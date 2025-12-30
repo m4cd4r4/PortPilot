@@ -43,5 +43,11 @@ contextBridge.exposeInMainWorld('portpilot', {
   },
 
   // Shell operations
-  openExternal: (url) => ipcRenderer.invoke('shell:openExternal', url)
+  openExternal: (url) => ipcRenderer.invoke('shell:openExternal', url),
+
+  // Docker operations
+  docker: {
+    status: () => ipcRenderer.invoke('docker:status'),
+    start: () => ipcRenderer.invoke('docker:start')
+  }
 });

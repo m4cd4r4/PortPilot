@@ -11,8 +11,82 @@ const state = {
   detectedApps: {},  // Map of appId -> detected port info
   settings: {},
   filter: '',
-  theme: 'tokyonight'
+  theme: 'tokyonight',
+  dockerRunning: false  // Track Docker Desktop status
 };
+
+// ============ Requirement Detection ============
+/**
+ * Detect app requirements based on command and cwd
+ * @param {Object} app - App configuration
+ * @returns {Object} Requirements object with boolean flags
+ */
+function detectRequirements(app) {
+  const cmd = (app.command || '').toLowerCase();
+  const cwd = (app.cwd || '').toLowerCase();
+
+  return {
+    docker: cmd.includes('docker') || cmd.includes('compose'),
+    node: cmd.includes('npm') || cmd.includes('pnpm') || cmd.includes('yarn') || cmd.includes('node'),
+    python: cmd.includes('python') || cmd.includes('uvicorn') || cmd.includes('flask') || cmd.includes('django'),
+    database: cmd.includes('postgres') || cmd.includes('mysql') || cmd.includes('redis') || cmd.includes('mongo'),
+    autoStart: app.autoStart || false,
+    remote: cwd.includes('ssh') || cwd.includes('@') || app.remote || false
+  };
+}
+
+/**
+ * Check if Docker Desktop is running
+ */
+async function checkDockerStatus() {
+  try {
+    const result = await window.portpilot.docker.status();
+    state.dockerRunning = result.running;
+    return result.running;
+  } catch {
+    state.dockerRunning = false;
+    return false;
+  }
+}
+
+/**
+ * Start Docker Desktop
+ */
+async function startDocker() {
+  showToast('Starting Docker Desktop...', 'success');
+  try {
+    const result = await window.portpilot.docker.start();
+    if (result.success) {
+      showToast('Docker Desktop starting - please wait...', 'success');
+      // Poll for Docker to be ready
+      pollDockerReady();
+    } else {
+      showToast('Failed to start Docker: ' + result.error, 'error');
+    }
+  } catch (error) {
+    showToast('Failed to start Docker: ' + error.message, 'error');
+  }
+}
+
+/**
+ * Poll Docker status until ready
+ */
+function pollDockerReady(attempts = 0) {
+  if (attempts > 30) {
+    showToast('Docker taking too long to start', 'error');
+    return;
+  }
+
+  setTimeout(async () => {
+    const running = await checkDockerStatus();
+    if (running) {
+      showToast('Docker Desktop is ready!', 'success');
+      renderApps();
+    } else {
+      pollDockerReady(attempts + 1);
+    }
+  }, 2000);
+}
 
 // ============ DOM References ============
 const dom = {
@@ -30,6 +104,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupEventListeners();
   loadTheme();
   await loadSettings();
+
+  // Check Docker status in background (don't await - non-blocking)
+  checkDockerStatus();
+
   await loadApps();
 
   if (state.settings.autoScan) {
@@ -237,26 +315,47 @@ function renderApps() {
     const detected = state.detectedApps[app.id];
     const isRunning = managedRunning || detected;
 
-    // Determine port display
+    // Detect requirements
+    const reqs = detectRequirements(app);
+
+    // Determine port display with IPv4/IPv6 indicator
     let portDisplay = '';
+    let ipVersion = '';
     if (detected) {
-      // Show actual detected port with indicator
-      portDisplay = ` • <span class="detected-port" title="Detected on port ${detected.port}">:${detected.port} ✓</span>`;
+      const isIPv6 = detected.address?.startsWith('[');
+      ipVersion = isIPv6 ? 'v6' : 'v4';
+      portDisplay = ` • <span class="detected-port" title="Detected on ${detected.address}">:${detected.port} ✓</span>`;
     } else if (app.preferredPort) {
-      // Show configured preferred port
       portDisplay = ` • Port ${app.preferredPort}`;
     }
 
-    // Status text
+    // Status text with IPv4/IPv6 indicator
     let statusText = '○ Stopped';
     let statusClass = 'status-stopped';
     if (detected) {
-      statusText = `● Running :${detected.port}`;
+      statusText = `● Running :${detected.port} <span class="ip-version">${ipVersion}</span>`;
       statusClass = 'status-running';
     } else if (managedRunning) {
       statusText = '● Running';
       statusClass = 'status-running';
     }
+
+    // Build requirement badges
+    const badges = [];
+    if (reqs.docker) {
+      const dockerReady = state.dockerRunning;
+      const dockerClass = dockerReady ? 'badge-ready' : 'badge-warning';
+      const dockerTitle = dockerReady ? 'Docker is running' : 'Docker Desktop not running - click to start';
+      const dockerClick = dockerReady ? '' : `onclick="startDocker()"`;
+      badges.push(`<span class="req-badge docker ${dockerClass}" title="${dockerTitle}" ${dockerClick}>🐳</span>`);
+    }
+    if (reqs.node) badges.push(`<span class="req-badge node" title="Node.js app">📦</span>`);
+    if (reqs.python) badges.push(`<span class="req-badge python" title="Python app">🐍</span>`);
+    if (reqs.database) badges.push(`<span class="req-badge database" title="Uses database">🗄️</span>`);
+    if (reqs.autoStart) badges.push(`<span class="req-badge autostart" title="Auto-start enabled">⚡</span>`);
+    if (reqs.remote) badges.push(`<span class="req-badge remote" title="Remote/VPS app">🌐</span>`);
+
+    const badgesHtml = badges.length > 0 ? `<div class="req-badges">${badges.join('')}</div>` : '';
 
     return `
       <div class="app-card" data-id="${app.id}">
@@ -264,6 +363,7 @@ function renderApps() {
           <div class="app-name">
             <span class="app-color" style="background: ${app.color}"></span>
             ${escapeHtml(app.name)}
+            ${badgesHtml}
           </div>
           <div class="app-meta">
             <code>${escapeHtml(app.command)}</code>
