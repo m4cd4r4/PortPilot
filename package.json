@@ -1,0 +1,21 @@
+{
+  "name": "portpilot",
+  "version": "1.0.0",
+  "description": "Localhost port and app manager for developers",
+  "main": "src/main/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev"
+  },
+  "keywords": [
+    "ports",
+    "localhost",
+    "developer-tools"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^28.3.3",
+    "playwright": "^1.57.0"
+  }
+}

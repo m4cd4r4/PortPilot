@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'">
+  <title>PortPilot</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="app">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-left">
+        <h1>🚀 PortPilot</h1>
+        <span class="subtitle">Localhost Port Manager</span>
+      </div>
+      <div class="header-right">
+        <button id="btn-scan" class="btn btn-primary">
+          <span class="icon">🔄</span> Scan Ports
+        </button>
+        <button id="btn-add-app" class="btn btn-secondary">
+          <span class="icon">➕</span> Add App
+        </button>
+      </div>
+    </header>
+
+    <!-- Tab Navigation -->
+    <nav class="tabs">
+      <button class="tab active" data-tab="ports">Active Ports</button>
+      <button class="tab" data-tab="apps">My Apps</button>
+      <button class="tab" data-tab="knowledge">Knowledge</button>
+      <button class="tab" data-tab="settings">Settings</button>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="content">
+      <!-- Ports Tab -->
+      <section id="tab-ports" class="tab-content active">
+        <div class="toolbar">
+          <input type="text" id="port-filter" placeholder="Filter by port or process..." class="input-search">
+          <span id="port-count" class="count-badge">0 ports</span>
+        </div>
+        <div id="ports-list" class="ports-grid">
+          <div class="empty-state">Click "Scan Ports" to discover active ports</div>
+        </div>
+      </section>
+
+      <!-- Apps Tab -->
+      <section id="tab-apps" class="tab-content">
+        <div id="apps-list" class="apps-list">
+          <div class="empty-state">No apps registered. Click "Add App" to get started.</div>
+        </div>
+      </section>
+
+      <!-- Knowledge Tab -->
+      <section id="tab-knowledge" class="tab-content">
+        <div class="knowledge-grid">
+          <!-- How It Works -->
+          <div class="knowledge-card">
+            <div class="knowledge-icon">⚡</div>
+            <h3>How It Works</h3>
+            <p>PortPilot scans your system for active TCP ports using native OS commands. It identifies which processes are using each port, letting you manage your development environment efficiently.</p>
+            <ul class="knowledge-list">
+              <li>Scans ports via <code>netstat</code> (Windows) or <code>lsof</code> (Mac/Linux)</li>
+              <li>Displays process name, PID, and command line</li>
+              <li>One-click kill for stuck processes</li>
+              <li>Register apps with preferred ports</li>
+            </ul>
+          </div>
+
+          <!-- Quick Start -->
+          <div class="knowledge-card">
+            <div class="knowledge-icon">🚀</div>
+            <h3>Quick Start</h3>
+            <ol class="knowledge-list numbered">
+              <li><strong>Scan Ports</strong> — Click the button to discover active ports</li>
+              <li><strong>Add Apps</strong> — Register your dev projects with their start commands</li>
+              <li><strong>Start/Stop</strong> — Control apps from the My Apps tab</li>
+              <li><strong>Kill Ports</strong> — Free up stuck ports with one click</li>
+            </ol>
+          </div>
+
+          <!-- Keyboard Shortcuts -->
+          <div class="knowledge-card">
+            <div class="knowledge-icon">⌨️</div>
+            <h3>Keyboard Shortcuts</h3>
+            <div class="shortcut-grid">
+              <div class="shortcut"><kbd>Ctrl</kbd>+<kbd>R</kbd><span>Refresh/Scan</span></div>
+              <div class="shortcut"><kbd>Ctrl</kbd>+<kbd>N</kbd><span>Add New App</span></div>
+              <div class="shortcut"><kbd>Ctrl</kbd>+<kbd>1</kbd><span>Ports Tab</span></div>
+              <div class="shortcut"><kbd>Ctrl</kbd>+<kbd>2</kbd><span>Apps Tab</span></div>
+              <div class="shortcut"><kbd>Ctrl</kbd>+<kbd>3</kbd><span>Knowledge</span></div>
+              <div class="shortcut"><kbd>Ctrl</kbd>+<kbd>4</kbd><span>Settings</span></div>
+            </div>
+          </div>
+
+          <!-- Tips & Tricks -->
+          <div class="knowledge-card">
+            <div class="knowledge-icon">💡</div>
+            <h3>Tips & Tricks</h3>
+            <ul class="knowledge-list">
+              <li>Use <strong>fallback port ranges</strong> when your preferred port is busy</li>
+              <li>Click the <strong>copy button</strong> to get <code>localhost:PORT</code> to clipboard</li>
+              <li>Minimize to <strong>system tray</strong> — click the tray icon to restore</li>
+              <li>Set <strong>auto-start</strong> on apps you always need running</li>
+              <li><strong>Export config</strong> to back up your app registrations</li>
+            </ul>
+          </div>
+
+          <!-- Common Ports -->
+          <div class="knowledge-card">
+            <div class="knowledge-icon">📡</div>
+            <h3>Common Dev Ports</h3>
+            <div class="port-reference">
+              <div class="port-item"><span class="port-num">3000</span> React, Next.js, Express</div>
+              <div class="port-item"><span class="port-num">4200</span> Angular CLI</div>
+              <div class="port-item"><span class="port-num">5173</span> Vite</div>
+              <div class="port-item"><span class="port-num">5432</span> PostgreSQL</div>
+              <div class="port-item"><span class="port-num">6379</span> Redis</div>
+              <div class="port-item"><span class="port-num">8000</span> Django, FastAPI</div>
+              <div class="port-item"><span class="port-num">8080</span> Tomcat, Live Server</div>
+              <div class="port-item"><span class="port-num">27017</span> MongoDB</div>
+            </div>
+          </div>
+
+          <!-- Troubleshooting -->
+          <div class="knowledge-card">
+            <div class="knowledge-icon">🔧</div>
+            <h3>Troubleshooting</h3>
+            <div class="faq-list">
+              <details class="faq-item">
+                <summary>Port won't kill?</summary>
+                <p>Some system processes require admin privileges. Try running PortPilot as Administrator.</p>
+              </details>
+              <details class="faq-item">
+                <summary>App won't start?</summary>
+                <p>Check the working directory path and ensure the command is correct. View app logs for errors.</p>
+              </details>
+              <details class="faq-item">
+                <summary>Scan shows nothing?</summary>
+                <p>No apps are using TCP ports. This is normal if nothing is running locally.</p>
+              </details>
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer Links -->
+        <div class="knowledge-footer">
+          <a href="#" class="footer-link" onclick="openExternal('https://github.com')">
+            <span class="link-icon">📖</span>
+            <span>Documentation</span>
+          </a>
+          <a href="#" class="footer-link" onclick="openExternal('https://github.com')">
+            <span class="link-icon">💬</span>
+            <span>Community</span>
+          </a>
+          <a href="#" class="footer-link" onclick="openExternal('https://github.com')">
+            <span class="link-icon">🐛</span>
+            <span>Report Issue</span>
+          </a>
+          <a href="#" class="footer-link" onclick="openExternal('https://github.com')">
+            <span class="link-icon">⭐</span>
+            <span>Star on GitHub</span>
+          </a>
+        </div>
+      </section>
+
+      <!-- Settings Tab -->
+      <section id="tab-settings" class="tab-content">
+        <div class="settings-section">
+          <h3>Theme</h3>
+          <div class="setting-row">
+            <span>Select Theme</span>
+            <div class="theme-selector" id="theme-selector">
+              <button class="theme-btn active" data-theme="tokyonight">TokyoNight</button>
+              <button class="theme-btn" data-theme="brutalist-dark">Brutalist Dark</button>
+              <button class="theme-btn" data-theme="brutalist-light">Brutalist Light</button>
+              <button class="theme-btn" data-theme="nord">Nord</button>
+              <button class="theme-btn" data-theme="dracula">Dracula</button>
+              <button class="theme-btn" data-theme="solarized-light">Solarized</button>
+            </div>
+          </div>
+        </div>
+        <div class="settings-section">
+          <h3>Preferences</h3>
+          <label class="setting-row">
+            <span>Auto-scan on startup</span>
+            <input type="checkbox" id="setting-autoscan" checked>
+          </label>
+          <label class="setting-row">
+            <span>Scan interval (seconds)</span>
+            <input type="number" id="setting-interval" value="5" min="1" max="60" class="input-small">
+          </label>
+        </div>
+        <div class="settings-section">
+          <h3>Data</h3>
+          <div class="button-row">
+            <button id="btn-export" class="btn btn-secondary">Export Config</button>
+            <button id="btn-import" class="btn btn-secondary">Import Config</button>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- App Modal -->
+    <div id="modal-app" class="modal hidden">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 id="modal-title">Add App</h2>
+          <button class="btn-close" id="modal-close">✕</button>
+        </div>
+        <form id="app-form">
+          <input type="hidden" id="app-id">
+          <div class="form-group">
+            <label for="app-name">App Name</label>
+            <input type="text" id="app-name" required placeholder="e.g., AzurePrep Frontend">
+          </div>
+          <div class="form-group">
+            <label for="app-command">Command</label>
+            <input type="text" id="app-command" required placeholder="e.g., npm run dev">
+          </div>
+          <div class="form-group">
+            <label for="app-cwd">Working Directory</label>
+            <input type="text" id="app-cwd" placeholder="e.g., C:\Projects\myapp">
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="app-port">Preferred Port</label>
+              <input type="number" id="app-port" placeholder="e.g., 3000">
+            </div>
+            <div class="form-group">
+              <label for="app-fallback">Fallback Range</label>
+              <input type="text" id="app-fallback" placeholder="e.g., 3001-3010">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="checkbox-label">
+              <input type="checkbox" id="app-autostart">
+              Auto-start on launch
+            </label>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" id="btn-cancel">Cancel</button>
+            <button type="submit" class="btn btn-primary">Save App</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toast-container"></div>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>
