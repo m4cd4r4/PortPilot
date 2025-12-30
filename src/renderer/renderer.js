@@ -8,6 +8,7 @@ const state = {
   ports: [],
   apps: [],
   runningApps: [],
+  detectedApps: {},  // Map of appId -> detected port info
   settings: {},
   filter: '',
   theme: 'tokyonight'
@@ -175,16 +176,35 @@ function copyPort(port) {
   showToast(`Copied localhost:${port}`, 'success');
 }
 
+function openInBrowser(appId) {
+  const detected = state.detectedApps[appId];
+  const app = state.apps.find(a => a.id === appId);
+  const port = detected?.port || app?.preferredPort;
+
+  if (port) {
+    const url = `http://localhost:${port}`;
+    openExternal(url);
+    showToast(`Opening ${url}`, 'success');
+  } else {
+    showToast('No port detected for this app', 'error');
+  }
+}
+
 // ============ App Operations ============
 async function loadApps() {
   try {
-    const [configResult, runningResult] = await Promise.all([
+    const [configResult, runningResult, scanResult] = await Promise.all([
       window.portpilot.config.getApps(),
-      window.portpilot.process.list()
+      window.portpilot.process.list(),
+      window.portpilot.ports.scanWithApps()
     ]);
 
     if (configResult.success) state.apps = configResult.apps;
     if (runningResult.success) state.runningApps = runningResult.apps;
+    if (scanResult.success) {
+      state.ports = scanResult.ports;
+      state.detectedApps = scanResult.matches || {};
+    }
 
     renderApps();
   } catch (error) {
@@ -201,7 +221,33 @@ function renderApps() {
   }
 
   dom.appsList.innerHTML = state.apps.map(app => {
-    const running = state.runningApps.find(r => r.id === app.id && r.running);
+    // Check if app is running via PortPilot's process manager
+    const managedRunning = state.runningApps.find(r => r.id === app.id && r.running);
+    // Check if app is detected running externally via port scan
+    const detected = state.detectedApps[app.id];
+    const isRunning = managedRunning || detected;
+
+    // Determine port display
+    let portDisplay = '';
+    if (detected) {
+      // Show actual detected port with indicator
+      portDisplay = ` • <span class="detected-port" title="Detected on port ${detected.port}">:${detected.port} ✓</span>`;
+    } else if (app.preferredPort) {
+      // Show configured preferred port
+      portDisplay = ` • Port ${app.preferredPort}`;
+    }
+
+    // Status text
+    let statusText = '○ Stopped';
+    let statusClass = 'status-stopped';
+    if (detected) {
+      statusText = `● Running :${detected.port}`;
+      statusClass = 'status-running';
+    } else if (managedRunning) {
+      statusText = '● Running';
+      statusClass = 'status-running';
+    }
+
     return `
       <div class="app-card" data-id="${app.id}">
         <div class="app-info">
@@ -211,15 +257,16 @@ function renderApps() {
           </div>
           <div class="app-meta">
             <code>${escapeHtml(app.command)}</code>
-            ${app.preferredPort ? ` • Port ${app.preferredPort}` : ''}
+            ${portDisplay}
           </div>
         </div>
-        <span class="app-status ${running ? 'status-running' : 'status-stopped'}">
-          ${running ? '● Running' : '○ Stopped'}
+        <span class="app-status ${statusClass}">
+          ${statusText}
         </span>
         <div class="app-actions">
-          ${running 
-            ? `<button class="btn btn-small btn-danger" onclick="stopApp('${app.id}')">Stop</button>`
+          ${isRunning
+            ? `<button class="btn btn-small btn-secondary" onclick="openInBrowser('${app.id}')" title="Open in browser">🌐</button>
+               <button class="btn btn-small btn-danger" onclick="stopApp('${app.id}')">Stop</button>`
             : `<button class="btn btn-small btn-primary" onclick="startApp('${app.id}')">Start</button>`
           }
           <button class="btn btn-small btn-secondary" onclick="editApp('${app.id}')">Edit</button>
@@ -435,10 +482,10 @@ function truncate(str, len) {
 }
 
 // ============ External Links ============
-function openExternal(url) {
+async function openExternal(url) {
   // Use Electron's shell to open URLs in default browser
   if (window.portpilot && window.portpilot.openExternal) {
-    window.portpilot.openExternal(url);
+    await window.portpilot.openExternal(url);
   } else {
     // Fallback for development/testing
     window.open(url, '_blank');
@@ -453,3 +500,4 @@ window.stopApp = stopApp;
 window.editApp = editApp;
 window.deleteApp = deleteApp;
 window.openExternal = openExternal;
+window.openInBrowser = openInBrowser;

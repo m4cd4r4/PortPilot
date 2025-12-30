@@ -8,6 +8,7 @@ contextBridge.exposeInMainWorld('portpilot', {
   // Port operations
   ports: {
     scan: () => ipcRenderer.invoke('ports:scan'),
+    scanWithApps: () => ipcRenderer.invoke('ports:scanWithApps'),
     check: (port) => ipcRenderer.invoke('ports:check', port),
     findAvailable: (start, end) => ipcRenderer.invoke('ports:findAvailable', start, end),
     kill: (port) => ipcRenderer.invoke('ports:kill', port)
@@ -39,5 +40,8 @@ contextBridge.exposeInMainWorld('portpilot', {
     if (validChannels.includes(channel)) {
       ipcRenderer.on(channel, (_, ...args) => callback(...args));
     }
-  }
+  },
+
+  // Shell operations
+  openExternal: (url) => ipcRenderer.invoke('shell:openExternal', url)
 });

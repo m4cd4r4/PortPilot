@@ -1,20 +1,102 @@
 const { scanPorts, checkPort, findAvailablePort } = require('./portScanner');
 const { startApp, stopApp, killProcess, killByPort, getRunningApps, getAppLogs } = require('./processManager');
+const path = require('path');
+
+/**
+ * Match scanned ports to registered apps by analyzing command line and working directory
+ * @param {Array} ports - Scanned port info
+ * @param {Array} apps - Registered apps from config
+ * @returns {Object} Map of appId -> detected port info
+ */
+function matchPortsToApps(ports, apps) {
+  const matches = {};
+
+  for (const app of apps) {
+    if (!app.cwd) continue;
+
+    // Normalize the app's cwd for comparison
+    const normalizedCwd = path.normalize(app.cwd).toLowerCase();
+    const cwdBasename = path.basename(normalizedCwd);
+
+    for (const portInfo of ports) {
+      const cmdLine = (portInfo.commandLine || '').toLowerCase();
+      const processName = (portInfo.processName || '').toLowerCase();
+
+      // Match strategies:
+      // 1. CommandLine contains the full cwd path
+      // 2. CommandLine contains the directory name and it's a node/npm process
+      // 3. Check preferred port if it matches
+
+      const cwdInCmd = cmdLine.includes(normalizedCwd.replace(/\\/g, '\\\\')) ||
+                       cmdLine.includes(normalizedCwd.replace(/\\/g, '/'));
+
+      const isNodeProcess = processName.includes('node') ||
+                           processName.includes('npm') ||
+                           processName.includes('python') ||
+                           processName.includes('docker');
+
+      const dirInCmd = cmdLine.includes(cwdBasename);
+
+      // Primary match: full path in command line
+      if (cwdInCmd) {
+        matches[app.id] = {
+          ...portInfo,
+          matchType: 'cwd',
+          confidence: 'high'
+        };
+        break;
+      }
+
+      // Secondary match: port matches preferred and it's the right type of process
+      if (app.preferredPort === portInfo.port && isNodeProcess && dirInCmd) {
+        matches[app.id] = {
+          ...portInfo,
+          matchType: 'port+dir',
+          confidence: 'medium'
+        };
+        break;
+      }
+
+      // Tertiary match: just the preferred port and node process
+      if (app.preferredPort === portInfo.port && isNodeProcess && !matches[app.id]) {
+        matches[app.id] = {
+          ...portInfo,
+          matchType: 'port',
+          confidence: 'low'
+        };
+      }
+    }
+  }
+
+  return matches;
+}
 
 /**
  * Setup all IPC handlers for communication with renderer
- * @param {Electron.IpcMain} ipcMain 
- * @param {ConfigStore} configStore 
+ * @param {Electron.IpcMain} ipcMain
+ * @param {ConfigStore} configStore
  */
 function setupIpcHandlers(ipcMain, configStore) {
-  
+
   // ============ Port Operations ============
-  
+
   /** Scan all listening ports */
   ipcMain.handle('ports:scan', async () => {
     try {
       const ports = await scanPorts();
       return { success: true, ports };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+
+  /** Scan ports and match to registered apps */
+  ipcMain.handle('ports:scanWithApps', async () => {
+    try {
+      const ports = await scanPorts();
+      const apps = configStore.getApps();
+      const matches = matchPortsToApps(ports, apps);
+      return { success: true, ports, matches };
     } catch (error) {
       return { success: false, error: error.message };
     }
@@ -169,6 +251,19 @@ function setupIpcHandlers(ipcMain, configStore) {
     try {
       const result = configStore.import(jsonString);
       return { success: result, error: result ? null : 'Invalid config format' };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+
+  // ============ Shell Operations ============
+
+  /** Open URL in default browser */
+  ipcMain.handle('shell:openExternal', async (_, url) => {
+    try {
+      const { shell } = require('electron');
+      await shell.openExternal(url);
+      return { success: true };
     } catch (error) {
       return { success: false, error: error.message };
     }

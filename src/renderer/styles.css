@@ -484,6 +484,11 @@ body {
   color: var(--text-muted);
 }
 
+.detected-port {
+  color: var(--accent-green);
+  font-weight: 600;
+}
+
 .app-actions {
   display: flex;
   gap: 8px;
