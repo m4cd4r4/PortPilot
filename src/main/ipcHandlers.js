@@ -14,28 +14,36 @@ function matchPortsToApps(ports, apps) {
   for (const app of apps) {
     if (!app.cwd) continue;
 
-    // Normalize paths for comparison (handle both / and \ separators)
+    // Normalize paths for comparison
     const normalizedCwd = path.normalize(app.cwd).toLowerCase();
     const cwdWithForwardSlash = normalizedCwd.replace(/\\/g, '/');
     const cwdWithBackSlash = normalizedCwd.replace(/\//g, '\\');
 
     for (const portInfo of ports) {
-      const cmdLine = (portInfo.commandLine || '').toLowerCase();
-
-      // Only match if the FULL working directory path appears in the command line
-      // This ensures we're matching the exact project, not just similar names
-      const cwdInCmd = cmdLine.includes(cwdWithForwardSlash) ||
-                       cmdLine.includes(cwdWithBackSlash) ||
-                       cmdLine.includes(normalizedCwd);
-
-      if (cwdInCmd) {
-        matches[app.id] = {
-          ...portInfo,
-          matchType: 'cwd',
-          confidence: 'high'
-        };
-        break;
+      // Check main command line AND all bindings (for port conflicts)
+      const cmdLinesToCheck = [portInfo.commandLine || ''];
+      if (portInfo.bindings) {
+        for (const binding of portInfo.bindings) {
+          cmdLinesToCheck.push(binding.commandLine || '');
+        }
       }
+
+      for (const cmdLine of cmdLinesToCheck) {
+        const cmdLower = cmdLine.toLowerCase();
+        const cwdInCmd = cmdLower.includes(cwdWithForwardSlash) ||
+                         cmdLower.includes(cwdWithBackSlash) ||
+                         cmdLower.includes(normalizedCwd);
+
+        if (cwdInCmd) {
+          matches[app.id] = {
+            ...portInfo,
+            matchType: 'cwd',
+            confidence: 'high'
+          };
+          break;
+        }
+      }
+      if (matches[app.id]) break;
     }
   }
 

@@ -39,14 +39,21 @@ function scanPortsWindows() {
         if (parts.length >= 5) {
           const localAddress = parts[1];
           const pid = parseInt(parts[4], 10);
-          
-          // Extract port from address (e.g., "0.0.0.0:3000" or "[::]:3000")
+
+          // Extract port from address (e.g., "0.0.0.0:3000" or "[::]:3000" or "[::1]:3000")
           const portMatch = localAddress.match(/:(\d+)$/);
           if (portMatch) {
             const port = parseInt(portMatch[1], 10);
-            // Skip system ports and duplicates, keep first occurrence
-            if (port > 0 && !portMap.has(port)) {
-              portMap.set(port, { port, pid, address: localAddress });
+            if (port > 0) {
+              const existing = portMap.get(port);
+              if (!existing) {
+                // First occurrence of this port
+                portMap.set(port, { port, pid, address: localAddress, bindings: [{ pid, address: localAddress }] });
+              } else if (existing.pid !== pid) {
+                // Different process on same port - mark as conflict
+                existing.bindings.push({ pid, address: localAddress });
+                existing.conflict = true;
+              }
             }
           }
         }
@@ -145,17 +152,28 @@ function scanPortsLinux() {
 /** Get process names for Windows PIDs */
 function getProcessNames(portInfos) {
   return new Promise((resolve) => {
-    const pids = [...new Set(portInfos.map(p => p.pid).filter(Boolean))];
+    // Collect all PIDs including from bindings
+    const allPids = new Set();
+    for (const p of portInfos) {
+      if (p.pid) allPids.add(p.pid);
+      if (p.bindings) {
+        for (const b of p.bindings) {
+          if (b.pid) allPids.add(b.pid);
+        }
+      }
+    }
+
+    const pids = [...allPids];
     if (pids.length === 0) {
       resolve(portInfos);
       return;
     }
 
-    exec(`wmic process where "ProcessId=${pids.join(' or ProcessId=')}" get ProcessId,Name,CommandLine /format:csv`, 
-      { encoding: 'utf8', maxBuffer: 1024 * 1024 }, 
+    exec(`wmic process where "ProcessId=${pids.join(' or ProcessId=')}" get ProcessId,Name,CommandLine /format:csv`,
+      { encoding: 'utf8', maxBuffer: 1024 * 1024 },
       (error, stdout) => {
         const pidToInfo = new Map();
-        
+
         if (!error && stdout) {
           const lines = stdout.trim().split('\n').slice(1);
           for (const line of lines) {
@@ -171,11 +189,21 @@ function getProcessNames(portInfos) {
           }
         }
 
-        resolve(portInfos.map(info => ({
-          ...info,
-          processName: pidToInfo.get(info.pid)?.processName || 'Unknown',
-          commandLine: pidToInfo.get(info.pid)?.commandLine || ''
-        })));
+        resolve(portInfos.map(info => {
+          // Enrich bindings with process info
+          if (info.bindings) {
+            info.bindings = info.bindings.map(b => ({
+              ...b,
+              processName: pidToInfo.get(b.pid)?.processName || 'Unknown',
+              commandLine: pidToInfo.get(b.pid)?.commandLine || ''
+            }));
+          }
+          return {
+            ...info,
+            processName: pidToInfo.get(info.pid)?.processName || 'Unknown',
+            commandLine: pidToInfo.get(info.pid)?.commandLine || ''
+          };
+        }));
       }
     );
   });
