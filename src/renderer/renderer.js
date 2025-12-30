@@ -184,11 +184,10 @@ async function openInBrowser(appId) {
   if (port) {
     const url = `http://localhost:${port}`;
     try {
-      await openExternal(url);
+      await window.portpilot.openExternal(url);
       showToast(`Opening ${url}`, 'success');
     } catch (error) {
-      console.error('Failed to open browser:', error);
-      showToast(`Failed to open browser: ${error.message}`, 'error');
+      showToast(`Failed: ${error.message}`, 'error');
     }
   } else {
     showToast('No port detected for this app', 'error');

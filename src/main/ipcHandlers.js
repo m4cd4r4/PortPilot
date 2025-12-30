@@ -14,30 +14,20 @@ function matchPortsToApps(ports, apps) {
   for (const app of apps) {
     if (!app.cwd) continue;
 
-    // Normalize the app's cwd for comparison
+    // Normalize paths for comparison (handle both / and \ separators)
     const normalizedCwd = path.normalize(app.cwd).toLowerCase();
-    const cwdBasename = path.basename(normalizedCwd);
+    const cwdWithForwardSlash = normalizedCwd.replace(/\\/g, '/');
+    const cwdWithBackSlash = normalizedCwd.replace(/\//g, '\\');
 
     for (const portInfo of ports) {
       const cmdLine = (portInfo.commandLine || '').toLowerCase();
-      const processName = (portInfo.processName || '').toLowerCase();
 
-      // Match strategies:
-      // 1. CommandLine contains the full cwd path
-      // 2. CommandLine contains the directory name and it's a node/npm process
-      // 3. Check preferred port if it matches
+      // Only match if the FULL working directory path appears in the command line
+      // This ensures we're matching the exact project, not just similar names
+      const cwdInCmd = cmdLine.includes(cwdWithForwardSlash) ||
+                       cmdLine.includes(cwdWithBackSlash) ||
+                       cmdLine.includes(normalizedCwd);
 
-      const cwdInCmd = cmdLine.includes(normalizedCwd.replace(/\\/g, '\\\\')) ||
-                       cmdLine.includes(normalizedCwd.replace(/\\/g, '/'));
-
-      const isNodeProcess = processName.includes('node') ||
-                           processName.includes('npm') ||
-                           processName.includes('python') ||
-                           processName.includes('docker');
-
-      const dirInCmd = cmdLine.includes(cwdBasename);
-
-      // Primary match: full path in command line
       if (cwdInCmd) {
         matches[app.id] = {
           ...portInfo,
@@ -45,25 +35,6 @@ function matchPortsToApps(ports, apps) {
           confidence: 'high'
         };
         break;
-      }
-
-      // Secondary match: port matches preferred and it's the right type of process
-      if (app.preferredPort === portInfo.port && isNodeProcess && dirInCmd) {
-        matches[app.id] = {
-          ...portInfo,
-          matchType: 'port+dir',
-          confidence: 'medium'
-        };
-        break;
-      }
-
-      // Tertiary match: just the preferred port and node process
-      if (app.preferredPort === portInfo.port && isNodeProcess && !matches[app.id]) {
-        matches[app.id] = {
-          ...portInfo,
-          matchType: 'port',
-          confidence: 'low'
-        };
       }
     }
   }
