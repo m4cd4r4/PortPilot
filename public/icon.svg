@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a1b26"/>
+      <stop offset="100%" style="stop-color:#24283b"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#7aa2f7"/>
+      <stop offset="100%" style="stop-color:#7dcfff"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background circle -->
+  <circle cx="256" cy="256" r="240" fill="url(#bg)" stroke="#7aa2f7" stroke-width="8"/>
+
+  <!-- Compass/port symbol - outer ring -->
+  <circle cx="256" cy="256" r="160" fill="none" stroke="#414868" stroke-width="12"/>
+
+  <!-- Port indicators (like compass points but representing ports) -->
+  <circle cx="256" cy="116" r="20" fill="#7aa2f7"/>
+  <circle cx="396" cy="256" r="20" fill="#9ece6a"/>
+  <circle cx="256" cy="396" r="20" fill="#f7768e"/>
+  <circle cx="116" cy="256" r="20" fill="#e0af68"/>
+
+  <!-- Center hub -->
+  <circle cx="256" cy="256" r="50" fill="url(#accent)"/>
+
+  <!-- Connection lines from center to ports -->
+  <line x1="256" y1="206" x2="256" y2="136" stroke="#7aa2f7" stroke-width="6" stroke-linecap="round"/>
+  <line x1="306" y1="256" x2="376" y2="256" stroke="#9ece6a" stroke-width="6" stroke-linecap="round"/>
+  <line x1="256" y1="306" x2="256" y2="376" stroke="#f7768e" stroke-width="6" stroke-linecap="round"/>
+  <line x1="206" y1="256" x2="136" y2="256" stroke="#e0af68" stroke-width="6" stroke-linecap="round"/>
+
+  <!-- Center P letter -->
+  <text x="256" y="275" font-family="Arial, sans-serif" font-size="60" font-weight="bold" fill="#1a1b26" text-anchor="middle">P</text>
+</svg>
