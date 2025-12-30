@@ -1059,6 +1059,32 @@ kbd {
   text-align: center;
 }
 
+/* Badge Reference */
+.badge-reference {
+  display: grid;
+  gap: 8px;
+}
+
+.badge-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-color);
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.badge-item:last-child {
+  border-bottom: none;
+}
+
+.badge-icon {
+  font-size: 1.2rem;
+  min-width: 28px;
+  text-align: center;
+}
+
 /* FAQ / Troubleshooting */
 .faq-list {
   display: flex;

@@ -124,6 +124,47 @@
             </div>
           </div>
 
+          <!-- App Badges -->
+          <div class="knowledge-card">
+            <div class="knowledge-icon">🏷️</div>
+            <h3>App Badges</h3>
+            <p>PortPilot automatically detects app requirements and shows badges:</p>
+            <div class="badge-reference">
+              <div class="badge-item"><span class="badge-icon">🐳</span> <strong>Docker</strong> — App uses Docker/Compose (click to start Docker Desktop)</div>
+              <div class="badge-item"><span class="badge-icon">📦</span> <strong>Node.js</strong> — Uses npm, npx, pnpm, yarn, or bun</div>
+              <div class="badge-item"><span class="badge-icon">🐍</span> <strong>Python</strong> — Uses python, uvicorn, flask, or django</div>
+              <div class="badge-item"><span class="badge-icon">🗄️</span> <strong>Database</strong> — Uses postgres, mysql, redis, or mongo</div>
+              <div class="badge-item"><span class="badge-icon">⚡</span> <strong>Auto-start</strong> — App starts automatically on launch</div>
+              <div class="badge-item"><span class="badge-icon">🌐</span> <strong>Remote</strong> — App runs on a remote server/VPS</div>
+            </div>
+          </div>
+
+          <!-- IPv4/IPv6 -->
+          <div class="knowledge-card">
+            <div class="knowledge-icon">🔀</div>
+            <h3>IPv4 vs IPv6</h3>
+            <p>When apps are running, PortPilot shows which IP protocol they're bound to:</p>
+            <ul class="knowledge-list">
+              <li><strong>v4</strong> — App is bound to IPv4 (e.g., <code>0.0.0.0:3000</code> or <code>127.0.0.1:3000</code>)</li>
+              <li><strong>v6</strong> — App is bound to IPv6 (e.g., <code>[::]:3000</code> or <code>[::1]:3000</code>)</li>
+            </ul>
+            <p>This matters because browsers may prefer IPv6. PortPilot opens the correct URL based on the binding.</p>
+          </div>
+
+          <!-- Docker Integration -->
+          <div class="knowledge-card">
+            <div class="knowledge-icon">🐳</div>
+            <h3>Docker Integration</h3>
+            <p>PortPilot integrates with Docker Desktop:</p>
+            <ul class="knowledge-list">
+              <li><strong>Yellow pulsing 🐳</strong> — Docker Desktop is not running</li>
+              <li><strong>Green 🐳</strong> — Docker Desktop is running and ready</li>
+              <li><strong>Click the badge</strong> — Starts Docker Desktop automatically</li>
+              <li>PortPilot polls until Docker is ready, then updates the display</li>
+            </ul>
+            <p>Docker apps will fail to start if Docker Desktop isn't running first.</p>
+          </div>
+
           <!-- Troubleshooting -->
           <div class="knowledge-card">
             <div class="knowledge-icon">🔧</div>
@@ -140,6 +181,14 @@
               <details class="faq-item">
                 <summary>Scan shows nothing?</summary>
                 <p>No apps are using TCP ports. This is normal if nothing is running locally.</p>
+              </details>
+              <details class="faq-item">
+                <summary>Docker app fails?</summary>
+                <p>Make sure Docker Desktop is running first. Click the yellow 🐳 badge to start it.</p>
+              </details>
+              <details class="faq-item">
+                <summary>Wrong app opens in browser?</summary>
+                <p>Multiple apps may share a port on IPv4 vs IPv6. Check the v4/v6 indicator.</p>
               </details>
             </div>
           </div>

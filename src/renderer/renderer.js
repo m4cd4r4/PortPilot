@@ -27,9 +27,9 @@ function detectRequirements(app) {
 
   return {
     docker: cmd.includes('docker') || cmd.includes('compose'),
-    node: cmd.includes('npm') || cmd.includes('pnpm') || cmd.includes('yarn') || cmd.includes('node'),
-    python: cmd.includes('python') || cmd.includes('uvicorn') || cmd.includes('flask') || cmd.includes('django'),
-    database: cmd.includes('postgres') || cmd.includes('mysql') || cmd.includes('redis') || cmd.includes('mongo'),
+    node: cmd.includes('npm') || cmd.includes('npx') || cmd.includes('pnpm') || cmd.includes('yarn') || cmd.includes('node') || cmd.includes('bun'),
+    python: cmd.includes('python') || cmd.includes('uvicorn') || cmd.includes('flask') || cmd.includes('django') || cmd.includes('gunicorn') || cmd.includes('pip'),
+    database: cmd.includes('postgres') || cmd.includes('mysql') || cmd.includes('redis') || cmd.includes('mongo') || cmd.includes('sqlite'),
     autoStart: app.autoStart || false,
     remote: cwd.includes('ssh') || cwd.includes('@') || app.remote || false
   };
