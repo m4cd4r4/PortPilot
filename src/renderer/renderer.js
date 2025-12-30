@@ -176,15 +176,20 @@ function copyPort(port) {
   showToast(`Copied localhost:${port}`, 'success');
 }
 
-function openInBrowser(appId) {
+async function openInBrowser(appId) {
   const detected = state.detectedApps[appId];
   const app = state.apps.find(a => a.id === appId);
   const port = detected?.port || app?.preferredPort;
 
   if (port) {
     const url = `http://localhost:${port}`;
-    openExternal(url);
-    showToast(`Opening ${url}`, 'success');
+    try {
+      await openExternal(url);
+      showToast(`Opening ${url}`, 'success');
+    } catch (error) {
+      console.error('Failed to open browser:', error);
+      showToast(`Failed to open browser: ${error.message}`, 'error');
+    }
   } else {
     showToast('No port detected for this app', 'error');
   }
@@ -485,7 +490,10 @@ function truncate(str, len) {
 async function openExternal(url) {
   // Use Electron's shell to open URLs in default browser
   if (window.portpilot && window.portpilot.openExternal) {
-    await window.portpilot.openExternal(url);
+    const result = await window.portpilot.openExternal(url);
+    if (!result.success) {
+      throw new Error(result.error || 'Unknown error');
+    }
   } else {
     // Fallback for development/testing
     window.open(url, '_blank');
