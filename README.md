@@ -2,7 +2,7 @@
 
 **Localhost Port Manager** — A desktop app for developers to manage local development ports and applications.
 
-![PortPilot Main Interface](docs/screenshot-main.png)
+![PortPilot My Apps](docs/screenshots/my-apps.png)
 
 ## Features
 
@@ -10,20 +10,61 @@
 - **One-Click Kill** — Free up stuck ports instantly
 - **App Registry** — Register your dev projects with start commands and preferred ports
 - **Process Management** — Start/stop apps directly from PortPilot
+- **Auto-Detection** — Automatically detects running apps by matching ports to registered projects
+- **Requirement Badges** — Visual indicators for Docker, Node.js, Python, and more
+- **Docker Integration** — Click to start Docker Desktop, with status detection
+- **IPv4/IPv6 Awareness** — Shows which protocol your app is bound to
 - **System Tray** — Minimize to tray, quick access menu
 - **Multi-Theme Support** — 6 themes including TokyoNight, Brutalist, Nord, Dracula
 - **Knowledge Base** — Built-in help with tips, shortcuts, and common ports reference
 
 ## Screenshots
 
-### Active Ports View
-![Main Interface](docs/screenshot-main.png)
+### My Apps
+Register and manage your development applications with automatic status detection.
+
+![My Apps](docs/screenshots/my-apps.png)
+
+### Active Ports
+Scan and view all listening TCP ports on your system.
+
+![Active Ports](docs/screenshots/active-ports.png)
 
 ### Knowledge Base
-![Knowledge Tab](docs/screenshot-knowledge.png)
+Built-in documentation, shortcuts, and troubleshooting guides.
 
-### Theme Settings
-![Settings](docs/screenshot-settings.png)
+![Knowledge](docs/screenshots/knowledge.png)
+
+### Settings
+Choose from 6 themes and configure auto-scan preferences.
+
+![Settings](docs/screenshots/settings.png)
+
+## App Badges
+
+PortPilot automatically detects app requirements and shows badges:
+
+| Badge | Meaning | Detected When |
+|-------|---------|---------------|
+| 🐳 | Docker app | Command includes `docker` or `compose` |
+| 📦 | Node.js app | Command includes `npm`, `npx`, `pnpm`, `yarn`, or `bun` |
+| 🐍 | Python app | Command includes `python`, `uvicorn`, `flask`, or `django` |
+| 🗄️ | Database | Command includes `postgres`, `mysql`, `redis`, or `mongo` |
+| ⚡ | Auto-start | App configured to start on launch |
+| 🌐 | Remote | App runs on remote server/VPS |
+
+### Docker Integration
+
+- **Yellow pulsing 🐳** — Docker Desktop is not running (click to start)
+- **Green 🐳** — Docker Desktop is running and ready
+
+### IPv4/IPv6 Indicators
+
+When apps are running, PortPilot shows `v4` or `v6` to indicate the IP protocol:
+- **v4** — Bound to IPv4 (e.g., `0.0.0.0:3000`)
+- **v6** — Bound to IPv6 (e.g., `[::]:3000`)
+
+This ensures the browser button opens the correct URL.
 
 ## Installation
 
@@ -39,7 +80,7 @@ npm install
 npm start
 ```
 
-> **Note for VSCode/Claude Code users:** If you get module resolution errors, use `start.bat` which clears the `ELECTRON_RUN_AS_NODE` environment variable.
+> **Note for VSCode/Claude Code users:** If you get module resolution errors, use `launch.bat` which clears the `ELECTRON_RUN_AS_NODE` environment variable.
 
 ## Usage
 
@@ -127,20 +168,7 @@ npm install
 npm start
 
 # Take screenshots (for docs)
-node screenshot.js
-```
-
-## Building for Production
-
-```bash
-# Install electron-builder
-npm install --save-dev electron-builder
-
-# Add to package.json scripts:
-# "dist": "electron-builder"
-
-# Build
-npm run dist
+npm run screenshots
 ```
 
 ## Tech Stack
