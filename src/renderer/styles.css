@@ -489,6 +489,87 @@ body {
   font-weight: 600;
 }
 
+.ip-version {
+  font-size: 0.65rem;
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: var(--bg-tertiary);
+  color: var(--accent-cyan);
+  font-weight: 700;
+  margin-left: 4px;
+  vertical-align: middle;
+}
+
+/* ============ Requirement Badges ============ */
+.req-badges {
+  display: inline-flex;
+  gap: 4px;
+  margin-left: 8px;
+  vertical-align: middle;
+}
+
+.req-badge {
+  font-size: 0.85rem;
+  padding: 2px 4px;
+  border-radius: 4px;
+  background: var(--bg-tertiary);
+  cursor: default;
+  transition: all 0.15s ease;
+  opacity: 0.8;
+}
+
+.req-badge:hover {
+  opacity: 1;
+  transform: scale(1.1);
+}
+
+/* Docker badge states */
+.req-badge.docker {
+  cursor: pointer;
+}
+
+.req-badge.docker.badge-ready {
+  background: rgba(158, 206, 106, 0.2);
+  border: 1px solid var(--accent-green);
+}
+
+.req-badge.docker.badge-warning {
+  background: rgba(224, 175, 104, 0.2);
+  border: 1px solid var(--accent-yellow);
+  animation: pulse-warning 2s infinite;
+}
+
+@keyframes pulse-warning {
+  0%, 100% { opacity: 0.8; }
+  50% { opacity: 1; }
+}
+
+/* Other badges */
+.req-badge.node {
+  background: rgba(122, 162, 247, 0.2);
+  border: 1px solid var(--accent-primary);
+}
+
+.req-badge.python {
+  background: rgba(122, 162, 247, 0.2);
+  border: 1px solid var(--accent-cyan);
+}
+
+.req-badge.database {
+  background: rgba(187, 154, 247, 0.2);
+  border: 1px solid var(--accent-purple);
+}
+
+.req-badge.autostart {
+  background: rgba(224, 175, 104, 0.2);
+  border: 1px solid var(--accent-yellow);
+}
+
+.req-badge.remote {
+  background: rgba(125, 207, 255, 0.2);
+  border: 1px solid var(--accent-cyan);
+}
+
 .app-actions {
   display: flex;
   gap: 8px;
@@ -975,6 +1056,32 @@ kbd {
   font-weight: 700;
   color: var(--accent-cyan);
   min-width: 60px;
+  text-align: center;
+}
+
+/* Badge Reference */
+.badge-reference {
+  display: grid;
+  gap: 8px;
+}
+
+.badge-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-color);
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.badge-item:last-child {
+  border-bottom: none;
+}
+
+.badge-icon {
+  font-size: 1.2rem;
+  min-width: 28px;
   text-align: center;
 }
 

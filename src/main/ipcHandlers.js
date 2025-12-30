@@ -253,6 +253,45 @@ function setupIpcHandlers(ipcMain, configStore) {
       return { success: false, error: error.message };
     }
   });
+
+  // ============ Docker Operations ============
+
+  /** Check if Docker Desktop is running */
+  ipcMain.handle('docker:status', async () => {
+    const { exec } = require('child_process');
+    return new Promise((resolve) => {
+      exec('docker info', { timeout: 5000 }, (error) => {
+        resolve({ running: !error });
+      });
+    });
+  });
+
+  /** Start Docker Desktop */
+  ipcMain.handle('docker:start', async () => {
+    const { exec } = require('child_process');
+    const os = require('os');
+
+    return new Promise((resolve) => {
+      let cmd;
+      if (os.platform() === 'win32') {
+        // Try common Docker Desktop installation paths
+        cmd = 'start "" "C:\\Program Files\\Docker\\Docker\\Docker Desktop.exe"';
+      } else if (os.platform() === 'darwin') {
+        cmd = 'open -a Docker';
+      } else {
+        // Linux - systemd
+        cmd = 'systemctl start docker';
+      }
+
+      exec(cmd, { timeout: 10000 }, (error) => {
+        if (error) {
+          resolve({ success: false, error: error.message });
+        } else {
+          resolve({ success: true });
+        }
+      });
+    });
+  });
 }
 
 module.exports = { setupIpcHandlers };
