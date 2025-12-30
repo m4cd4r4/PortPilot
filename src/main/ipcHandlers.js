@@ -20,23 +20,29 @@ function matchPortsToApps(ports, apps) {
     const cwdWithBackSlash = normalizedCwd.replace(/\//g, '\\');
 
     for (const portInfo of ports) {
-      // Check main command line AND all bindings (for port conflicts)
-      const cmdLinesToCheck = [portInfo.commandLine || ''];
-      if (portInfo.bindings) {
-        for (const binding of portInfo.bindings) {
-          cmdLinesToCheck.push(binding.commandLine || '');
-        }
-      }
+      // Check all bindings to find which one matches this app
+      const allBindings = portInfo.bindings || [{
+        pid: portInfo.pid,
+        address: portInfo.address,
+        commandLine: portInfo.commandLine,
+        processName: portInfo.processName
+      }];
 
-      for (const cmdLine of cmdLinesToCheck) {
-        const cmdLower = cmdLine.toLowerCase();
+      for (const binding of allBindings) {
+        const cmdLower = (binding.commandLine || '').toLowerCase();
         const cwdInCmd = cmdLower.includes(cwdWithForwardSlash) ||
                          cmdLower.includes(cwdWithBackSlash) ||
                          cmdLower.includes(normalizedCwd);
 
         if (cwdInCmd) {
+          // Return the specific binding that matched, with correct address
           matches[app.id] = {
-            ...portInfo,
+            port: portInfo.port,
+            pid: binding.pid,
+            address: binding.address,
+            processName: binding.processName,
+            commandLine: binding.commandLine,
+            conflict: portInfo.conflict,
             matchType: 'cwd',
             confidence: 'high'
           };

@@ -182,7 +182,13 @@ async function openInBrowser(appId) {
   const port = detected?.port || app?.preferredPort;
 
   if (port) {
-    const url = `http://localhost:${port}`;
+    // Use correct host based on binding address
+    // IPv6 bindings ([::1] or [::]) use localhost, IPv4 (0.0.0.0 or 127.0.0.1) use 127.0.0.1
+    const address = detected?.address || '';
+    const isIPv6 = address.startsWith('[');
+    const host = isIPv6 ? 'localhost' : '127.0.0.1';
+    const url = `http://${host}:${port}`;
+
     try {
       await window.portpilot.openExternal(url);
       showToast(`Opening ${url}`, 'success');

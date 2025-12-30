@@ -25,7 +25,7 @@ async function scanPorts() {
 /** Windows port scanning using netstat */
 function scanPortsWindows() {
   return new Promise((resolve, reject) => {
-    exec('netstat -ano -p TCP | findstr LISTENING', { encoding: 'utf8' }, (error, stdout) => {
+    exec('netstat -ano | findstr LISTENING | findstr TCP', { encoding: 'utf8' }, (error, stdout) => {
       if (error && !stdout) {
         resolve([]);
         return;
