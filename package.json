@@ -3,21 +3,74 @@
   "version": "1.0.0",
   "description": "Localhost port and app manager for developers",
   "main": "src/main/main.js",
+  "author": {
+    "name": "Macdara",
+    "url": "https://github.com/m4cd4r4"
+  },
+  "homepage": "https://github.com/m4cd4r4/PortPilot",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/m4cd4r4/PortPilot.git"
+  },
   "scripts": {
     "start": "electron .",
     "dev": "electron . --dev",
-    "screenshots": "node take-screenshots.js"
+    "screenshots": "node take-screenshots.js",
+    "build": "electron-builder --win",
+    "build:portable": "electron-builder --win portable",
+    "build:all": "electron-builder --win nsis portable",
+    "dist": "electron-builder --win --publish never"
   },
   "keywords": [
     "ports",
     "localhost",
-    "developer-tools"
+    "developer-tools",
+    "electron"
   ],
-  "author": "",
   "license": "MIT",
   "devDependencies": {
     "electron": "^35.7.5",
+    "electron-builder": "^26.0.12",
     "playwright": "^1.57.0",
     "png-to-ico": "^3.0.1"
+  },
+  "build": {
+    "appId": "com.macdara.portpilot",
+    "productName": "PortPilot",
+    "copyright": "Copyright © 2024 Macdara",
+    "directories": {
+      "output": "dist",
+      "buildResources": "public"
+    },
+    "files": [
+      "src/**/*",
+      "public/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        },
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "public/icon.png",
+      "artifactName": "${productName}-${version}-${arch}.${ext}",
+      "signAndEditExecutable": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "PortPilot"
+    },
+    "portable": {
+      "artifactName": "${productName}-${version}-portable.${ext}"
+    }
   }
 }
