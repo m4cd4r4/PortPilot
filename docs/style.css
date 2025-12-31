@@ -140,52 +140,56 @@ body {
 
 /* Features Section */
 .features {
-  padding: 80px 0;
+  padding: 48px 0;
   background: var(--bg-secondary);
 }
 
 h2 {
-  font-size: 2.5rem;
+  font-size: 2rem;
   text-align: center;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
   color: var(--text-primary);
 }
 
 .section-subtitle {
   text-align: center;
   color: var(--text-secondary);
-  margin-bottom: 48px;
-  font-size: 1.1rem;
+  margin-bottom: 32px;
+  font-size: 1rem;
 }
 
 .features-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 24px;
-  margin-top: 48px;
+  gap: 12px;
+  margin-top: 24px;
 }
 
 .feature-card {
   background: var(--bg-primary);
-  padding: 32px;
-  border-radius: 12px;
+  padding: 16px 20px;
+  border-radius: 8px;
   border: 1px solid var(--border-color);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition: border-color 0.2s ease;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
 }
 
 .feature-card:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--shadow);
+  border-color: var(--accent-primary);
 }
 
 .feature-icon {
-  font-size: 2.5rem;
-  margin-bottom: 16px;
+  font-size: 1.25rem;
+  color: var(--accent-primary);
+  flex-shrink: 0;
+  margin-top: 2px;
 }
 
-.feature-card h3 {
-  font-size: 1.25rem;
-  margin-bottom: 12px;
+.feature-text h3 {
+  font-size: 0.95rem;
+  margin-bottom: 4px;
   color: var(--accent-primary);
 }
 
