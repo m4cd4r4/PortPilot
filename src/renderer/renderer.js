@@ -155,6 +155,49 @@ function setupEventListeners() {
   dom.modal.addEventListener('click', (e) => {
     if (e.target === dom.modal) closeModal();
   });
+
+  // Keyboard shortcuts
+  document.addEventListener('keydown', (e) => {
+    // Don't trigger shortcuts when typing in inputs
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+      // Allow Escape to close modal even when in input
+      if (e.key === 'Escape') {
+        closeModal();
+      }
+      return;
+    }
+
+    if (e.ctrlKey || e.metaKey) {
+      switch (e.key.toLowerCase()) {
+        case 'r':
+          e.preventDefault();
+          scanPorts();
+          break;
+        case 'n':
+          e.preventDefault();
+          openAppModal();
+          break;
+        case '1':
+          e.preventDefault();
+          switchTab('ports');
+          break;
+        case '2':
+          e.preventDefault();
+          switchTab('apps');
+          break;
+        case '3':
+          e.preventDefault();
+          switchTab('knowledge');
+          break;
+        case '4':
+          e.preventDefault();
+          switchTab('settings');
+          break;
+      }
+    } else if (e.key === 'Escape') {
+      closeModal();
+    }
+  });
 }
 
 // ============ Tab Navigation ============
@@ -614,3 +657,4 @@ window.editApp = editApp;
 window.deleteApp = deleteApp;
 window.openExternal = openExternal;
 window.openInBrowser = openInBrowser;
+window.startDocker = startDocker;

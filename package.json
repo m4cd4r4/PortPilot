@@ -16,7 +16,7 @@
   "author": "",
   "license": "MIT",
   "devDependencies": {
-    "electron": "^28.3.3",
+    "electron": "^35.7.5",
     "playwright": "^1.57.0",
     "png-to-ico": "^3.0.1"
   }
