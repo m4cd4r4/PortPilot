@@ -24,14 +24,20 @@ async function startApp(appConfig) {
   return new Promise((resolve) => {
     try {
       const isWindows = os.platform() === 'win32';
-      const shell = isWindows ? 'cmd.exe' : '/bin/sh';
-      const shellArgs = isWindows ? ['/c', command] : ['-c', command];
 
-      const childProcess = spawn(shell, shellArgs, {
+      // Use exec with explicit ComSpec for Windows
+      const execEnv = {
+        ...process.env,
+        ...env,
+        ComSpec: process.env.ComSpec || 'C:\\Windows\\System32\\cmd.exe'
+      };
+
+      const childProcess = exec(command, {
         cwd: cwd || process.cwd(),
-        env: { ...process.env, ...env },
-        detached: !isWindows,
-        stdio: ['ignore', 'pipe', 'pipe']
+        env: execEnv,
+        windowsHide: true,
+        maxBuffer: 10 * 1024 * 1024,
+        shell: isWindows ? 'C:\\Windows\\System32\\cmd.exe' : '/bin/sh'
       });
 
       let output = '';
@@ -124,18 +130,21 @@ async function stopApp(appId) {
 function killProcess(pid) {
   return new Promise((resolve) => {
     const isWindows = os.platform() === 'win32';
-    const command = isWindows 
-      ? `taskkill /F /PID ${pid} /T` 
+    const command = isWindows
+      ? `taskkill /F /PID ${pid} /T`
       : `kill -9 ${pid}`;
 
-    exec(command, (error) => {
+    // Must specify shell explicitly - Git Bash/MSYS can interfere with Windows commands
+    const execOptions = { shell: isWindows ? 'cmd.exe' : '/bin/sh' };
+
+    exec(command, execOptions, (error) => {
       if (error) {
         // Try alternative methods
         if (isWindows) {
-          exec(`wmic process where ProcessId=${pid} delete`, (err2) => {
-            resolve({ 
-              success: !err2, 
-              error: err2 ? 'Failed to kill process' : null 
+          exec(`wmic process where ProcessId=${pid} delete`, execOptions, (err2) => {
+            resolve({
+              success: !err2,
+              error: err2 ? 'Failed to kill process' : null
             });
           });
         } else {
@@ -214,11 +223,30 @@ function getAppLogs(appId) {
   };
 }
 
-module.exports = { 
-  startApp, 
-  stopApp, 
-  killProcess, 
-  killByPort, 
+/**
+ * Clean up all running processes (called on app quit)
+ * @returns {Promise<void>}
+ */
+async function cleanupAllProcesses() {
+  const pids = [];
+
+  for (const [id, info] of runningProcesses) {
+    if (info.process && !info.process.killed && info.pid) {
+      pids.push(info.pid);
+    }
+  }
+
+  // Kill all tracked processes
+  await Promise.all(pids.map(pid => killProcess(pid)));
+  runningProcesses.clear();
+}
+
+module.exports = {
+  startApp,
+  stopApp,
+  killProcess,
+  killByPort,
   getRunningApps,
-  getAppLogs 
+  getAppLogs,
+  cleanupAllProcesses
 };
