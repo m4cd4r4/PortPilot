@@ -13,8 +13,8 @@
     "url": "https://github.com/m4cd4r4/PortPilot.git"
   },
   "scripts": {
-    "start": "unset ELECTRON_RUN_AS_NODE && electron .",
-    "dev": "unset ELECTRON_RUN_AS_NODE && electron . --dev",
+    "start": "node launch.js",
+    "dev": "node launch.js --dev",
     "screenshots": "node take-screenshots.js",
     "build": "electron-builder --win",
     "build:portable": "electron-builder --win portable",
