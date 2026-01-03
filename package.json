@@ -15,6 +15,7 @@
   "scripts": {
     "start": "node launch.js",
     "dev": "node launch.js --dev",
+    "test": "node tests/run-comprehensive.js",
     "screenshots": "node take-screenshots.js",
     "build": "electron-builder --win",
     "build:portable": "electron-builder --win portable",

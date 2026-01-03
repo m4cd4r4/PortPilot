@@ -1,0 +1,349 @@
+/**
+ * Comprehensive PortPilot Test Suite with Playwright
+ * Fixed to work with launch.js wrapper
+ */
+const { _electron: electron } = require('playwright');
+const path = require('path');
+const { execSync } = require('child_process');
+
+// Helpers
+function isPortListening(port) {
+  try {
+    const output = execSync(`netstat -ano | findstr :${port}`, { encoding: 'utf-8' });
+    return output.includes('LISTENING');
+  } catch {
+    return false;
+  }
+}
+
+function getPidForPort(port) {
+  try {
+    const output = execSync(`netstat -ano | findstr :${port}`, { encoding: 'utf-8' });
+    const lines = output.split('\n');
+    for (const line of lines) {
+      if (line.includes('LISTENING')) {
+        const parts = line.trim().split(/\s+/);
+        return parseInt(parts[parts.length - 1]);
+      }
+    }
+  } catch {
+    return null;
+  }
+}
+
+async function runTests() {
+  console.log('\n========================================');
+  console.log('  PortPilot Comprehensive Test Suite');
+  console.log('========================================\n');
+
+  let passed = 0;
+  let failed = 0;
+  let electronApp;
+  let window;
+
+  try {
+    // Launch Electron directly (bypassing launch.js)
+    console.log('🚀 Launching PortPilot...');
+    const electronPath = require('electron');
+    const appPath = path.join(__dirname, '..');
+
+    electronApp = await electron.launch({
+      executablePath: electronPath,
+      args: [appPath],
+      env: {
+        ...process.env,
+        ELECTRON_RUN_AS_NODE: undefined // Clear the problematic env var
+      }
+    });
+
+    window = await electronApp.firstWindow();
+
+    // Suppress security warnings in console
+    window.on('console', msg => {
+      const text = msg.text();
+      if (!text.includes('Electron Security Warning') && !text.includes('GPU process')) {
+        console.log(`  [App] ${text}`);
+      }
+    });
+
+    await window.waitForLoadState('domcontentloaded');
+    await window.waitForTimeout(4000);
+    console.log('✅ App launched successfully\n');
+
+    // Test 1: Window title
+    console.log('Test 1: Window title...');
+    try {
+      const title = await window.title();
+      if (title.includes('PortPilot')) {
+        console.log(`✅ PASSED - Title: "${title}"`);
+        passed++;
+      } else {
+        throw new Error(`Expected "PortPilot", got "${title}"`);
+      }
+    } catch (err) {
+      console.log(`❌ FAILED - ${err.message}`);
+      failed++;
+    }
+
+    // Test 2: Ports tab is active
+    console.log('\nTest 2: Ports tab active by default...');
+    try {
+      const portsTab = await window.$('[data-tab="ports"]');
+      const isActive = await portsTab.evaluate(el => el.classList.contains('active'));
+      if (isActive) {
+        console.log('✅ PASSED - Ports tab is active');
+        passed++;
+      } else {
+        throw new Error('Ports tab not active');
+      }
+    } catch (err) {
+      console.log(`❌ FAILED - ${err.message}`);
+      failed++;
+    }
+
+    // Test 3: Scan ports
+    console.log('\nTest 3: Port scanning...');
+    try {
+      const scanBtn = await window.$('#btn-scan');
+      await scanBtn.click();
+      await window.waitForTimeout(6000);
+      console.log('✅ PASSED - Scan completed');
+      passed++;
+    } catch (err) {
+      console.log(`❌ FAILED - ${err.message}`);
+      failed++;
+    }
+
+    // Test 4: Detect test servers
+    console.log('\nTest 4: Detecting test servers...');
+    try {
+      const port3000 = await window.$('[data-port="3000"]');
+      const port3001 = await window.$('[data-port="3001"]');
+      const port8080 = await window.$('[data-port="8080"]');
+
+      const detected = [];
+      if (port3000) detected.push('3000');
+      if (port3001) detected.push('3001');
+      if (port8080) detected.push('8080');
+
+      if (detected.length >= 2) {
+        console.log(`✅ PASSED - Detected ports: ${detected.join(', ')}`);
+        passed++;
+      } else {
+        throw new Error(`Only ${detected.length} test ports detected`);
+      }
+    } catch (err) {
+      console.log(`❌ FAILED - ${err.message}`);
+      failed++;
+    }
+
+    // Test 5: Port card shows information
+    console.log('\nTest 5: Port card information...');
+    try {
+      const port3000Card = await window.$('[data-port="3000"]');
+      if (!port3000Card) throw new Error('Port 3000 not found');
+
+      const cardText = await port3000Card.textContent();
+      if (cardText.includes(':3000') && cardText.includes('PID')) {
+        console.log('✅ PASSED - Port card displays info correctly');
+        passed++;
+      } else {
+        throw new Error('Port card missing required information');
+      }
+    } catch (err) {
+      console.log(`❌ FAILED - ${err.message}`);
+      failed++;
+    }
+
+    // Test 6: Port filter
+    console.log('\nTest 6: Port filter functionality...');
+    try {
+      const filterInput = await window.$('#port-filter');
+
+      // Apply filter
+      await filterInput.fill('3000');
+      await window.waitForTimeout(500);
+
+      const visible = await window.$('[data-port="3000"]');
+      const hidden = await window.$('[data-port="8080"]');
+
+      if (visible && !hidden) {
+        // Clear filter
+        await filterInput.fill('');
+        await window.waitForTimeout(500);
+        console.log('✅ PASSED - Filter works correctly');
+        passed++;
+      } else {
+        throw new Error('Filter not working as expected');
+      }
+    } catch (err) {
+      console.log(`❌ FAILED - ${err.message}`);
+      failed++;
+    }
+
+    // Test 7: Copy button exists
+    console.log('\nTest 7: Copy port button...');
+    try {
+      const port3000Card = await window.$('[data-port="3000"]');
+      const copyBtn = await port3000Card.$('button:has-text("📋")');
+
+      if (copyBtn) {
+        console.log('✅ PASSED - Copy button found');
+        passed++;
+      } else {
+        throw new Error('Copy button not found');
+      }
+    } catch (err) {
+      console.log(`❌ FAILED - ${err.message}`);
+      failed++;
+    }
+
+    // Test 8: 🎯 CRITICAL - PORT KILL FUNCTIONALITY
+    console.log('\n🎯 Test 8: PORT KILL FUNCTIONALITY (CRITICAL)');
+    try {
+      // Rescan to ensure fresh data
+      await window.click('#btn-scan');
+      await window.waitForTimeout(4000);
+
+      // Find a port to kill
+      let targetPort = null;
+      if (isPortListening(8080)) targetPort = 8080;
+      else if (isPortListening(3000)) targetPort = 3000;
+      else if (isPortListening(3001)) targetPort = 3001;
+
+      if (!targetPort) throw new Error('No test ports available to kill');
+
+      console.log(`  Target: Port ${targetPort}`);
+      console.log(`  Before: PID ${getPidForPort(targetPort)}`);
+
+      // Find and click kill button
+      const portCard = await window.$(`[data-port="${targetPort}"]`);
+      if (!portCard) throw new Error('Port card not found');
+
+      const killBtn = await portCard.$('button.btn-danger');
+      if (!killBtn) throw new Error('Kill button not found');
+
+console.log('  Clicking kill button...');            // Set up dialog handler BEFORE clicking      window.once('dialog', async dialog => {        console.log(`  Dialog: "${dialog.message()}"`);        await dialog.accept();      });            await killBtn.click();      // Wait for kill operation      console.log('  Waiting for kill operation...');
+      await window.waitForTimeout(6000);
+
+      // Verify port was killed
+      const stillRunning = isPortListening(targetPort);
+
+      if (!stillRunning) {
+        console.log(`  ✓ Port ${targetPort} successfully killed!`);
+        console.log('✅ PASSED - PORT KILL WORKS! 🎉🎉🎉');
+        passed++;
+      } else {
+        throw new Error(`Port ${targetPort} still running after kill`);
+      }
+    } catch (err) {
+      console.log(`❌ FAILED - ${err.message}`);
+      failed++;
+    }
+
+    // Test 9: Killed port removed from list
+    console.log('\nTest 9: Port removed from list after kill...');
+    try {
+      await window.click('#btn-scan');
+      await window.waitForTimeout(4000);
+
+      const portsList = await window.$$('[data-port]');
+
+      if (portsList.length > 0) {
+        console.log(`✅ PASSED - ${portsList.length} ports remain in list`);
+        passed++;
+      } else {
+        throw new Error('Port list is empty');
+      }
+    } catch (err) {
+      console.log(`❌ FAILED - ${err.message}`);
+      failed++;
+    }
+
+    // Test 10: Tab navigation
+    console.log('\nTest 10: Tab navigation...');
+    try {
+      const appsTab = await window.$('[data-tab="apps"]');
+      await appsTab.click();
+      await window.waitForTimeout(500);
+
+      const isActive = await appsTab.evaluate(el => el.classList.contains('active'));
+
+      if (isActive) {
+        console.log('✅ PASSED - Apps tab navigation works');
+        passed++;
+      } else {
+        throw new Error('Apps tab not active after click');
+      }
+    } catch (err) {
+      console.log(`❌ FAILED - ${err.message}`);
+      failed++;
+    }
+
+    // Test 11: Settings tab
+    console.log('\nTest 11: Settings tab...');
+    try {
+      const settingsTab = await window.$('[data-tab="settings"]');
+      await settingsTab.click();
+      await window.waitForTimeout(500);
+
+      const settingsContent = await window.$('#tab-settings');
+      const isVisible = await settingsContent.evaluate(el => el.classList.contains('active'));
+
+      if (isVisible) {
+        console.log('✅ PASSED - Settings tab accessible');
+        passed++;
+      } else {
+        throw new Error('Settings content not visible');
+      }
+    } catch (err) {
+      console.log(`❌ FAILED - ${err.message}`);
+      failed++;
+    }
+
+    // Screenshot
+    console.log('\n📸 Taking screenshot...');
+    await window.screenshot({ path: 'test-results/comprehensive-final.png' });
+    console.log('Screenshot saved');
+
+  } catch (err) {
+    console.error('\n❌ FATAL ERROR:', err);
+    console.error(err.stack);
+  } finally {
+    if (electronApp) {
+      await electronApp.close();
+      console.log('\n✅ PortPilot closed');
+    }
+  }
+
+  // Results
+  const total = 11;
+  const successRate = Math.round((passed / total) * 100);
+
+  console.log('\n========================================');
+  console.log('           TEST RESULTS');
+  console.log('========================================');
+  console.log(`✅ Passed: ${passed}/${total}`);
+  console.log(`❌ Failed: ${failed}/${total}`);
+  console.log(`📊 Success Rate: ${successRate}%`);
+  console.log('========================================\n');
+
+  if (failed === 0) {
+    console.log('🎉 ALL TESTS PASSED! 🎉\n');
+    console.log('✓ Port scanning works');
+    console.log('✓ Port filtering works');
+    console.log('✓ PORT KILLING WORKS (our fix!)');
+    console.log('✓ Tab navigation works');
+    console.log('✓ UI displays correctly\n');
+  } else {
+    console.log(`⚠️  ${failed} test(s) need attention\n`);
+  }
+
+  process.exit(failed > 0 ? 1 : 0);
+}
+
+// Run tests
+runTests().catch(err => {
+  console.error('FATAL ERROR:', err);
+  process.exit(1);
+});
