@@ -276,7 +276,10 @@
           <div class="form-row">
             <div class="form-group">
               <label for="app-port">Preferred Port</label>
-              <input type="number" id="app-port" placeholder="e.g., 3000">
+              <div class="input-with-button">
+                <input type="number" id="app-port" placeholder="e.g., 3000">
+                <button type="button" class="btn btn-small" id="btn-find-port" title="Find next available port">Find Free</button>
+              </div>
             </div>
             <div class="form-group">
               <label for="app-fallback">Fallback Range</label>

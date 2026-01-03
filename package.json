@@ -13,8 +13,8 @@
     "url": "https://github.com/m4cd4r4/PortPilot.git"
   },
   "scripts": {
-    "start": "electron .",
-    "dev": "electron . --dev",
+    "start": "unset ELECTRON_RUN_AS_NODE && electron .",
+    "dev": "unset ELECTRON_RUN_AS_NODE && electron . --dev",
     "screenshots": "node take-screenshots.js",
     "build": "electron-builder --win",
     "build:portable": "electron-builder --win portable",
@@ -29,7 +29,7 @@
   ],
   "license": "MIT",
   "devDependencies": {
-    "electron": "^35.7.5",
+    "electron": "^27.3.11",
     "electron-builder": "^26.0.12",
     "playwright": "^1.57.0",
     "png-to-ico": "^3.0.1"
@@ -51,11 +51,15 @@
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         },
         {
           "target": "portable",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "icon": "public/icon.png",

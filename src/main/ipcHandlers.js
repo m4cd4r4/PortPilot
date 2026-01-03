@@ -268,28 +268,30 @@ function setupIpcHandlers(ipcMain, configStore) {
 
   /** Start Docker Desktop */
   ipcMain.handle('docker:start', async () => {
-    const { exec } = require('child_process');
+    const { exec, spawn } = require('child_process');
     const os = require('os');
 
     return new Promise((resolve) => {
-      let cmd;
       if (os.platform() === 'win32') {
-        // Try common Docker Desktop installation paths
-        cmd = 'start "" "C:\\Program Files\\Docker\\Docker\\Docker Desktop.exe"';
+        // Use spawn with detached to start Docker without leaving a cmd window
+        const dockerPath = 'C:\\Program Files\\Docker\\Docker\\Docker Desktop.exe';
+        const child = spawn(dockerPath, [], {
+          detached: true,
+          stdio: 'ignore',
+          windowsHide: true
+        });
+        child.unref();
+        resolve({ success: true });
       } else if (os.platform() === 'darwin') {
-        cmd = 'open -a Docker';
+        exec('open -a Docker', { timeout: 10000 }, (error) => {
+          resolve(error ? { success: false, error: error.message } : { success: true });
+        });
       } else {
         // Linux - systemd
-        cmd = 'systemctl start docker';
+        exec('systemctl start docker', { timeout: 10000 }, (error) => {
+          resolve(error ? { success: false, error: error.message } : { success: true });
+        });
       }
-
-      exec(cmd, { timeout: 10000 }, (error) => {
-        if (error) {
-          resolve({ success: false, error: error.message });
-        } else {
-          resolve({ success: true });
-        }
-      });
     });
   });
 }

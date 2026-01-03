@@ -138,6 +138,7 @@ function setupEventListeners() {
   // Modal
   document.getElementById('modal-close').addEventListener('click', closeModal);
   document.getElementById('btn-cancel').addEventListener('click', closeModal);
+  document.getElementById('btn-find-port').addEventListener('click', findFreePort);
   dom.appForm.addEventListener('submit', handleAppSubmit);
 
   // Settings
@@ -493,6 +494,23 @@ function openAppModal(app = null) {
 function closeModal() {
   dom.modal.classList.add('hidden');
   dom.appForm.reset();
+}
+
+async function findFreePort() {
+  const portInput = document.getElementById('app-port');
+  const startPort = parseInt(portInput.value) || 3000;
+
+  try {
+    const result = await window.portpilot.ports.findAvailable(startPort, startPort + 100);
+    if (result.success && result.port) {
+      portInput.value = result.port;
+      showToast(`Found free port: ${result.port}`, 'success');
+    } else {
+      showToast('No free port found in range', 'error');
+    }
+  } catch (error) {
+    showToast('Error finding free port', 'error');
+  }
 }
 
 async function handleAppSubmit(e) {

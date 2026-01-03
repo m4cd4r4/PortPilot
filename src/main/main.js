@@ -26,6 +26,7 @@ function createWindow() {
 
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
+    mainWindow.webContents.openDevTools();
   });
 
   // Minimize to tray instead of closing
@@ -75,6 +76,7 @@ function createTray() {
   
   tray.on('click', () => {
     mainWindow.isVisible() ? mainWindow.hide() : mainWindow.show();
+    mainWindow.webContents.openDevTools();
   });
 }
 
@@ -98,6 +100,14 @@ app.on('window-all-closed', () => {
   }
 });
 
-app.on('before-quit', () => {
+app.on('before-quit', async (event) => {
   app.isQuitting = true;
+
+  // Clean up any child processes started by PortPilot
+  try {
+    const { cleanupAllProcesses } = require('./processManager');
+    await cleanupAllProcesses();
+  } catch (err) {
+    console.error('Error cleaning up processes:', err);
+  }
 });
