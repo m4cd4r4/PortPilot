@@ -80,7 +80,7 @@ npm install
 npm start
 ```
 
-> **Note for VSCode/Claude Code users:** If you get module resolution errors, use `launch.bat` which clears the `ELECTRON_RUN_AS_NODE` environment variable.
+> **Note for VSCode/Claude Code users:** The app automatically clears the `ELECTRON_RUN_AS_NODE` environment variable via `launch.js`.
 
 ## Usage
 
@@ -158,6 +158,7 @@ Your config is stored at:
 }
 ```
 
+
 ## Development
 
 ```bash
@@ -167,17 +168,46 @@ npm install
 # Run in development
 npm start
 
+# Run tests
+npm test
+
 # Take screenshots (for docs)
 npm run screenshots
 ```
 
+## Testing
+
+PortPilot includes a comprehensive Playwright test suite:
+
+```bash
+# Run automated tests (10/11 passing)
+npm test
+
+# Check port status manually
+node manual-test-report.js
+```
+
+**Test Coverage:**
+- ✅ UI rendering and navigation
+- ✅ Port scanning functionality
+- ✅ Port filtering
+- ✅ Test server detection
+- ⚠️ Port killing (works manually, dialog automation issue in Playwright)
+
 ## Tech Stack
 
-- **Electron 28** — Cross-platform desktop framework
+- **Electron 27** — Cross-platform desktop framework
 - **Node.js** — Process management and port scanning
+- **Playwright** — End-to-end testing
 - **Vanilla JS** — No framework bloat
 - **CSS Variables** — Theme system
 - **Native Commands** — `netstat` (Windows) / `lsof` (Mac/Linux)
+
+## Recent Fixes
+
+- **Port Kill Fix** — Now correctly uses `cmd.exe` shell on Windows (fixed Git Bash compatibility issue)
+- **ELECTRON_RUN_AS_NODE** — Automatically cleared via `launch.js` wrapper for VS Code/Claude Code users
+- **Cross-Platform** — Works in CMD, PowerShell, Git Bash, and VS Code terminal
 
 ## License
 
