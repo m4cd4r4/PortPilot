@@ -26,7 +26,10 @@ function createWindow() {
 
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
-    mainWindow.webContents.openDevTools();
+    // Only open DevTools in development mode
+    if (!app.isPackaged) {
+      mainWindow.webContents.openDevTools();
+    }
   });
 
   // Minimize to tray instead of closing
@@ -76,7 +79,6 @@ function createTray() {
   
   tray.on('click', () => {
     mainWindow.isVisible() ? mainWindow.hide() : mainWindow.show();
-    mainWindow.webContents.openDevTools();
   });
 }
 
