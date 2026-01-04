@@ -223,7 +223,18 @@ async function runTests() {
       const killBtn = await portCard.$('button.btn-danger');
       if (!killBtn) throw new Error('Kill button not found');
 
-console.log('  Clicking kill button...');            // Set up dialog handler BEFORE clicking      window.once('dialog', async dialog => {        console.log(`  Dialog: "${dialog.message()}"`);        await dialog.accept();      });            await killBtn.click();      // Wait for kill operation      console.log('  Waiting for kill operation...');
+      console.log('  Clicking kill button...');
+
+      // Set up dialog handler BEFORE clicking
+      window.once('dialog', async dialog => {
+        console.log(`  Dialog: "${dialog.message()}"`);
+        await dialog.accept();
+      });
+
+      await killBtn.click();
+
+      // Wait for kill operation
+      console.log('  Waiting for kill operation...');
       await window.waitForTimeout(6000);
 
       // Verify port was killed
