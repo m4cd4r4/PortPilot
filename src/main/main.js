@@ -7,7 +7,7 @@ let mainWindow = null;
 let tray = null;
 
 /** Create the main application window */
-function createWindow() {
+function createWindow(configStore) {
   mainWindow = new BrowserWindow({
     width: 900,
     height: 700,
@@ -26,9 +26,12 @@ function createWindow() {
 
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
-    // Only open DevTools in development mode
+    // Open DevTools if enabled in settings (dev mode only)
     if (!app.isPackaged) {
-      mainWindow.webContents.openDevTools();
+      const settings = configStore.getSettings();
+      if (settings.openDevTools === true) {
+        mainWindow.webContents.openDevTools();
+      }
     }
   });
 
@@ -83,15 +86,16 @@ function createTray() {
 }
 
 // App lifecycle
+let configStore;
 app.whenReady().then(() => {
-  const configStore = new ConfigStore();
-  createWindow();
+  configStore = new ConfigStore();
+  createWindow(configStore);
   createTray();
   setupIpcHandlers(ipcMain, configStore);
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow();
+      createWindow(configStore);
     }
   });
 });

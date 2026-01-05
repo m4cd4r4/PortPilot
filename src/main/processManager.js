@@ -16,9 +16,12 @@ async function startApp(appConfig) {
   // Check if already running
   if (runningProcesses.has(id)) {
     const existing = runningProcesses.get(id);
-    if (existing.process && !existing.process.killed) {
+    // Only block if process is still alive (not killed AND no exit code)
+    if (existing.process && !existing.process.killed && existing.process.exitCode === null && existing.running) {
       return { success: false, error: 'App is already running', pid: existing.process.pid };
     }
+    // Clean up dead process entry
+    runningProcesses.delete(id);
   }
 
   return new Promise((resolve) => {
@@ -87,16 +90,17 @@ async function startApp(appConfig) {
       // Give it a moment to start
       setTimeout(() => {
         if (childProcess.killed || childProcess.exitCode !== null) {
-          resolve({ 
-            success: false, 
+          runningProcesses.delete(id); // Clean up failed start
+          resolve({
+            success: false,
             error: errorOutput || 'Process exited immediately',
-            exitCode: childProcess.exitCode 
+            exitCode: childProcess.exitCode
           });
         } else {
-          resolve({ 
-            success: true, 
+          resolve({
+            success: true,
             pid: childProcess.pid,
-            message: `Started ${name}` 
+            message: `Started ${name}`
           });
         }
       }, 500);

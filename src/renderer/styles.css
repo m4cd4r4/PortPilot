@@ -356,11 +356,11 @@ body {
 .count-badge {
   background: var(--bg-tertiary);
   border: var(--border-width) solid var(--border-color);
-  padding: 4px 12px;
+  padding: 6px 14px;
   border-radius: var(--radius);
-  font-size: 0.75rem;
-  color: var(--accent-cyan);
-  font-weight: 700;
+  font-size: 0.813rem;
+  color: var(--text-primary);
+  font-weight: 600;
 }
 
 /* ============ Ports Grid ============ */
@@ -374,7 +374,7 @@ body {
   background: var(--bg-secondary);
   border: var(--border-width) solid var(--border-color);
   border-radius: var(--radius);
-  padding: 8px 12px;
+  padding: 12px 16px;
   transition: all 0.15s ease;
 }
 
@@ -391,7 +391,7 @@ body {
 }
 
 .port-number {
-  font-size: 1.25rem;
+  font-size: 1.5rem;
   font-weight: 700;
   color: var(--accent-cyan);
 }
@@ -406,7 +406,8 @@ body {
 }
 
 .port-info .label {
-  color: var(--text-muted);
+  color: var(--text-secondary);
+  opacity: 0.75;
   margin-right: 6px;
   text-transform: uppercase;
   font-size: 0.7rem;
@@ -415,7 +416,12 @@ body {
 
 .port-info .value {
   color: var(--text-primary);
-  word-break: break-all;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+  display: inline-block;
+  vertical-align: bottom;
 }
 
 .port-info-row {
@@ -473,7 +479,8 @@ body {
 
 .app-meta {
   font-size: 0.75rem;
-  color: var(--text-muted);
+  color: var(--text-secondary);
+  opacity: 0.85;
 }
 
 .app-meta code {
@@ -514,8 +521,9 @@ body {
 
 .status-stopped {
   background: transparent;
-  border-color: var(--text-muted);
-  color: var(--text-muted);
+  border-color: var(--text-secondary);
+  color: var(--text-secondary);
+  opacity: 0.8;
 }
 
 .detected-port {

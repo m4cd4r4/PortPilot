@@ -225,6 +225,7 @@ function setupEventListeners() {
   // Settings
   document.getElementById('setting-autoscan').addEventListener('change', saveSettings);
   document.getElementById('setting-interval').addEventListener('change', saveSettings);
+  document.getElementById('setting-devtools').addEventListener('change', saveSettings);
   document.getElementById('btn-export').addEventListener('click', exportConfig);
   document.getElementById('btn-import').addEventListener('click', importConfig);
 
@@ -740,15 +741,17 @@ async function loadSettings() {
     state.settings = result.settings;
     document.getElementById('setting-autoscan').checked = state.settings.autoScan !== false;
     document.getElementById('setting-interval').value = state.settings.scanInterval / 1000 || 5;
+    document.getElementById('setting-devtools').checked = state.settings.openDevTools === true;
   }
 }
 
 async function saveSettings() {
   const settings = {
     autoScan: document.getElementById('setting-autoscan').checked,
-    scanInterval: parseInt(document.getElementById('setting-interval').value) * 1000
+    scanInterval: parseInt(document.getElementById('setting-interval').value) * 1000,
+    openDevTools: document.getElementById('setting-devtools').checked
   };
-  
+
   await window.portpilot.config.updateSettings(settings);
   state.settings = settings;
   showToast('Settings saved', 'success');
