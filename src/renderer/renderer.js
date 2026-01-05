@@ -123,6 +123,7 @@ function setupEventListeners() {
   // Header buttons
   document.getElementById('btn-scan').addEventListener('click', scanPorts);
   document.getElementById('btn-add-app').addEventListener('click', () => openAppModal());
+  document.getElementById('btn-refresh-apps').addEventListener('click', refreshApps);
 
   // Tabs
   document.querySelectorAll('.tab').forEach(tab => {
@@ -339,8 +340,38 @@ async function loadApps() {
     }
 
     renderApps();
+    updateAppsCount();
   } catch (error) {
     showToast('Failed to load apps: ' + error.message, 'error');
+  }
+}
+
+async function refreshApps() {
+  const btn = document.getElementById('btn-refresh-apps');
+  btn.disabled = true;
+  btn.innerHTML = '⏳ Refreshing...';
+
+  try {
+    await loadApps();
+    showToast('Apps refreshed', 'success');
+  } catch (error) {
+    showToast('Failed to refresh: ' + error.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '🔄 Refresh';
+  }
+}
+
+function updateAppsCount() {
+  const countBadge = document.getElementById('apps-count');
+  if (countBadge) {
+    const runningCount = state.apps.filter(app => {
+      const managedRunning = state.runningApps.find(r => r.id === app.id && r.running);
+      const detected = state.detectedApps[app.id];
+      return managedRunning || detected;
+    }).length;
+
+    countBadge.textContent = `${state.apps.length} apps • ${runningCount} running`;
   }
 }
 
@@ -448,12 +479,34 @@ async function startApp(appId) {
 }
 
 async function stopApp(appId) {
+  // First try normal stop (for PortPilot-managed apps)
   const result = await window.portpilot.process.stop(appId);
+
   if (result.success) {
     showToast('App stopped', 'success');
+    await loadApps();
+    return;
+  }
+
+  // If that fails, check if app has a detected port and kill by port instead
+  const app = state.apps.find(a => a.id === appId);
+  const detected = state.detectedApps[appId];
+
+  if (detected && detected.port) {
+    if (!confirm(`App not managed by PortPilot. Kill process on port ${detected.port}?`)) {
+      return;
+    }
+
+    const killResult = await window.portpilot.ports.kill(detected.port);
+    if (killResult.success) {
+      showToast(`Killed process on port ${detected.port}`, 'success');
+    } else {
+      showToast(`Failed to kill: ${killResult.error}`, 'error');
+    }
   } else {
     showToast('Failed to stop: ' + result.error, 'error');
   }
+
   await loadApps();
 }
 

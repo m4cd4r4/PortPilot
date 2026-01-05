@@ -56,22 +56,37 @@ function matchPortsToApps(ports, apps) {
       }
     }
 
-    // Strategy 2: Match by preferredPort (medium confidence fallback)
+    // Strategy 2: Match by preferredPort (ONLY if process name suggests it's the right app)
     if (!matched && app.preferredPort) {
       const portInfo = ports.find(p => p.port === app.preferredPort);
       if (portInfo) {
-        // Use first binding if multiple exist
         const binding = portInfo.bindings?.[0] || portInfo;
-        matches[app.id] = {
-          port: portInfo.port,
-          pid: binding.pid,
-          address: binding.address,
-          processName: binding.processName,
-          commandLine: binding.commandLine,
-          conflict: portInfo.conflict,
-          matchType: 'preferredPort',
-          confidence: 'medium'
-        };
+        const cmdLower = (binding.commandLine || '').toLowerCase();
+        const processLower = (binding.processName || '').toLowerCase();
+        const appNameLower = app.name.toLowerCase();
+
+        // Only match if there's some evidence this is the right app
+        // (app name in command line or process name contains node/python/etc)
+        const hasEvidence =
+          cmdLower.includes(appNameLower) ||
+          cmdLower.includes(app.name.replace(/[^a-z0-9]/gi, '').toLowerCase()) ||
+          processLower.includes('node') ||
+          processLower.includes('python') ||
+          processLower.includes('java');
+
+        if (hasEvidence) {
+          matches[app.id] = {
+            port: portInfo.port,
+            pid: binding.pid,
+            address: binding.address,
+            processName: binding.processName,
+            commandLine: binding.commandLine,
+            conflict: portInfo.conflict,
+            matchType: 'preferredPort',
+            confidence: 'low'
+          };
+        }
+        // If no evidence, don't match at all - prevents false positives
       }
     }
   }
