@@ -10,71 +10,36 @@ const path = require('path');
  */
 function matchPortsToApps(ports, apps) {
   const matches = {};
+  const matchedPorts = new Set(); // Track which ports have been matched to prevent duplicates
 
+  // Phase 1: High-confidence CWD matches (priority)
   for (const app of apps) {
-    let matched = false;
+    if (!app.cwd) continue;
 
-    // Strategy 1: Match by CWD in command line (highest confidence)
-    if (app.cwd) {
-      // Normalize paths for comparison
-      const normalizedCwd = path.normalize(app.cwd).toLowerCase();
-      const cwdWithForwardSlash = normalizedCwd.replace(/\\/g, '/');
-      const cwdWithBackSlash = normalizedCwd.replace(/\//g, '\\');
+    // Normalize paths for comparison
+    const normalizedCwd = path.normalize(app.cwd).toLowerCase();
+    const cwdWithForwardSlash = normalizedCwd.replace(/\\/g, '/');
+    const cwdWithBackSlash = normalizedCwd.replace(/\//g, '\\');
 
-      for (const portInfo of ports) {
-        // Check all bindings to find which one matches this app
-        const allBindings = portInfo.bindings || [{
-          pid: portInfo.pid,
-          address: portInfo.address,
-          commandLine: portInfo.commandLine,
-          processName: portInfo.processName
-        }];
+    for (const portInfo of ports) {
+      if (matchedPorts.has(portInfo.port)) continue; // Skip already matched ports
 
-        for (const binding of allBindings) {
-          const cmdLower = (binding.commandLine || '').toLowerCase();
-          const cwdInCmd = cmdLower.includes(cwdWithForwardSlash) ||
-                           cmdLower.includes(cwdWithBackSlash) ||
-                           cmdLower.includes(normalizedCwd);
+      // Check all bindings to find which one matches this app
+      const allBindings = portInfo.bindings || [{
+        pid: portInfo.pid,
+        address: portInfo.address,
+        commandLine: portInfo.commandLine,
+        processName: portInfo.processName
+      }];
 
-          if (cwdInCmd) {
-            // Return the specific binding that matched, with correct address
-            matches[app.id] = {
-              port: portInfo.port,
-              pid: binding.pid,
-              address: binding.address,
-              processName: binding.processName,
-              commandLine: binding.commandLine,
-              conflict: portInfo.conflict,
-              matchType: 'cwd',
-              confidence: 'high'
-            };
-            matched = true;
-            break;
-          }
-        }
-        if (matched) break;
-      }
-    }
-
-    // Strategy 2: Match by preferredPort (ONLY if process name suggests it's the right app)
-    if (!matched && app.preferredPort) {
-      const portInfo = ports.find(p => p.port === app.preferredPort);
-      if (portInfo) {
-        const binding = portInfo.bindings?.[0] || portInfo;
+      for (const binding of allBindings) {
         const cmdLower = (binding.commandLine || '').toLowerCase();
-        const processLower = (binding.processName || '').toLowerCase();
-        const appNameLower = app.name.toLowerCase();
+        const cwdInCmd = cmdLower.includes(cwdWithForwardSlash) ||
+                         cmdLower.includes(cwdWithBackSlash) ||
+                         cmdLower.includes(normalizedCwd);
 
-        // Only match if there's some evidence this is the right app
-        // (app name in command line or process name contains node/python/etc)
-        const hasEvidence =
-          cmdLower.includes(appNameLower) ||
-          cmdLower.includes(app.name.replace(/[^a-z0-9]/gi, '').toLowerCase()) ||
-          processLower.includes('node') ||
-          processLower.includes('python') ||
-          processLower.includes('java');
-
-        if (hasEvidence) {
+        if (cwdInCmd) {
+          // High-confidence match found
           matches[app.id] = {
             port: portInfo.port,
             pid: binding.pid,
@@ -82,13 +47,53 @@ function matchPortsToApps(ports, apps) {
             processName: binding.processName,
             commandLine: binding.commandLine,
             conflict: portInfo.conflict,
-            matchType: 'preferredPort',
-            confidence: 'low'
+            matchType: 'cwd',
+            confidence: 'high'
           };
+          matchedPorts.add(portInfo.port); // Mark port as matched
+          break;
         }
-        // If no evidence, don't match at all - prevents false positives
       }
+      if (matches[app.id]) break; // Found match, move to next app
     }
+  }
+
+  // Phase 2: Low-confidence preferredPort matches (fallback)
+  for (const app of apps) {
+    if (matches[app.id]) continue; // Already matched in Phase 1
+    if (!app.preferredPort) continue;
+
+    const portInfo = ports.find(p => p.port === app.preferredPort);
+    if (!portInfo || matchedPorts.has(portInfo.port)) continue; // Port not found or already matched
+
+    const binding = portInfo.bindings?.[0] || portInfo;
+    const cmdLower = (binding.commandLine || '').toLowerCase();
+    const processLower = (binding.processName || '').toLowerCase();
+    const appNameLower = app.name.toLowerCase();
+
+    // Only match if there's some evidence this is the right app
+    // (app name in command line or process name contains node/python/etc)
+    const hasEvidence =
+      cmdLower.includes(appNameLower) ||
+      cmdLower.includes(app.name.replace(/[^a-z0-9]/gi, '').toLowerCase()) ||
+      processLower.includes('node') ||
+      processLower.includes('python') ||
+      processLower.includes('java');
+
+    if (hasEvidence) {
+      matches[app.id] = {
+        port: portInfo.port,
+        pid: binding.pid,
+        address: binding.address,
+        processName: binding.processName,
+        commandLine: binding.commandLine,
+        conflict: portInfo.conflict,
+        matchType: 'preferredPort',
+        confidence: 'low'
+      };
+      matchedPorts.add(portInfo.port); // Mark port as matched
+    }
+    // If no evidence, don't match at all - prevents false positives
   }
 
   return matches;
