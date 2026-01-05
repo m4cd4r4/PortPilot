@@ -35,6 +35,12 @@ async function startApp(appConfig) {
         ComSpec: process.env.ComSpec || 'C:\\Windows\\System32\\cmd.exe'
       };
 
+      // Auto-set PORT environment variable if preferredPort is specified
+      // This ensures apps like react-scripts, vite, etc. use the correct port
+      if (appConfig.preferredPort && !execEnv.PORT) {
+        execEnv.PORT = appConfig.preferredPort.toString();
+      }
+
       const childProcess = exec(command, {
         cwd: cwd || process.cwd(),
         env: execEnv,

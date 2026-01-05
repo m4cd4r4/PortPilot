@@ -2,6 +2,8 @@
 
 **Localhost Port Manager** — A desktop app for developers to manage local development ports and applications.
 
+🌐 **[View Landing Page & Download](https://m4cd4r4.github.io/PortPilot/)** 🌐
+
 [![Version](https://img.shields.io/badge/version-1.3.0-blue.svg)](https://github.com/m4cd4r4/PortPilot/releases/tag/v1.3.0)
 [![Tests](https://img.shields.io/badge/tests-20%2F20%20passing-brightgreen.svg)](TESTING_SUMMARY.md)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
