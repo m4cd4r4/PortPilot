@@ -9,6 +9,7 @@ const state = {
   apps: [],
   runningApps: [],
   detectedApps: {},  // Map of appId -> detected port info
+  startingApps: {},  // Map of appId -> { countdown, interval, port }
   settings: {},
   filter: '',
   theme: 'tokyonight',
@@ -32,6 +33,85 @@ function detectRequirements(app) {
     database: cmd.includes('postgres') || cmd.includes('mysql') || cmd.includes('redis') || cmd.includes('mongo') || cmd.includes('sqlite'),
     autoStart: app.autoStart || false,
     remote: cwd.includes('ssh') || cwd.includes('@') || app.remote || false
+  };
+}
+
+/**
+ * Detect startup delay based on app type
+ * @param {Object} app - App configuration
+ * @returns {number} Delay in seconds
+ */
+function detectStartupDelay(app) {
+  // Check if user configured a custom delay
+  if (app.startupDelay && app.startupDelay > 0) {
+    return app.startupDelay;
+  }
+
+  const cmd = (app.command || '').toLowerCase();
+
+  // Docker containers take longer
+  if (cmd.includes('docker') || cmd.includes('compose')) {
+    return 20;
+  }
+
+  // Node/npm/pnpm projects
+  if (cmd.includes('npm') || cmd.includes('pnpm') || cmd.includes('yarn') || cmd.includes('node') || cmd.includes('bun')) {
+    return 10;
+  }
+
+  // Python projects
+  if (cmd.includes('python') || cmd.includes('uvicorn') || cmd.includes('flask') || cmd.includes('django')) {
+    return 5;
+  }
+
+  // Default fallback
+  return 8;
+}
+
+/**
+ * Poll port to check if it's actually responding
+ * @param {number} port - Port to check
+ * @returns {Promise<boolean>} True if port is listening
+ */
+async function checkPortReady(port) {
+  try {
+    const result = await window.portpilot.ports.check(port);
+    return result.inUse && result.info;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Start countdown timer with port polling
+ * @param {string} appId - App ID
+ * @param {number} port - Port to poll
+ * @param {number} maxDelay - Maximum delay in seconds
+ */
+function startPortReadinessCheck(appId, port, maxDelay) {
+  let elapsed = 0;
+
+  state.startingApps[appId] = {
+    countdown: maxDelay,
+    port,
+    interval: setInterval(async () => {
+      elapsed++;
+      const remaining = maxDelay - elapsed;
+
+      // Check if port is ready
+      const ready = await checkPortReady(port);
+
+      if (ready || remaining <= 0) {
+        // Port is ready or timeout reached
+        clearInterval(state.startingApps[appId].interval);
+        delete state.startingApps[appId];
+        await loadApps(); // Refresh to show final state
+      } else {
+        // Update countdown
+        state.startingApps[appId].countdown = remaining;
+        renderApps(); // Just update the UI, don't reload
+      }
+    }, 1000)
   };
 }
 
@@ -306,10 +386,10 @@ async function openInBrowser(appId) {
 
   if (port) {
     // Use correct host based on binding address
-    // IPv6 bindings ([::1] or [::]) use localhost, IPv4 (0.0.0.0 or 127.0.0.1) use 127.0.0.1
+    // IPv6 bindings ([::1] or [::]) use [::1], IPv4 (0.0.0.0 or 127.0.0.1) use 127.0.0.1
     const address = detected?.address || '';
     const isIPv6 = address.startsWith('[');
-    const host = isIPv6 ? 'localhost' : '127.0.0.1';
+    const host = isIPv6 ? '[::1]' : '127.0.0.1';
     const url = `http://${host}:${port}`;
 
     try {
@@ -404,10 +484,16 @@ function renderApps() {
       portDisplay = ` • Port ${app.preferredPort}`;
     }
 
-    // Status text with IPv4/IPv6 indicator
+    // Check if app is starting (countdown active)
+    const starting = state.startingApps[app.id];
+
+    // Status text with IPv4/IPv6 indicator and countdown
     let statusText = '○ Stopped';
     let statusClass = 'status-stopped';
-    if (detected) {
+    if (starting) {
+      statusText = `● Starting... ${starting.countdown}s`;
+      statusClass = 'status-starting';
+    } else if (detected) {
       statusText = `● Running :${detected.port} <span class="ip-version">${ipVersion}</span>`;
       statusClass = 'status-running';
     } else if (managedRunning) {
@@ -449,9 +535,9 @@ function renderApps() {
           ${statusText}
         </span>
         <div class="app-actions">
-          ${isRunning
-            ? `<button class="btn btn-small btn-secondary" onclick="openInBrowser('${app.id}')" title="Open in browser">🌐</button>
-               <button class="btn btn-small btn-danger" onclick="stopApp('${app.id}')">Stop</button>`
+          ${isRunning || starting
+            ? `<button class="btn btn-small btn-secondary" onclick="openInBrowser('${app.id}')" title="${starting ? 'Waiting for app to be ready...' : 'Open in browser'}" ${starting ? 'disabled' : ''}>🌐</button>
+               <button class="btn btn-small btn-danger" onclick="stopApp('${app.id}')" ${starting ? 'disabled' : ''}>Stop</button>`
             : `<button class="btn btn-small btn-primary" onclick="startApp('${app.id}')">Start</button>`
           }
           <button class="btn btn-small btn-secondary" onclick="editApp('${app.id}')">Edit</button>
@@ -516,6 +602,12 @@ async function startApp(appId) {
   const result = await window.portpilot.process.start(app);
   if (result.success) {
     showToast(`${app.name} started (PID: ${result.pid})`, 'success');
+
+    // Start port readiness check if app has a preferred port
+    if (app.preferredPort) {
+      const delay = detectStartupDelay(app);
+      startPortReadinessCheck(appId, app.preferredPort, delay);
+    }
   } else {
     showToast(`Failed to start: ${result.error}`, 'error');
   }

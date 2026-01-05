@@ -500,6 +500,18 @@ body {
   color: var(--accent-green);
 }
 
+.status-starting {
+  background: transparent;
+  border-color: var(--accent-blue);
+  color: var(--accent-blue);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
 .status-stopped {
   background: transparent;
   border-color: var(--text-muted);
