@@ -466,15 +466,60 @@ async function startApp(appId) {
   const app = state.apps.find(a => a.id === appId);
   if (!app) return;
 
+  // PRE-FLIGHT CHECK: If app has a preferred port, check if it's in use
+  if (app.preferredPort) {
+    const portCheck = await window.portpilot.ports.check(app.preferredPort);
+
+    if (portCheck.inUse && portCheck.info) {
+      const blocker = portCheck.info;
+      const blockerName = blocker.processName || 'Unknown process';
+      const blockerPid = blocker.pid;
+
+      // Check if blocker is a registered app
+      let blockerAppName = null;
+      for (const [appId, detectedPort] of Object.entries(state.detectedApps)) {
+        if (detectedPort.port === app.preferredPort) {
+          const blockerApp = state.apps.find(a => a.id === appId);
+          if (blockerApp) {
+            blockerAppName = blockerApp.name;
+            break;
+          }
+        }
+      }
+
+      // Show conflict dialog
+      const message = blockerAppName
+        ? `Port ${app.preferredPort} is in use by ${blockerAppName} (${blockerName}, PID ${blockerPid}).\n\nStop ${blockerAppName} and start ${app.name}?`
+        : `Port ${app.preferredPort} is in use by ${blockerName} (PID ${blockerPid}).\n\nKill this process and start ${app.name}?`;
+
+      if (!confirm(message)) {
+        return; // User cancelled
+      }
+
+      // Kill the blocker
+      showToast(`Stopping process on port ${app.preferredPort}...`, 'info');
+      const killResult = await window.portpilot.ports.kill(app.preferredPort);
+
+      if (!killResult.success) {
+        showToast(`Failed to kill blocker: ${killResult.error}`, 'error');
+        return;
+      }
+
+      // Wait a moment for port to be released
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+  }
+
+  // Start the app
   showToast(`Starting ${app.name}...`, 'success');
-  
+
   const result = await window.portpilot.process.start(app);
   if (result.success) {
     showToast(`${app.name} started (PID: ${result.pid})`, 'success');
   } else {
     showToast(`Failed to start: ${result.error}`, 'error');
   }
-  
+
   await loadApps();
 }
 
