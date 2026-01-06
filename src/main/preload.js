@@ -28,10 +28,22 @@ contextBridge.exposeInMainWorld('portpilot', {
     getApps: () => ipcRenderer.invoke('config:getApps'),
     saveApp: (appConfig) => ipcRenderer.invoke('config:saveApp', appConfig),
     deleteApp: (appId) => ipcRenderer.invoke('config:deleteApp', appId),
+    toggleFavorite: (appId) => ipcRenderer.invoke('config:toggleFavorite', appId),
+    deleteAllApps: () => ipcRenderer.invoke('config:deleteAllApps'),
     getSettings: () => ipcRenderer.invoke('config:getSettings'),
     updateSettings: (settings) => ipcRenderer.invoke('config:updateSettings', settings),
     export: () => ipcRenderer.invoke('config:export'),
     import: (json) => ipcRenderer.invoke('config:import', json)
+  },
+
+  // Discovery operations
+  discovery: {
+    scan: (scanPaths) => ipcRenderer.invoke('discovery:scan', scanPaths),
+    addScanPath: (path) => ipcRenderer.invoke('discovery:addScanPath', path),
+    removeScanPath: (path) => ipcRenderer.invoke('discovery:removeScanPath', path),
+    getSettings: () => ipcRenderer.invoke('discovery:getSettings'),
+    updateSettings: (settings) => ipcRenderer.invoke('discovery:updateSettings', settings),
+    detectProject: (dirPath) => ipcRenderer.invoke('discovery:detectProject', dirPath)
   },
 
   // Event listeners
@@ -44,6 +56,7 @@ contextBridge.exposeInMainWorld('portpilot', {
 
   // Shell operations
   openExternal: (url) => ipcRenderer.invoke('shell:openExternal', url),
+  browseDirectory: () => ipcRenderer.invoke('shell:browseDirectory'),
 
   // Docker operations
   docker: {

@@ -4,44 +4,63 @@
 
 🌐 **[View Landing Page & Download](https://m4cd4r4.github.io/PortPilot/)** 🌐
 
-[![Version](https://img.shields.io/badge/version-1.3.0-blue.svg)](https://github.com/m4cd4r4/PortPilot/releases/tag/v1.3.0)
+[![Version](https://img.shields.io/badge/version-1.4.0-blue.svg)](https://github.com/m4cd4r4/PortPilot/releases/tag/v1.4.0)
 [![Tests](https://img.shields.io/badge/tests-20%2F20%20passing-brightgreen.svg)](TESTING_SUMMARY.md)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 ![PortPilot](screenshots/03-apps-tab.png)
 
-## ✨ What's New in v1.3.0
+## ✨ What's New in v1.4.0
 
-### New Features
-- **DevTools Setting** — Toggle DevTools opening on startup (dev mode only)
-- **Process Cleanup** — Automatic cleanup after failed starts (no more ghost processes!)
-- **Port Conflict Detection** — Pre-flight checks and resolution dialogs
-- **Smart Startup Countdown** — Visual feedback when apps are starting
-- **App Configuration Editing** — Add/delete apps directly in the UI
-- **Refresh Button** — Manual status updates in My Apps tab
+### 🔍 Browse & Auto-detect Project
+- **One-Click Project Setup** — Click "Browse & Auto-detect" in Add App modal to automatically configure any project
+- **Recursive Scanning** — Finds projects up to 2 levels deep in subdirectories
+- **Package Manager Detection** — Auto-detects pnpm, yarn, or npm and uses the correct command
+- **Smart Port Detection** — Only uses explicit port config (no more "everything gets port 3000")
+- **Works with Monorepos** — Finds the actual project inside parent folders (e.g., `manual-build/` inside root)
 
-### UI/UX Improvements
-- **20% Larger Port Numbers** — Easier scanning at a glance
-- **Better Spacing** — Increased card padding for better readability
-- **2x More Readable Labels** — Improved contrast and visibility
-- **Clean Text Truncation** — Ellipsis for long paths instead of awkward breaks
-- **Visible Status Badges** — STOPPED badges now clearly visible
-- **Prominent App Count** — Easy to see how many apps are running
+### ⚠️ Port Conflict Warnings
+- **Unknown Process Detection** — Warns when unknown processes block your app's preferred port
+- **🌐 Preview Button** — Click globe to see what's running on the blocked port
+- **Kill Blocker Button** — Terminate blocking processes with one click
+- **Toast Notifications** — Visual warnings when port conflicts are detected
+- **Improved Matching** — Two-phase algorithm with keyword extraction prevents false positives
 
-### Testing
-- **100% Test Coverage** — 20/20 tests passing (11 core + 9 feature tests)
-- **Screenshot Automation** — `npm run screenshots` for UI documentation
-- **Test Infrastructure** — Comprehensive E2E suite with Playwright
+### 🔍 Project Auto-Discovery
+- **Automatic Project Detection** — Scan your project directories to automatically discover Node.js, Docker, Python, and static site projects
+- **Smart Metadata Extraction** — Automatically detects project names, start commands, and ports
+- **User-Configurable Paths** — Add your own scan directories (e.g., `C:\Projects`, `C:\Dev`)
+- **Confidence Scoring** — Shows match confidence (95%, 85%, etc.) for each discovered project
+- **Bulk Import** — Add all discovered projects at once or pick individual ones
+- **Scan Depth Control** — Configure how deep to search (1-5 directory levels)
+
+### ⭐ Favorites System
+- **Star Your Apps** — Click the star (⭐/☆) button to mark frequently-used apps as favorites
+- **Organized Sections** — Apps automatically organized into:
+  - **⭐ Favorites** — Starred apps at the top for quick access
+  - **📁 Other Projects** — Non-starred apps below
+- **Collapsible Sections** — Click section headers to expand/collapse
+- **Persistent State** — Section collapse state saved across app restarts
+
+### 🗑 Delete All
+- **Bulk Delete** — Remove all apps in one click with "Delete All" button
+- **Safety First** — Strong confirmation modal warns before deletion
+- **Export Reminder** — Prompts to export config before deleting
 
 [See full changelog →](CHANGELOG.md)
 
 ## Features
 
+- **🔍 Browse & Auto-detect** — One-click project setup with recursive scanning and package manager detection
+- **⚠️ Port Conflict Warnings** — Visual warnings when unknown processes block app ports, with preview and kill options
+- **🔍 Project Auto-Discovery** — Scan directories to automatically find and import dev projects (Node.js, Docker, Python, static sites)
+- **⭐ Favorites** — Star frequently-used apps for quick access with collapsible sections
+- **🗑 Bulk Operations** — Delete all apps at once with safety confirmations
 - **Port Scanner** — Discover all active TCP ports with process details (name, PID, command line)
 - **One-Click Kill** — Free up stuck ports instantly
 - **App Registry** — Register your dev projects with start commands and preferred ports
 - **Process Management** — Start/stop apps directly from PortPilot
-- **Auto-Detection** — Automatically detects running apps by matching ports to registered projects
+- **Smart Port Matching** — Two-phase algorithm with CWD validation and keyword extraction for accurate detection
 - **Requirement Badges** — Visual indicators for Docker, Node.js, Python, and more
 - **Docker Integration** — Click to start Docker Desktop, with status detection
 - **IPv4/IPv6 Awareness** — Shows which protocol your app is bound to
@@ -80,10 +99,10 @@ Brutalist Dark theme with high contrast and bold design.
 
 ### Download (Recommended)
 
-**Latest Release: v1.3.0**
+**Latest Release: v1.4.0**
 
-- [PortPilot-1.3.0-x64.exe](https://github.com/m4cd4r4/PortPilot/releases/download/v1.3.0/PortPilot-1.3.0-x64.exe) (72 MB) — NSIS Installer
-- [PortPilot-1.3.0-portable.exe](https://github.com/m4cd4r4/PortPilot/releases/download/v1.3.0/PortPilot-1.3.0-portable.exe) (72 MB) — Portable Version
+- [PortPilot-1.4.0-x64.exe](https://github.com/m4cd4r4/PortPilot/releases/download/v1.4.0/PortPilot-1.4.0-x64.exe) — NSIS Installer
+- [PortPilot-1.4.0-portable.exe](https://github.com/m4cd4r4/PortPilot/releases/download/v1.4.0/PortPilot-1.4.0-portable.exe) — Portable Version
 
 ### Build from Source
 
@@ -113,16 +132,37 @@ Click "Scan Ports" to discover all listening TCP ports. You'll see:
 Click the ❌ button to kill any process.
 
 ### Register Apps
+
+#### Option 1: Auto-detect (Recommended)
+1. Click "Add App"
+2. Click **"🔍 Browse & Auto-detect Project"**
+3. Select your project folder (e.g., `C:\Scratch\MyApp`)
+4. PortPilot automatically fills in:
+   - **Name** from package.json
+   - **Command** with the correct package manager (`pnpm run dev`, `yarn dev`, `npm run dev`)
+   - **Working Directory** path
+   - **Preferred Port** from config files (if found)
+5. Review and edit if needed
+6. Click "Save App"
+
+#### Option 2: Manual Entry
 1. Click "Add App"
 2. Fill in:
    - **Name**: Display name (e.g., "AzurePrep Frontend")
    - **Command**: Start command (e.g., `npm run dev`)
    - **Working Directory**: Project folder path
-   - **Preferred Port**: The port your app should use
+   - **Preferred Port**: The port your app should use (or leave blank to assign later)
    - **Fallback Range**: Alternative ports if preferred is taken (e.g., `3001-3010`)
 3. Click "Save App"
 
 Now you can start/stop your apps directly from PortPilot with visual countdown feedback!
+
+### Handle Port Conflicts
+When a port is blocked by an unknown process:
+1. You'll see **"⚠️ Port Blocked"** status on the app card
+2. Click **🌐 Globe button** to preview what's running on that port
+3. Click **"Kill Blocker"** to terminate the blocking process
+4. Click **"Start"** to launch your app
 
 ## App Badges
 
@@ -267,7 +307,17 @@ npm run screenshots
 
 ## Version History
 
-### v1.3.0 (2026-01-05) — Current Release
+### v1.4.0 (2026-01-06) — Current Release
+- 🔍 **Browse & Auto-detect** — One-click project setup with recursive scanning
+- 📦 **Package Manager Detection** — Auto-detects pnpm, yarn, npm
+- ⚠️ **Port Conflict Warnings** — Visual warnings with preview and kill options
+- 🔍 **Project Auto-Discovery** — Bulk scan and import projects
+- ⭐ **Favorites System** — Star apps for quick access
+- 🗑 **Delete All** — Bulk delete with safety confirmations
+- ✨ **Improved Port Matching** — Two-phase algorithm with keyword extraction
+- ✨ **Smart Port Detection** — No more hard-coded framework defaults
+
+### v1.3.0 (2026-01-05)
 - 7 new features (DevTools, process cleanup, port conflict detection, etc.)
 - 7 UI/UX improvements (larger port numbers, better spacing, improved readability)
 - 100% test coverage (20/20 tests passing)

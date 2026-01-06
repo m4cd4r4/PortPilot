@@ -6,11 +6,12 @@ const path = require('path');
  * Match scanned ports to registered apps by analyzing command line and working directory
  * @param {Array} ports - Scanned port info
  * @param {Array} apps - Registered apps from config
- * @returns {Object} Map of appId -> detected port info
+ * @returns {Object} { matches: Map of appId -> detected port info, unknownConflicts: Array of port conflicts }
  */
 function matchPortsToApps(ports, apps) {
   const matches = {};
   const matchedPorts = new Set(); // Track which ports have been matched to prevent duplicates
+  const unknownConflicts = []; // Track ports with unknown processes blocking registered apps
 
   // Phase 1: High-confidence CWD matches (priority)
   for (const app of apps) {
@@ -58,7 +59,7 @@ function matchPortsToApps(ports, apps) {
     }
   }
 
-  // Phase 2: Low-confidence preferredPort matches (fallback)
+  // Phase 2: Stricter preferredPort matches with CWD validation
   for (const app of apps) {
     if (matches[app.id]) continue; // Already matched in Phase 1
     if (!app.preferredPort) continue;
@@ -71,16 +72,32 @@ function matchPortsToApps(ports, apps) {
     const processLower = (binding.processName || '').toLowerCase();
     const appNameLower = app.name.toLowerCase();
 
-    // Only match if there's some evidence this is the right app
-    // (app name in command line or process name contains node/python/etc)
-    const hasEvidence =
-      cmdLower.includes(appNameLower) ||
-      cmdLower.includes(app.name.replace(/[^a-z0-9]/gi, '').toLowerCase()) ||
-      processLower.includes('node') ||
-      processLower.includes('python') ||
-      processLower.includes('java');
+    // Extract keywords from app name for better matching
+    const appKeywords = app.name.toLowerCase()
+      .replace(/[^a-z0-9]/gi, '')
+      .split(/(?=[A-Z])/) // Split on capital letters (e.g., "AzurePrep" -> ["azure", "prep"])
+      .filter(word => word.length > 3); // Only meaningful words
 
-    if (hasEvidence) {
+    // Check for CWD match (partial - just the folder name)
+    let cwdMatch = false;
+    if (app.cwd) {
+      const normalizedCwd = path.normalize(app.cwd).toLowerCase();
+      const cwdFolderName = path.basename(normalizedCwd);
+      cwdMatch = cmdLower.includes(normalizedCwd) ||
+                 cmdLower.includes(normalizedCwd.replace(/\\/g, '/')) ||
+                 cmdLower.includes(cwdFolderName);
+    }
+
+    // Check for strong app name evidence in command or process
+    const strongAppNameMatch =
+      cmdLower.includes(appNameLower) ||
+      appKeywords.some(keyword => cmdLower.includes(keyword) || processLower.includes(keyword));
+
+    // STRICT MATCHING: Require CWD match OR strong app name match
+    // Don't match just because it's a Node.js process
+    const isConfidentMatch = cwdMatch || strongAppNameMatch;
+
+    if (isConfidentMatch) {
       matches[app.id] = {
         port: portInfo.port,
         pid: binding.pid,
@@ -88,15 +105,27 @@ function matchPortsToApps(ports, apps) {
         processName: binding.processName,
         commandLine: binding.commandLine,
         conflict: portInfo.conflict,
-        matchType: 'preferredPort',
-        confidence: 'low'
+        matchType: cwdMatch ? 'preferredPort-cwd' : 'preferredPort-name',
+        confidence: cwdMatch ? 'medium' : 'low'
       };
       matchedPorts.add(portInfo.port); // Mark port as matched
+    } else {
+      // Port is occupied but doesn't match this app - record as unknown conflict
+      unknownConflicts.push({
+        appId: app.id,
+        appName: app.name,
+        port: app.preferredPort,
+        occupiedBy: {
+          pid: binding.pid,
+          processName: binding.processName,
+          commandLine: binding.commandLine,
+          address: binding.address
+        }
+      });
     }
-    // If no evidence, don't match at all - prevents false positives
   }
 
-  return matches;
+  return { matches, unknownConflicts };
 }
 
 /**
@@ -123,8 +152,8 @@ function setupIpcHandlers(ipcMain, configStore) {
     try {
       const ports = await scanPorts();
       const apps = configStore.getApps();
-      const matches = matchPortsToApps(ports, apps);
-      return { success: true, ports, matches };
+      const { matches, unknownConflicts } = matchPortsToApps(ports, apps);
+      return { success: true, ports, matches, unknownConflicts };
     } catch (error) {
       return { success: false, error: error.message };
     }
@@ -284,6 +313,142 @@ function setupIpcHandlers(ipcMain, configStore) {
     }
   });
 
+  // ============ Favorites Operations ============
+
+  /** Toggle favorite status */
+  ipcMain.handle('config:toggleFavorite', async (_, appId) => {
+    try {
+      const app = configStore.getApp(appId);
+      if (!app) return { success: false, error: 'App not found' };
+
+      app.isFavorite = !app.isFavorite;
+      app.updatedAt = new Date().toISOString();
+
+      const updated = configStore.saveApp(app);
+      return { success: true, app: updated };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+
+  /** Delete all apps */
+  ipcMain.handle('config:deleteAllApps', async () => {
+    try {
+      const count = configStore.config.apps.length;
+      configStore.config.apps = [];
+      configStore.save();
+      return { success: true, count };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+
+  // ============ Discovery Operations ============
+
+  /** Scan directories for projects */
+  ipcMain.handle('discovery:scan', async (_, scanPaths) => {
+    try {
+      const { scanDirectories } = require('./projectScanner');
+      const settings = configStore.getSettings();
+      const paths = scanPaths || settings.discovery?.scanPaths || [];
+
+      if (paths.length === 0) {
+        return { success: true, projects: [], total: 0 };
+      }
+
+      const discovered = await scanDirectories(paths, {
+        maxDepth: settings.discovery?.maxDepth || 2,
+        ignorePatterns: settings.discovery?.ignorePatterns || []
+      });
+
+      // Filter out already registered apps (by cwd matching)
+      const existingApps = configStore.getApps();
+      const newProjects = discovered.filter(proj => {
+        const normalizedPath = path.normalize(proj.path).toLowerCase();
+        return !existingApps.some(app =>
+          path.normalize(app.cwd).toLowerCase() === normalizedPath
+        );
+      });
+
+      return { success: true, projects: newProjects, total: discovered.length };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+
+  /** Add a scan path */
+  ipcMain.handle('discovery:addScanPath', async (_, dirPath) => {
+    try {
+      const fs = require('fs');
+      const settings = configStore.getSettings();
+      const scanPaths = settings.discovery?.scanPaths || [];
+
+      // Validate path exists
+      if (!fs.existsSync(dirPath)) {
+        return { success: false, error: 'Directory does not exist' };
+      }
+
+      // Normalize path
+      const normalizedPath = path.normalize(dirPath);
+
+      // Avoid duplicates
+      if (scanPaths.some(p => path.normalize(p).toLowerCase() === normalizedPath.toLowerCase())) {
+        return { success: false, error: 'Path already exists' };
+      }
+
+      scanPaths.push(normalizedPath);
+      configStore.updateSettings({
+        discovery: { ...settings.discovery, scanPaths }
+      });
+
+      return { success: true, scanPaths };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+
+  /** Remove a scan path */
+  ipcMain.handle('discovery:removeScanPath', async (_, dirPath) => {
+    try {
+      const settings = configStore.getSettings();
+      const normalizedPath = path.normalize(dirPath);
+      const scanPaths = (settings.discovery?.scanPaths || []).filter(p =>
+        path.normalize(p).toLowerCase() !== normalizedPath.toLowerCase()
+      );
+
+      configStore.updateSettings({
+        discovery: { ...settings.discovery, scanPaths }
+      });
+
+      return { success: true, scanPaths };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+
+  /** Get discovery settings */
+  ipcMain.handle('discovery:getSettings', async () => {
+    try {
+      const settings = configStore.getSettings();
+      return { success: true, settings: settings.discovery || {} };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+
+  /** Update discovery settings */
+  ipcMain.handle('discovery:updateSettings', async (_, newSettings) => {
+    try {
+      const settings = configStore.getSettings();
+      configStore.updateSettings({
+        discovery: { ...settings.discovery, ...newSettings }
+      });
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+
   // ============ Shell Operations ============
 
   /** Open URL in default browser */
@@ -292,6 +457,40 @@ function setupIpcHandlers(ipcMain, configStore) {
       const { shell } = require('electron');
       await shell.openExternal(url);
       return { success: true };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+
+  /** Browse for directory */
+  ipcMain.handle('shell:browseDirectory', async () => {
+    try {
+      const { dialog, BrowserWindow } = require('electron');
+      const result = await dialog.showOpenDialog(BrowserWindow.getFocusedWindow(), {
+        properties: ['openDirectory']
+      });
+
+      if (result.canceled || result.filePaths.length === 0) {
+        return { success: false, canceled: true };
+      }
+
+      return { success: true, path: result.filePaths[0] };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+
+  /** Detect project from a single directory */
+  ipcMain.handle('discovery:detectProject', async (_, dirPath) => {
+    try {
+      const { detectProject } = require('./projectScanner');
+      const project = await detectProject(dirPath);
+
+      if (!project) {
+        return { success: false, error: 'No project detected in this directory' };
+      }
+
+      return { success: true, project };
     } catch (error) {
       return { success: false, error: error.message };
     }

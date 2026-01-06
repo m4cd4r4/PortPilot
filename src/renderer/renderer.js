@@ -9,11 +9,17 @@ const state = {
   apps: [],
   runningApps: [],
   detectedApps: {},  // Map of appId -> detected port info
+  unknownConflicts: [],  // Array of port conflicts with unknown processes
   startingApps: {},  // Map of appId -> { countdown, interval, port }
   settings: {},
   filter: '',
   theme: 'tokyonight',
-  dockerRunning: false  // Track Docker Desktop status
+  dockerRunning: false,  // Track Docker Desktop status
+  favoritesExpanded: true,  // Favorites section collapse state
+  otherProjectsExpanded: true,  // Other projects section collapse state
+  deleteAppId: null,  // Track app being deleted for confirmation modal
+  selectedApps: new Set(),  // Multi-select for apps
+  selectedProjects: new Set()  // Multi-select for discovered projects
 };
 
 // ============ Requirement Detection ============
@@ -220,6 +226,7 @@ function setupEventListeners() {
   document.getElementById('modal-close').addEventListener('click', closeModal);
   document.getElementById('btn-cancel').addEventListener('click', closeModal);
   document.getElementById('btn-find-port').addEventListener('click', findFreePort);
+  document.getElementById('btn-auto-detect').addEventListener('click', browseAndAutoDetect);
   dom.appForm.addEventListener('submit', handleAppSubmit);
 
   // Settings
@@ -228,6 +235,25 @@ function setupEventListeners() {
   document.getElementById('setting-devtools').addEventListener('change', saveSettings);
   document.getElementById('btn-export').addEventListener('click', exportConfig);
   document.getElementById('btn-import').addEventListener('click', importConfig);
+
+  // Discovery
+  document.getElementById('btn-add-scan-path').addEventListener('click', addScanPath);
+  document.getElementById('btn-discover-projects').addEventListener('click', discoverProjects);
+  document.getElementById('discoveries-close').addEventListener('click', () => {
+    document.getElementById('modal-discoveries').classList.add('hidden');
+  });
+  document.getElementById('btn-discoveries-cancel').addEventListener('click', () => {
+    document.getElementById('modal-discoveries').classList.add('hidden');
+  });
+  document.getElementById('btn-select-all-projects').addEventListener('click', selectAllProjects);
+  document.getElementById('btn-add-selected-projects').addEventListener('click', addSelectedProjects);
+  document.getElementById('btn-add-all-discoveries').addEventListener('click', addAllDiscoveries);
+
+  // Delete Confirmation Modal
+  document.getElementById('delete-confirm-close').addEventListener('click', closeDeleteConfirm);
+  document.getElementById('btn-delete-cancel').addEventListener('click', closeDeleteConfirm);
+  document.getElementById('btn-delete-confirm').addEventListener('click', confirmDeleteApp);
+  document.getElementById('btn-delete-all-instead').addEventListener('click', deleteAllInstead);
 
   // Theme selector
   document.querySelectorAll('.theme-btn').forEach(btn => {
@@ -243,9 +269,11 @@ function setupEventListeners() {
   document.addEventListener('keydown', (e) => {
     // Don't trigger shortcuts when typing in inputs
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
-      // Allow Escape to close modal even when in input
+      // Allow Escape to close modals even when in input
       if (e.key === 'Escape') {
         closeModal();
+        closeDeleteConfirm();
+        document.getElementById('modal-discoveries').classList.add('hidden');
       }
       return;
     }
@@ -279,6 +307,8 @@ function setupEventListeners() {
       }
     } else if (e.key === 'Escape') {
       closeModal();
+      closeDeleteConfirm();
+      document.getElementById('modal-discoveries').classList.add('hidden');
     }
   });
 }
@@ -418,6 +448,12 @@ async function loadApps() {
     if (scanResult.success) {
       state.ports = scanResult.ports;
       state.detectedApps = scanResult.matches || {};
+      state.unknownConflicts = scanResult.unknownConflicts || [];
+
+      // Show warnings for unknown port conflicts
+      if (state.unknownConflicts.length > 0) {
+        showUnknownConflictWarnings(state.unknownConflicts);
+      }
     }
 
     renderApps();
@@ -464,89 +500,150 @@ function renderApps() {
     return;
   }
 
-  dom.appsList.innerHTML = state.apps.map(app => {
-    // Check if app is running via PortPilot's process manager
-    const managedRunning = state.runningApps.find(r => r.id === app.id && r.running);
-    // Check if app is detected running externally via port scan
-    const detected = state.detectedApps[app.id];
-    const isRunning = managedRunning || detected;
+  // Separate favorites and non-favorites
+  const favorites = state.apps.filter(app => app.isFavorite);
+  const others = state.apps.filter(app => !app.isFavorite);
 
-    // Detect requirements
-    const reqs = detectRequirements(app);
+  let html = '';
 
-    // Determine port display with IPv4/IPv6 indicator
-    let portDisplay = '';
-    let ipVersion = '';
-    if (detected) {
-      const isIPv6 = detected.address?.startsWith('[');
-      ipVersion = isIPv6 ? 'v6' : 'v4';
-      portDisplay = ` • <span class="detected-port" title="Detected on ${detected.address}">:${detected.port} ✓</span>`;
-    } else if (app.preferredPort) {
-      portDisplay = ` • Port ${app.preferredPort}`;
-    }
-
-    // Check if app is starting (countdown active)
-    const starting = state.startingApps[app.id];
-
-    // Status text with IPv4/IPv6 indicator and countdown
-    let statusText = '○ Stopped';
-    let statusClass = 'status-stopped';
-    if (starting) {
-      statusText = `● Starting... ${starting.countdown}s`;
-      statusClass = 'status-starting';
-    } else if (detected) {
-      statusText = `● Running :${detected.port} <span class="ip-version">${ipVersion}</span>`;
-      statusClass = 'status-running';
-    } else if (managedRunning) {
-      statusText = '● Running';
-      statusClass = 'status-running';
-    }
-
-    // Build requirement badges
-    const badges = [];
-    if (reqs.docker) {
-      const dockerReady = state.dockerRunning;
-      const dockerClass = dockerReady ? 'badge-ready' : 'badge-warning';
-      const dockerTitle = dockerReady ? 'Docker is running' : 'Docker Desktop not running - click to start';
-      const dockerClick = dockerReady ? '' : `onclick="startDocker()"`;
-      badges.push(`<span class="req-badge docker ${dockerClass}" title="${dockerTitle}" ${dockerClick}>🐳</span>`);
-    }
-    if (reqs.node) badges.push(`<span class="req-badge node" title="Node.js app">📦</span>`);
-    if (reqs.python) badges.push(`<span class="req-badge python" title="Python app">🐍</span>`);
-    if (reqs.database) badges.push(`<span class="req-badge database" title="Uses database">🗄️</span>`);
-    if (reqs.autoStart) badges.push(`<span class="req-badge autostart" title="Auto-start enabled">⚡</span>`);
-    if (reqs.remote) badges.push(`<span class="req-badge remote" title="Remote/VPS app">🌐</span>`);
-
-    const badgesHtml = badges.length > 0 ? `<div class="req-badges">${badges.join('')}</div>` : '';
-
-    return `
-      <div class="app-card" data-id="${app.id}">
-        <div class="app-info">
-          <div class="app-name">
-            <span class="app-color" style="background: ${app.color}"></span>
-            ${escapeHtml(app.name)}
-            ${badgesHtml}
-          </div>
-          <div class="app-meta">
-            <code>${escapeHtml(app.command)}</code>
-            ${portDisplay}
-          </div>
+  // Favorites Section (only if favorites exist)
+  if (favorites.length > 0) {
+    html += `
+      <div class="app-section">
+        <div class="section-header" onclick="toggleSection('favorites')">
+          <span class="section-toggle">${state.favoritesExpanded ? '▼' : '▶'}</span>
+          <span class="section-title">⭐ Favorites</span>
+          <span class="section-count">${favorites.length} app${favorites.length !== 1 ? 's' : ''}</span>
         </div>
-        <span class="app-status ${statusClass}">
-          ${statusText}
-        </span>
-        <div class="app-actions">
-          ${isRunning || starting
-            ? `<button class="btn btn-small btn-secondary" onclick="openInBrowser('${app.id}')" title="${starting ? 'Waiting for app to be ready...' : 'Open in browser'}" ${starting ? 'disabled' : ''}>🌐</button>
-               <button class="btn btn-small btn-danger" onclick="stopApp('${app.id}')" ${starting ? 'disabled' : ''}>Stop</button>`
-            : `<button class="btn btn-small btn-primary" onclick="startApp('${app.id}')">Start</button>`
-          }
-          <button class="btn btn-small btn-secondary" onclick="editApp('${app.id}')">Edit</button>
-          <button class="btn btn-small btn-secondary" onclick="deleteApp('${app.id}')">🗑</button>
+        <div class="section-apps ${state.favoritesExpanded ? '' : 'collapsed'}">
+          ${favorites.map(app => renderAppCard(app)).join('')}
         </div>
       </div>
     `;
-  }).join('');
+  }
+
+  // Other Projects Section
+  if (others.length > 0) {
+    html += `
+      <div class="app-section">
+        <div class="section-header" onclick="toggleSection('others')">
+          <span class="section-toggle">${state.otherProjectsExpanded ? '▼' : '▶'}</span>
+          <span class="section-title">📁 Other Projects</span>
+          <span class="section-count">${others.length} app${others.length !== 1 ? 's' : ''}</span>
+        </div>
+        <div class="section-apps ${state.otherProjectsExpanded ? '' : 'collapsed'}">
+          ${others.map(app => renderAppCard(app)).join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  dom.appsList.innerHTML = html;
+}
+
+function renderAppCard(app) {
+  // Check if app is running via PortPilot's process manager
+  const managedRunning = state.runningApps.find(r => r.id === app.id && r.running);
+  // Check if app is detected running externally via port scan
+  const detected = state.detectedApps[app.id];
+  const isRunning = managedRunning || detected;
+
+  // Detect requirements
+  const reqs = detectRequirements(app);
+
+  // Determine port display with IPv4/IPv6 indicator
+  let portDisplay = '';
+  let ipVersion = '';
+  if (detected) {
+    const isIPv6 = detected.address?.startsWith('[');
+    ipVersion = isIPv6 ? 'v6' : 'v4';
+    portDisplay = ` • <span class="detected-port" title="Detected on ${detected.address}">:${detected.port} ✓</span>`;
+  } else if (app.preferredPort) {
+    portDisplay = ` • Port ${app.preferredPort}`;
+  }
+
+  // Check if app is starting (countdown active)
+  const starting = state.startingApps[app.id];
+
+  // Check for unknown port conflict
+  const conflict = state.unknownConflicts.find(c => c.appId === app.id);
+
+  // Status text with IPv4/IPv6 indicator and countdown
+  let statusText = '○ Stopped';
+  let statusClass = 'status-stopped';
+  if (starting) {
+    statusText = `● Starting... ${starting.countdown}s`;
+    statusClass = 'status-starting';
+  } else if (detected) {
+    statusText = `● Running :${detected.port} <span class="ip-version">${ipVersion}</span>`;
+    statusClass = 'status-running';
+  } else if (managedRunning) {
+    statusText = '● Running';
+    statusClass = 'status-running';
+  } else if (conflict) {
+    statusText = `⚠️ Port ${conflict.port} Blocked`;
+    statusClass = 'status-conflict';
+  }
+
+  // Build requirement badges
+  const badges = [];
+  if (reqs.docker) {
+    const dockerReady = state.dockerRunning;
+    const dockerClass = dockerReady ? 'badge-ready' : 'badge-warning';
+    const dockerTitle = dockerReady ? 'Docker is running' : 'Docker Desktop not running - click to start';
+    const dockerClick = dockerReady ? '' : `onclick="startDocker()"`;
+    badges.push(`<span class="req-badge docker ${dockerClass}" title="${dockerTitle}" ${dockerClick}>🐳</span>`);
+  }
+  if (reqs.node) badges.push(`<span class="req-badge node" title="Node.js app">📦</span>`);
+  if (reqs.python) badges.push(`<span class="req-badge python" title="Python app">🐍</span>`);
+  if (reqs.database) badges.push(`<span class="req-badge database" title="Uses database">🗄️</span>`);
+  if (reqs.autoStart) badges.push(`<span class="req-badge autostart" title="Auto-start enabled">⚡</span>`);
+  if (reqs.remote) badges.push(`<span class="req-badge remote" title="Remote/VPS app">🌐</span>`);
+
+  const badgesHtml = badges.length > 0 ? `<div class="req-badges">${badges.join('')}</div>` : '';
+
+  const isSelected = state.selectedApps.has(app.id);
+
+  return `
+    <div class="app-card ${isSelected ? 'selected' : ''}" data-id="${app.id}">
+      <input type="checkbox" class="app-checkbox"
+             ${isSelected ? 'checked' : ''}
+             onchange="toggleAppSelection('${app.id}')"
+             title="Select for bulk actions">
+      <div class="app-info">
+        <div class="app-name">
+          <span class="app-color" style="background: ${app.color}"></span>
+          <button class="btn-star ${app.isFavorite ? 'starred' : ''}"
+                  onclick="toggleFavorite('${app.id}')"
+                  title="${app.isFavorite ? 'Remove from favorites' : 'Add to favorites'}">
+            ${app.isFavorite ? '⭐' : '☆'}
+          </button>
+          ${escapeHtml(app.name)}
+          ${badgesHtml}
+        </div>
+        <div class="app-meta">
+          <code>${escapeHtml(app.command)}</code>
+          ${portDisplay}
+        </div>
+      </div>
+      <span class="app-status ${statusClass}">
+        ${statusText}
+      </span>
+      <div class="app-actions">
+        ${conflict
+          ? `<button class="btn btn-small btn-secondary" onclick="openPortInBrowser(${conflict.port})" title="Open http://localhost:${conflict.port} to see what's running">🌐</button>
+             <button class="btn btn-small btn-warning" onclick="killConflictingProcess('${app.id}')" title="Kill process occupying port ${conflict.port} (PID ${conflict.occupiedBy.pid})">Kill Blocker</button>
+             <button class="btn btn-small btn-primary" onclick="startApp('${app.id}')">Start</button>`
+          : isRunning || starting
+            ? `<button class="btn btn-small btn-secondary" onclick="openInBrowser('${app.id}')" title="${starting ? 'Waiting for app to be ready...' : 'Open in browser'}" ${starting ? 'disabled' : ''}>🌐</button>
+               <button class="btn btn-small btn-danger" onclick="stopApp('${app.id}')" ${starting ? 'disabled' : ''}>Stop</button>`
+            : `<button class="btn btn-small btn-primary" onclick="startApp('${app.id}')">Start</button>`
+        }
+        <button class="btn btn-small btn-secondary" onclick="editApp('${app.id}')">Edit</button>
+        <button class="btn btn-small btn-secondary" onclick="deleteApp('${app.id}')">🗑</button>
+      </div>
+    </div>
+  `;
 }
 
 async function startApp(appId) {
@@ -648,6 +745,55 @@ async function stopApp(appId) {
   await loadApps();
 }
 
+// ============ Port Conflict Resolution ============
+function showUnknownConflictWarnings(conflicts) {
+  // Show toast for each conflict (limit to 3 to avoid spam)
+  const toShow = conflicts.slice(0, 3);
+  toShow.forEach(conflict => {
+    const processName = conflict.occupiedBy.processName || 'Unknown';
+    const pid = conflict.occupiedBy.pid;
+    showToast(
+      `⚠️ Port ${conflict.port} blocked for ${conflict.appName} by ${processName} (PID ${pid})`,
+      'warning'
+    );
+  });
+
+  if (conflicts.length > 3) {
+    showToast(`⚠️ ${conflicts.length - 3} more port conflicts detected`, 'warning');
+  }
+}
+
+async function killConflictingProcess(appId) {
+  const conflict = state.unknownConflicts.find(c => c.appId === appId);
+  if (!conflict) {
+    showToast('No conflict found', 'error');
+    return;
+  }
+
+  const processInfo = conflict.occupiedBy;
+  const processName = processInfo.processName || 'Unknown process';
+  const message = `Kill ${processName} (PID ${processInfo.pid}) on port ${conflict.port}?`;
+
+  if (!confirm(message)) return;
+
+  const result = await window.portpilot.ports.kill(conflict.port);
+  if (result.success) {
+    showToast(`Killed ${processName} on port ${conflict.port}`, 'success');
+    // Clear conflict from state
+    state.unknownConflicts = state.unknownConflicts.filter(c => c.appId !== appId);
+    // Refresh to update UI
+    await loadApps();
+  } else {
+    showToast(`Failed to kill process: ${result.error}`, 'error');
+  }
+}
+
+function openPortInBrowser(port) {
+  const url = `http://localhost:${port}`;
+  window.portpilot.shell.openExternal(url);
+  showToast(`Opening http://localhost:${port}`, 'info');
+}
+
 function editApp(appId) {
   const app = state.apps.find(a => a.id === appId);
   if (app) openAppModal(app);
@@ -655,14 +801,431 @@ function editApp(appId) {
 
 async function deleteApp(appId) {
   const app = state.apps.find(a => a.id === appId);
-  if (!app || !confirm(`Delete "${app.name}"?`)) return;
+  if (!app) return;
 
-  const result = await window.portpilot.config.deleteApp(appId);
+  // Open confirmation modal
+  state.deleteAppId = appId;
+  document.getElementById('delete-app-name').textContent = app.name;
+  document.getElementById('total-apps-count').textContent = state.apps.length;
+  document.getElementById('modal-delete-confirm').classList.remove('hidden');
+}
+
+async function confirmDeleteApp() {
+  if (!state.deleteAppId) return;
+
+  const result = await window.portpilot.config.deleteApp(state.deleteAppId);
   if (result.success) {
     showToast('App deleted', 'success');
+    closeDeleteConfirm();
     await loadApps();
   } else {
     showToast('Failed to delete: ' + result.error, 'error');
+  }
+}
+
+function closeDeleteConfirm() {
+  document.getElementById('modal-delete-confirm').classList.add('hidden');
+  state.deleteAppId = null;
+}
+
+// ============ Favorites ============
+async function toggleFavorite(appId) {
+  const result = await window.portpilot.config.toggleFavorite(appId);
+
+  if (result.success) {
+    const app = state.apps.find(a => a.id === appId);
+    if (app) {
+      app.isFavorite = result.app.isFavorite;
+      renderApps(); // Re-render to move to correct section
+    }
+  } else {
+    showToast('Failed to toggle favorite: ' + result.error, 'error');
+  }
+}
+
+async function toggleSection(section) {
+  if (section === 'favorites') {
+    state.favoritesExpanded = !state.favoritesExpanded;
+    await window.portpilot.config.updateSettings({ favoritesExpanded: state.favoritesExpanded });
+  } else if (section === 'others') {
+    state.otherProjectsExpanded = !state.otherProjectsExpanded;
+    await window.portpilot.config.updateSettings({ otherProjectsExpanded: state.otherProjectsExpanded });
+  }
+  renderApps();
+}
+
+// ============ Delete All ============
+async function deleteAllInstead() {
+  // Close delete confirmation and delete all apps
+  closeDeleteConfirm();
+
+  if (state.apps.length === 0) {
+    showToast('No apps to delete', 'info');
+    return;
+  }
+
+  const result = await window.portpilot.config.deleteAllApps();
+
+  if (result.success) {
+    showToast(`Deleted ${result.count} apps`, 'success');
+    state.apps = [];
+    state.selectedApps.clear();
+    renderApps();
+    updateAppsCount();
+    updateSelectionToolbar();
+  } else {
+    showToast('Failed to delete apps: ' + result.error, 'error');
+  }
+}
+
+// ============ Multi-Select for Apps ============
+function toggleAppSelection(appId) {
+  if (state.selectedApps.has(appId)) {
+    state.selectedApps.delete(appId);
+  } else {
+    state.selectedApps.add(appId);
+  }
+  renderApps();
+  updateSelectionToolbar();
+}
+
+function clearSelection() {
+  state.selectedApps.clear();
+  renderApps();
+  updateSelectionToolbar();
+}
+
+function selectAllApps() {
+  state.apps.forEach(app => state.selectedApps.add(app.id));
+  renderApps();
+  updateSelectionToolbar();
+}
+
+async function deleteSelected() {
+  if (state.selectedApps.size === 0) return;
+
+  const count = state.selectedApps.size;
+  if (!confirm(`Delete ${count} selected app${count !== 1 ? 's' : ''}?`)) return;
+
+  // Delete each selected app
+  for (const appId of state.selectedApps) {
+    await window.portpilot.config.deleteApp(appId);
+  }
+
+  state.selectedApps.clear();
+  showToast(`Deleted ${count} app${count !== 1 ? 's' : ''}`, 'success');
+  await loadApps();
+  updateSelectionToolbar();
+}
+
+async function favoriteSelected() {
+  if (state.selectedApps.size === 0) return;
+
+  for (const appId of state.selectedApps) {
+    const app = state.apps.find(a => a.id === appId);
+    if (app && !app.isFavorite) {
+      await window.portpilot.config.toggleFavorite(appId);
+    }
+  }
+
+  state.selectedApps.clear();
+  showToast(`Marked ${state.selectedApps.size} as favorites`, 'success');
+  await loadApps();
+  updateSelectionToolbar();
+}
+
+async function unfavoriteSelected() {
+  if (state.selectedApps.size === 0) return;
+
+  for (const appId of state.selectedApps) {
+    const app = state.apps.find(a => a.id === appId);
+    if (app && app.isFavorite) {
+      await window.portpilot.config.toggleFavorite(appId);
+    }
+  }
+
+  state.selectedApps.clear();
+  showToast(`Unmarked ${state.selectedApps.size} from favorites`, 'success');
+  await loadApps();
+  updateSelectionToolbar();
+}
+
+function updateSelectionToolbar() {
+  const toolbar = document.getElementById('selection-toolbar');
+  const count = document.getElementById('selection-count');
+
+  if (state.selectedApps.size > 0) {
+    toolbar.classList.remove('hidden');
+    count.textContent = `${state.selectedApps.size} selected`;
+  } else {
+    toolbar.classList.add('hidden');
+  }
+}
+
+// ============ Project Discovery ============
+async function loadDiscoverySettings() {
+  const result = await window.portpilot.discovery.getSettings();
+  if (result.success) {
+    renderScanPaths(result.settings.scanPaths || []);
+    document.getElementById('setting-discovery-autoscan').checked = result.settings.autoScanOnStartup || false;
+    document.getElementById('setting-discovery-depth').value = result.settings.maxDepth || 2;
+  }
+}
+
+function renderScanPaths(scanPaths) {
+  const container = document.getElementById('scan-paths-list');
+  if (!container) return;
+
+  if (scanPaths.length === 0) {
+    container.innerHTML = '<div class="empty-state" style="padding: 10px; font-size: 0.85rem;">No scan paths configured. Click "Add Path" to get started.</div>';
+    return;
+  }
+
+  container.innerHTML = scanPaths.map(path => `
+    <div class="scan-path-item">
+      <span class="path-text">${escapeHtml(path)}</span>
+      <button class="btn btn-small btn-danger" onclick="removeScanPath('${escapeHtml(path).replace(/'/g, "\\'")}')">Remove</button>
+    </div>
+  `).join('');
+}
+
+async function addScanPath() {
+  const path = prompt('Enter directory path to scan (e.g., C:\\Projects):');
+  if (!path) return;
+
+  const result = await window.portpilot.discovery.addScanPath(path);
+  if (result.success) {
+    renderScanPaths(result.scanPaths);
+    showToast('Scan path added', 'success');
+  } else {
+    showToast(result.error, 'error');
+  }
+}
+
+async function removeScanPath(path) {
+  const result = await window.portpilot.discovery.removeScanPath(path);
+  if (result.success) {
+    renderScanPaths(result.scanPaths);
+    showToast('Scan path removed', 'success');
+  }
+}
+
+async function discoverProjects() {
+  showToast('Scanning for projects...', 'info');
+
+  const result = await window.portpilot.discovery.scan();
+
+  if (result.success) {
+    if (result.projects.length === 0) {
+      showToast(`No new projects found (scanned ${result.total} total)`, 'info');
+    } else {
+      showDiscoveriesModal(result.projects);
+    }
+  } else {
+    showToast(`Discovery failed: ${result.error}`, 'error');
+  }
+}
+
+function showDiscoveriesModal(projects) {
+  const modal = document.getElementById('modal-discoveries');
+  const list = document.getElementById('discoveries-list');
+  const count = document.getElementById('discoveries-count');
+
+  count.textContent = `${projects.length} found`;
+
+  // Reset selected projects
+  state.selectedProjects.clear();
+
+  list.innerHTML = projects.map((proj, index) => {
+    const isSelected = state.selectedProjects.has(index);
+    return `
+      <div class="discovery-item ${isSelected ? 'selected' : ''}" data-index="${index}">
+        <input type="checkbox" class="discovery-checkbox"
+               ${isSelected ? 'checked' : ''}
+               onchange="toggleProjectSelection(${index})"
+               title="Select for bulk import">
+        <div class="discovery-content">
+          <div class="discovery-header">
+            <h4>${escapeHtml(proj.name)}</h4>
+            <span class="badge badge-${proj.type.toLowerCase().replace(/\s+/g, '-')}">${proj.type}</span>
+            <span class="confidence-badge confidence-${proj.confidence > 0.8 ? 'high' : 'medium'}">
+              ${Math.round(proj.confidence * 100)}% match
+            </span>
+          </div>
+          <div class="discovery-details">
+            <div class="detail-row">
+              <span class="label">Command:</span>
+              <code>${escapeHtml(proj.command || 'Not detected')}</code>
+            </div>
+            <div class="detail-row">
+              <span class="label">Port:</span>
+              <code>${proj.port || 'Auto-detect'}</code>
+            </div>
+            <div class="detail-row">
+              <span class="label">Path:</span>
+              <code class="path-text">${escapeHtml(proj.path)}</code>
+            </div>
+          </div>
+          <button class="btn btn-small btn-primary btn-add-discovery" onclick="addDiscoveredProject(${index})">
+            Add
+          </button>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // Store projects in a temporary variable for access in onclick handlers
+  window._discoveredProjects = projects;
+
+  modal.classList.remove('hidden');
+  updateDiscoverySelectionButtons();
+}
+
+async function addDiscoveredProject(index) {
+  const project = window._discoveredProjects?.[index];
+  if (!project) return;
+
+  const appConfig = {
+    name: project.name,
+    command: project.command,
+    cwd: project.path,
+    preferredPort: project.port || null,
+    fallbackRange: project.port ? [project.port + 1, project.port + 10] : null,
+    env: project.env || {},
+    autoStart: false
+  };
+
+  const result = await window.portpilot.config.saveApp(appConfig);
+  if (result.success) {
+    // Mark as added in UI
+    const item = document.querySelector(`.discovery-item[data-index="${index}"]`);
+    if (item) {
+      item.style.opacity = '0.5';
+      const button = item.querySelector('.btn-add-discovery');
+      button.textContent = 'Added ✓';
+      button.disabled = true;
+    }
+    showToast(`${project.name} added to apps`, 'success');
+    await loadApps();
+  }
+}
+
+async function addAllDiscoveries() {
+  const projects = window._discoveredProjects || [];
+  let added = 0;
+
+  for (let i = 0; i < projects.length; i++) {
+    const item = document.querySelector(`.discovery-item[data-index="${i}"]`);
+    const button = item?.querySelector('.btn-add-discovery');
+
+    if (!button?.disabled) {
+      await addDiscoveredProject(i);
+      added++;
+    }
+  }
+
+  showToast(`Added ${added} project${added !== 1 ? 's' : ''}`, 'success');
+  state.selectedProjects.clear();
+  updateDiscoverySelectionButtons();
+  setTimeout(() => {
+    document.getElementById('modal-discoveries').classList.add('hidden');
+  }, 1500);
+}
+
+// ============ Multi-Select for Discovered Projects ============
+function toggleProjectSelection(index) {
+  if (state.selectedProjects.has(index)) {
+    state.selectedProjects.delete(index);
+  } else {
+    state.selectedProjects.add(index);
+  }
+
+  // Update checkbox and item visual
+  const item = document.querySelector(`.discovery-item[data-index="${index}"]`);
+  const checkbox = item?.querySelector('.discovery-checkbox');
+
+  if (item && checkbox) {
+    if (state.selectedProjects.has(index)) {
+      item.classList.add('selected');
+      checkbox.checked = true;
+    } else {
+      item.classList.remove('selected');
+      checkbox.checked = false;
+    }
+  }
+
+  updateDiscoverySelectionButtons();
+}
+
+function selectAllProjects() {
+  const projects = window._discoveredProjects || [];
+  projects.forEach((_, index) => {
+    const item = document.querySelector(`.discovery-item[data-index="${index}"]`);
+    const button = item?.querySelector('.btn-add-discovery');
+
+    // Only select projects that haven't been added yet
+    if (!button?.disabled) {
+      state.selectedProjects.add(index);
+      item?.classList.add('selected');
+      const checkbox = item?.querySelector('.discovery-checkbox');
+      if (checkbox) checkbox.checked = true;
+    }
+  });
+
+  updateDiscoverySelectionButtons();
+}
+
+function clearProjectSelection() {
+  state.selectedProjects.forEach(index => {
+    const item = document.querySelector(`.discovery-item[data-index="${index}"]`);
+    item?.classList.remove('selected');
+    const checkbox = item?.querySelector('.discovery-checkbox');
+    if (checkbox) checkbox.checked = false;
+  });
+
+  state.selectedProjects.clear();
+  updateDiscoverySelectionButtons();
+}
+
+async function addSelectedProjects() {
+  if (state.selectedProjects.size === 0) {
+    showToast('No projects selected', 'info');
+    return;
+  }
+
+  const selectedIndexes = Array.from(state.selectedProjects);
+  let added = 0;
+
+  for (const index of selectedIndexes) {
+    const item = document.querySelector(`.discovery-item[data-index="${index}"]`);
+    const button = item?.querySelector('.btn-add-discovery');
+
+    if (!button?.disabled) {
+      await addDiscoveredProject(index);
+      added++;
+    }
+  }
+
+  state.selectedProjects.clear();
+  showToast(`Added ${added} selected project${added !== 1 ? 's' : ''}`, 'success');
+  updateDiscoverySelectionButtons();
+}
+
+function updateDiscoverySelectionButtons() {
+  const selectAllBtn = document.getElementById('btn-select-all-projects');
+  const addSelectedBtn = document.getElementById('btn-add-selected-projects');
+  const addAllBtn = document.getElementById('btn-add-all-discoveries');
+
+  if (state.selectedProjects.size > 0) {
+    if (selectAllBtn) selectAllBtn.textContent = 'Clear Selection';
+    if (selectAllBtn) selectAllBtn.onclick = clearProjectSelection;
+    if (addSelectedBtn) addSelectedBtn.classList.remove('hidden');
+    if (addAllBtn) addAllBtn.classList.add('hidden');
+  } else {
+    if (selectAllBtn) selectAllBtn.textContent = 'Select All';
+    if (selectAllBtn) selectAllBtn.onclick = selectAllProjects;
+    if (addSelectedBtn) addSelectedBtn.classList.add('hidden');
+    if (addAllBtn) addAllBtn.classList.remove('hidden');
   }
 }
 
@@ -692,15 +1255,89 @@ async function findFreePort() {
   const startPort = parseInt(portInput.value) || 3000;
 
   try {
-    const result = await window.portpilot.ports.findAvailable(startPort, startPort + 100);
-    if (result.success && result.port) {
-      portInput.value = result.port;
-      showToast(`Found free port: ${result.port}`, 'success');
-    } else {
-      showToast('No free port found in range', 'error');
+    // Get all registered apps' preferred ports to avoid conflicts
+    const registeredPorts = new Set(
+      state.apps
+        .filter(app => app.preferredPort)
+        .map(app => app.preferredPort)
+    );
+
+    // Find a port that's both system-available AND not registered to another app
+    let candidatePort = startPort;
+    let found = false;
+
+    for (let attempt = 0; attempt < 100; attempt++) {
+      const result = await window.portpilot.ports.findAvailable(candidatePort, candidatePort + 50);
+
+      if (result.success && result.port) {
+        // Check if this port is already registered to another app
+        if (!registeredPorts.has(result.port)) {
+          portInput.value = result.port;
+          showToast(`Found free port: ${result.port}`, 'success');
+          found = true;
+          break;
+        } else {
+          // Port is available on system but registered to another app, try next
+          candidatePort = result.port + 1;
+        }
+      } else {
+        break; // No more available ports in range
+      }
+    }
+
+    if (!found) {
+      showToast('No free port found (all ports in use or registered)', 'error');
     }
   } catch (error) {
     showToast('Error finding free port', 'error');
+  }
+}
+
+async function browseAndAutoDetect() {
+  const btn = document.getElementById('btn-auto-detect');
+  btn.disabled = true;
+  btn.textContent = '🔍 Detecting...';
+
+  try {
+    // Browse for directory
+    const browseResult = await window.portpilot.browseDirectory();
+
+    if (!browseResult.success) {
+      if (!browseResult.canceled) {
+        showToast('Failed to browse directory', 'error');
+      }
+      return;
+    }
+
+    const dirPath = browseResult.path;
+
+    // Detect project in selected directory
+    const detectResult = await window.portpilot.discovery.detectProject(dirPath);
+
+    if (!detectResult.success) {
+      showToast(detectResult.error || 'No project detected in this directory', 'warning');
+      return;
+    }
+
+    const project = detectResult.project;
+
+    // Auto-fill form fields
+    document.getElementById('app-name').value = project.name || '';
+    document.getElementById('app-command').value = project.command || '';
+    document.getElementById('app-cwd').value = project.path || dirPath;
+    document.getElementById('app-port').value = project.port || '';
+
+    // Set fallback range if port detected
+    if (project.port) {
+      document.getElementById('app-fallback').value = `${project.port + 1}-${project.port + 10}`;
+    }
+
+    showToast(`✓ Detected ${project.type} project: ${project.name}`, 'success');
+  } catch (error) {
+    showToast('Error detecting project: ' + error.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '🔍 Browse & Auto-detect Project';
   }
 }
 
@@ -742,7 +1379,14 @@ async function loadSettings() {
     document.getElementById('setting-autoscan').checked = state.settings.autoScan !== false;
     document.getElementById('setting-interval').value = state.settings.scanInterval / 1000 || 5;
     document.getElementById('setting-devtools').checked = state.settings.openDevTools === true;
+
+    // Restore favorites section state
+    state.favoritesExpanded = result.settings.favoritesExpanded !== false;
+    state.otherProjectsExpanded = result.settings.otherProjectsExpanded !== false;
   }
+
+  // Load discovery settings
+  await loadDiscoverySettings();
 }
 
 async function saveSettings() {
@@ -864,8 +1508,24 @@ window.killPort = killPort;
 window.copyPort = copyPort;
 window.startApp = startApp;
 window.stopApp = stopApp;
+window.killConflictingProcess = killConflictingProcess;
+window.openPortInBrowser = openPortInBrowser;
 window.editApp = editApp;
 window.deleteApp = deleteApp;
 window.openExternal = openExternal;
 window.openInBrowser = openInBrowser;
 window.startDocker = startDocker;
+window.toggleFavorite = toggleFavorite;
+window.toggleSection = toggleSection;
+window.toggleAppSelection = toggleAppSelection;
+window.selectAllApps = selectAllApps;
+window.clearSelection = clearSelection;
+window.deleteSelected = deleteSelected;
+window.favoriteSelected = favoriteSelected;
+window.unfavoriteSelected = unfavoriteSelected;
+window.removeScanPath = removeScanPath;
+window.addDiscoveredProject = addDiscoveredProject;
+window.toggleProjectSelection = toggleProjectSelection;
+window.selectAllProjects = selectAllProjects;
+window.clearProjectSelection = clearProjectSelection;
+window.addSelectedProjects = addSelectedProjects;

@@ -32,7 +32,20 @@ class ConfigStore {
         startMinimized: false,
         autoScan: true,
         scanInterval: 5000,
-        theme: 'dark'
+        theme: 'dark',
+
+        // Favorites system
+        favoritesExpanded: true,
+        otherProjectsExpanded: true,
+
+        // Project discovery
+        discovery: {
+          scanPaths: [],
+          maxDepth: 2,
+          autoScanOnStartup: false,
+          ignorePatterns: ['node_modules', '.git', 'dist', 'build', 'venv', '__pycache__', 'target', 'bin', 'obj'],
+          enabledDetectors: ['node', 'docker', 'python', 'static']
+        }
       }
     };
   }
@@ -88,6 +101,7 @@ class ConfigStore {
       fallbackRange: appConfig.fallbackRange || null,
       env: appConfig.env || {},
       autoStart: appConfig.autoStart || false,
+      isFavorite: appConfig.isFavorite || false,
       color: appConfig.color || this.getRandomColor(),
       createdAt: appConfig.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString()

@@ -244,9 +244,28 @@ body {
   color: var(--accent-red);
 }
 
+.btn-warning {
+  background: var(--accent-yellow);
+  color: var(--bg-primary);
+  border-color: var(--accent-yellow);
+}
+
+.btn-warning:hover {
+  background: transparent;
+  color: var(--accent-yellow);
+}
+
 .btn-small {
   padding: 4px 10px;
   font-size: 0.75rem;
+}
+
+.btn-full-width {
+  width: 100%;
+}
+
+.btn-auto-detect {
+  margin-top: 8px;
 }
 
 .input-with-button {
@@ -335,6 +354,40 @@ body {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 16px;
+}
+
+/* Selection Toolbar */
+.selection-toolbar {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg-tertiary);
+  border: var(--border-width) solid var(--accent-cyan);
+  border-radius: var(--radius);
+  padding: 12px 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  z-index: 100;
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+
+.selection-toolbar.hidden {
+  display: none;
+}
+
+.selection-count {
+  font-weight: 600;
+  color: var(--accent-cyan);
+  font-size: 0.9rem;
+}
+
+.selection-actions {
+  display: flex;
+  gap: 8px;
 }
 
 .input-search {
@@ -457,6 +510,21 @@ body {
   border-color: var(--accent-yellow);
 }
 
+.app-card.selected {
+  border-color: var(--accent-cyan);
+  background: rgba(125, 207, 255, 0.05);
+}
+
+/* App Checkbox for Multi-Select */
+.app-checkbox {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  margin-right: 10px;
+  flex-shrink: 0;
+  accent-color: var(--accent-cyan);
+}
+
 .app-info {
   flex: 1;
 }
@@ -524,6 +592,12 @@ body {
   border-color: var(--text-secondary);
   color: var(--text-secondary);
   opacity: 0.8;
+}
+
+.status-conflict {
+  background: transparent;
+  border-color: var(--accent-yellow);
+  color: var(--accent-yellow);
 }
 
 .detected-port {
@@ -1226,4 +1300,366 @@ kbd {
   background: var(--accent-yellow);
   color: #000;
   border-color: #000;
+}
+
+/* ============ v1.4.0 - Favorites & Sections ============ */
+.app-section {
+  margin-bottom: 20px;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: var(--bg-tertiary);
+  border: var(--border-width) solid var(--border-color);
+  border-radius: var(--radius);
+  cursor: pointer;
+  margin-bottom: 8px;
+  transition: all 0.15s ease;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.section-header:hover {
+  border-color: var(--accent-yellow);
+  background: var(--bg-secondary);
+}
+
+.section-toggle {
+  font-size: 0.75rem;
+  color: var(--accent-cyan);
+  font-weight: bold;
+  transition: transform 0.2s ease;
+  min-width: 12px;
+}
+
+.section-title {
+  font-weight: 700;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-primary);
+  flex: 1;
+}
+
+.section-count {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  background: var(--bg-primary);
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  border: var(--border-width) solid var(--border-color);
+}
+
+.section-apps {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(500px, 1fr));
+  gap: 8px;
+  overflow: hidden;
+  transition: max-height 0.3s ease, opacity 0.2s ease;
+  max-height: 10000px;
+  opacity: 1;
+}
+
+.section-apps.collapsed {
+  max-height: 0;
+  opacity: 0;
+  margin-bottom: 0;
+}
+
+/* Star Button */
+.btn-star {
+  background: none;
+  border: none;
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 0 4px;
+  color: var(--text-muted);
+  transition: all 0.15s ease;
+  line-height: 1;
+}
+
+.btn-star:hover {
+  transform: scale(1.2);
+  color: var(--accent-yellow);
+}
+
+.btn-star.starred {
+  color: var(--accent-yellow);
+}
+
+.btn-star.starred:hover {
+  transform: scale(1.2) rotate(-15deg);
+}
+
+/* ============ v1.4.0 - Delete All Modal ============ */
+.modal-danger .modal-header {
+  background: var(--accent-red);
+  color: #fff;
+}
+
+.modal-danger .modal-header h2 {
+  color: #fff;
+}
+
+.modal-body {
+  padding: 20px;
+}
+
+.modal-body p {
+  margin-bottom: 12px;
+  line-height: 1.6;
+}
+
+.warning-text {
+  font-size: 1rem;
+  color: var(--text-primary);
+}
+
+.warning-text strong {
+  color: var(--accent-yellow);
+  font-weight: 700;
+}
+
+.danger-text {
+  font-size: 0.9rem;
+  color: var(--accent-red);
+  font-weight: 600;
+  padding: 12px;
+  background: rgba(247, 118, 142, 0.1);
+  border-left: 3px solid var(--accent-red);
+  border-radius: var(--radius-sm);
+}
+
+.export-reminder {
+  font-size: 0.85rem;
+  color: var(--accent-cyan);
+  padding: 10px;
+  background: rgba(125, 207, 255, 0.1);
+  border-left: 3px solid var(--accent-cyan);
+  border-radius: var(--radius-sm);
+}
+
+/* Discrete Delete All option */
+.delete-all-option {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: var(--border-width) solid var(--border-color);
+  text-align: center;
+}
+
+.btn-link-danger {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  cursor: pointer;
+  padding: 6px 10px;
+  text-decoration: underline;
+  transition: color 0.2s ease;
+}
+
+.btn-link-danger:hover {
+  color: var(--accent-red);
+}
+
+.btn-danger-outline {
+  background: transparent;
+  color: var(--accent-red);
+  border-color: var(--accent-red);
+}
+
+.btn-danger-outline:hover {
+  background: var(--accent-red);
+  color: #fff;
+}
+
+/* ============ v1.4.0 - Discovery Modal ============ */
+.modal-wide {
+  max-width: 700px;
+  width: 90%;
+}
+
+.discoveries-list {
+  max-height: 500px;
+  overflow-y: auto;
+  padding: 20px;
+}
+
+.discovery-item {
+  border: var(--border-width) solid var(--border-color);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 12px;
+  background: var(--bg-secondary);
+  transition: all 0.2s ease;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.discovery-item:hover {
+  border-color: var(--accent-cyan);
+}
+
+.discovery-item.selected {
+  border-color: var(--accent-cyan);
+  background: rgba(125, 207, 255, 0.05);
+}
+
+/* Discovery Checkbox for Multi-Select */
+.discovery-checkbox {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  margin-top: 2px;
+  flex-shrink: 0;
+  accent-color: var(--accent-cyan);
+}
+
+.discovery-content {
+  flex: 1;
+}
+
+.discovery-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.discovery-header h4 {
+  margin: 0;
+  flex: 1;
+  color: var(--text-primary);
+  font-size: 1rem;
+}
+
+.badge {
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.badge-node\.js,
+.badge-node-js {
+  background: rgba(102, 175, 51, 0.2);
+  color: #66af33;
+  border: 1px solid #66af33;
+}
+
+.badge-docker {
+  background: rgba(41, 152, 255, 0.2);
+  color: #2998ff;
+  border: 1px solid #2998ff;
+}
+
+.badge-python {
+  background: rgba(255, 221, 107, 0.2);
+  color: #ffdd6b;
+  border: 1px solid #ffdd6b;
+}
+
+.badge-static-site {
+  background: rgba(139, 92, 246, 0.2);
+  color: #8b5cf6;
+  border: 1px solid #8b5cf6;
+}
+
+.confidence-badge {
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.confidence-high {
+  background: rgba(16, 185, 129, 0.2);
+  color: #10b981;
+  border: 1px solid #10b981;
+}
+
+.confidence-medium {
+  background: rgba(251, 191, 36, 0.2);
+  color: #fbbf24;
+  border: 1px solid #fbbf24;
+}
+
+.discovery-details {
+  margin: 12px 0;
+}
+
+.detail-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 8px;
+  font-size: 0.85rem;
+}
+
+.detail-row .label {
+  color: var(--text-muted);
+  min-width: 80px;
+  font-weight: 600;
+}
+
+.detail-row code {
+  color: var(--text-primary);
+  background: var(--bg-primary);
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 0.8rem;
+}
+
+.btn-add-discovery {
+  width: 100%;
+  margin-top: 8px;
+}
+
+.btn-add-discovery:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ============ v1.4.0 - Scan Paths List ============ */
+.scan-paths-list {
+  margin-bottom: 12px;
+  border: var(--border-width) solid var(--border-color);
+  border-radius: var(--radius);
+  background: var(--bg-secondary);
+}
+
+.scan-path-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-bottom: var(--border-width) solid var(--border-color);
+}
+
+.scan-path-item:last-child {
+  border-bottom: none;
+}
+
+.path-text {
+  flex: 1;
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  font-family: 'Consolas', 'Monaco', monospace;
+}
+
+/* ============ v1.4.0 - Toolbar Layout ============ */
+.toolbar-left {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+@media (max-width: 1100px) {
+  .section-apps {
+    grid-template-columns: 1fr;
+  }
 }

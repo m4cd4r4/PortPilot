@@ -55,6 +55,18 @@
         <div id="apps-list" class="apps-list">
           <div class="empty-state">No apps registered. Click "Add App" to get started.</div>
         </div>
+
+        <!-- Selection Toolbar (appears when apps are selected) -->
+        <div id="selection-toolbar" class="selection-toolbar hidden">
+          <span id="selection-count" class="selection-count">0 selected</span>
+          <div class="selection-actions">
+            <button type="button" class="btn btn-small btn-secondary" onclick="selectAllApps()">Select All</button>
+            <button type="button" class="btn btn-small btn-primary" onclick="favoriteSelected()">⭐ Favorite</button>
+            <button type="button" class="btn btn-small btn-secondary" onclick="unfavoriteSelected()">☆ Unfavorite</button>
+            <button type="button" class="btn btn-small btn-danger" onclick="deleteSelected()">🗑 Delete</button>
+            <button type="button" class="btn btn-small btn-secondary" onclick="clearSelection()">Clear</button>
+          </div>
+        </div>
       </section>
 
       <!-- Knowledge Tab -->
@@ -257,6 +269,29 @@
             <button id="btn-import" class="btn btn-secondary">Import Config</button>
           </div>
         </div>
+
+        <!-- Project Discovery -->
+        <div class="settings-section">
+          <h3>Project Discovery</h3>
+          <label class="setting-row">
+            <span>Auto-scan on startup</span>
+            <input type="checkbox" id="setting-discovery-autoscan">
+          </label>
+          <div class="setting-row">
+            <span>Max scan depth</span>
+            <input type="number" id="setting-discovery-depth" value="2" min="1" max="5" class="input-small" title="Maximum directory depth to scan">
+          </div>
+          <div class="form-group">
+            <label>Scan Paths</label>
+            <div id="scan-paths-list" class="scan-paths-list">
+              <!-- Dynamically populated -->
+            </div>
+            <button id="btn-add-scan-path" class="btn btn-secondary">Add Path</button>
+          </div>
+          <button id="btn-discover-projects" class="btn btn-primary">
+            <span class="icon">🔍</span> Discover Projects
+          </button>
+        </div>
       </section>
     </main>
 
@@ -280,6 +315,9 @@
           <div class="form-group">
             <label for="app-cwd">Working Directory</label>
             <input type="text" id="app-cwd" placeholder="e.g., C:\Projects\myapp">
+            <button type="button" class="btn btn-secondary btn-full-width btn-auto-detect" id="btn-auto-detect">
+              🔍 Browse & Auto-detect Project
+            </button>
           </div>
           <div class="form-row">
             <div class="form-group">
@@ -305,6 +343,54 @@
             <button type="submit" class="btn btn-primary">Save App</button>
           </div>
         </form>
+      </div>
+    </div>
+
+    <!-- Discovered Projects Modal -->
+    <div id="modal-discoveries" class="modal hidden">
+      <div class="modal-content modal-wide">
+        <div class="modal-header">
+          <h2>Discovered Projects</h2>
+          <span id="discoveries-count" class="count-badge">0 found</span>
+          <button type="button" class="btn-close" id="discoveries-close">✕</button>
+        </div>
+        <div class="discoveries-list" id="discoveries-list">
+          <!-- Dynamically populated -->
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" id="btn-discoveries-cancel">Close</button>
+          <button type="button" class="btn btn-secondary" id="btn-select-all-projects">Select All</button>
+          <button type="button" class="btn btn-primary hidden" id="btn-add-selected-projects">Add Selected</button>
+          <button type="button" class="btn btn-primary" id="btn-add-all-discoveries">Add All</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Delete App Confirmation Modal -->
+    <div id="modal-delete-confirm" class="modal hidden">
+      <div class="modal-content modal-danger">
+        <div class="modal-header">
+          <h2>⚠️ Delete App</h2>
+          <button type="button" class="btn-close" id="delete-confirm-close">✕</button>
+        </div>
+        <div class="modal-body">
+          <p class="warning-text">
+            Delete "<strong id="delete-app-name"></strong>"?
+          </p>
+          <p class="danger-text">
+            ⚠️ This action cannot be undone.
+          </p>
+          <!-- Discrete Delete All option -->
+          <div class="delete-all-option">
+            <button type="button" class="btn-link-danger" id="btn-delete-all-instead">
+              Delete all <span id="total-apps-count">0</span> apps instead
+            </button>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" id="btn-delete-cancel">Cancel</button>
+          <button type="button" class="btn btn-danger" id="btn-delete-confirm">Delete This App</button>
+        </div>
       </div>
     </div>
 
