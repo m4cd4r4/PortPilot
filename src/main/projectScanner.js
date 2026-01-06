@@ -48,11 +48,42 @@ class NodeDetector extends ProjectDetector {
         }
       }
 
-      // Determine which script to use
+      // Determine which script to use - enhanced for monorepos
       let scriptName = null;
-      if (pkg.scripts?.dev) scriptName = 'dev';
-      else if (pkg.scripts?.start) scriptName = 'start';
-      else if (pkg.scripts?.serve) scriptName = 'serve';
+
+      if (pkg.scripts) {
+        // Check if this is a monorepo
+        const isMonorepo = pkg.workspaces ||
+                          Object.values(pkg.scripts).some(script =>
+                            script.includes('workspace') || script.includes('--filter'));
+
+        if (isMonorepo) {
+          // Prioritize common monorepo entry point scripts
+          const monorepoScripts = ['web', 'app', 'frontend', 'client', 'main', 'dev', 'start'];
+          for (const script of monorepoScripts) {
+            if (pkg.scripts[script]) {
+              scriptName = script;
+              break;
+            }
+          }
+        }
+
+        // If not found yet, use standard priority
+        if (!scriptName) {
+          if (pkg.scripts.dev) scriptName = 'dev';
+          else if (pkg.scripts.start) scriptName = 'start';
+          else if (pkg.scripts.serve) scriptName = 'serve';
+          else if (pkg.scripts.web) scriptName = 'web';
+          else if (pkg.scripts.app) scriptName = 'app';
+          else {
+            // Pick the first script that looks like a start command
+            const startScripts = Object.keys(pkg.scripts).filter(name =>
+              name.includes('dev') || name.includes('start') || name.includes('serve')
+            );
+            if (startScripts.length > 0) scriptName = startScripts[0];
+          }
+        }
+      }
 
       // Construct proper command
       let command;
