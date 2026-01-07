@@ -736,6 +736,17 @@ body {
   color: var(--text-secondary);
 }
 
+.setting-description {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin: 8px 0 0 0;
+  line-height: 1.4;
+  padding: 8px 12px;
+  background: var(--bg-tertiary);
+  border-left: 2px solid var(--border-color);
+  border-radius: 2px;
+}
+
 /* Theme Selector */
 .theme-selector {
   display: flex;

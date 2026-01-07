@@ -263,6 +263,20 @@
           </label>
         </div>
         <div class="settings-section">
+          <h3>Window Behavior</h3>
+          <label class="setting-row">
+            <span>Minimize to tray on close</span>
+            <input type="checkbox" id="setting-close-to-tray" checked>
+          </label>
+          <label class="setting-row">
+            <span>Stop running apps when quitting</span>
+            <input type="checkbox" id="setting-stop-apps-on-quit" checked>
+          </label>
+          <p class="setting-description">
+            When enabled, PortPilot will automatically stop all apps it started when you quit the application. External processes will not be affected.
+          </p>
+        </div>
+        <div class="settings-section">
           <h3>Data</h3>
           <div class="button-row">
             <button id="btn-export" class="btn btn-secondary">Export Config</button>

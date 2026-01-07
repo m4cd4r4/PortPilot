@@ -35,12 +35,14 @@ function createWindow(configStore) {
     }
   });
 
-  // Minimize to tray instead of closing
+  // Handle close - either minimize to tray or exit completely
   mainWindow.on('close', (event) => {
-    if (!app.isQuitting) {
+    const settings = configStore.getSettings();
+    if (!app.isQuitting && settings.closeToTray !== false) {
       event.preventDefault();
       mainWindow.hide();
     }
+    // If closeToTray is false, window closes normally
   });
 
   return mainWindow;
@@ -59,17 +61,33 @@ function createTray() {
   tray = new Tray(icon);
   
   const contextMenu = Menu.buildFromTemplate([
-    { 
-      label: 'Show PortPilot', 
-      click: () => mainWindow.show() 
+    {
+      label: 'Show PortPilot',
+      click: () => mainWindow.show()
     },
-    { 
-      label: 'Scan Ports', 
+    {
+      label: 'Scan Ports',
       click: () => mainWindow.webContents.send('trigger-scan')
     },
     { type: 'separator' },
-    { 
-      label: 'Quit', 
+    {
+      label: 'Stop All Apps',
+      click: async () => {
+        try {
+          const { cleanupAllProcesses } = require('./processManager');
+          await cleanupAllProcesses();
+          mainWindow.webContents.send('toast', {
+            type: 'success',
+            message: 'Stopped all running apps'
+          });
+        } catch (err) {
+          console.error('Error stopping apps:', err);
+        }
+      }
+    },
+    { type: 'separator' },
+    {
+      label: 'Quit',
       click: () => {
         app.isQuitting = true;
         app.quit();
@@ -109,11 +127,15 @@ app.on('window-all-closed', () => {
 app.on('before-quit', async (event) => {
   app.isQuitting = true;
 
-  // Clean up any child processes started by PortPilot
-  try {
-    const { cleanupAllProcesses } = require('./processManager');
-    await cleanupAllProcesses();
-  } catch (err) {
-    console.error('Error cleaning up processes:', err);
+  // Clean up child processes if enabled in settings
+  const settings = configStore.getSettings();
+  if (settings.stopAppsOnQuit !== false) {
+    try {
+      const { cleanupAllProcesses } = require('./processManager');
+      await cleanupAllProcesses();
+      console.log('Stopped all PortPilot-managed apps');
+    } catch (err) {
+      console.error('Error cleaning up processes:', err);
+    }
   }
 });

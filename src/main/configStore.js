@@ -34,6 +34,10 @@ class ConfigStore {
         scanInterval: 5000,
         theme: 'dark',
 
+        // Window behavior
+        closeToTray: true,  // Close button minimizes to tray (true) or exits (false)
+        stopAppsOnQuit: true,  // Stop PortPilot-managed apps when quitting
+
         // Favorites system
         favoritesExpanded: true,
         otherProjectsExpanded: true,

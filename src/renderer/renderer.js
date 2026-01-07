@@ -233,6 +233,8 @@ function setupEventListeners() {
   document.getElementById('setting-autoscan').addEventListener('change', saveSettings);
   document.getElementById('setting-interval').addEventListener('change', saveSettings);
   document.getElementById('setting-devtools').addEventListener('change', saveSettings);
+  document.getElementById('setting-close-to-tray').addEventListener('change', saveSettings);
+  document.getElementById('setting-stop-apps-on-quit').addEventListener('change', saveSettings);
   document.getElementById('btn-export').addEventListener('click', exportConfig);
   document.getElementById('btn-import').addEventListener('click', importConfig);
 
@@ -1379,6 +1381,8 @@ async function loadSettings() {
     document.getElementById('setting-autoscan').checked = state.settings.autoScan !== false;
     document.getElementById('setting-interval').value = state.settings.scanInterval / 1000 || 5;
     document.getElementById('setting-devtools').checked = state.settings.openDevTools === true;
+    document.getElementById('setting-close-to-tray').checked = state.settings.closeToTray !== false;
+    document.getElementById('setting-stop-apps-on-quit').checked = state.settings.stopAppsOnQuit !== false;
 
     // Restore favorites section state
     state.favoritesExpanded = result.settings.favoritesExpanded !== false;
@@ -1393,7 +1397,9 @@ async function saveSettings() {
   const settings = {
     autoScan: document.getElementById('setting-autoscan').checked,
     scanInterval: parseInt(document.getElementById('setting-interval').value) * 1000,
-    openDevTools: document.getElementById('setting-devtools').checked
+    openDevTools: document.getElementById('setting-devtools').checked,
+    closeToTray: document.getElementById('setting-close-to-tray').checked,
+    stopAppsOnQuit: document.getElementById('setting-stop-apps-on-quit').checked
   };
 
   await window.portpilot.config.updateSettings(settings);
