@@ -20,8 +20,10 @@
     "test:all": "node tests/run-comprehensive.js && node tests/v1.3.0-features.spec.js",
     "screenshots": "node take-screenshots.js",
     "build": "electron-builder --win",
+    "build:linux": "electron-builder --linux",
     "build:portable": "electron-builder --win portable",
     "build:all": "electron-builder --win nsis portable",
+    "build:all-platforms": "electron-builder --win --linux",
     "dist": "electron-builder --win --publish never"
   },
   "keywords": [
@@ -78,6 +80,25 @@
     },
     "portable": {
       "artifactName": "${productName}-${version}-portable.${ext}"
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "deb",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "public/icon.png",
+      "category": "Development",
+      "artifactName": "${productName}-${version}-${arch}.${ext}"
     }
   }
 }

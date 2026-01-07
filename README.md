@@ -1,6 +1,6 @@
 # PortPilot
 
-**Localhost Port Manager** — A desktop app for developers to manage local development ports and applications.
+**Localhost Port Manager for Windows & Linux** — A desktop app for developers to manage local development ports and applications.
 
 🌐 **[View Landing Page & Download](https://m4cd4r4.github.io/PortPilot/)** 🌐
 
@@ -101,8 +101,12 @@ Brutalist Dark theme with high contrast and bold design.
 
 **Latest Release: v1.4.0**
 
+**Windows:**
 - [PortPilot-1.4.0-x64.exe](https://github.com/m4cd4r4/PortPilot/releases/download/v1.4.0/PortPilot-1.4.0-x64.exe) — NSIS Installer
 - [PortPilot-1.4.0-portable.exe](https://github.com/m4cd4r4/PortPilot/releases/download/v1.4.0/PortPilot-1.4.0-portable.exe) — Portable Version
+
+**Linux:**
+- AppImage and .deb packages coming soon (build from source for now)
 
 ### Build from Source
 
@@ -116,6 +120,11 @@ npm install
 
 # Run the app
 npm start
+
+# Build for your platform
+npm run build              # Windows (NSIS installer)
+npm run build:linux        # Linux (AppImage + .deb)
+npm run build:all-platforms  # Both Windows and Linux
 ```
 
 > **Note for VSCode/Claude Code users:** The app automatically clears the `ELECTRON_RUN_AS_NODE` environment variable via `launch.js`.
