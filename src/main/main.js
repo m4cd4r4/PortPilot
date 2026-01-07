@@ -11,14 +11,18 @@ let tray = null;
 
 /** Create the main application window */
 function createWindow(configStore) {
-  const isWindows = process.platform === 'win32';
-
-  const windowConfig = {
+  mainWindow = new BrowserWindow({
     width: 900,
     height: 700,
     minWidth: 600,
     minHeight: 400,
     backgroundColor: '#1a1a1a', // Dark background to match app theme
+    titleBarStyle: 'hidden',
+    titleBarOverlay: {
+      color: '#2a2a2a', // Slightly lighter for better contrast with controls
+      symbolColor: '#ffffff',
+      height: 40 // Taller for better visibility
+    },
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -26,19 +30,7 @@ function createWindow(configStore) {
     },
     icon: path.join(__dirname, '../../public/icon.png'),
     show: false
-  };
-
-  // Windows-specific dark titlebar (Windows 10/11)
-  if (isWindows) {
-    windowConfig.titleBarStyle = 'hidden';
-    windowConfig.titleBarOverlay = {
-      color: '#1a1a1a',
-      symbolColor: '#ffffff',
-      height: 32
-    };
-  }
-
-  mainWindow = new BrowserWindow(windowConfig);
+  });
 
   mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
 
