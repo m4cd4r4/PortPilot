@@ -11,7 +11,9 @@ let tray = null;
 
 /** Create the main application window */
 function createWindow(configStore) {
-  mainWindow = new BrowserWindow({
+  const isWindows = process.platform === 'win32';
+
+  const windowConfig = {
     width: 900,
     height: 700,
     minWidth: 600,
@@ -24,7 +26,19 @@ function createWindow(configStore) {
     },
     icon: path.join(__dirname, '../../public/icon.png'),
     show: false
-  });
+  };
+
+  // Windows-specific dark titlebar (Windows 10/11)
+  if (isWindows) {
+    windowConfig.titleBarStyle = 'hidden';
+    windowConfig.titleBarOverlay = {
+      color: '#1a1a1a',
+      symbolColor: '#ffffff',
+      height: 32
+    };
+  }
+
+  mainWindow = new BrowserWindow(windowConfig);
 
   mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
 
