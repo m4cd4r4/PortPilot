@@ -17,12 +17,6 @@ function createWindow(configStore) {
     minWidth: 600,
     minHeight: 400,
     backgroundColor: '#1a1a1a', // Dark background to match app theme
-    titleBarStyle: 'hidden',
-    titleBarOverlay: {
-      color: '#2a2a2a', // Slightly lighter for better contrast with controls
-      symbolColor: '#ffffff',
-      height: 40 // Taller for better visibility
-    },
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
