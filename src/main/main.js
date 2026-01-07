@@ -13,6 +13,7 @@ function createWindow(configStore) {
     height: 700,
     minWidth: 600,
     minHeight: 400,
+    backgroundColor: '#1a1a1a', // Dark background to match app theme
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
