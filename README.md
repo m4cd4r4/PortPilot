@@ -4,11 +4,26 @@
 
 🌐 **[View Landing Page & Download](https://m4cd4r4.github.io/PortPilot/)** 🌐
 
-[![Version](https://img.shields.io/badge/version-1.4.0-blue.svg)](https://github.com/m4cd4r4/PortPilot/releases/tag/v1.4.0)
+[![Version](https://img.shields.io/badge/version-1.4.1-blue.svg)](https://github.com/m4cd4r4/PortPilot/releases/tag/v1.4.1)
 [![Tests](https://img.shields.io/badge/tests-20%2F20%20passing-brightgreen.svg)](TESTING_SUMMARY.md)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 ![PortPilot](screenshots/03-apps-tab.png)
+
+## ✨ What's New in v1.4.1
+
+### 🖥️ System Tray & Window Behavior
+- **Stop All Apps from Tray** — Right-click tray icon to stop all PortPilot-managed apps without quitting
+- **Configurable Window Behavior** — Choose whether close button minimizes to tray or exits completely
+- **Smart Process Cleanup** — Optionally stop all apps when quitting (only affects PortPilot-managed processes)
+- **External Process Safety** — Never touches processes started outside PortPilot
+
+### 🔒 Single-Instance Lock
+- **One Instance Only** — Prevents multiple copies of PortPilot from running simultaneously
+- **Smart Window Focusing** — Launching a second instance automatically focuses the existing window
+- **No More Confusion** — Single system tray icon, clear state management
+
+[See full changelog →](CHANGELOG.md)
 
 ## ✨ What's New in v1.4.0
 
@@ -64,7 +79,8 @@
 - **Requirement Badges** — Visual indicators for Docker, Node.js, Python, and more
 - **Docker Integration** — Click to start Docker Desktop, with status detection
 - **IPv4/IPv6 Awareness** — Shows which protocol your app is bound to
-- **System Tray** — Minimize to tray, quick access menu
+- **System Tray** — Minimize to tray, "Stop All Apps" menu option, configurable window behavior
+- **Single-Instance Lock** — Only one PortPilot runs at a time, focuses existing window
 - **Multi-Theme Support** — 6 themes including TokyoNight, Brutalist, Nord, Dracula
 - **Knowledge Base** — Built-in help with tips, shortcuts, and common ports reference
 
