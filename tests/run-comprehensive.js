@@ -1,39 +1,19 @@
 /**
  * Comprehensive PortPilot Test Suite with Playwright
- * Fixed to work with launch.js wrapper
+ * Cross-platform: Works on Windows and Linux (WSL)
  */
 const { _electron: electron } = require('playwright');
 const path = require('path');
-const { execSync } = require('child_process');
-
-// Helpers
-function isPortListening(port) {
-  try {
-    const output = execSync(`netstat -ano | findstr :${port}`, { encoding: 'utf-8' });
-    return output.includes('LISTENING');
-  } catch {
-    return false;
-  }
-}
-
-function getPidForPort(port) {
-  try {
-    const output = execSync(`netstat -ano | findstr :${port}`, { encoding: 'utf-8' });
-    const lines = output.split('\n');
-    for (const line of lines) {
-      if (line.includes('LISTENING')) {
-        const parts = line.trim().split(/\s+/);
-        return parseInt(parts[parts.length - 1]);
-      }
-    }
-  } catch {
-    return null;
-  }
-}
+const { isPortListening, getPidForPort, getPlatformInfo } = require('./platform-helpers');
 
 async function runTests() {
+  const platform = getPlatformInfo();
+
   console.log('\n========================================');
   console.log('  PortPilot Comprehensive Test Suite');
+  console.log('========================================');
+  console.log(`Platform: ${platform.platform} (${platform.arch})`);
+  if (platform.isWSL) console.log('Environment: WSL');
   console.log('========================================\n');
 
   let passed = 0;
