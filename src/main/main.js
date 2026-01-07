@@ -1,10 +1,7 @@
-const { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, nativeTheme } = require('electron');
+const { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage } = require('electron');
 const path = require('path');
 const { setupIpcHandlers } = require('./ipcHandlers');
 const { ConfigStore } = require('./configStore');
-
-// Force dark mode for window frame/titlebar
-nativeTheme.themeSource = 'dark';
 
 let mainWindow = null;
 let tray = null;

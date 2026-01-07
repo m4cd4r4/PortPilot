@@ -85,18 +85,16 @@ class NodeDetector extends ProjectDetector {
         }
       }
 
-      // If no runnable script found, don't match this package.json
-      // This allows the scanner to continue searching deeper for a better match
-      if (!scriptName) {
-        return null;
-      }
-
       // Construct proper command
       let command;
-      if (packageManager === 'yarn') {
-        command = `yarn ${scriptName}`;
+      if (scriptName) {
+        if (packageManager === 'yarn') {
+          command = `yarn ${scriptName}`;
+        } else {
+          command = `${packageManager} run ${scriptName}`;
+        }
       } else {
-        command = `${packageManager} run ${scriptName}`;
+        command = 'npm run dev'; // Fallback
       }
 
       // Detect port - ONLY from explicit config, not framework defaults
@@ -449,16 +447,15 @@ function deduplicateProjects(projects) {
 }
 
 /**
- * Detect project in a directory and its subdirectories (recursive up to 3 levels)
+ * Detect project in a directory and its subdirectories (recursive up to 2 levels)
  * Returns the highest-confidence project found, preferring shallower paths
  * @param {string} dirPath - Directory to check
  * @returns {Promise<Object|null>} Detected project or null
  */
 async function detectProject(dirPath) {
-  // Scan directory and subdirectories (up to 3 levels deep)
-  // This handles structures like project/backend/api/package.json
+  // Scan directory and subdirectories (up to 2 levels deep)
   const discovered = await scanDirectory(dirPath, {
-    maxDepth: 3,
+    maxDepth: 2,
     ignorePatterns: ['node_modules', '.git', '.next', 'dist', 'build', '.vercel', 'target']
   });
 
