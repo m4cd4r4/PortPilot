@@ -4,13 +4,20 @@
 
 🌐 **[View Landing Page & Download](https://m4cd4r4.github.io/PortPilot/)** 🌐
 
-[![Version](https://img.shields.io/badge/version-1.4.1-blue.svg)](https://github.com/m4cd4r4/PortPilot/releases/tag/v1.4.1)
+[![Version](https://img.shields.io/badge/version-1.5.0-blue.svg)](https://github.com/m4cd4r4/PortPilot/releases/tag/v1.5.0)
 [![Tests](https://img.shields.io/badge/tests-20%2F20%20passing-brightgreen.svg)](TESTING_SUMMARY.md)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-![PortPilot](screenshots/03-apps-tab.png)
+![PortPilot](docs/screenshots/03-apps-tab.png)
 
-## ✨ What's New in v1.4.1
+## ✨ What's New in v1.5.0
+
+### 🐧 Linux Platform Support
+- **Cross-Platform Builds** — Now officially supports Windows AND Linux
+- **AppImage Package** — Universal Linux binary that runs on any distro (98 MB)
+- **.deb Package** — Native Debian/Ubuntu installer (69 MB)
+- **WSL Testing** — Full testing support in Windows Subsystem for Linux
+- **Platform Auto-Detection** — Automatically adapts commands for Windows/Linux
 
 ### 🖥️ System Tray & Window Behavior
 - **Stop All Apps from Tray** — Right-click tray icon to stop all PortPilot-managed apps without quitting
@@ -24,6 +31,7 @@
 - **No More Confusion** — Single system tray icon, clear state management
 
 [See full changelog →](CHANGELOG.md)
+
 
 ## ✨ What's New in v1.4.0
 
@@ -87,42 +95,46 @@
 ## Screenshots
 
 ### My Apps
-Register and manage your development applications with automatic status detection.
+Register and manage your development applications with automatic status detection and favorites.
 
-![My Apps](screenshots/03-apps-tab.png)
+![My Apps](docs/screenshots/03-apps-tab.png)
 
 ### Active Ports
 Scan and view all listening TCP ports with improved readability.
 
-![Active Ports](screenshots/01-ports-tab.png)
+![Active Ports](docs/screenshots/01-ports-tab.png)
 
 ### Knowledge Base
-Built-in documentation, shortcuts, and troubleshooting guides.
+Built-in documentation with System Tray guide, shortcuts, and troubleshooting.
 
-![Knowledge](screenshots/05-knowledge-tab.png)
+![Knowledge](docs/screenshots/05-knowledge-tab.png)
 
 ### Settings
-Choose from 6 themes, configure auto-scan, and enable DevTools.
+Choose from 6 themes, configure window behavior, auto-scan, and more.
 
-![Settings](screenshots/06-settings-tab.png)
+![Settings](docs/screenshots/06-settings-tab.png)
 
 ### Dark Theme
 Brutalist Dark theme with high contrast and bold design.
 
-![Dark Theme](screenshots/07-brutalist-dark-theme.png)
+![Dark Theme](docs/screenshots/07-brutalist-dark-theme.png)
 
 ## Installation
 
 ### Download (Recommended)
 
-**Latest Release: v1.4.0**
+**Latest Release: v1.5.0** 🐧
+
+> 🎉 **v1.5.0 adds Linux support!** Build from source or download pre-built packages (coming soon to GitHub Releases)
 
 **Windows:**
-- [PortPilot-1.4.0-x64.exe](https://github.com/m4cd4r4/PortPilot/releases/download/v1.4.0/PortPilot-1.4.0-x64.exe) — NSIS Installer
-- [PortPilot-1.4.0-portable.exe](https://github.com/m4cd4r4/PortPilot/releases/download/v1.4.0/PortPilot-1.4.0-portable.exe) — Portable Version
+- [PortPilot-1.4.0-x64.exe](https://github.com/m4cd4r4/PortPilot/releases/download/v1.4.0/PortPilot-1.4.0-x64.exe) — NSIS Installer (v1.4.0)
+- [PortPilot-1.4.0-portable.exe](https://github.com/m4cd4r4/PortPilot/releases/download/v1.4.0/PortPilot-1.4.0-portable.exe) — Portable (v1.4.0)
+- Build v1.5.0 from source for latest features
 
-**Linux:**
-- AppImage and .deb packages coming soon (build from source for now)
+**Linux:** 🆕
+- Build AppImage + .deb from source (see instructions below)
+- Pre-built packages coming soon to GitHub Releases
 
 ### Build from Source
 
