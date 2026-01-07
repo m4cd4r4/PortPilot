@@ -105,18 +105,39 @@ function createTray() {
 
 // App lifecycle
 let configStore;
-app.whenReady().then(() => {
-  configStore = new ConfigStore();
-  createWindow(configStore);
-  createTray();
-  setupIpcHandlers(ipcMain, configStore);
 
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow(configStore);
+// Single instance lock - prevent multiple copies of PortPilot from running
+const gotTheLock = app.requestSingleInstanceLock();
+
+if (!gotTheLock) {
+  // Another instance is already running, quit this one
+  console.log('PortPilot is already running. Exiting duplicate instance.');
+  app.quit();
+} else {
+  // We have the lock - this is the primary instance
+  // Handle second-instance attempts by focusing our window
+  app.on('second-instance', (event, commandLine, workingDirectory) => {
+    // Someone tried to run a second instance, focus our window instead
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      if (!mainWindow.isVisible()) mainWindow.show();
+      mainWindow.focus();
     }
   });
-});
+
+  app.whenReady().then(() => {
+    configStore = new ConfigStore();
+    createWindow(configStore);
+    createTray();
+    setupIpcHandlers(ipcMain, configStore);
+
+    app.on('activate', () => {
+      if (BrowserWindow.getAllWindows().length === 0) {
+        createWindow(configStore);
+      }
+    });
+  });
+}
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
