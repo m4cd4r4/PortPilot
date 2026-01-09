@@ -43,7 +43,7 @@
   "build": {
     "appId": "com.macdara.portpilot",
     "productName": "PortPilot",
-    "copyright": "Copyright © 2024 Macdara",
+    "copyright": "Copyright © 2026 Macdara",
     "directories": {
       "output": "dist",
       "buildResources": "public"
