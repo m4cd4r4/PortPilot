@@ -381,6 +381,6 @@ MIT © Macdara
 
 ---
 
-**Built with ❤️ for developers who juggle multiple localhost apps**
+**Built for developers who juggle multiple localhost apps**
 
 🚀 [Download Latest Release](https://github.com/m4cd4r4/PortPilot/releases/latest) | 📖 [Documentation](TESTING_SUMMARY.md) | 🐛 [Report Issues](https://github.com/m4cd4r4/PortPilot/issues)
