@@ -1,0 +1,15 @@
+{
+  "name": "portpilot-mcp-server",
+  "version": "1.0.0",
+  "description": "MCP server for PortPilot - manage local development servers from Claude",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^0.5.0"
+  },
+  "author": "Macdara",
+  "license": "MIT"
+}
