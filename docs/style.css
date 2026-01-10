@@ -400,6 +400,80 @@ kbd {
   color: var(--accent-cyan);
 }
 
+/* MCP Section */
+.mcp-section {
+  padding: 80px 0;
+  background: var(--bg-primary);
+}
+
+.mcp-content {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 48px;
+  margin-top: 48px;
+}
+
+.mcp-commands h3,
+.mcp-info h3 {
+  font-size: 1.1rem;
+  color: var(--accent-primary);
+  margin-bottom: 20px;
+  text-align: left;
+}
+
+.command-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.command-item {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 14px 20px;
+  transition: border-color 0.2s ease;
+}
+
+.command-item:hover {
+  border-color: var(--accent-green);
+}
+
+.command-quote {
+  color: var(--accent-green);
+  font-style: italic;
+  font-size: 1rem;
+}
+
+.mcp-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.mcp-tool {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 20px;
+  padding: 8px 16px;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.mcp-note {
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  margin-bottom: 20px;
+  text-align: left;
+}
+
+@media (max-width: 768px) {
+  .mcp-content {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Footer */
 .footer {
   padding: 48px 0 24px;

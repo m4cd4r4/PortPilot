@@ -1120,6 +1120,43 @@ body {
   border: 1px solid var(--border-color);
 }
 
+/* MCP Commands */
+.mcp-commands {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 12px 0;
+}
+
+.mcp-command {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  color: var(--accent-green);
+  font-style: italic;
+}
+
+.mcp-compat {
+  font-size: 0.8rem !important;
+  color: var(--text-muted) !important;
+  margin-top: 8px !important;
+}
+
+.mcp-setup-link {
+  display: inline-block;
+  margin-top: 8px;
+  color: var(--accent-cyan);
+  font-size: 0.85rem;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.mcp-setup-link:hover {
+  text-decoration: underline;
+}
+
 /* Keyboard Shortcuts */
 .shortcut-grid {
   display: grid;
