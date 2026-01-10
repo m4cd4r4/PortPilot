@@ -7,8 +7,21 @@
 [![Version](https://img.shields.io/badge/version-1.5.0-blue.svg)](https://github.com/m4cd4r4/PortPilot/releases/tag/v1.5.0)
 [![Tests](https://img.shields.io/badge/tests-20%2F20%20passing-brightgreen.svg)](TESTING_SUMMARY.md)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![MCP](https://img.shields.io/badge/MCP-enabled-purple.svg)](mcp-server/README.md)
 
 ![PortPilot](docs/screenshots/03-apps-tab.png)
+
+### 🤖 NEW: AI Agent Integration
+
+Control PortPilot with natural language! Works with Claude Code, Cursor, Windsurf, and any MCP-compatible AI assistant.
+
+```
+"Start the azure-practice-exam-platform app"
+"What's running on port 3001?"
+"Kill whatever is running on port 3000"
+```
+
+**[→ Setup MCP Integration](mcp-server/README.md)**
 
 ## What's New in v1.5.0
 
@@ -332,6 +345,69 @@ npm run screenshots
 - ✅ App configuration editing (100%)
 
 **Total: 20/20 tests passing** — See [TESTING_SUMMARY.md](TESTING_SUMMARY.md) for details.
+
+## 🤖 AI Agent Integration (MCP)
+
+PortPilot includes an MCP (Model Context Protocol) server that lets any compatible AI assistant manage your development environment with natural language.
+
+### Compatible Tools
+
+Works with any MCP-enabled AI assistant:
+- **Claude Code** (CLI)
+- **Claude Desktop**
+- **Cursor**
+- **Windsurf**
+- **Cline**
+
+### Setup
+
+```bash
+# Install MCP server dependencies
+cd mcp-server && npm install && cd ..
+
+# Add to Claude Code
+claude mcp add portpilot -- node "C:\path\to\PortPilot\mcp-server\index.js"
+
+# Verify connection
+claude mcp list
+# Should show: portpilot: ... - ✓ Connected
+```
+
+**Restart your AI tool** after adding to load the new tools.
+
+### Example Commands
+
+Just ask in natural language:
+
+```
+"List all my PortPilot apps"
+"Start the azure-practice-exam-platform app"
+"What's running on port 3001?"
+"Add a new app called 'hero-concepts-preview' at C:\Scratch\azure-practice-exam-platform with command 'npm run web' on port 3001"
+"Stop mocksnap"
+"Kill whatever is running on port 3000"
+"Delete all apps from PortPilot"
+"Favorite the AzurePrep app"
+```
+
+### Available Tools
+
+| Tool | Description |
+|------|-------------|
+| `list_apps` | List all registered apps |
+| `get_app` | Get details of a specific app |
+| `start_app` | Start an app by name or ID |
+| `stop_app` | Stop a running app |
+| `add_app` | Register a new app |
+| `update_app` | Update app configuration |
+| `delete_app` | Remove an app |
+| `list_running` | Show currently running apps |
+| `scan_ports` | Scan for active ports |
+| `kill_port` | Kill process on a port |
+| `toggle_favorite` | Star/unstar an app |
+| `delete_all_apps` | Remove all apps (requires confirmation) |
+
+See [mcp-server/README.md](mcp-server/README.md) for full documentation.
 
 ## Tech Stack
 
