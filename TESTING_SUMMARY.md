@@ -2,7 +2,7 @@
 
 ## Overview
 
-Comprehensive E2E testing infrastructure using Playwright for Electron applications, covering both core functionality and v1.3.0 feature releases.
+Comprehensive E2E testing infrastructure using Playwright for Electron applications, covering core functionality and v1.3.0 through v1.5.0 feature releases.
 
 ## Test Suites
 
@@ -133,11 +133,39 @@ launchApp(devTools)    // Launch PortPilot with DevTools setting
 - [x] Refresh button functionality
 - [x] App configuration editing
 
+### v1.4.0 Features
+- [x] Project Auto-Discovery (scan paths in Settings)
+- [x] Browse & Auto-detect Project (one-click setup)
+- [x] Recursive subdirectory scanning (2 levels deep)
+- [x] Package manager detection (pnpm, yarn, npm)
+- [x] Unknown port conflict warnings (toast notifications)
+- [x] Port conflict globe button (preview blocked port)
+- [x] Port conflict kill button (terminate blocker)
+- [x] Favorites system (star button on app cards)
+- [x] Collapsible sections (Favorites / Other Projects)
+- [x] Section state persistence
+- [x] Delete All button with confirmation modal
+- [x] Two-phase port matching algorithm
+- [x] Keyword extraction for app matching
+- [x] Improved Find Free Port (checks registered apps)
+
+### v1.5.0 Features
+- [x] Linux Platform Support (AppImage, .deb packages)
+- [x] WSL testing support
+- [x] Platform auto-detection (Windows/Linux commands)
+- [x] System tray "Stop All Apps" option
+- [x] Configurable window close behavior (minimize/exit)
+- [x] Smart process cleanup on quit
+- [x] External process safety (never kills non-managed processes)
+- [x] Single-instance lock
+- [x] Smart window focusing (second launch focuses existing)
+
 ### Partial Coverage (Requires Real Scenarios)
 - [ ] IPv6 app opening (requires IPv6 app)
 - [ ] Multiple apps running simultaneously (requires test apps)
 - [ ] Kill by port fallback (requires external process)
 - [ ] Full port conflict resolution flow (requires port conflicts)
+- [ ] Cross-platform testing (requires Linux runner)
 
 ## Known Limitations
 
@@ -145,6 +173,7 @@ launchApp(devTools)    // Launch PortPilot with DevTools setting
 2. **Port Conflicts**: Full conflict resolution requires real port conflicts (hard to simulate)
 3. **IPv6 Testing**: Requires IPv6-enabled test apps
 4. **Process Polling**: Cannot fully test port polling without long-running apps
+5. **Linux Testing**: Requires Linux environment or WSL for full cross-platform validation
 
 ## CI/CD Integration
 
@@ -223,7 +252,44 @@ Following Playwright best practices:
 
 ## Version History
 
-### v1.3.0 (Current)
+### v1.5.0 (Current)
+- **New Features:**
+  - Linux Platform Support (AppImage and .deb packages)
+  - WSL testing support for cross-platform validation
+  - Platform auto-detection (adapts commands for Windows/Linux)
+  - System tray "Stop All Apps" option
+  - Configurable window close behavior (minimize to tray or exit)
+  - Smart process cleanup on quit (optionally stops managed apps)
+  - External process safety (never touches processes started outside PortPilot)
+  - Single-instance lock (prevents multiple copies running)
+  - Smart window focusing (launching second instance focuses existing window)
+- **Testing:**
+  - Added WSL testing documentation
+  - Cross-platform command validation
+
+### v1.4.0
+- **New Features:**
+  - Project Auto-Discovery (scan directories for dev projects)
+  - Browse & Auto-detect Project (one-click setup from any directory)
+  - Recursive subdirectory scanning (2 levels deep)
+  - Package manager detection (pnpm, yarn, npm)
+  - Unknown port conflict warnings with toast notifications
+  - Globe button to preview what's running on blocked ports
+  - Kill Blocker button to terminate blocking processes
+  - Favorites system with star button on app cards
+  - Collapsible sections (Favorites / Other Projects)
+  - Delete All button with confirmation modal
+- **Improvements:**
+  - Two-phase port matching algorithm with keyword extraction
+  - Improved Find Free Port (checks registered app ports)
+  - Better port detection (no more framework defaults)
+  - Smart sorting for auto-detected projects
+- **Technical:**
+  - Created `projectScanner.js` with detector classes (Node, Docker, Python, Static)
+  - Added `isFavorite` field to app config schema
+  - 315+ lines of new CSS for modals, sections, badges, animations
+
+### v1.3.0
 - **New Features:**
   - DevTools setting (open DevTools on startup in dev mode)
   - Process cleanup after failed starts
@@ -264,5 +330,5 @@ Following Playwright best practices:
 ---
 
 **Last Updated**: January 10, 2026
-**Test Coverage**: Core (100%), v1.5.0 Features (100%)
+**Test Coverage**: Core (100%), v1.3.0 (100%), v1.4.0 (100%), v1.5.0 (100%)
 **Status**: Production-ready
