@@ -198,7 +198,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Release Schedule
 
-- **v1.3.0** - January 5, 2026 (Current)
+- **v1.5.0** - January 10, 2026 (Current)
+- **v1.4.0** - January 6, 2026
+- **v1.3.0** - January 5, 2026
 - **v1.2.0** - December 2025
 - **v1.1.0** - December 2025
 - **v1.0.0** - December 2025

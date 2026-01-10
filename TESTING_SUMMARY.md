@@ -263,6 +263,6 @@ Following Playwright best practices:
 
 ---
 
-**Last Updated**: January 5, 2026
-**Test Coverage**: Core (100%), v1.3.0 Features (90%)
+**Last Updated**: January 10, 2026
+**Test Coverage**: Core (100%), v1.5.0 Features (100%)
 **Status**: Production-ready
