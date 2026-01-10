@@ -4,3 +4,26 @@ dist/
 *.log
 .env
 .env.local
+
+# Marketing materials (keep local)
+LINKEDIN_TWITTER_POSTS.md
+REDDIT_LAUNCH_POSTS.md
+GMAIL_DRAFT_EMAILS_READY_TO_SEND.md
+GUEST_POST_OPPORTUNITIES.md
+GUEST_POST_TRACKING.md
+LAUNCH_DAY_CHECKLIST.md
+MASTER_LAUNCH_GUIDE.md
+pitch-emails.md
+author-bio-options.md
+azure-certification-guide-article.md
+azure-certification-guide-styled.html
+
+# Session/dev files
+CROSS_SESSION_AWARENESS_*.md
+TEST_PLAN_*.md
+take-screenshots.md
+screenshots/
+*.ps1
+
+# Claude local settings (contains personal permissions)
+.claude/
