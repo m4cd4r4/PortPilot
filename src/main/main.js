@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage } = require('electron');
+const { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, nativeTheme } = require('electron');
 const path = require('path');
 const { setupIpcHandlers } = require('./ipcHandlers');
 const { ConfigStore } = require('./configStore');
@@ -127,6 +127,9 @@ if (!gotTheLock) {
   });
 
   app.whenReady().then(() => {
+    // Set dark mode for native title bar on Windows
+    nativeTheme.themeSource = 'dark';
+
     configStore = new ConfigStore();
     createWindow(configStore);
     createTray();
