@@ -123,18 +123,15 @@ Brutalist Dark theme with high contrast and bold design.
 
 ### Download (Recommended)
 
-**Latest Release: v1.5.0** 🐧
-
-> 🎉 **v1.5.0 adds Linux support!** Build from source or download pre-built packages (coming soon to GitHub Releases)
+**Latest Release: v1.5.0**
 
 **Windows:**
-- [PortPilot-1.4.0-x64.exe](https://github.com/m4cd4r4/PortPilot/releases/download/v1.4.0/PortPilot-1.4.0-x64.exe) — NSIS Installer (v1.4.0)
-- [PortPilot-1.4.0-portable.exe](https://github.com/m4cd4r4/PortPilot/releases/download/v1.4.0/PortPilot-1.4.0-portable.exe) — Portable (v1.4.0)
-- Build v1.5.0 from source for latest features
+- [PortPilot-1.5.0-x64.exe](https://github.com/m4cd4r4/PortPilot/releases/download/v1.5.0/PortPilot-1.5.0-x64.exe) — NSIS Installer (72 MB)
+- [PortPilot-1.5.0-portable.exe](https://github.com/m4cd4r4/PortPilot/releases/download/v1.5.0/PortPilot-1.5.0-portable.exe) — Portable (72 MB)
 
-**Linux:** 🆕
-- Build AppImage + .deb from source (see instructions below)
-- Pre-built packages coming soon to GitHub Releases
+**Linux:**
+- [PortPilot-1.5.0-x86_64.AppImage](https://github.com/m4cd4r4/PortPilot/releases/download/v1.5.0/PortPilot-1.5.0-x86_64.AppImage) — Universal Linux (98 MB)
+- [PortPilot-1.5.0-amd64.deb](https://github.com/m4cd4r4/PortPilot/releases/download/v1.5.0/PortPilot-1.5.0-amd64.deb) — Debian/Ubuntu (69 MB)
 
 ### Build from Source
 
