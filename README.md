@@ -10,22 +10,22 @@
 
 ![PortPilot](docs/screenshots/03-apps-tab.png)
 
-## ✨ What's New in v1.5.0
+## What's New in v1.5.0
 
-### 🐧 Linux Platform Support
+### Linux Platform Support
 - **Cross-Platform Builds** — Now officially supports Windows AND Linux
 - **AppImage Package** — Universal Linux binary that runs on any distro (98 MB)
 - **.deb Package** — Native Debian/Ubuntu installer (69 MB)
 - **WSL Testing** — Full testing support in Windows Subsystem for Linux
 - **Platform Auto-Detection** — Automatically adapts commands for Windows/Linux
 
-### 🖥️ System Tray & Window Behavior
+### System Tray & Window Behavior
 - **Stop All Apps from Tray** — Right-click tray icon to stop all PortPilot-managed apps without quitting
 - **Configurable Window Behavior** — Choose whether close button minimizes to tray or exits completely
 - **Smart Process Cleanup** — Optionally stop all apps when quitting (only affects PortPilot-managed processes)
 - **External Process Safety** — Never touches processes started outside PortPilot
 
-### 🔒 Single-Instance Lock
+### Single-Instance Lock
 - **One Instance Only** — Prevents multiple copies of PortPilot from running simultaneously
 - **Smart Window Focusing** — Launching a second instance automatically focuses the existing window
 - **No More Confusion** — Single system tray icon, clear state management
@@ -33,23 +33,23 @@
 [See full changelog →](CHANGELOG.md)
 
 
-## ✨ What's New in v1.4.0
+## What's New in v1.4.0
 
-### 🔍 Browse & Auto-detect Project
+### Browse & Auto-detect Project
 - **One-Click Project Setup** — Click "Browse & Auto-detect" in Add App modal to automatically configure any project
 - **Recursive Scanning** — Finds projects up to 2 levels deep in subdirectories
 - **Package Manager Detection** — Auto-detects pnpm, yarn, or npm and uses the correct command
 - **Smart Port Detection** — Only uses explicit port config (no more "everything gets port 3000")
 - **Works with Monorepos** — Finds the actual project inside parent folders (e.g., `manual-build/` inside root)
 
-### ⚠️ Port Conflict Warnings
+### Port Conflict Warnings
 - **Unknown Process Detection** — Warns when unknown processes block your app's preferred port
 - **🌐 Preview Button** — Click globe to see what's running on the blocked port
 - **Kill Blocker Button** — Terminate blocking processes with one click
 - **Toast Notifications** — Visual warnings when port conflicts are detected
 - **Improved Matching** — Two-phase algorithm with keyword extraction prevents false positives
 
-### 🔍 Project Auto-Discovery
+### Project Auto-Discovery
 - **Automatic Project Detection** — Scan your project directories to automatically discover Node.js, Docker, Python, and static site projects
 - **Smart Metadata Extraction** — Automatically detects project names, start commands, and ports
 - **User-Configurable Paths** — Add your own scan directories (e.g., `C:\Projects`, `C:\Dev`)
@@ -57,7 +57,7 @@
 - **Bulk Import** — Add all discovered projects at once or pick individual ones
 - **Scan Depth Control** — Configure how deep to search (1-5 directory levels)
 
-### ⭐ Favorites System
+### Favorites System
 - **Star Your Apps** — Click the star (⭐/☆) button to mark frequently-used apps as favorites
 - **Organized Sections** — Apps automatically organized into:
   - **⭐ Favorites** — Starred apps at the top for quick access
@@ -65,7 +65,7 @@
 - **Collapsible Sections** — Click section headers to expand/collapse
 - **Persistent State** — Section collapse state saved across app restarts
 
-### 🗑 Delete All
+### Delete All
 - **Bulk Delete** — Remove all apps in one click with "Delete All" button
 - **Safety First** — Strong confirmation modal warns before deletion
 - **Export Reminder** — Prompts to export config before deleting
