@@ -133,6 +133,9 @@ Brutalist Dark theme with high contrast and bold design.
 - [PortPilot-1.5.0-x86_64.AppImage](https://github.com/m4cd4r4/PortPilot/releases/download/v1.5.0/PortPilot-1.5.0-x86_64.AppImage) — Universal Linux (98 MB)
 - [PortPilot-1.5.0-amd64.deb](https://github.com/m4cd4r4/PortPilot/releases/download/v1.5.0/PortPilot-1.5.0-amd64.deb) — Debian/Ubuntu (69 MB)
 
+**macOS:**
+- Build from source (see below) — macOS is supported but not officially tested
+
 ### Build from Source
 
 ```bash
