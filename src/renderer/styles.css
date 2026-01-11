@@ -44,28 +44,6 @@
   --border-width: 2px;
 }
 
-/* Brutalist Light (Enhanced-IT inspired) */
-[data-theme="brutalist-light"] {
-  --bg-primary: #ffffff;
-  --bg-secondary: #f5f5f5;
-  --bg-tertiary: #eeeeee;
-  --text-primary: #000000;
-  --text-secondary: #333333;
-  --text-muted: #666666;
-  --accent-primary: #000000;
-  --accent-green: #059669;
-  --accent-red: #dc2626;
-  --accent-yellow: #ffff00;
-  --accent-purple: #7c3aed;
-  --accent-cyan: #0891b2;
-  --border-color: #000000;
-  --shadow: 8px 8px 0 #000;
-  --radius: 0;
-  --radius-sm: 0;
-  --font-family: Arial, sans-serif;
-  --border-width: 4px;
-}
-
 /* Nord (Cool Blues) */
 [data-theme="nord"] {
   --bg-primary: #2e3440;
@@ -1075,33 +1053,8 @@ body {
 }
 
 /* ============ Brutalist Specifics ============ */
-[data-theme="brutalist-dark"] .port-card:hover,
-[data-theme="brutalist-light"] .port-card:hover {
+[data-theme="brutalist-dark"] .port-card:hover {
   transform: translateY(-2px);
-}
-
-[data-theme="brutalist-light"] .btn-primary {
-  background: #000;
-  color: #fff;
-  border-color: #000;
-}
-
-[data-theme="brutalist-light"] .btn-primary:hover {
-  background: #fff;
-  color: #000;
-}
-
-[data-theme="brutalist-light"] .header {
-  border-bottom-width: 4px;
-}
-
-[data-theme="brutalist-light"] .tabs {
-  border-bottom-width: 4px;
-}
-
-[data-theme="brutalist-light"] .tab.active {
-  background: var(--accent-yellow);
-  color: #000;
 }
 
 /* ============ Knowledge Tab ============ */
@@ -1410,24 +1363,6 @@ kbd {
 
 .link-icon {
   font-size: 1.1rem;
-}
-
-/* Brutalist Light Specifics for Knowledge */
-[data-theme="brutalist-light"] .knowledge-card:hover {
-  box-shadow: var(--shadow);
-  transform: translateY(-2px);
-}
-
-[data-theme="brutalist-light"] kbd {
-  background: #fff;
-  border-color: #000;
-  color: #000;
-}
-
-[data-theme="brutalist-light"] .port-num {
-  background: var(--accent-yellow);
-  color: #000;
-  border-color: #000;
 }
 
 /* ============ v1.4.0 - Favorites & Sections ============ */
