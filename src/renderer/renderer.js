@@ -624,7 +624,16 @@ function renderAppCard(app) {
   return `
     <div class="app-card ${isSelected ? 'selected' : ''} ${isExpanded ? 'expanded' : 'compact'}"
          data-id="${app.id}"
-         onclick="if (event.target.closest('.app-checkbox, .btn-star, .app-actions, button')) return; toggleAppExpansion('${app.id}')">
+         data-favorite="${app.isFavorite ? 'true' : 'false'}"
+         draggable="true"
+         ondragstart="handleDragStart(event, '${app.id}')"
+         ondragover="handleDragOver(event)"
+         ondragenter="handleDragEnter(event)"
+         ondragleave="handleDragLeave(event)"
+         ondrop="handleDrop(event, '${app.id}')"
+         ondragend="handleDragEnd(event)"
+         onclick="if (event.target.closest('.app-checkbox, .btn-star, .app-actions, .drag-handle, button')) return; toggleAppExpansion('${app.id}')">
+      <span class="drag-handle" title="Drag to reorder">⋮⋮</span>
       <input type="checkbox" class="app-checkbox"
              ${isSelected ? 'checked' : ''}
              onchange="event.stopPropagation(); toggleAppSelection('${app.id}')"
@@ -892,6 +901,76 @@ function expandAllApps() {
 function collapseAllApps() {
   state.expandedApps.clear();
   renderApps();
+}
+
+// ============ Drag and Drop Reordering ============
+let draggedAppId = null;
+
+function handleDragStart(event, appId) {
+  draggedAppId = appId;
+  event.currentTarget.classList.add('dragging');
+  event.dataTransfer.effectAllowed = 'move';
+  event.dataTransfer.setData('text/html', event.currentTarget.innerHTML);
+}
+
+function handleDragOver(event) {
+  event.preventDefault();
+  event.dataTransfer.dropEffect = 'move';
+  return false;
+}
+
+function handleDragEnter(event) {
+  event.currentTarget.classList.add('drag-over');
+}
+
+function handleDragLeave(event) {
+  event.currentTarget.classList.remove('drag-over');
+}
+
+async function handleDrop(event, targetAppId) {
+  event.stopPropagation();
+  event.preventDefault();
+
+  event.currentTarget.classList.remove('drag-over');
+
+  if (draggedAppId === targetAppId) return;
+
+  const draggedApp = state.apps.find(a => a.id === draggedAppId);
+  const targetApp = state.apps.find(a => a.id === targetAppId);
+
+  // Only allow reordering within same section (favorites vs non-favorites)
+  if (draggedApp.isFavorite !== targetApp.isFavorite) {
+    showToast('Cannot move between Favorites and Other Projects sections', 'warning');
+    return;
+  }
+
+  // Reorder apps array
+  const draggedIndex = state.apps.findIndex(a => a.id === draggedAppId);
+  const targetIndex = state.apps.findIndex(a => a.id === targetAppId);
+
+  const [removed] = state.apps.splice(draggedIndex, 1);
+  state.apps.splice(targetIndex, 0, removed);
+
+  // Save new order to config
+  const result = await window.portpilot.config.updateAppsOrder(state.apps.map(a => a.id));
+
+  if (result.success) {
+    renderApps();
+    showToast('App order saved', 'success');
+  } else {
+    showToast('Failed to save order: ' + result.error, 'error');
+  }
+}
+
+function handleDragEnd(event) {
+  event.currentTarget.classList.remove('dragging');
+
+  // Remove drag-over class from all cards
+  document.querySelectorAll('.app-card').forEach(card => {
+    card.classList.remove('drag-over');
+  });
+
+  draggedAppId = null;
 }
 
 // ============ Delete All ============

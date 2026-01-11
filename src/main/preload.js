@@ -30,6 +30,7 @@ contextBridge.exposeInMainWorld('portpilot', {
     deleteApp: (appId) => ipcRenderer.invoke('config:deleteApp', appId),
     toggleFavorite: (appId) => ipcRenderer.invoke('config:toggleFavorite', appId),
     deleteAllApps: () => ipcRenderer.invoke('config:deleteAllApps'),
+    updateAppsOrder: (appIds) => ipcRenderer.invoke('config:updateAppsOrder', appIds),
     getSettings: () => ipcRenderer.invoke('config:getSettings'),
     updateSettings: (settings) => ipcRenderer.invoke('config:updateSettings', settings),
     export: () => ipcRenderer.invoke('config:export'),
