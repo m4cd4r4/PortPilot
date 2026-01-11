@@ -4,8 +4,8 @@
 
 🌐 **[View Landing Page & Download](https://m4cd4r4.github.io/PortPilot/)** 🌐
 
-[![Version](https://img.shields.io/badge/version-1.5.0-blue.svg)](https://github.com/m4cd4r4/PortPilot/releases/tag/v1.5.0)
-[![Tests](https://img.shields.io/badge/tests-20%2F20%20passing-brightgreen.svg)](TESTING_SUMMARY.md)
+[![Version](https://img.shields.io/badge/version-1.6.0-blue.svg)](https://github.com/m4cd4r4/PortPilot/releases/tag/v1.6.0)
+[![Tests](https://img.shields.io/badge/tests-11%2F11%20passing-brightgreen.svg)](TESTING_SUMMARY.md)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![MCP](https://img.shields.io/badge/MCP-enabled-purple.svg)](mcp-server/README.md)
 
@@ -22,6 +22,40 @@ Control PortPilot with natural language! Works with Claude Code, Cursor, Windsur
 ```
 
 **[→ Setup MCP Integration](mcp-server/README.md)**
+
+## What's New in v1.6.0
+
+### Compact & Sharp UI Redesign
+- **30-40% More Density** — See more apps and ports on screen without scrolling
+- **Sharp 2px Corners** — Modern, clean aesthetic (down from 8px)
+- **Tighter Spacing** — Reduced padding and gaps throughout
+- **Compact Port Cards** — Process and PID combined on one line for space efficiency
+- **Smaller Fonts** — Better information density while maintaining readability
+
+### MCP Auto-Refresh
+- **External Changes Detected** — Automatically refreshes when MCP or other tools modify config
+- **File Watcher** — Monitors config file for changes with 100ms debounce
+- **Toast Notifications** — Visual feedback when apps list updates externally
+- **No Restart Required** — Apps added via MCP appear instantly
+
+### Smart Window Auto-Resize
+- **Dynamic Height** — Window grows/shrinks based on number of apps
+- **Optimal Sizing** — 400px minimum, 1200px maximum
+- **Seamless Integration** — Works with MCP auto-refresh
+- **Better UX** — No wasted space, no excessive scrolling
+
+### Enhanced Testing
+- **100% Test Coverage** — All 11 E2E tests passing
+- **Integrated Test Servers** — HTTP servers on ports 3000, 3001, 8080
+- **Test Mode Support** — Singleton lock bypass for running tests alongside GUI
+- **Improved Reliability** — Fixed visibility issues, better wait strategies
+
+### Bug Fixes
+- **ConfigStore Null Reference** — Fixed critical crash on startup
+- **Test Infrastructure** — All tests now passing reliably
+- **Load Strategy** — Improved app initialization wait logic
+
+[See full changelog →](CHANGELOG-v1.6.0.md)
 
 ## What's New in v1.5.0
 
