@@ -19,7 +19,8 @@ const state = {
   otherProjectsExpanded: true,  // Other projects section collapse state
   deleteAppId: null,  // Track app being deleted for confirmation modal
   selectedApps: new Set(),  // Multi-select for apps
-  selectedProjects: new Set()  // Multi-select for discovered projects
+  selectedProjects: new Set(),  // Multi-select for discovered projects
+  expandedApps: new Set()  // Track which app cards are expanded (v1.6: 1-line compact mode)
 };
 
 // ============ Requirement Detection ============
@@ -618,27 +619,31 @@ function renderAppCard(app) {
   const badgesHtml = badges.length > 0 ? `<div class="req-badges">${badges.join('')}</div>` : '';
 
   const isSelected = state.selectedApps.has(app.id);
+  const isExpanded = state.expandedApps.has(app.id);
 
   return `
-    <div class="app-card ${isSelected ? 'selected' : ''}" data-id="${app.id}">
+    <div class="app-card ${isSelected ? 'selected' : ''} ${isExpanded ? 'expanded' : 'compact'}"
+         data-id="${app.id}"
+         onclick="if (event.target.closest('.app-checkbox, .btn-star, .app-actions, button')) return; toggleAppExpansion('${app.id}')">
       <input type="checkbox" class="app-checkbox"
              ${isSelected ? 'checked' : ''}
-             onchange="toggleAppSelection('${app.id}')"
+             onchange="event.stopPropagation(); toggleAppSelection('${app.id}')"
              title="Select for bulk actions">
       <div class="app-info">
         <div class="app-name">
           <span class="app-color" style="background: ${app.color}"></span>
           <button class="btn-star ${app.isFavorite ? 'starred' : ''}"
-                  onclick="toggleFavorite('${app.id}')"
+                  onclick="event.stopPropagation(); toggleFavorite('${app.id}')"
                   title="${app.isFavorite ? 'Remove from favorites' : 'Add to favorites'}">
             ${app.isFavorite ? '⭐' : '☆'}
           </button>
           ${escapeHtml(app.name)}
-          ${badgesHtml}
+          ${portDisplay}
+          <span class="expand-indicator">${isExpanded ? '▼' : '▶'}</span>
         </div>
         <div class="app-meta">
           <code>${escapeHtml(app.command)}</code>
-          ${portDisplay}
+          ${badgesHtml}
         </div>
       </div>
       <span class="app-status ${statusClass}">
@@ -866,6 +871,26 @@ async function toggleSection(section) {
     state.otherProjectsExpanded = !state.otherProjectsExpanded;
     await window.portpilot.config.updateSettings({ otherProjectsExpanded: state.otherProjectsExpanded });
   }
+  renderApps();
+}
+
+// ============ App Card Expansion (v1.6: 1-line compact mode) ============
+function toggleAppExpansion(appId) {
+  if (state.expandedApps.has(appId)) {
+    state.expandedApps.delete(appId);
+  } else {
+    state.expandedApps.add(appId);
+  }
+  renderApps();
+}
+
+function expandAllApps() {
+  state.apps.forEach(app => state.expandedApps.add(app.id));
+  renderApps();
+}
+
+function collapseAllApps() {
+  state.expandedApps.clear();
   renderApps();
 }
 
