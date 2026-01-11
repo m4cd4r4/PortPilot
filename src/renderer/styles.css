@@ -505,6 +505,7 @@ body {
   align-items: center;
   transition: all 0.15s ease;
   min-height: 42px;  /* v1.6: Compact height */
+  cursor: pointer;  /* v1.6: Clickable for expansion */
 }
 
 .app-card:hover {
@@ -514,6 +515,43 @@ body {
 .app-card.selected {
   border-color: var(--accent-cyan);
   background: rgba(125, 207, 255, 0.05);
+}
+
+/* v1.6: Compact mode (1-line, collapsed by default) */
+.app-card.compact {
+  min-height: 32px;  /* Ultra-compact for 15+ apps */
+}
+
+.app-card.compact .app-meta {
+  display: none;  /* Hide command/badges in compact mode */
+}
+
+.app-card.compact .app-info {
+  display: flex;
+  align-items: center;
+}
+
+/* v1.6: Expanded mode (show all details) */
+.app-card.expanded {
+  min-height: 42px;
+  align-items: flex-start;  /* Top-align for multi-line content */
+}
+
+.app-card.expanded .app-meta {
+  display: block;  /* Show command/badges in expanded mode */
+}
+
+/* v1.6: Expansion indicator */
+.expand-indicator {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  margin-left: 5px;
+  opacity: 0.6;
+  transition: opacity 0.15s;
+}
+
+.app-card:hover .expand-indicator {
+  opacity: 1;
 }
 
 /* App Checkbox for Multi-Select */
