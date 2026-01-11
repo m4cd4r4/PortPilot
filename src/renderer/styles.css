@@ -554,6 +554,38 @@ body {
   opacity: 1;
 }
 
+/* v1.6: Drag-and-drop reordering */
+.drag-handle {
+  cursor: grab;
+  color: var(--text-muted);
+  font-size: 1rem;
+  opacity: 0.5;
+  margin-right: 8px;
+  -webkit-user-select: none;
+  user-select: none;
+  transition: opacity 0.15s;
+}
+
+.drag-handle:hover {
+  opacity: 1;
+  color: var(--accent-cyan);
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+}
+
+.app-card.dragging {
+  opacity: 0.5;
+  border-color: var(--accent-yellow);
+}
+
+.app-card.drag-over {
+  border-color: var(--accent-cyan);
+  border-top-width: 2px;
+  background: rgba(125, 207, 255, 0.1);
+}
+
 /* App Checkbox for Multi-Select */
 .app-checkbox {
   width: 16px;  /* v1.6: Smaller (was 18px) */

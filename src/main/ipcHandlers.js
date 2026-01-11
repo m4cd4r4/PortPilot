@@ -343,6 +343,16 @@ function setupIpcHandlers(ipcMain, configStore) {
     }
   });
 
+  /** Update apps order (drag-and-drop reordering) */
+  ipcMain.handle('config:updateAppsOrder', async (_, appIds) => {
+    try {
+      configStore.updateAppsOrder(appIds);
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+
   // ============ Window Management ============
 
   /** Auto-resize window based on app count (v1.6 feature) */

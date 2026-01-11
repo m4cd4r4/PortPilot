@@ -165,12 +165,26 @@ class ConfigStore {
   deleteApp(id) {
     const initialLength = this.config.apps.length;
     this.config.apps = this.config.apps.filter(app => app.id !== id);
-    
+
     if (this.config.apps.length < initialLength) {
       this.save();
       return true;
     }
     return false;
+  }
+
+  /**
+   * Update apps order (for drag-and-drop reordering)
+   * @param {Array<string>} appIds - Ordered array of app IDs
+   */
+  updateAppsOrder(appIds) {
+    const orderedApps = [];
+    appIds.forEach(id => {
+      const app = this.config.apps.find(a => a.id === id);
+      if (app) orderedApps.push(app);
+    });
+    this.config.apps = orderedApps;
+    this.save();
   }
 
   /** Get settings */
