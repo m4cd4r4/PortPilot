@@ -202,6 +202,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Listen for tray scan trigger
   window.portpilot.on('trigger-scan', scanPorts);
+
+  // Listen for external config changes (e.g., from MCP)
+  window.portpilot.on('config-changed', async (data) => {
+    console.log('[Renderer] Config changed externally, refreshing apps list...');
+    await loadApps();
+    showToast('Apps list updated (external change detected)', 'info');
+  });
 });
 
 // ============ Event Listeners ============
@@ -380,9 +387,7 @@ function renderPorts() {
         <div class="port-info-row">
           <span class="label">Process:</span>
           <span class="value">${escapeHtml(p.processName || 'Unknown')}</span>
-        </div>
-        <div class="port-info-row">
-          <span class="label">PID:</span>
+          <span class="label" style="margin-left: 12px;">PID:</span>
           <span class="value">${p.pid || 'N/A'}</span>
         </div>
         ${p.commandLine ? `
@@ -460,6 +465,14 @@ async function loadApps() {
 
     renderApps();
     updateAppsCount();
+
+    // v1.6: Auto-resize window based on app count
+    try {
+      await window.portpilot.window.autoResize(state.apps.length);
+    } catch (resizeError) {
+      // Silent fail - window resize is not critical
+      console.log('Window auto-resize skipped:', resizeError.message);
+    }
   } catch (error) {
     showToast('Failed to load apps: ' + error.message, 'error');
   }

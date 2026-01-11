@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PortPilot v1.6 - UI Redesign Options</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #1a1b26;
+      color: #c0caf5;
+      padding: 40px 20px;
+      line-height: 1.6;
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      text-align: center;
+      margin-bottom: 20px;
+      color: #7dcfff;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: #9aa5ce;
+      margin-bottom: 50px;
+      font-size: 1.1rem;
+    }
+
+    .options-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 30px;
+      margin-bottom: 50px;
+    }
+
+    .option-card {
+      background: #24283b;
+      border: 2px solid #3b4261;
+      border-radius: 8px;
+      padding: 30px;
+      transition: all 0.3s ease;
+      cursor: pointer;
+      text-decoration: none;
+      color: inherit;
+      display: block;
+    }
+
+    .option-card:hover {
+      border-color: #7aa2f7;
+      transform: translateY(-5px);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    }
+
+    .option-card.current {
+      border-color: #e0af68;
+    }
+
+    .option-card.recommended {
+      border-color: #7dcfff;
+      background: linear-gradient(135deg, #24283b 0%, #2a3650 100%);
+    }
+
+    .option-card.extreme {
+      border-color: #f7768e;
+    }
+
+    .option-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .option-number {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      font-weight: bold;
+      flex-shrink: 0;
+    }
+
+    .current .option-number {
+      background: #e0af68;
+      color: #1a1b26;
+    }
+
+    .recommended .option-number {
+      background: #7dcfff;
+      color: #1a1b26;
+    }
+
+    .extreme .option-number {
+      background: #f7768e;
+      color: #fff;
+    }
+
+    .option-title {
+      font-size: 1.3rem;
+      font-weight: bold;
+      flex: 1;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-top: 5px;
+    }
+
+    .badge-current {
+      background: rgba(224, 175, 104, 0.2);
+      color: #e0af68;
+      border: 1px solid #e0af68;
+    }
+
+    .badge-recommended {
+      background: rgba(125, 207, 255, 0.2);
+      color: #7dcfff;
+      border: 1px solid #7dcfff;
+    }
+
+    .badge-extreme {
+      background: rgba(247, 118, 142, 0.2);
+      color: #f7768e;
+      border: 1px solid #f7768e;
+    }
+
+    .option-description {
+      color: #9aa5ce;
+      font-size: 0.95rem;
+      margin-bottom: 15px;
+      line-height: 1.5;
+    }
+
+    .specs-list {
+      list-style: none;
+      padding: 0;
+      margin: 15px 0;
+    }
+
+    .specs-list li {
+      padding: 6px 0;
+      padding-left: 20px;
+      position: relative;
+      font-size: 0.9rem;
+      color: #c0caf5;
+    }
+
+    .specs-list li::before {
+      content: "•";
+      position: absolute;
+      left: 0;
+      color: #7aa2f7;
+      font-weight: bold;
+    }
+
+    .cta {
+      text-align: center;
+      padding: 30px;
+      background: #2f3549;
+      border-radius: 8px;
+      border: 1px solid #3b4261;
+      margin-top: 40px;
+    }
+
+    .cta h2 {
+      color: #9ece6a;
+      margin-bottom: 15px;
+    }
+
+    .cta p {
+      color: #9aa5ce;
+      font-size: 1rem;
+      margin-bottom: 20px;
+    }
+
+    .btn {
+      display: inline-block;
+      padding: 12px 30px;
+      background: #7aa2f7;
+      color: #1a1b26;
+      text-decoration: none;
+      border-radius: 6px;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      transition: all 0.3s ease;
+      margin: 0 10px;
+    }
+
+    .btn:hover {
+      background: #7dcfff;
+      transform: scale(1.05);
+    }
+
+    .footer {
+      text-align: center;
+      margin-top: 60px;
+      color: #565f89;
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>PortPilot v1.6 UI Redesign</h1>
+    <p class="subtitle">Compare three density options and choose your favorite</p>
+
+    <div class="options-grid">
+      <!-- Current Design -->
+      <a href="CURRENT-DESIGN.html" target="_blank" class="option-card current">
+        <div class="option-header">
+          <div class="option-number">V1.5</div>
+          <div>
+            <div class="option-title">Current Design</div>
+            <span class="badge badge-current">Baseline</span>
+          </div>
+        </div>
+        <p class="option-description">
+          The current PortPilot v1.5 design for comparison purposes.
+        </p>
+        <ul class="specs-list">
+          <li>8px border radius (rounded corners)</li>
+          <li>Standard padding (8-12px)</li>
+          <li>Font sizes: 0.75-0.9rem</li>
+          <li>8px gaps between cards</li>
+          <li>52px card height</li>
+        </ul>
+      </a>
+
+      <!-- Option 1: Compact & Sharp (RECOMMENDED) -->
+      <a href="OPTION-1-COMPACT-SHARP.html" target="_blank" class="option-card recommended">
+        <div class="option-header">
+          <div class="option-number">1</div>
+          <div>
+            <div class="option-title">Compact & Sharp</div>
+            <span class="badge badge-recommended">Recommended</span>
+          </div>
+        </div>
+        <p class="option-description">
+          Perfect balance between readability and information density. Sharp, modern look with significantly more compact layout.
+        </p>
+        <ul class="specs-list">
+          <li>2px border radius (sharp corners)</li>
+          <li>Reduced padding (~40% less)</li>
+          <li>Font sizes: 0.65-0.8rem</li>
+          <li>3-5px gaps between cards</li>
+          <li>42px card height</li>
+        </ul>
+      </a>
+
+      <!-- Option 2: Ultra-Compact -->
+      <a href="OPTION-2-ULTRA-COMPACT.html" target="_blank" class="option-card extreme">
+        <div class="option-header">
+          <div class="option-number">2</div>
+          <div>
+            <div class="option-title">Ultra-Compact</div>
+            <span class="badge badge-extreme">Maximum Density</span>
+          </div>
+        </div>
+        <p class="option-description">
+          Maximum information density for users who want to see as many apps as possible. May sacrifice some readability.
+        </p>
+        <ul class="specs-list">
+          <li>0px border radius (completely sharp)</li>
+          <li>Minimal padding (~50% less)</li>
+          <li>Font sizes: 0.6-0.75rem</li>
+          <li>1-2px gaps between cards</li>
+          <li>36px card height</li>
+        </ul>
+      </a>
+    </div>
+
+    <div class="cta">
+      <h2>✨ Ready to Choose?</h2>
+      <p>Open each mockup in a separate tab to compare side-by-side, then let me know which one you prefer!</p>
+      <a href="CURRENT-DESIGN.html" target="_blank" class="btn">Current (v1.5)</a>
+      <a href="OPTION-1-COMPACT-SHARP.html" target="_blank" class="btn">Option 1 (Recommended)</a>
+      <a href="OPTION-2-ULTRA-COMPACT.html" target="_blank" class="btn">Option 2 (Maximum)</a>
+    </div>
+
+    <div class="footer">
+      <p>PortPilot v1.6 • Localhost Port Manager</p>
+      <p>MCP Auto-Refresh + Compact UI Redesign</p>
+    </div>
+  </div>
+</body>
+</html>

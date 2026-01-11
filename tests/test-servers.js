@@ -1,58 +1,72 @@
 /**
- * Test Servers for PortPilot Comprehensive Tests
- *
- * Spawns simple HTTP servers on ports 3000, 3001, and 8080
- * for testing port detection, filtering, and kill functionality.
+ * Simple HTTP test servers for E2E testing
+ * Starts servers on ports 3000, 3001, and 8080
  */
-
 const http = require('http');
 
 const servers = [];
-const ports = [3000, 3001, 8080];
 
-// Create simple HTTP servers
-ports.forEach(port => {
+function createTestServer(port, name) {
   const server = http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': 'text/plain' });
-    res.end(`Test server running on port ${port}\n`);
+    res.end(`Test Server ${name} running on port ${port}\n`);
   });
 
-  server.listen(port, () => {
-    console.log(`✓ Test server started on port ${port}`);
-  });
+  return new Promise((resolve, reject) => {
+    server.listen(port, () => {
+      console.log(`✅ Test server "${name}" started on port ${port}`);
+      servers.push({ server, port, name });
+      resolve(server);
+    });
 
-  server.on('error', (err) => {
-    if (err.code === 'EADDRINUSE') {
-      console.log(`⚠ Port ${port} already in use`);
-    } else {
-      console.error(`✗ Error on port ${port}:`, err.message);
+    server.on('error', (err) => {
+      if (err.code === 'EADDRINUSE') {
+        console.log(`⚠️  Port ${port} already in use (server may already be running)`);
+        resolve(null); // Don't fail, just skip
+      } else {
+        reject(err);
+      }
+    });
+  });
+}
+
+async function startTestServers() {
+  console.log('\n🚀 Starting test HTTP servers...\n');
+
+  try {
+    await Promise.all([
+      createTestServer(3000, 'Server A'),
+      createTestServer(3001, 'Server B'),
+      createTestServer(8080, 'Server C')
+    ]);
+
+    console.log(`\n✅ ${servers.length} test servers ready\n`);
+    return servers;
+  } catch (error) {
+    console.error('❌ Failed to start test servers:', error);
+    throw error;
+  }
+}
+
+function stopTestServers() {
+  console.log('\n🛑 Stopping test servers...');
+
+  servers.forEach(({ server, port, name }) => {
+    try {
+      server.close(() => {
+        console.log(`✅ Stopped "${name}" on port ${port}`);
+      });
+    } catch (err) {
+      console.error(`⚠️  Error stopping server on port ${port}:`, err.message);
     }
   });
 
-  servers.push(server);
-});
+  servers.length = 0; // Clear array
+  console.log('✅ All test servers stopped\n');
+}
 
-// Keep servers running
-console.log('\n========================================');
-console.log('  Test Servers Running');
-console.log('========================================');
-console.log('Ports: 3000, 3001, 8080');
-console.log('Press Ctrl+C to stop');
-console.log('========================================\n');
-
-// Graceful shutdown
-process.on('SIGINT', () => {
-  console.log('\n\nShutting down test servers...');
-  servers.forEach((server, i) => {
-    server.close(() => {
-      console.log(`✓ Server on port ${ports[i]} closed`);
-    });
-  });
-  setTimeout(() => {
-    console.log('All servers stopped.\n');
-    process.exit(0);
-  }, 1000);
-});
-
-// Keep process alive
-process.stdin.resume();
+module.exports = {
+  startTestServers,
+  stopTestServers,
+  servers
+};

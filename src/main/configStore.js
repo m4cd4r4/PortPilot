@@ -6,12 +6,52 @@ const { app } = require('electron');
  * ConfigStore - Manages persistent app configurations
  */
 class ConfigStore {
-  constructor() {
+  constructor(mainWindow = null) {
     this.configPath = path.join(
       app?.getPath('userData') || path.join(process.cwd(), 'data'),
       'portpilot-config.json'
     );
     this.config = this.load();
+    this.mainWindow = mainWindow;
+    this.watchConfigFile();
+  }
+
+  /**
+   * Watch config file for external changes (e.g., from MCP)
+   */
+  watchConfigFile() {
+    let debounceTimer = null;
+
+    // Ensure config file exists before watching
+    if (!fs.existsSync(this.configPath)) {
+      this.save(); // Create initial config file
+    }
+
+    try {
+      fs.watch(this.configPath, (eventType) => {
+        if (eventType === 'change') {
+          // Debounce to avoid multiple rapid reloads
+          clearTimeout(debounceTimer);
+          debounceTimer = setTimeout(() => {
+            console.log('[ConfigStore] Detected external config change, reloading...');
+            const oldConfig = JSON.stringify(this.config);
+            this.config = this.load();
+            const newConfig = JSON.stringify(this.config);
+
+            // Only notify if config actually changed
+            if (oldConfig !== newConfig && this.mainWindow && !this.mainWindow.isDestroyed()) {
+              this.mainWindow.webContents.send('config-changed', {
+                apps: this.config.apps,
+                settings: this.config.settings
+              });
+            }
+          }, 100); // 100ms debounce
+        }
+      });
+      console.log('[ConfigStore] Watching config file for changes');
+    } catch (error) {
+      console.error('[ConfigStore] Failed to watch config file:', error);
+    }
   }
 
   /** Load config from disk */
