@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CURRENT DESIGN (v1.5)</title>
+  <style>
+    :root {
+      --bg-primary: #1a1b26;
+      --bg-secondary: #24283b;
+      --bg-tertiary: #2f3549;
+      --text-primary: #c0caf5;
+      --text-secondary: #9aa5ce;
+      --text-muted: #565f89;
+      --accent-primary: #7aa2f7;
+      --accent-green: #9ece6a;
+      --accent-red: #f7768e;
+      --accent-yellow: #e0af68;
+      --accent-purple: #bb9af7;
+      --accent-cyan: #7dcfff;
+      --border-color: #3b4261;
+      --radius: 8px;
+      --radius-sm: 4px;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      padding: 20px;
+      line-height: 1.4;
+      font-size: 14px;
+    }
+
+    .header {
+      background: var(--accent-yellow);
+      color: #000;
+      padding: 15px 20px;
+      margin: -20px -20px 20px -20px;
+      border-radius: 0;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-size: 1.1rem;
+    }
+
+    .description {
+      color: var(--text-secondary);
+      margin-bottom: 30px;
+      padding: 12px;
+      background: var(--bg-secondary);
+      border-left: 3px solid var(--text-muted);
+      font-size: 0.875rem;
+      border-radius: var(--radius-sm);
+    }
+
+    .apps-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(500px, 1fr));
+      gap: 8px;
+    }
+
+    .app-section {
+      margin-bottom: 20px;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      cursor: pointer;
+      margin-bottom: 8px;
+    }
+
+    .section-toggle {
+      font-size: 0.75rem;
+      color: var(--accent-cyan);
+      font-weight: bold;
+      min-width: 12px;
+    }
+
+    .section-title {
+      font-weight: 700;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-primary);
+      flex: 1;
+    }
+
+    .section-count {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      background: var(--bg-primary);
+      padding: 3px 8px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-color);
+    }
+
+    .app-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      padding: 8px 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: all 0.15s ease;
+      margin-bottom: 8px;
+      min-height: 52px;
+    }
+
+    .app-card:hover {
+      border-color: var(--accent-yellow);
+    }
+
+    .app-checkbox {
+      width: 18px;
+      height: 18px;
+      cursor: pointer;
+      margin-right: 10px;
+      flex-shrink: 0;
+    }
+
+    .app-info {
+      flex: 1;
+    }
+
+    .app-name {
+      font-weight: 600;
+      font-size: 0.9rem;
+      margin-bottom: 2px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .app-color {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      border: 2px solid var(--border-color);
+    }
+
+    .btn-star {
+      background: none;
+      border: none;
+      font-size: 1rem;
+      cursor: pointer;
+      padding: 0 4px;
+      color: var(--text-muted);
+    }
+
+    .btn-star.starred {
+      color: var(--accent-yellow);
+    }
+
+    .app-meta {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      opacity: 0.85;
+    }
+
+    .app-meta code {
+      background: var(--bg-tertiary);
+      padding: 2px 6px;
+      border-radius: var(--radius-sm);
+      font-family: 'Courier New', monospace;
+      border: 1px solid var(--border-color);
+    }
+
+    .req-badges {
+      display: inline-flex;
+      gap: 4px;
+      margin-left: 8px;
+      vertical-align: middle;
+    }
+
+    .req-badge {
+      font-size: 0.85rem;
+      padding: 2px 4px;
+      border-radius: 4px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--accent-green);
+      opacity: 0.8;
+    }
+
+    .app-status {
+      margin-right: 10px;
+      padding: 4px 10px;
+      border-radius: var(--radius);
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      border: 1px solid;
+    }
+
+    .status-running {
+      background: transparent;
+      border-color: var(--accent-green);
+      color: var(--accent-green);
+    }
+
+    .status-stopped {
+      background: transparent;
+      border-color: var(--text-secondary);
+      color: var(--text-secondary);
+      opacity: 0.8;
+    }
+
+    .app-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn {
+      padding: 4px 10px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+
+    .btn-primary {
+      background: var(--accent-primary);
+      color: var(--bg-primary);
+      border-color: var(--accent-primary);
+    }
+
+    .btn-secondary {
+      background: var(--bg-tertiary);
+    }
+
+    .detected-port {
+      color: var(--accent-green);
+      font-weight: 600;
+    }
+
+    .ip-version {
+      font-size: 0.65rem;
+      padding: 1px 4px;
+      border-radius: 3px;
+      background: var(--bg-tertiary);
+      color: var(--accent-cyan);
+      font-weight: 700;
+      margin-left: 4px;
+      vertical-align: middle;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">CURRENT DESIGN (v1.5)</div>
+  <div class="description">
+    <strong>Current styling:</strong> 8px border radius • Standard padding • 0.75-0.9rem font sizes • 8px gaps between cards
+  </div>
+
+  <div class="app-section">
+    <div class="section-header">
+      <span class="section-toggle">▼</span>
+      <span class="section-title">⭐ Favorites</span>
+      <span class="section-count">5 apps</span>
+    </div>
+
+    <div class="apps-list">
+      <div class="app-card">
+        <input type="checkbox" class="app-checkbox">
+        <div class="app-info">
+          <div class="app-name">
+            <span class="app-color" style="background: #3B82F6"></span>
+            <button class="btn-star starred">⭐</button>
+            mocksnap
+            <div class="req-badges">
+              <span class="req-badge">📦</span>
+            </div>
+          </div>
+          <div class="app-meta">
+            <code>pnpm run dev</code> • <span class="detected-port">:3002 ✓</span> <span class="ip-version">v4</span>
+          </div>
+        </div>
+        <span class="app-status status-running">● Running :3002 <span class="ip-version">v4</span></span>
+        <div class="app-actions">
+          <button class="btn btn-secondary">🌐</button>
+          <button class="btn">Stop</button>
+          <button class="btn btn-secondary">Edit</button>
+          <button class="btn btn-secondary">🗑</button>
+        </div>
+      </div>
+
+      <div class="app-card">
+        <input type="checkbox" class="app-checkbox">
+        <div class="app-info">
+          <div class="app-name">
+            <span class="app-color" style="background: #10B981"></span>
+            <button class="btn-star starred">⭐</button>
+            swanflow-api
+            <div class="req-badges">
+              <span class="req-badge">📦</span>
+            </div>
+          </div>
+          <div class="app-meta">
+            <code>npm run dev</code> • Port 3006
+          </div>
+        </div>
+        <span class="app-status status-running">● Running</span>
+        <div class="app-actions">
+          <button class="btn btn-secondary">🌐</button>
+          <button class="btn">Stop</button>
+          <button class="btn btn-secondary">Edit</button>
+          <button class="btn btn-secondary">🗑</button>
+        </div>
+      </div>
+
+      <div class="app-card">
+        <input type="checkbox" class="app-checkbox">
+        <div class="app-info">
+          <div class="app-name">
+            <span class="app-color" style="background: #F59E0B"></span>
+            <button class="btn-star starred">⭐</button>
+            azure-practice-exam-platform
+            <div class="req-badges">
+              <span class="req-badge">📦</span>
+            </div>
+          </div>
+          <div class="app-meta">
+            <code>npm run web</code> • Port 3001
+          </div>
+        </div>
+        <span class="app-status status-stopped">○ Stopped</span>
+        <div class="app-actions">
+          <button class="btn btn-primary">Start</button>
+          <button class="btn btn-secondary">Edit</button>
+          <button class="btn btn-secondary">🗑</button>
+        </div>
+      </div>
+
+      <div class="app-card">
+        <input type="checkbox" class="app-checkbox">
+        <div class="app-info">
+          <div class="app-name">
+            <span class="app-color" style="background: #EF4444"></span>
+            <button class="btn-star starred">⭐</button>
+            RNA 3D Folding Dashboard
+            <div class="req-badges">
+              <span class="req-badge">📦</span>
+            </div>
+          </div>
+          <div class="app-meta">
+            <code>npm run dev</code> • <span class="detected-port">:3008 ✓</span> <span class="ip-version">v4</span>
+          </div>
+        </div>
+        <span class="app-status status-running">● Running :3008 <span class="ip-version">v4</span></span>
+        <div class="app-actions">
+          <button class="btn btn-secondary">🌐</button>
+          <button class="btn">Stop</button>
+          <button class="btn btn-secondary">Edit</button>
+          <button class="btn btn-secondary">🗑</button>
+        </div>
+      </div>
+
+      <div class="app-card">
+        <input type="checkbox" class="app-checkbox">
+        <div class="app-info">
+          <div class="app-name">
+            <span class="app-color" style="background: #8B5CF6"></span>
+            <button class="btn-star starred">⭐</button>
+            SEO Toolkit Dashboard
+            <div class="req-badges">
+              <span class="req-badge">🐍</span>
+            </div>
+          </div>
+          <div class="app-meta">
+            <code>python dashboard/app.py</code> • Port 5000
+          </div>
+        </div>
+        <span class="app-status status-stopped">○ Stopped</span>
+        <div class="app-actions">
+          <button class="btn btn-primary">Start</button>
+          <button class="btn btn-secondary">Edit</button>
+          <button class="btn btn-secondary">🗑</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="app-section">
+    <div class="section-header">
+      <span class="section-toggle">▼</span>
+      <span class="section-title">📁 Other Projects</span>
+      <span class="section-count">4 apps</span>
+    </div>
+
+    <div class="apps-list">
+      <div class="app-card">
+        <input type="checkbox" class="app-checkbox">
+        <div class="app-info">
+          <div class="app-name">
+            <span class="app-color" style="background: #EC4899"></span>
+            <button class="btn-star">☆</button>
+            solaisoft
+          </div>
+          <div class="app-meta">
+            <code>npm run dev</code> • Port 3010
+          </div>
+        </div>
+        <span class="app-status status-stopped">○ Stopped</span>
+        <div class="app-actions">
+          <button class="btn btn-primary">Start</button>
+          <button class="btn btn-secondary">Edit</button>
+          <button class="btn btn-secondary">🗑</button>
+        </div>
+      </div>
+
+      <div class="app-card">
+        <input type="checkbox" class="app-checkbox">
+        <div class="app-info">
+          <div class="app-name">
+            <span class="app-color" style="background: #06B6D4"></span>
+            <button class="btn-star">☆</button>
+            AzurePrep - E2E Test Suite Dashboard
+          </div>
+          <div class="app-meta">
+            <code>npm run dev</code> • Port 3007
+          </div>
+        </div>
+        <span class="app-status status-stopped">○ Stopped</span>
+        <div class="app-actions">
+          <button class="btn btn-primary">Start</button>
+          <button class="btn btn-secondary">Edit</button>
+          <button class="btn btn-secondary">🗑</button>
+        </div>
+      </div>
+
+      <div class="app-card">
+        <input type="checkbox" class="app-checkbox">
+        <div class="app-info">
+          <div class="app-name">
+            <span class="app-color" style="background: #84CC16"></span>
+            <button class="btn-star">☆</button>
+            netthrottle-gui
+          </div>
+          <div class="app-meta">
+            <code>npm run dev</code> • Port 1420
+          </div>
+        </div>
+        <span class="app-status status-stopped">○ Stopped</span>
+        <div class="app-actions">
+          <button class="btn btn-primary">Start</button>
+          <button class="btn btn-secondary">Edit</button>
+          <button class="btn btn-secondary">🗑</button>
+        </div>
+      </div>
+
+      <div class="app-card">
+        <input type="checkbox" class="app-checkbox">
+        <div class="app-info">
+          <div class="app-name">
+            <span class="app-color" style="background: #F97316"></span>
+            <button class="btn-star">☆</button>
+            FinChoon
+            <div class="req-badges">
+              <span class="req-badge">🐍</span>
+            </div>
+          </div>
+          <div class="app-meta">
+            <code>.\venv\Scripts\python.exe -m app.main</code> • Port 7860
+          </div>
+        </div>
+        <span class="app-status status-stopped">○ Stopped</span>
+        <div class="app-actions">
+          <button class="btn btn-primary">Start</button>
+          <button class="btn btn-secondary">Edit</button>
+          <button class="btn btn-secondary">🗑</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

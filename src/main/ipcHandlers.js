@@ -343,6 +343,47 @@ function setupIpcHandlers(ipcMain, configStore) {
     }
   });
 
+  // ============ Window Management ============
+
+  /** Auto-resize window based on app count (v1.6 feature) */
+  ipcMain.handle('window:autoResize', async (_, appCount) => {
+    try {
+      const { BrowserWindow } = require('electron');
+      const window = BrowserWindow.getFocusedWindow() || BrowserWindow.getAllWindows()[0];
+
+      if (!window) return { success: false, error: 'No window found' };
+
+      // Calculate required height (v1.6 compact design)
+      const BASE_HEIGHT = 200;  // Header + tabs + padding
+      const APP_CARD_HEIGHT = 45;  // Card (42px) + gap (3px)
+      const SECTION_HEADER_HEIGHT = 30;  // Section header + margin
+      const MAX_SECTIONS = 2;  // Favorites + Other Projects
+
+      // Calculate total height
+      const sectionsHeight = MAX_SECTIONS * SECTION_HEADER_HEIGHT;
+      const cardsHeight = appCount * APP_CARD_HEIGHT;
+      const calculatedHeight = BASE_HEIGHT + sectionsHeight + cardsHeight;
+
+      // Constrain between min and max
+      const MIN_HEIGHT = 400;
+      const MAX_HEIGHT = 1200;
+      const targetHeight = Math.max(MIN_HEIGHT, Math.min(MAX_HEIGHT, calculatedHeight));
+
+      // Get current bounds
+      const bounds = window.getBounds();
+
+      // Smooth resize
+      window.setBounds({
+        ...bounds,
+        height: targetHeight
+      }, true);  // true = animate
+
+      return { success: true, height: targetHeight, appCount };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+
   // ============ Discovery Operations ============
 
   /** Scan directories for projects */

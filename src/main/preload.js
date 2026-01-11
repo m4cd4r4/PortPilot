@@ -48,7 +48,7 @@ contextBridge.exposeInMainWorld('portpilot', {
 
   // Event listeners
   on: (channel, callback) => {
-    const validChannels = ['trigger-scan'];
+    const validChannels = ['trigger-scan', 'config-changed'];
     if (validChannels.includes(channel)) {
       ipcRenderer.on(channel, (_, ...args) => callback(...args));
     }
@@ -62,5 +62,10 @@ contextBridge.exposeInMainWorld('portpilot', {
   docker: {
     status: () => ipcRenderer.invoke('docker:status'),
     start: () => ipcRenderer.invoke('docker:start')
+  },
+
+  // Window operations
+  window: {
+    autoResize: (appCount) => ipcRenderer.invoke('window:autoResize', appCount)
   }
 });

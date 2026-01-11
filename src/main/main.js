@@ -28,7 +28,7 @@ function createWindow(configStore) {
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
     // Open DevTools if enabled in settings (dev mode only)
-    if (!app.isPackaged) {
+    if (!app.isPackaged && configStore) {
       const settings = configStore.getSettings();
       if (settings.openDevTools === true) {
         mainWindow.webContents.openDevTools();
@@ -38,6 +38,7 @@ function createWindow(configStore) {
 
   // Handle close - either minimize to tray or exit completely
   mainWindow.on('close', (event) => {
+    if (!configStore) return;
     const settings = configStore.getSettings();
     if (!app.isQuitting && settings.closeToTray !== false) {
       event.preventDefault();
@@ -107,8 +108,11 @@ function createTray() {
 // App lifecycle
 let configStore;
 
-// Single instance lock - prevent multiple copies of PortPilot from running
-const gotTheLock = app.requestSingleInstanceLock();
+// Detect if running in test mode (Playwright adds --remote-debugging-port)
+const isTestMode = process.argv.some(arg => arg.includes('--remote-debugging-port'));
+
+// Single instance lock - prevent multiple copies of PortPilot from running (skip in test mode)
+const gotTheLock = isTestMode || app.requestSingleInstanceLock();
 
 if (!gotTheLock) {
   // Another instance is already running, quit this one
@@ -117,27 +121,31 @@ if (!gotTheLock) {
 } else {
   // We have the lock - this is the primary instance
   // Handle second-instance attempts by focusing our window
-  app.on('second-instance', (event, commandLine, workingDirectory) => {
-    // Someone tried to run a second instance, focus our window instead
-    if (mainWindow) {
-      if (mainWindow.isMinimized()) mainWindow.restore();
-      if (!mainWindow.isVisible()) mainWindow.show();
-      mainWindow.focus();
-    }
-  });
+  if (!isTestMode) {
+    app.on('second-instance', (event, commandLine, workingDirectory) => {
+      // Someone tried to run a second instance, focus our window instead
+      if (mainWindow) {
+        if (mainWindow.isMinimized()) mainWindow.restore();
+        if (!mainWindow.isVisible()) mainWindow.show();
+        mainWindow.focus();
+      }
+    });
+  }
 
   app.whenReady().then(() => {
     // Set dark mode for native title bar on Windows
     nativeTheme.themeSource = 'dark';
 
-    configStore = new ConfigStore();
-    createWindow(configStore);
+    // Create window first, then pass it to ConfigStore for file watching
+    const window = createWindow(null);
+    configStore = new ConfigStore(window);
     createTray();
     setupIpcHandlers(ipcMain, configStore);
 
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) {
-        createWindow(configStore);
+        const window = createWindow(null);
+        configStore.mainWindow = window;
       }
     });
   });
@@ -153,14 +161,16 @@ app.on('before-quit', async (event) => {
   app.isQuitting = true;
 
   // Clean up child processes if enabled in settings
-  const settings = configStore.getSettings();
-  if (settings.stopAppsOnQuit !== false) {
-    try {
-      const { cleanupAllProcesses } = require('./processManager');
-      await cleanupAllProcesses();
-      console.log('Stopped all PortPilot-managed apps');
-    } catch (err) {
-      console.error('Error cleaning up processes:', err);
+  if (configStore) {
+    const settings = configStore.getSettings();
+    if (settings.stopAppsOnQuit !== false) {
+      try {
+        const { cleanupAllProcesses } = require('./processManager');
+        await cleanupAllProcesses();
+        console.log('Stopped all PortPilot-managed apps');
+      } catch (err) {
+        console.error('Error cleaning up processes:', err);
+      }
     }
   }
 });
