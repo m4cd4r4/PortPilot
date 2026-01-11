@@ -1578,7 +1578,6 @@ function setTheme(themeName, showNotification = true) {
     const themeLabels = {
       'tokyonight': 'TokyoNight',
       'brutalist-dark': 'Brutalist Dark',
-      'brutalist-light': 'Brutalist Light',
       'nord': 'Nord',
       'dracula': 'Dracula',
       'solarized-light': 'Solarized Light'
