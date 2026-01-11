@@ -1,60 +1,115 @@
+/**
+ * Screenshot Generator for PortPilot
+ * Takes screenshots for README, releases, and landing pages
+ */
 const { _electron: electron } = require('playwright');
 const path = require('path');
+const fs = require('fs');
 
 async function takeScreenshots() {
-  console.log('Launching PortPilot for screenshots...');
+  console.log('🎬 Starting screenshot generator...\n');
 
-  // Launch Electron app with explicit executable path (same as working test script)
-  const electronApp = await electron.launch({
-    executablePath: path.join(__dirname, 'node_modules', 'electron', 'dist', 'electron.exe'),
-    args: ['.'],
-    cwd: __dirname
-  });
+  // Ensure screenshots directory exists
+  const screenshotsDir = path.join(__dirname, '../screenshots');
+  if (!fs.existsSync(screenshotsDir)) {
+    fs.mkdirSync(screenshotsDir, { recursive: true });
+  }
 
-  const window = await electronApp.firstWindow();
-  console.log('Window title:', await window.title());
+  let electronApp;
 
-  // Set a compact size for screenshots
-  await window.setViewportSize({ width: 1000, height: 700 });
+  try {
+    // Launch PortPilot
+    console.log('🚀 Launching PortPilot...');
+    const electronPath = require('electron');
+    const appPath = path.join(__dirname, '..');
 
-  await window.waitForLoadState('domcontentloaded');
-  await window.waitForTimeout(2000);
+    electronApp = await electron.launch({
+      executablePath: electronPath,
+      args: [appPath]
+    });
 
-  // Screenshot 1: My Apps tab
-  console.log('Taking My Apps screenshot...');
-  await window.click('.tab[data-tab="apps"]');
-  await window.waitForTimeout(1500);
-  await window.screenshot({ path: 'docs/screenshots/my-apps.png', fullPage: false });
-  console.log('Saved: docs/screenshots/my-apps.png');
+    const window = await electronApp.firstWindow();
+    
+    // Wait for app to be ready
+    await window.waitForSelector('[data-tab="ports"]', { timeout: 15000 });
+    await window.waitForTimeout(2000);
+    console.log('✅ PortPilot ready\n');
 
-  // Screenshot 2: Active Ports tab
-  console.log('Taking Active Ports screenshot...');
-  await window.click('.tab[data-tab="ports"]');
-  await window.waitForTimeout(500);
-  await window.click('#btn-scan');
-  await window.waitForTimeout(2500);
-  await window.screenshot({ path: 'docs/screenshots/active-ports.png', fullPage: false });
-  console.log('Saved: docs/screenshots/active-ports.png');
+    // 1. Apps Tab Screenshot
+    console.log('📸 Screenshot 1: Apps Tab...');
+    const appsTab = await window.$('[data-tab="apps"]');
+    await appsTab.click();
+    await window.waitForTimeout(1000);
+    await window.screenshot({ 
+      path: path.join(screenshotsDir, '01-apps-tab.png'),
+      fullPage: false
+    });
+    console.log('   ✓ Saved: screenshots/01-apps-tab.png\n');
 
-  // Screenshot 3: Knowledge tab
-  console.log('Taking Knowledge screenshot...');
-  await window.click('.tab[data-tab="knowledge"]');
-  await window.waitForTimeout(1000);
-  await window.screenshot({ path: 'docs/screenshots/knowledge.png', fullPage: false });
-  console.log('Saved: docs/screenshots/knowledge.png');
+    // 2. Ports Tab Screenshot (with scan)
+    console.log('📸 Screenshot 2: Ports Tab...');
+    const portsTab = await window.$('[data-tab="ports"]');
+    await portsTab.click();
+    await window.waitForTimeout(500);
+    
+    // Trigger scan
+    const scanBtn = await window.$('#btn-scan');
+    await scanBtn.click();
+    await window.waitForTimeout(6000);
+    
+    await window.screenshot({ 
+      path: path.join(screenshotsDir, '02-ports-tab.png'),
+      fullPage: false
+    });
+    console.log('   ✓ Saved: screenshots/02-ports-tab.png\n');
 
-  // Screenshot 4: Settings tab
-  console.log('Taking Settings screenshot...');
-  await window.click('.tab[data-tab="settings"]');
-  await window.waitForTimeout(500);
-  await window.screenshot({ path: 'docs/screenshots/settings.png', fullPage: false });
-  console.log('Saved: docs/screenshots/settings.png');
+    // 3. Knowledge Tab Screenshot
+    console.log('📸 Screenshot 3: Knowledge Tab...');
+    const knowledgeTab = await window.$('[data-tab="knowledge"]');
+    await knowledgeTab.click();
+    await window.waitForTimeout(1000);
+    await window.screenshot({ 
+      path: path.join(screenshotsDir, '03-knowledge-tab.png'),
+      fullPage: false
+    });
+    console.log('   ✓ Saved: screenshots/03-knowledge-tab.png\n');
 
-  await electronApp.close();
-  console.log('Done! Screenshots saved to docs/screenshots/');
+    // 4. Settings Tab Screenshot
+    console.log('📸 Screenshot 4: Settings Tab...');
+    const settingsTab = await window.$('[data-tab="settings"]');
+    await settingsTab.click();
+    await window.waitForTimeout(1000);
+    await window.screenshot({ 
+      path: path.join(screenshotsDir, '04-settings-tab.png'),
+      fullPage: false
+    });
+    console.log('   ✓ Saved: screenshots/04-settings-tab.png\n');
+
+    // 5. Port Card Closeup (for highlighting compact design)
+    console.log('📸 Screenshot 5: Port Cards Closeup...');
+    await portsTab.click();
+    await window.waitForTimeout(500);
+    const portsGrid = await window.$('#ports-list');
+    await portsGrid.screenshot({
+      path: path.join(screenshotsDir, '05-port-cards-closeup.png')
+    });
+    console.log('   ✓ Saved: screenshots/05-port-cards-closeup.png\n');
+
+    console.log('✨ All screenshots captured successfully!\n');
+    console.log('Screenshots saved to: ' + screenshotsDir);
+
+  } catch (error) {
+    console.error('❌ Error taking screenshots:', error);
+    throw error;
+  } finally {
+    if (electronApp) {
+      await electronApp.close();
+      console.log('\n✅ PortPilot closed');
+    }
+  }
 }
 
 takeScreenshots().catch(err => {
-  console.error('Screenshot failed:', err);
+  console.error('FATAL ERROR:', err);
   process.exit(1);
 });
