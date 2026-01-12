@@ -34,59 +34,32 @@
           <p class="version-note">Windows 10/11 &amp; Linux | v1.6.1 | MIT Licence</p>
         </div>
         <div class="hero-mockup">
-          <div class="mockup-window">
-            <div class="mockup-titlebar">
-              <div class="mockup-dots"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span></div>
-              <span class="mockup-title">&#9875; PortPilot</span>
-              <div class="mockup-actions">
-                <button class="mockup-btn">&#128260; Scan Ports</button>
-                <button class="mockup-btn mockup-btn-secondary">&#10133; Add App</button>
-              </div>
+          <div class="screenshot-carousel">
+            <button type="button" class="carousel-btn carousel-prev" onclick="prevSlide()">&#10094;</button>
+            <div class="carousel-container">
+              <div class="carousel-slide active"><img src="screenshots/slot1.png" alt="PortPilot Screenshot 1"></div>
+              <div class="carousel-slide"><img src="screenshots/slot2.png" alt="PortPilot Screenshot 2"></div>
+              <div class="carousel-slide"><img src="screenshots/slot3.png" alt="PortPilot Screenshot 3"></div>
+              <div class="carousel-slide"><img src="screenshots/slot4.png" alt="PortPilot Screenshot 4"></div>
+              <div class="carousel-slide"><img src="screenshots/slot5.png" alt="PortPilot Screenshot 5"></div>
+              <div class="carousel-slide"><img src="screenshots/slot6.png" alt="PortPilot Screenshot 6"></div>
+              <div class="carousel-slide"><img src="screenshots/slot7.png" alt="PortPilot Screenshot 7"></div>
+              <div class="carousel-slide"><img src="screenshots/slot8.png" alt="PortPilot Screenshot 8"></div>
+              <div class="carousel-slide"><img src="screenshots/slot9.png" alt="PortPilot Screenshot 9"></div>
+              <div class="carousel-slide"><img src="screenshots/slot10.png" alt="PortPilot Screenshot 10"></div>
             </div>
-            <div class="mockup-tabs">
-              <button class="mockup-tab" data-tab="ports">Active Ports</button>
-              <button class="mockup-tab active" data-tab="apps">My Apps</button>
-              <button class="mockup-tab" data-tab="knowledge">Knowledge</button>
-              <button class="mockup-tab" data-tab="settings">Settings</button>
-            </div>
-            <div class="mockup-content">
-              <div class="mockup-apps">
-                <div class="mockup-app-card running">
-                  <div class="app-header">
-                    <span class="app-status running"></span>
-                    <span class="app-name">AzurePrep Frontend</span>
-                    <span class="app-port">:3000</span>
-                    <span class="app-badge node">&#128230; Node</span>
-                    <span class="app-favorite">&#11088;</span>
-                  </div>
-                  <div class="app-details"><code>npm run dev</code><span class="app-path">C:\Projects\azure-exam</span></div>
-                  <div class="app-actions">
-                    <button class="app-btn stop">&#9632; Stop</button>
-                    <button class="app-btn">&#127760; Open</button>
-                    <button class="app-btn">&#128203; Copy</button>
-                  </div>
-                </div>
-                <div class="mockup-app-card">
-                  <div class="app-header">
-                    <span class="app-status stopped"></span>
-                    <span class="app-name">Backend API</span>
-                    <span class="app-port">:8000</span>
-                    <span class="app-badge python">&#128013; Python</span>
-                  </div>
-                  <div class="app-details"><code>uvicorn main:app --reload</code><span class="app-path">C:\Projects\api</span></div>
-                  <div class="app-actions"><button class="app-btn start">&#9654; Start</button><button class="app-btn">&#9998; Edit</button></div>
-                </div>
-                <div class="mockup-app-card">
-                  <div class="app-header">
-                    <span class="app-status stopped"></span>
-                    <span class="app-name">PostgreSQL</span>
-                    <span class="app-port">:5432</span>
-                    <span class="app-badge docker">&#128051; Docker</span>
-                  </div>
-                  <div class="app-details"><code>docker-compose up -d postgres</code><span class="app-path">C:\Projects\infra</span></div>
-                  <div class="app-actions"><button class="app-btn start">&#9654; Start</button><button class="app-btn">&#9998; Edit</button></div>
-                </div>
-              </div>
+            <button type="button" class="carousel-btn carousel-next" onclick="nextSlide()">&#10095;</button>
+            <div class="carousel-dots">
+              <span class="dot active" onclick="goToSlide(0)"></span>
+              <span class="dot" onclick="goToSlide(1)"></span>
+              <span class="dot" onclick="goToSlide(2)"></span>
+              <span class="dot" onclick="goToSlide(3)"></span>
+              <span class="dot" onclick="goToSlide(4)"></span>
+              <span class="dot" onclick="goToSlide(5)"></span>
+              <span class="dot" onclick="goToSlide(6)"></span>
+              <span class="dot" onclick="goToSlide(7)"></span>
+              <span class="dot" onclick="goToSlide(8)"></span>
+              <span class="dot" onclick="goToSlide(9)"></span>
             </div>
           </div>
         </div>
@@ -293,18 +266,56 @@
     </div>
   </footer>
   <script>
+    // Smooth scroll for anchor links
     document.querySelectorAll("a[href^='#']").forEach(anchor => {
       anchor.addEventListener("click", function (e) {
         e.preventDefault();
         document.querySelector(this.getAttribute("href")).scrollIntoView({behavior: "smooth"});
       });
     });
-    document.querySelectorAll(".mockup-tab").forEach(tab => {
-      tab.addEventListener("click", function() {
-        document.querySelectorAll(".mockup-tab").forEach(t => t.classList.remove("active"));
-        this.classList.add("active");
+
+    // Screenshot carousel
+    let currentSlide = 0;
+    const slides = document.querySelectorAll('.carousel-slide');
+    const dots = document.querySelectorAll('.carousel-dots .dot');
+
+    function showSlide(index) {
+      // Wrap around
+      if (index >= slides.length) currentSlide = 0;
+      else if (index < 0) currentSlide = slides.length - 1;
+      else currentSlide = index;
+
+      // Update slides
+      slides.forEach((slide, i) => {
+        slide.classList.toggle('active', i === currentSlide);
       });
+
+      // Update dots
+      dots.forEach((dot, i) => {
+        dot.classList.toggle('active', i === currentSlide);
+      });
+    }
+
+    function nextSlide() {
+      showSlide(currentSlide + 1);
+    }
+
+    function prevSlide() {
+      showSlide(currentSlide - 1);
+    }
+
+    function goToSlide(index) {
+      showSlide(index);
+    }
+
+    // Keyboard navigation
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowLeft') prevSlide();
+      if (e.key === 'ArrowRight') nextSlide();
     });
+
+    // Initialize
+    showSlide(0);
   </script>
 </body>
 </html>
