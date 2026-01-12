@@ -364,11 +364,11 @@ function setupIpcHandlers(ipcMain, configStore) {
       if (!window) return { success: false, error: 'No window found' };
 
       // Calculate required height (v1.6 compact design)
-      const BASE_HEIGHT = 180;  // Header (80px) + tabs (40px) + toolbar (40px) + padding (20px)
-      const APP_CARD_HEIGHT = 38;  // Compact card (32px) + gap (6px)
-      const SECTION_HEADER_HEIGHT = 40;  // Section header (32px) + margin (8px)
+      const BASE_HEIGHT = 260;  // Header + tabs + toolbar + window chrome + padding
+      const APP_CARD_HEIGHT = 46;  // Compact card + gap + borders
+      const SECTION_HEADER_HEIGHT = 55;  // Section header + margin
       const MAX_SECTIONS = 2;  // Favorites + Other Projects
-      const BOTTOM_PADDING = 20;  // Extra padding at bottom
+      const BOTTOM_PADDING = 40;  // Space under final card
 
       // Calculate total height
       const sectionsHeight = MAX_SECTIONS * SECTION_HEADER_HEIGHT;
