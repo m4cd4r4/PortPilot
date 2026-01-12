@@ -875,7 +875,7 @@ kbd {
 }
 
 .knowledge-list li::before {
-  content: "2";
+  content: "•";
   color: var(--accent-primary);
   position: absolute;
   left: 0;
@@ -900,7 +900,7 @@ kbd {
 }
 
 .sub-list li::before {
-  content: "3";
+  content: "–";
 }
 
 .port-reference {
