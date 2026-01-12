@@ -376,26 +376,13 @@ function renderPorts() {
   }
 
   dom.portsList.innerHTML = filtered.map(p => `
-    <div class="port-card" data-port="${p.port}">
-      <div class="port-header">
-        <span class="port-number">:${p.port}</span>
-        <div class="port-actions">
-          <button class="btn btn-small btn-secondary" onclick="copyPort(${p.port})" title="Copy">📋</button>
-          <button class="btn btn-small btn-danger" onclick="killPort(${p.port})" title="Kill">✕</button>
-        </div>
-      </div>
-      <div class="port-info">
-        <div class="port-info-row">
-          <span class="label">Process:</span>
-          <span class="value">${escapeHtml(p.processName || 'Unknown')}</span>
-          <span class="label" style="margin-left: 12px;">PID:</span>
-          <span class="value">${p.pid || 'N/A'}</span>
-        </div>
-        ${p.commandLine ? `
-        <div class="port-info-row">
-          <span class="label">Command:</span>
-          <span class="value">${escapeHtml(truncate(p.commandLine, 60))}</span>
-        </div>` : ''}
+    <div class="port-card" data-port="${p.port}" title="${p.commandLine ? escapeHtml(p.commandLine) : ''}">
+      <span class="port-number">:${p.port}</span>
+      <span class="port-process">${escapeHtml(p.processName || 'Unknown')}</span>
+      <span class="port-pid">${p.pid || ''}</span>
+      <div class="port-actions">
+        <button class="btn btn-small btn-secondary" onclick="copyPort(${p.port})" title="Copy localhost:${p.port}">📋</button>
+        <button class="btn btn-small btn-danger" onclick="killPort(${p.port})" title="Kill process">✕</button>
       </div>
     </div>
   `).join('');
