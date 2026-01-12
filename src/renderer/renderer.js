@@ -349,6 +349,9 @@ async function scanPorts() {
       state.ports = result.ports.sort((a, b) => a.port - b.port);
       renderPorts();
       showToast(`Found ${state.ports.length} active ports`, 'success');
+
+      // Auto-fetch details for all ports
+      fetchAllPortDetails();
     } else {
       showToast('Failed to scan ports: ' + result.error, 'error');
     }
@@ -389,14 +392,12 @@ function renderPorts() {
     const cmdLine = p.commandLine || '';
     const exePath = extractExePath(cmdLine);
 
-    // Check if expanded
-    const isExpanded = state.expandedPorts.has(p.port);
+    // Get cached details
     const details = state.expandedPorts.get(p.port);
-    const expandIcon = isExpanded ? '▼' : '▶';
 
-    // Format details
+    // Format uptime
     const formatUptime = (seconds) => {
-      if (!seconds) return 'N/A';
+      if (!seconds) return '';
       const hours = Math.floor(seconds / 3600);
       const minutes = Math.floor((seconds % 3600) / 60);
       if (hours > 0) return `${hours}h ${minutes}m`;
@@ -404,14 +405,24 @@ function renderPorts() {
       return `${seconds}s`;
     };
 
+    // Determine if command is long
+    const cmdTruncated = cmdLine.length > 80 ? cmdLine.substring(0, 80) + '...' : cmdLine;
+    const hasLongCommand = cmdLine.length > 80;
+    const isExpanded = state.expandedPorts.has(p.port) && hasLongCommand;
+
     return `
-    <div class="port-card ${isExpanded ? 'expanded' : 'compact'}" data-port="${p.port}">
-      <div class="port-card-header" onclick="togglePortExpansion(${p.port}, ${p.pid || 0})" title="Click to ${isExpanded ? 'collapse' : 'expand details'}">
-        <span class="expand-indicator">${expandIcon}</span>
+    <div class="port-card" data-port="${p.port}">
+      <div class="port-card-header" ${hasLongCommand ? `onclick="togglePortExpansion(${p.port}, ${p.pid || 0})" style="cursor: pointer;"` : ''}>
+        ${hasLongCommand ? `<span class="expand-indicator">${isExpanded ? '▼' : '▶'}</span>` : '<span class="expand-indicator-spacer"></span>'}
         <span class="port-number">:${p.port}</span>
         <span class="port-bind" title="${bindTitle}">${bindIcon}</span>
         <span class="port-ip">${ipVersion}</span>
         <span class="port-process">${escapeHtml(p.processName || 'Unknown')}</span>
+        ${details ? `
+        <span class="port-stat" title="Memory usage">${details.memory ? details.memory + ' MB' : 'N/A'}</span>
+        <span class="port-stat" title="Uptime">${formatUptime(details.uptime) || 'N/A'}</span>
+        <span class="port-stat" title="Active connections">${details.connections !== null ? details.connections + ' conn' : 'N/A'}</span>
+        ` : '<span class="port-stat-loading">⏳</span>'}
         <span class="port-pid">${p.pid || ''}</span>
         <div class="port-actions" onclick="event.stopPropagation()">
           <button class="btn btn-small btn-secondary" onclick="openPortInBrowser(${p.port})" title="Open in browser">🌐</button>
@@ -420,30 +431,10 @@ function renderPorts() {
           <button class="btn btn-small btn-danger" onclick="killPort(${p.port})" title="Kill process">✕</button>
         </div>
       </div>
-      ${isExpanded ? `
-      <div class="port-card-details">
-        ${details && details.loading ? '<span class="loading">Loading...</span>' : ''}
-        ${details && !details.loading ? `
-        <div class="detail-row">
-          <span class="detail-label">Memory:</span>
-          <span class="detail-value">${details.memory ? details.memory + ' MB' : 'N/A'}</span>
-        </div>
-        <div class="detail-row">
-          <span class="detail-label">Uptime:</span>
-          <span class="detail-value">${formatUptime(details.uptime)}</span>
-        </div>
-        <div class="detail-row">
-          <span class="detail-label">Connections:</span>
-          <span class="detail-value">${details.connections !== null ? details.connections : 'N/A'}</span>
-        </div>
-        ${cmdLine ? `
-        <div class="detail-row full-width">
-          <span class="detail-label">Command:</span>
-          <span class="detail-value">${escapeHtml(cmdLine)}</span>
-        </div>` : ''}
-        ` : ''}
-      </div>
-      ` : ''}
+      ${cmdLine ? `
+      <div class="port-command" ${hasLongCommand ? `onclick="togglePortExpansion(${p.port}, ${p.pid || 0})" style="cursor: pointer;" title="Click to ${isExpanded ? 'collapse' : 'expand full command'}"` : ''}>
+        ${escapeHtml(isExpanded ? cmdLine : cmdTruncated)}
+      </div>` : ''}
     </div>
   `}).join('');
 }
@@ -465,62 +456,60 @@ function copyPort(port) {
   showToast(`Copied localhost:${port}`, 'success');
 }
 
-// Toggle port card expansion and fetch details
-async function togglePortExpansion(port, pid) {
+// Toggle port card expansion (for long commands only)
+function togglePortExpansion(port, pid) {
   if (state.expandedPorts.has(port)) {
-    // Collapse
     state.expandedPorts.delete(port);
-    renderPorts();
   } else {
-    // Expand and fetch details
-    state.expandedPorts.set(port, { loading: true });
-    renderPorts();
-
-    try {
-      const result = await window.portpilot.ports.getDetails(pid, port);
-      if (result.success) {
-        state.expandedPorts.set(port, result.details);
-      } else {
-        state.expandedPorts.set(port, { memory: null, uptime: null, connections: null });
-      }
-      renderPorts();
-    } catch (err) {
-      state.expandedPorts.set(port, { memory: null, uptime: null, connections: null });
-      renderPorts();
-    }
-  }
-}
-
-// Expand all port cards and fetch details
-async function expandAllPorts() {
-  for (const port of state.ports) {
-    if (!state.expandedPorts.has(port.port) && port.pid) {
-      state.expandedPorts.set(port.port, { loading: true });
-    }
+    state.expandedPorts.set(port, {});
   }
   renderPorts();
+}
 
-  // Fetch details for all expanded ports
-  for (const port of state.ports) {
-    if (port.pid && state.expandedPorts.get(port.port)?.loading) {
+// Auto-fetch details for all ports
+async function fetchAllPortDetails() {
+  const promises = state.ports.map(async (p) => {
+    if (p.pid && !state.expandedPorts.has(p.port)) {
       try {
-        const result = await window.portpilot.ports.getDetails(port.pid, port.port);
+        const result = await window.portpilot.ports.getDetails(p.pid, p.port);
         if (result.success) {
-          state.expandedPorts.set(port.port, result.details);
+          state.expandedPorts.set(p.port, result.details);
         } else {
-          state.expandedPorts.set(port.port, { memory: null, uptime: null, connections: null });
+          state.expandedPorts.set(p.port, { memory: null, uptime: null, connections: null });
         }
       } catch (err) {
-        state.expandedPorts.set(port.port, { memory: null, uptime: null, connections: null });
+        state.expandedPorts.set(p.port, { memory: null, uptime: null, connections: null });
       }
     }
-  }
+  });
+
+  await Promise.all(promises);
   renderPorts();
 }
 
-// Collapse all port cards
+// Expand all port commands (for long commands)
+function expandAllPorts() {
+  state.ports.forEach(p => {
+    const cmdLine = p.commandLine || '';
+    if (cmdLine.length > 80) {
+      const existing = state.expandedPorts.get(p.port) || {};
+      state.expandedPorts.set(p.port, existing);
+    }
+  });
+  renderPorts();
+}
+
+// Collapse all port commands
 function collapseAllPorts() {
-  state.expandedPorts.clear();
+  // Keep the details, just remove the expansion flag
+  const newMap = new Map();
+  state.expandedPorts.forEach((details, port) => {
+    // Only keep if it has actual details (not just expansion flag)
+    if (details.memory !== undefined || details.uptime !== undefined) {
+      newMap.set(port, details);
+    }
+  });
+  state.expandedPorts = newMap;
   renderPorts();
 }
 
