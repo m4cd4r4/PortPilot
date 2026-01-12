@@ -780,7 +780,7 @@ kbd {
 .screenshot-carousel {
   position: relative;
   width: 100%;
-  max-width: 2400px;
+  max-width: 3200px;
   margin: 0 auto;
   border-radius: 12px;
   overflow: hidden;
