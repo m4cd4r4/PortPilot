@@ -20,6 +20,24 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <!-- Header Navigation -->
+  <nav class="header-nav">
+    <div class="nav-container">
+      <div class="nav-brand">
+        <span class="icon">&#9875;</span> PortPilot
+      </div>
+      <div class="nav-links">
+        <a href="#features" class="nav-link">Features</a>
+        <a href="#knowledge" class="nav-link">Knowledge Base</a>
+        <a href="#smart-detection" class="nav-link">Smart Detection</a>
+        <a href="#getting-started" class="nav-link">Getting Started</a>
+        <a href="#shortcuts" class="nav-link">Shortcuts</a>
+        <a href="#mcp" class="nav-link">🤖 AI Agent</a>
+        <a href="#download" class="nav-link nav-link-download">Download</a>
+      </div>
+    </div>
+  </nav>
+
   <header class="hero">
     <div class="container">
       <div class="hero-content">
@@ -181,7 +199,7 @@
     </div>
   </section>
 
-  <section class="badges-section">
+  <section class="badges-section" id="smart-detection">
     <div class="container">
       <h2>Smart App Detection</h2>
       <p class="section-subtitle">PortPilot automatically detects app requirements and shows visual badges</p>
@@ -206,7 +224,7 @@
       </div>
     </div>
   </section>
-  <section class="shortcuts-section">
+  <section class="shortcuts-section" id="shortcuts">
     <div class="container">
       <h2>Keyboard Shortcuts</h2>
       <div class="shortcuts-grid">
@@ -285,6 +303,32 @@
         document.querySelector(this.getAttribute("href")).scrollIntoView({behavior: "smooth"});
       });
     });
+
+    // Active nav link on scroll
+    const sections = document.querySelectorAll('section[id]');
+    const navLinks = document.querySelectorAll('.nav-link');
+
+    function updateActiveNavLink() {
+      let current = '';
+
+      sections.forEach(section => {
+        const sectionTop = section.offsetTop;
+        const sectionHeight = section.clientHeight;
+        if (window.pageYOffset >= sectionTop - 100) {
+          current = section.getAttribute('id');
+        }
+      });
+
+      navLinks.forEach(link => {
+        link.classList.remove('active');
+        if (link.getAttribute('href') === '#' + current) {
+          link.classList.add('active');
+        }
+      });
+    }
+
+    window.addEventListener('scroll', updateActiveNavLink);
+    updateActiveNavLink();
 
     // Screenshot carousel
     let currentSlide = 0;
