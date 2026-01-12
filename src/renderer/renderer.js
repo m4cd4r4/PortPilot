@@ -562,6 +562,18 @@ async function openProcessFolder(exePath) {
   }
 }
 
+// Open app working directory
+async function openAppFolder(appId) {
+  const app = state.apps.find(a => a.id === appId);
+  if (!app || !app.cwd) return;
+  try {
+    await window.portpilot.openExternal(`file:///${app.cwd.replace(/\\/g, '/')}`);
+    showToast('Opened folder', 'success');
+  } catch (err) {
+    showToast('Failed to open folder', 'error');
+  }
+}
+
 // Extract executable path from command line
 function extractExePath(cmdLine) {
   if (!cmdLine) return null;
@@ -834,6 +846,7 @@ function renderAppCard(app) {
                <button class="btn btn-small btn-danger" onclick="stopApp('${app.id}')" ${starting ? 'disabled' : ''}>Stop</button>`
             : `<button class="btn btn-small btn-primary" onclick="startApp('${app.id}')">Start</button>`
         }
+        <button class="btn btn-small btn-secondary" onclick="openAppFolder('${app.id}')" title="Open working directory">📂</button>
         <button class="btn btn-small btn-secondary" onclick="editApp('${app.id}')">Edit</button>
         <button class="btn btn-small btn-secondary" onclick="deleteApp('${app.id}')">🗑</button>
       </div>
@@ -1799,6 +1812,7 @@ window.startApp = startApp;
 window.stopApp = stopApp;
 window.killConflictingProcess = killConflictingProcess;
 window.openPortInBrowser = openPortInBrowser;
+window.openAppFolder = openAppFolder;
 window.editApp = editApp;
 window.deleteApp = deleteApp;
 window.openExternal = openExternal;
