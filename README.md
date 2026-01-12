@@ -23,6 +23,30 @@ Control PortPilot with natural language! Works with Claude Code, Cursor, Windsur
 
 **[→ Setup MCP Integration](mcp-server/README.md)**
 
+## What's New in v1.6.1
+
+### Enhanced Port Cards
+- **CMD Icon with Hover Tooltip** — Black CMD badge shows full command path on hover with copy button
+- **Single-Row Layout** — Removed second row, CMD tooltip replaces expandable command display
+- **Brighter Stats** — Improved visibility of Memory, Uptime, and Connections badges
+- **Cleaner Design** — More compact while showing all essential information
+
+### Knowledge Carousel System
+- **Horizontal Navigation** — 13 tabs for easy access to all help sections
+- **Single Card View** — Clean, focused presentation with smooth transitions
+- **v1.6.1 Documentation** — New sections for Port Cards and Port Actions features
+- **Enhanced Troubleshooting** — Added FAQs for new features (N/A values, bind indicators)
+
+### App Card Enhancements
+- **Folder Button** — 📂 icon opens app's working directory in file explorer
+- **Consistent UX** — Matches port card folder button functionality
+- **Quick Access** — One-click navigation to project files
+
+### UI Refinements
+- **Aligned Keyboard Shortcuts** — Fixed grid layout with centered keys
+- **Wider CMD Tooltips** — Increased from 500px to 600px with scrolling support
+- **Better Text Wrapping** — Improved long command path display
+
 ## What's New in v1.6.0
 
 ### Compact & Sharp UI Redesign
