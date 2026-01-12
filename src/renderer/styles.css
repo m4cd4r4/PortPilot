@@ -578,8 +578,8 @@ body {
   border: 1px solid var(--border-color);
   border-radius: 8px;
   padding: 10px;
-  min-width: 350px;
-  max-width: 500px;
+  width: 600px;
+  max-width: 90vw;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
   z-index: 1000;
   opacity: 0;
@@ -636,6 +636,9 @@ body {
   padding: 8px;
   border-radius: 4px;
   border: 1px solid var(--border-color);
+  max-height: 200px;
+  overflow-y: auto;
+  white-space: pre-wrap;
 }
 
 /* ============ Apps List ============ */
@@ -1435,12 +1438,13 @@ body {
 }
 
 .shortcut {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: 100px 1fr;
   align-items: center;
   padding: 6px 0;
   border-bottom: 1px solid var(--border-color);
   font-size: 0.85rem;
+  gap: 16px;
 }
 
 .shortcut:last-child {
@@ -1460,6 +1464,9 @@ kbd {
   font-family: var(--font-family);
   color: var(--accent-cyan);
   font-weight: 600;
+  display: inline-block;
+  min-width: 32px;
+  text-align: center;
 }
 
 /* Port Reference */
