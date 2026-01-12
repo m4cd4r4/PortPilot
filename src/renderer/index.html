@@ -39,6 +39,8 @@
       <section id="tab-ports" class="tab-content active">
         <div class="toolbar">
           <input type="text" id="port-filter" placeholder="Filter by port or process..." class="input-search">
+          <button type="button" class="btn btn-small btn-secondary" onclick="expandAllPorts()" title="Expand all port cards">▼ Expand All</button>
+          <button type="button" class="btn btn-small btn-secondary" onclick="collapseAllPorts()" title="Collapse all port cards">▶ Collapse All</button>
           <span id="port-count" class="count-badge">0 ports</span>
         </div>
         <div id="ports-list" class="ports-grid">

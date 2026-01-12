@@ -491,6 +491,39 @@ async function togglePortExpansion(port, pid) {
   }
 }
 
+// Expand all port cards and fetch details
+async function expandAllPorts() {
+  for (const port of state.ports) {
+    if (!state.expandedPorts.has(port.port) && port.pid) {
+      state.expandedPorts.set(port.port, { loading: true });
+    }
+  }
+  renderPorts();
+
+  // Fetch details for all expanded ports
+  for (const port of state.ports) {
+    if (port.pid && state.expandedPorts.get(port.port)?.loading) {
+      try {
+        const result = await window.portpilot.ports.getDetails(port.pid, port.port);
+        if (result.success) {
+          state.expandedPorts.set(port.port, result.details);
+        } else {
+          state.expandedPorts.set(port.port, { memory: null, uptime: null, connections: null });
+        }
+      } catch (err) {
+        state.expandedPorts.set(port.port, { memory: null, uptime: null, connections: null });
+      }
+    }
+  }
+  renderPorts();
+}
+
+// Collapse all port cards
+function collapseAllPorts() {
+  state.expandedPorts.clear();
+  renderPorts();
+}
+
 // Open port in browser
 async function openPortInBrowser(port) {
   const url = `http://localhost:${port}`;
