@@ -52,8 +52,7 @@
           <p class="version-note">Windows 10/11 &amp; Linux | v1.6.1 | MIT Licence</p>
         </div>
         <div class="hero-mockup">
-          <div class="screenshot-carousel">
-            <button type="button" class="carousel-btn carousel-prev" onclick="prevSlide()">&#10094;</button>
+          <div class="screenshot-carousel" onclick="openCarouselModal()">
             <div class="carousel-container">
               <div class="carousel-slide active"><img src="screenshots/slot1.png" alt="My Apps Tab"></div>
               <div class="carousel-slide"><img src="screenshots/slot2.png" alt="Port Scanner"></div>
@@ -66,18 +65,41 @@
               <div class="carousel-slide"><img src="screenshots/slot9.png" alt="Settings"></div>
               <div class="carousel-slide"><img src="screenshots/slot10.png" alt="Docker Integration"></div>
             </div>
-            <button type="button" class="carousel-btn carousel-next" onclick="nextSlide()">&#10095;</button>
-            <div class="carousel-dots">
-              <span class="dot active" onclick="goToSlide(0)"></span>
-              <span class="dot" onclick="goToSlide(1)"></span>
-              <span class="dot" onclick="goToSlide(2)"></span>
-              <span class="dot" onclick="goToSlide(3)"></span>
-              <span class="dot" onclick="goToSlide(4)"></span>
-              <span class="dot" onclick="goToSlide(5)"></span>
-              <span class="dot" onclick="goToSlide(6)"></span>
-              <span class="dot" onclick="goToSlide(7)"></span>
-              <span class="dot" onclick="goToSlide(8)"></span>
-              <span class="dot" onclick="goToSlide(9)"></span>
+            <div class="carousel-click-hint">Click to enlarge</div>
+          </div>
+        </div>
+
+        <!-- Modal Carousel -->
+        <div id="carousel-modal" class="carousel-modal" onclick="closeCarouselModal(event)">
+          <div class="modal-content" onclick="event.stopPropagation()">
+            <button type="button" class="modal-close" onclick="closeCarouselModal(event)">✕</button>
+            <div class="modal-carousel">
+              <button type="button" class="carousel-btn carousel-prev" onclick="prevSlide()">&#10094;</button>
+              <div class="modal-carousel-container">
+                <div class="modal-carousel-slide active"><img src="screenshots/slot1.png" alt="My Apps Tab"></div>
+                <div class="modal-carousel-slide"><img src="screenshots/slot2.png" alt="Port Scanner"></div>
+                <div class="modal-carousel-slide"><img src="screenshots/slot3.png" alt="Port Details"></div>
+                <div class="modal-carousel-slide"><img src="screenshots/slot4.png" alt="CMD Tooltip"></div>
+                <div class="modal-carousel-slide"><img src="screenshots/slot5.png" alt="Knowledge Base"></div>
+                <div class="modal-carousel-slide"><img src="screenshots/slot6.png" alt="Keyboard Shortcuts"></div>
+                <div class="modal-carousel-slide"><img src="screenshots/slot7.png" alt="Port Actions"></div>
+                <div class="modal-carousel-slide"><img src="screenshots/slot8.png" alt="Themes"></div>
+                <div class="modal-carousel-slide"><img src="screenshots/slot9.png" alt="Settings"></div>
+                <div class="modal-carousel-slide"><img src="screenshots/slot10.png" alt="Docker Integration"></div>
+              </div>
+              <button type="button" class="carousel-btn carousel-next" onclick="nextSlide()">&#10095;</button>
+              <div class="carousel-dots">
+                <span class="dot active" onclick="goToSlide(0)"></span>
+                <span class="dot" onclick="goToSlide(1)"></span>
+                <span class="dot" onclick="goToSlide(2)"></span>
+                <span class="dot" onclick="goToSlide(3)"></span>
+                <span class="dot" onclick="goToSlide(4)"></span>
+                <span class="dot" onclick="goToSlide(5)"></span>
+                <span class="dot" onclick="goToSlide(6)"></span>
+                <span class="dot" onclick="goToSlide(7)"></span>
+                <span class="dot" onclick="goToSlide(8)"></span>
+                <span class="dot" onclick="goToSlide(9)"></span>
+              </div>
             </div>
           </div>
         </div>
@@ -322,6 +344,8 @@
     let currentSlide = 0;
     const slides = document.querySelectorAll('.carousel-slide');
     const dots = document.querySelectorAll('.carousel-dots .dot');
+    const modalSlides = document.querySelectorAll('.modal-carousel-slide');
+    const modalDots = document.querySelectorAll('.modal-carousel .carousel-dots .dot');
 
     function showSlide(index) {
       // Wrap around
@@ -329,13 +353,23 @@
       else if (index < 0) currentSlide = slides.length - 1;
       else currentSlide = index;
 
-      // Update slides
+      // Update hero carousel slides
       slides.forEach((slide, i) => {
         slide.classList.toggle('active', i === currentSlide);
       });
 
-      // Update dots
+      // Update hero carousel dots
       dots.forEach((dot, i) => {
+        dot.classList.toggle('active', i === currentSlide);
+      });
+
+      // Update modal carousel slides
+      modalSlides.forEach((slide, i) => {
+        slide.classList.toggle('active', i === currentSlide);
+      });
+
+      // Update modal carousel dots
+      modalDots.forEach((dot, i) => {
         dot.classList.toggle('active', i === currentSlide);
       });
     }
@@ -352,10 +386,32 @@
       showSlide(index);
     }
 
+    // Modal functions
+    function openCarouselModal() {
+      const modal = document.getElementById('carousel-modal');
+      modal.classList.add('active');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeCarouselModal(event) {
+      if (event) {
+        event.stopPropagation();
+      }
+      const modal = document.getElementById('carousel-modal');
+      modal.classList.remove('active');
+      document.body.style.overflow = '';
+    }
+
     // Keyboard navigation
     document.addEventListener('keydown', (e) => {
       if (e.key === 'ArrowLeft') prevSlide();
       if (e.key === 'ArrowRight') nextSlide();
+      if (e.key === 'Escape') {
+        const modal = document.getElementById('carousel-modal');
+        if (modal.classList.contains('active')) {
+          closeCarouselModal();
+        }
+      }
     });
 
     // Initialize
