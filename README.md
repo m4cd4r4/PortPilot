@@ -9,7 +9,7 @@
 [![Licence](https://img.shields.io/badge/licence-MIT-green.svg)](LICENSE)
 [![MCP](https://img.shields.io/badge/MCP-enabled-purple.svg)](mcp-server/README.md)
 
-![PortPilot](docs/screenshots/03-apps-tab.png)
+![PortPilot](docs/screenshots/slot2.png)
 
 ### 🤖 NEW: AI Agent Integration
 
