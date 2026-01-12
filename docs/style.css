@@ -68,6 +68,13 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
+  text-decoration: none;
+  transition: opacity 0.2s ease;
+  cursor: pointer;
+}
+
+.nav-brand:hover {
+  opacity: 0.8;
 }
 
 .nav-brand .icon {
@@ -440,6 +447,18 @@ kbd {
 
 .download-section h2 {
   margin-bottom: 8px;
+}
+
+.version-badge {
+  display: inline-block;
+  background: var(--accent-primary);
+  color: var(--bg-primary);
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 600;
+  margin-left: 12px;
+  vertical-align: middle;
 }
 
 .download-section .section-subtitle {
