@@ -424,6 +424,19 @@ function renderPorts() {
         <span class="port-stat" title="Active connections">${details.connections !== null ? details.connections + ' conn' : 'N/A'}</span>
         ` : '<span class="port-stat-loading">⏳</span>'}
         <span class="port-pid">${p.pid || ''}</span>
+        ${cmdLine ? `
+        <span class="port-cmd-icon" onclick="event.stopPropagation()" title="Command path">
+          CMD
+          <div class="cmd-tooltip">
+            <div class="cmd-tooltip-header">
+              <span class="cmd-tooltip-title">Full Command Path</span>
+              <button class="cmd-copy-btn" onclick="copyCmdPath('${escapeHtml(cmdLine.replace(/\\/g, '\\\\').replace(/'/g, "\\'"))}')">
+                Copy
+              </button>
+            </div>
+            <div class="cmd-tooltip-path">${escapeHtml(cmdLine)}</div>
+          </div>
+        </span>` : ''}
         <div class="port-actions" onclick="event.stopPropagation()">
           <button class="btn btn-small btn-secondary" onclick="openPortInBrowser(${p.port})" title="Open in browser">🌐</button>
           ${exePath ? `<button class="btn btn-small btn-secondary" onclick="openProcessFolder('${escapeHtml(exePath.replace(/\\/g, '\\\\'))}')" title="Open folder">📂</button>` : ''}
@@ -454,6 +467,11 @@ async function killPort(port) {
 function copyPort(port) {
   navigator.clipboard.writeText(`localhost:${port}`);
   showToast(`Copied localhost:${port}`, 'success');
+}
+
+function copyCmdPath(cmdPath) {
+  navigator.clipboard.writeText(cmdPath);
+  showToast('Command path copied to clipboard', 'success');
 }
 
 // Toggle port card expansion (for long commands only)
@@ -1771,6 +1789,7 @@ async function openExternal(url) {
 // Expose functions for onclick handlers
 window.killPort = killPort;
 window.copyPort = copyPort;
+window.copyCmdPath = copyCmdPath;
 window.startApp = startApp;
 window.stopApp = stopApp;
 window.killConflictingProcess = killConflictingProcess;
