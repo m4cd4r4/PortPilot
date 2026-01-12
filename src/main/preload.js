@@ -11,7 +11,8 @@ contextBridge.exposeInMainWorld('portpilot', {
     scanWithApps: () => ipcRenderer.invoke('ports:scanWithApps'),
     check: (port) => ipcRenderer.invoke('ports:check', port),
     findAvailable: (start, end) => ipcRenderer.invoke('ports:findAvailable', start, end),
-    kill: (port) => ipcRenderer.invoke('ports:kill', port)
+    kill: (port) => ipcRenderer.invoke('ports:kill', port),
+    getDetails: (pid, port) => ipcRenderer.invoke('ports:getDetails', pid, port)
   },
 
   // Process operations
