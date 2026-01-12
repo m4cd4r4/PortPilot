@@ -375,9 +375,20 @@ function renderPorts() {
     return;
   }
 
-  dom.portsList.innerHTML = filtered.map(p => `
+  dom.portsList.innerHTML = filtered.map(p => {
+    // Determine bind type and IP version from address
+    const addr = p.address || '';
+    const isIPv6 = addr.includes('[');
+    const isLocalOnly = addr.includes('127.0.0.1') || addr.includes('[::1]');
+    const bindIcon = isLocalOnly ? '🏠' : '🌐';
+    const bindTitle = isLocalOnly ? 'Localhost only (127.0.0.1)' : 'All interfaces (0.0.0.0) - Network accessible';
+    const ipVersion = isIPv6 ? 'v6' : 'v4';
+
+    return `
     <div class="port-card" data-port="${p.port}" title="${p.commandLine ? escapeHtml(p.commandLine) : ''}">
       <span class="port-number">:${p.port}</span>
+      <span class="port-bind" title="${bindTitle}">${bindIcon}</span>
+      <span class="port-ip">${ipVersion}</span>
       <span class="port-process">${escapeHtml(p.processName || 'Unknown')}</span>
       <span class="port-pid">${p.pid || ''}</span>
       <div class="port-actions">
@@ -385,7 +396,7 @@ function renderPorts() {
         <button class="btn btn-small btn-danger" onclick="killPort(${p.port})" title="Kill process">✕</button>
       </div>
     </div>
-  `).join('');
+  `}).join('');
 }
 
 async function killPort(port) {
