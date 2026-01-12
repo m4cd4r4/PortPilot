@@ -271,6 +271,21 @@ function setupEventListeners() {
     btn.addEventListener('click', () => setTheme(btn.dataset.theme));
   });
 
+  // Knowledge carousel navigation
+  document.querySelectorAll('.knowledge-nav-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const section = btn.dataset.section;
+
+      // Update active button
+      document.querySelectorAll('.knowledge-nav-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      // Update active section
+      document.querySelectorAll('.knowledge-section').forEach(s => s.classList.remove('active'));
+      document.querySelector(`.knowledge-section[data-section="${section}"]`).classList.add('active');
+    });
+  });
+
   // Close modal on backdrop click
   dom.modal.addEventListener('click', (e) => {
     if (e.target === dom.modal) closeModal();

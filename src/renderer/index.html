@@ -76,172 +76,237 @@
       <!-- Knowledge Tab -->
       <section id="tab-knowledge" class="tab-content">
         <div class="knowledge-grid">
-          <!-- How It Works -->
-          <div class="knowledge-card">
-            <h3>How It Works</h3>
-            <p>PortPilot scans your system for active TCP ports using native OS commands. It identifies which processes are using each port, letting you manage your development environment efficiently.</p>
-            <ul class="knowledge-list">
-              <li>Scans ports via <code>netstat</code> (Windows) or <code>lsof</code> (Mac/Linux)</li>
-              <li>Displays process name, PID, and command line</li>
-              <li>One-click kill for stuck processes</li>
-              <li>Register apps with preferred ports</li>
-            </ul>
+          <!-- Navigation -->
+          <div class="knowledge-navigation">
+            <button class="knowledge-nav-btn active" data-section="how-it-works">How It Works</button>
+            <button class="knowledge-nav-btn" data-section="quick-start">Quick Start</button>
+            <button class="knowledge-nav-btn" data-section="port-info">Port Cards</button>
+            <button class="knowledge-nav-btn" data-section="port-actions">Port Actions</button>
+            <button class="knowledge-nav-btn" data-section="shortcuts">Shortcuts</button>
+            <button class="knowledge-nav-btn" data-section="tips">Tips</button>
+            <button class="knowledge-nav-btn" data-section="tray">System Tray</button>
+            <button class="knowledge-nav-btn" data-section="ports">Common Ports</button>
+            <button class="knowledge-nav-btn" data-section="badges">App Badges</button>
+            <button class="knowledge-nav-btn" data-section="ipv">IPv4/IPv6</button>
+            <button class="knowledge-nav-btn" data-section="docker">Docker</button>
+            <button class="knowledge-nav-btn" data-section="troubleshoot">Troubleshooting</button>
+            <button class="knowledge-nav-btn" data-section="mcp">MCP/AI</button>
           </div>
 
-          <!-- Quick Start -->
-          <div class="knowledge-card">
-            <h3>Quick Start</h3>
-            <ol class="knowledge-list numbered">
-              <li><strong>Scan Ports</strong> — Click the button to discover active ports</li>
-              <li><strong>Add Apps</strong> — Register your dev projects with their start commands</li>
-              <li><strong>Start/Stop</strong> — Control apps from the My Apps tab</li>
-              <li><strong>Kill Ports</strong> — Free up stuck ports with one click</li>
-            </ol>
-          </div>
-
-          <!-- Keyboard Shortcuts -->
-          <div class="knowledge-card">
-            <h3>Keyboard Shortcuts</h3>
-            <div class="shortcut-grid">
-              <div class="shortcut"><kbd>Ctrl</kbd>+<kbd>R</kbd><span>Refresh/Scan</span></div>
-              <div class="shortcut"><kbd>Ctrl</kbd>+<kbd>N</kbd><span>Add New App</span></div>
-              <div class="shortcut"><kbd>Ctrl</kbd>+<kbd>1</kbd><span>Ports Tab</span></div>
-              <div class="shortcut"><kbd>Ctrl</kbd>+<kbd>2</kbd><span>Apps Tab</span></div>
-              <div class="shortcut"><kbd>Ctrl</kbd>+<kbd>3</kbd><span>Knowledge</span></div>
-              <div class="shortcut"><kbd>Ctrl</kbd>+<kbd>4</kbd><span>Settings</span></div>
+          <!-- Carousel Card -->
+          <div class="knowledge-carousel">
+            <!-- How It Works -->
+            <div class="knowledge-section active" data-section="how-it-works">
+              <h3>How It Works</h3>
+              <p>PortPilot scans your system for active TCP ports using native OS commands. It identifies which processes are using each port, letting you manage your development environment efficiently.</p>
+              <ul class="knowledge-list">
+                <li>Scans ports via <code>netstat</code> (Windows) or <code>lsof</code> (Mac/Linux)</li>
+                <li>Displays process name, PID, and command line</li>
+                <li>One-click kill for stuck processes</li>
+                <li>Register apps with preferred ports</li>
+              </ul>
             </div>
-          </div>
 
-          <!-- Tips & Tricks -->
-          <div class="knowledge-card">
-            <h3>Tips & Tricks</h3>
-            <ul class="knowledge-list">
-              <li>Use <strong>fallback port ranges</strong> when your preferred port is busy</li>
-              <li>Click the <strong>copy button</strong> to get <code>localhost:PORT</code> to clipboard</li>
-              <li>Minimize to <strong>system tray</strong> — click the tray icon to restore</li>
-              <li>Right-click the <strong>tray icon</strong> for quick access to "Stop All Apps"</li>
-              <li>Set <strong>auto-start</strong> on apps you always need running</li>
-              <li><strong>Export config</strong> to back up your app registrations</li>
-            </ul>
-          </div>
-
-          <!-- System Tray -->
-          <div class="knowledge-card">
-            <h3>System Tray</h3>
-            <p>PortPilot lives in your system tray for quick access:</p>
-            <ul class="knowledge-list">
-              <li><strong>Left-click</strong> the tray icon to show/hide the window</li>
-              <li><strong>Right-click</strong> for the menu:
-                <ul style="margin-left: 20px; margin-top: 5px;">
-                  <li>Show PortPilot — Restore the window</li>
-                  <li>Scan Ports — Run a port scan</li>
-                  <li><strong>Stop All Apps</strong> — Stop all PortPilot-managed apps without quitting</li>
-                  <li>Quit — Exit PortPilot</li>
-                </ul>
-              </li>
-              <li>Configure <strong>window behavior</strong> in Settings:
-                <ul style="margin-left: 20px; margin-top: 5px;">
-                  <li>Minimize to tray on close (default: on)</li>
-                  <li>Stop running apps when quitting (default: on)</li>
-                </ul>
-              </li>
-            </ul>
-            <p><em>Note: Only apps started by PortPilot are affected. External processes are never touched.</em></p>
-          </div>
-
-          <!-- Common Ports -->
-          <div class="knowledge-card">
-            <h3>Common Dev Ports</h3>
-            <div class="port-reference">
-              <div class="port-item"><span class="port-num">3000</span> React, Next.js, Express</div>
-              <div class="port-item"><span class="port-num">4200</span> Angular CLI</div>
-              <div class="port-item"><span class="port-num">5173</span> Vite</div>
-              <div class="port-item"><span class="port-num">5432</span> PostgreSQL</div>
-              <div class="port-item"><span class="port-num">6379</span> Redis</div>
-              <div class="port-item"><span class="port-num">8000</span> Django, FastAPI</div>
-              <div class="port-item"><span class="port-num">8080</span> Tomcat, Live Server</div>
-              <div class="port-item"><span class="port-num">27017</span> MongoDB</div>
+            <!-- Quick Start -->
+            <div class="knowledge-section" data-section="quick-start">
+              <h3>Quick Start</h3>
+              <ol class="knowledge-list numbered">
+                <li><strong>Scan Ports</strong> — Click the button to discover active ports</li>
+                <li><strong>Add Apps</strong> — Register your dev projects with their start commands</li>
+                <li><strong>Start/Stop</strong> — Control apps from the My Apps tab</li>
+                <li><strong>Kill Ports</strong> — Free up stuck ports with one click</li>
+              </ol>
             </div>
-          </div>
 
-          <!-- App Badges -->
-          <div class="knowledge-card">
-            <h3>App Badges</h3>
-            <p>PortPilot automatically detects app requirements and shows badges:</p>
-            <div class="badge-reference">
-              <div class="badge-item"><span class="badge-icon">🐳</span> <strong>Docker</strong> — App uses Docker/Compose (click to start Docker Desktop)</div>
-              <div class="badge-item"><span class="badge-icon">📦</span> <strong>Node.js</strong> — Uses npm, npx, pnpm, yarn, or bun</div>
-              <div class="badge-item"><span class="badge-icon">🐍</span> <strong>Python</strong> — Uses python, uvicorn, flask, or django</div>
-              <div class="badge-item"><span class="badge-icon">🗄️</span> <strong>Database</strong> — Uses postgres, mysql, redis, or mongo</div>
-              <div class="badge-item"><span class="badge-icon">⚡</span> <strong>Auto-start</strong> — App starts automatically on launch</div>
-              <div class="badge-item"><span class="badge-icon">🌐</span> <strong>Remote</strong> — App runs on a remote server/VPS</div>
+            <!-- Port Card Information (NEW in v1.6.1) -->
+            <div class="knowledge-section" data-section="port-info">
+              <h3>Port Card Information</h3>
+              <p>Each port card displays comprehensive process information automatically:</p>
+              <ul class="knowledge-list">
+                <li><strong>:port</strong> — Port number in cyan (e.g., :3000)</li>
+                <li><strong>🏠 / 🌐</strong> — Bind type indicator:
+                  <ul style="margin-left: 20px; margin-top: 4px;">
+                    <li>🏠 = Localhost only (127.0.0.1) — Not accessible from network</li>
+                    <li>🌐 = All interfaces (0.0.0.0) — Accessible from network</li>
+                  </ul>
+                </li>
+                <li><strong>v4 / v6</strong> — IP protocol version badge</li>
+                <li><strong>process.exe</strong> — Process name</li>
+                <li><strong>Memory</strong> — RAM usage in MB (e.g., 142 MB)</li>
+                <li><strong>Uptime</strong> — How long process has been running (e.g., 2h 15m)</li>
+                <li><strong>Connections</strong> — Number of active TCP connections (e.g., 3 conn)</li>
+                <li><strong>PID</strong> — Process ID for advanced troubleshooting</li>
+                <li><strong>CMD</strong> — Hover to see full command path with copy button</li>
+              </ul>
+              <p><em>Process details are automatically fetched when you scan ports. No extra clicks needed!</em></p>
             </div>
-          </div>
 
-          <!-- IPv4/IPv6 -->
-          <div class="knowledge-card">
-            <h3>IPv4 vs IPv6</h3>
-            <p>When apps are running, PortPilot shows which IP protocol they're bound to:</p>
-            <ul class="knowledge-list">
-              <li><strong>v4</strong> — App is bound to IPv4 (e.g., <code>0.0.0.0:3000</code> or <code>127.0.0.1:3000</code>)</li>
-              <li><strong>v6</strong> — App is bound to IPv6 (e.g., <code>[::]:3000</code> or <code>[::1]:3000</code>)</li>
-            </ul>
-            <p>This matters because browsers may prefer IPv6. PortPilot opens the correct URL based on the binding.</p>
-          </div>
-
-          <!-- Docker Integration -->
-          <div class="knowledge-card">
-            <h3>Docker Integration</h3>
-            <p>PortPilot integrates with Docker Desktop:</p>
-            <ul class="knowledge-list">
-              <li><strong>Yellow pulsing 🐳</strong> — Docker Desktop is not running</li>
-              <li><strong>Green 🐳</strong> — Docker Desktop is running and ready</li>
-              <li><strong>Click the badge</strong> — Starts Docker Desktop automatically</li>
-              <li>PortPilot polls until Docker is ready, then updates the display</li>
-            </ul>
-            <p>Docker apps will fail to start if Docker Desktop isn't running first.</p>
-          </div>
-
-          <!-- Troubleshooting -->
-          <div class="knowledge-card">
-            <h3>Troubleshooting</h3>
-            <div class="faq-list">
-              <details class="faq-item">
-                <summary>Port won't kill?</summary>
-                <p>Some system processes require admin privileges. Try running PortPilot as Administrator.</p>
-              </details>
-              <details class="faq-item">
-                <summary>App won't start?</summary>
-                <p>Check the working directory path and ensure the command is correct. View app logs for errors.</p>
-              </details>
-              <details class="faq-item">
-                <summary>Scan shows nothing?</summary>
-                <p>No apps are using TCP ports. This is normal if nothing is running locally.</p>
-              </details>
-              <details class="faq-item">
-                <summary>Docker app fails?</summary>
-                <p>Make sure Docker Desktop is running first. Click the yellow 🐳 badge to start it.</p>
-              </details>
-              <details class="faq-item">
-                <summary>Wrong app opens in browser?</summary>
-                <p>Multiple apps may share a port on IPv4 vs IPv6. Check the v4/v6 indicator.</p>
-              </details>
+            <!-- Port Actions (NEW in v1.6.1) -->
+            <div class="knowledge-section" data-section="port-actions">
+              <h3>Port Actions</h3>
+              <p>Quick actions available for each port:</p>
+              <div class="badge-reference">
+                <div class="badge-item"><span class="badge-icon">🌐</span> <strong>Open in Browser</strong> — Launch localhost:PORT in default browser</div>
+                <div class="badge-item"><span class="badge-icon">📂</span> <strong>Open Folder</strong> — Open directory containing the process executable</div>
+                <div class="badge-item"><span class="badge-icon">📋</span> <strong>Copy</strong> — Copy "localhost:PORT" to clipboard</div>
+                <div class="badge-item"><span class="badge-icon">✕</span> <strong>Kill Process</strong> — Terminate the process using this port</div>
+              </div>
+              <p><strong>CMD Icon:</strong> Hover over the black <code>CMD</code> badge to see the full command path in a tooltip. Click the Copy button to copy it to clipboard.</p>
             </div>
-          </div>
 
-          <!-- MCP Integration -->
-          <div class="knowledge-card">
-            <h3>AI Agent Integration (MCP)</h3>
-            <p>Control PortPilot with natural language via any MCP-compatible AI assistant:</p>
-            <div class="mcp-commands">
-              <div class="mcp-command">"List all my PortPilot apps"</div>
-              <div class="mcp-command">"Start the azure-practice-exam-platform app"</div>
-              <div class="mcp-command">"What's running on port 3001?"</div>
-              <div class="mcp-command">"Kill whatever is running on port 3000"</div>
-              <div class="mcp-command">"Favorite the AzurePrep app"</div>
+            <!-- Keyboard Shortcuts -->
+            <div class="knowledge-section" data-section="shortcuts">
+              <h3>Keyboard Shortcuts</h3>
+              <div class="shortcut-grid">
+                <div class="shortcut"><kbd>Ctrl</kbd>+<kbd>R</kbd><span>Refresh/Scan</span></div>
+                <div class="shortcut"><kbd>Ctrl</kbd>+<kbd>N</kbd><span>Add New App</span></div>
+                <div class="shortcut"><kbd>Ctrl</kbd>+<kbd>1</kbd><span>Ports Tab</span></div>
+                <div class="shortcut"><kbd>Ctrl</kbd>+<kbd>2</kbd><span>Apps Tab</span></div>
+                <div class="shortcut"><kbd>Ctrl</kbd>+<kbd>3</kbd><span>Knowledge</span></div>
+                <div class="shortcut"><kbd>Ctrl</kbd>+<kbd>4</kbd><span>Settings</span></div>
+              </div>
             </div>
-            <p class="mcp-compat"><strong>Works with:</strong> Claude Code, Claude Desktop, Cursor, Windsurf, Cline</p>
-            <a href="#" class="mcp-setup-link" onclick="openExternal('https://github.com/m4cd4r4/PortPilot/tree/master/mcp-server')">Setup Guide →</a>
+
+            <!-- Tips & Tricks -->
+            <div class="knowledge-section" data-section="tips">
+              <h3>Tips & Tricks</h3>
+              <ul class="knowledge-list">
+                <li>Use <strong>fallback port ranges</strong> when your preferred port is busy</li>
+                <li>Click the <strong>copy button</strong> to get <code>localhost:PORT</code> to clipboard</li>
+                <li>Minimize to <strong>system tray</strong> — click the tray icon to restore</li>
+                <li>Right-click the <strong>tray icon</strong> for quick access to "Stop All Apps"</li>
+                <li>Set <strong>auto-start</strong> on apps you always need running</li>
+                <li><strong>Export config</strong> to back up your app registrations</li>
+              </ul>
+            </div>
+
+            <!-- System Tray -->
+            <div class="knowledge-section" data-section="tray">
+              <h3>System Tray</h3>
+              <p>PortPilot lives in your system tray for quick access:</p>
+              <ul class="knowledge-list">
+                <li><strong>Left-click</strong> the tray icon to show/hide the window</li>
+                <li><strong>Right-click</strong> for the menu:
+                  <ul style="margin-left: 20px; margin-top: 5px;">
+                    <li>Show PortPilot — Restore the window</li>
+                    <li>Scan Ports — Run a port scan</li>
+                    <li><strong>Stop All Apps</strong> — Stop all PortPilot-managed apps without quitting</li>
+                    <li>Quit — Exit PortPilot</li>
+                  </ul>
+                </li>
+                <li>Configure <strong>window behavior</strong> in Settings:
+                  <ul style="margin-left: 20px; margin-top: 5px;">
+                    <li>Minimize to tray on close (default: on)</li>
+                    <li>Stop running apps when quitting (default: on)</li>
+                  </ul>
+                </li>
+              </ul>
+              <p><em>Note: Only apps started by PortPilot are affected. External processes are never touched.</em></p>
+            </div>
+
+            <!-- Common Ports -->
+            <div class="knowledge-section" data-section="ports">
+              <h3>Common Dev Ports</h3>
+              <div class="port-reference">
+                <div class="port-item"><span class="port-num">3000</span> React, Next.js, Express</div>
+                <div class="port-item"><span class="port-num">4200</span> Angular CLI</div>
+                <div class="port-item"><span class="port-num">5173</span> Vite</div>
+                <div class="port-item"><span class="port-num">5432</span> PostgreSQL</div>
+                <div class="port-item"><span class="port-num">6379</span> Redis</div>
+                <div class="port-item"><span class="port-num">8000</span> Django, FastAPI</div>
+                <div class="port-item"><span class="port-num">8080</span> Tomcat, Live Server</div>
+                <div class="port-item"><span class="port-num">27017</span> MongoDB</div>
+              </div>
+            </div>
+
+            <!-- App Badges -->
+            <div class="knowledge-section" data-section="badges">
+              <h3>App Badges</h3>
+              <p>PortPilot automatically detects app requirements and shows badges:</p>
+              <div class="badge-reference">
+                <div class="badge-item"><span class="badge-icon">🐳</span> <strong>Docker</strong> — App uses Docker/Compose (click to start Docker Desktop)</div>
+                <div class="badge-item"><span class="badge-icon">📦</span> <strong>Node.js</strong> — Uses npm, npx, pnpm, yarn, or bun</div>
+                <div class="badge-item"><span class="badge-icon">🐍</span> <strong>Python</strong> — Uses python, uvicorn, flask, or django</div>
+                <div class="badge-item"><span class="badge-icon">🗄️</span> <strong>Database</strong> — Uses postgres, mysql, redis, or mongo</div>
+                <div class="badge-item"><span class="badge-icon">⚡</span> <strong>Auto-start</strong> — App starts automatically on launch</div>
+                <div class="badge-item"><span class="badge-icon">🌐</span> <strong>Remote</strong> — App runs on a remote server/VPS</div>
+              </div>
+            </div>
+
+            <!-- IPv4/IPv6 -->
+            <div class="knowledge-section" data-section="ipv">
+              <h3>IPv4 vs IPv6</h3>
+              <p>When apps are running, PortPilot shows which IP protocol they're bound to:</p>
+              <ul class="knowledge-list">
+                <li><strong>v4</strong> — App is bound to IPv4 (e.g., <code>0.0.0.0:3000</code> or <code>127.0.0.1:3000</code>)</li>
+                <li><strong>v6</strong> — App is bound to IPv6 (e.g., <code>[::]:3000</code> or <code>[::1]:3000</code>)</li>
+              </ul>
+              <p>This matters because browsers may prefer IPv6. PortPilot opens the correct URL based on the binding.</p>
+              <p><strong>New in v1.6.1:</strong> Port cards now show v4/v6 badges inline for instant visibility.</p>
+            </div>
+
+            <!-- Docker Integration -->
+            <div class="knowledge-section" data-section="docker">
+              <h3>Docker Integration</h3>
+              <p>PortPilot integrates with Docker Desktop:</p>
+              <ul class="knowledge-list">
+                <li><strong>Yellow pulsing 🐳</strong> — Docker Desktop is not running</li>
+                <li><strong>Green 🐳</strong> — Docker Desktop is running and ready</li>
+                <li><strong>Click the badge</strong> — Starts Docker Desktop automatically</li>
+                <li>PortPilot polls until Docker is ready, then updates the display</li>
+              </ul>
+              <p>Docker apps will fail to start if Docker Desktop isn't running first.</p>
+            </div>
+
+            <!-- Troubleshooting -->
+            <div class="knowledge-section" data-section="troubleshoot">
+              <h3>Troubleshooting</h3>
+              <div class="faq-list">
+                <details class="faq-item">
+                  <summary>Port won't kill?</summary>
+                  <p>Some system processes require admin privileges. Try running PortPilot as Administrator.</p>
+                </details>
+                <details class="faq-item">
+                  <summary>App won't start?</summary>
+                  <p>Check the working directory path and ensure the command is correct. View app logs for errors.</p>
+                </details>
+                <details class="faq-item">
+                  <summary>Scan shows nothing?</summary>
+                  <p>No apps are using TCP ports. This is normal if nothing is running locally.</p>
+                </details>
+                <details class="faq-item">
+                  <summary>Docker app fails?</summary>
+                  <p>Make sure Docker Desktop is running first. Click the yellow 🐳 badge to start it.</p>
+                </details>
+                <details class="faq-item">
+                  <summary>Wrong app opens in browser?</summary>
+                  <p>Multiple apps may share a port on IPv4 vs IPv6. Check the v4/v6 indicator.</p>
+                </details>
+                <details class="faq-item">
+                  <summary>Why does a port show "N/A" for memory or uptime?</summary>
+                  <p>PortPilot couldn't retrieve process details (permission denied or process ended). The port scan shows what's listening, but extended info requires process access. Try running PortPilot as Administrator for system processes.</p>
+                </details>
+                <details class="faq-item">
+                  <summary>What does 🏠 vs 🌐 mean on port cards?</summary>
+                  <p>🏠 means the service only listens on localhost (127.0.0.1) and isn't accessible from other computers. 🌐 means it's bound to all network interfaces (0.0.0.0) and can be accessed from other devices on your network.</p>
+                </details>
+              </div>
+            </div>
+
+            <!-- MCP Integration -->
+            <div class="knowledge-section" data-section="mcp">
+              <h3>AI Agent Integration (MCP)</h3>
+              <p>Control PortPilot with natural language via any MCP-compatible AI assistant:</p>
+              <div class="mcp-commands">
+                <div class="mcp-command">"List all my PortPilot apps"</div>
+                <div class="mcp-command">"Start the azure-practice-exam-platform app"</div>
+                <div class="mcp-command">"What's running on port 3001?"</div>
+                <div class="mcp-command">"Kill whatever is running on port 3000"</div>
+                <div class="mcp-command">"Favorite the AzurePrep app"</div>
+              </div>
+              <p class="mcp-compat"><strong>Works with:</strong> Claude Code, Claude Desktop, Cursor, Windsurf, Cline</p>
+              <a href="#" class="mcp-setup-link" onclick="openExternal('https://github.com/m4cd4r4/PortPilot/tree/master/mcp-server')">Setup Guide →</a>
+            </div>
           </div>
         </div>
 
