@@ -405,15 +405,9 @@ function renderPorts() {
       return `${seconds}s`;
     };
 
-    // Determine if command is long
-    const cmdTruncated = cmdLine.length > 80 ? cmdLine.substring(0, 80) + '...' : cmdLine;
-    const hasLongCommand = cmdLine.length > 80;
-    const isExpanded = state.expandedPorts.has(p.port) && hasLongCommand;
-
     return `
     <div class="port-card" data-port="${p.port}">
-      <div class="port-card-header" ${hasLongCommand ? `onclick="togglePortExpansion(${p.port}, ${p.pid || 0})" style="cursor: pointer;"` : ''}>
-        ${hasLongCommand ? `<span class="expand-indicator">${isExpanded ? '▼' : '▶'}</span>` : '<span class="expand-indicator-spacer"></span>'}
+      <div class="port-card-header">
         <span class="port-number">:${p.port}</span>
         <span class="port-bind" title="${bindTitle}">${bindIcon}</span>
         <span class="port-ip">${ipVersion}</span>
@@ -444,10 +438,6 @@ function renderPorts() {
           <button class="btn btn-small btn-danger" onclick="killPort(${p.port})" title="Kill process">✕</button>
         </div>
       </div>
-      ${cmdLine ? `
-      <div class="port-command" ${hasLongCommand ? `onclick="togglePortExpansion(${p.port}, ${p.pid || 0})" style="cursor: pointer;" title="Click to ${isExpanded ? 'collapse' : 'expand full command'}"` : ''}>
-        ${escapeHtml(isExpanded ? cmdLine : cmdTruncated)}
-      </div>` : ''}
     </div>
   `}).join('');
 }
