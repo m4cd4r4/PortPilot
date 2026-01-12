@@ -154,7 +154,7 @@ launchApp(devTools)    // Launch PortPilot with DevTools setting
 - [x] WSL testing support
 - [x] Platform auto-detection (Windows/Linux commands)
 - [x] System tray "Stop All Apps" option
-- [x] Configurable window close behavior (minimize/exit)
+- [x] Configurable window close behaviour (minimise/exit)
 - [x] Smart process cleanup on quit
 - [x] External process safety (never kills non-managed processes)
 - [x] Single-instance lock
@@ -258,7 +258,7 @@ Following Playwright best practices:
   - WSL testing support for cross-platform validation
   - Platform auto-detection (adapts commands for Windows/Linux)
   - System tray "Stop All Apps" option
-  - Configurable window close behavior (minimize to tray or exit)
+  - Configurable window close behaviour (minimise to tray or exit)
   - Smart process cleanup on quit (optionally stops managed apps)
   - External process safety (never touches processes started outside PortPilot)
   - Single-instance lock (prevents multiple copies running)

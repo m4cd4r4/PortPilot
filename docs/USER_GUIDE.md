@@ -61,7 +61,7 @@ PortPilot solves these problems with a clean, visual interface that lets you:
 Each tab serves a specific purpose:
 
 - **Active Ports**: Real-time view of network activity
-- **My Apps**: Your command center for starting/stopping projects
+- **My Apps**: Your command centre for starting/stopping projects
 - **Knowledge**: Quick reference for common ports, troubleshooting tips, and shortcuts
 - **Settings**: Theme selection and auto-scan configuration
 
@@ -321,10 +321,10 @@ PortPilot offers 6 carefully designed themes:
 
 ### System Tray
 
-PortPilot can minimize to the system tray (Windows) or menu bar (macOS).
+PortPilot can minimise to the system tray (Windows) or menu bar (macOS).
 
-**To minimize to tray:**
-- Click the minimize button
+**To minimise to tray:**
+- Click the minimise button
 - PortPilot will hide but continue running in the background
 
 **To restore from tray:**
@@ -602,7 +602,7 @@ Assign colors based on:
 - **Type**: Frontend apps = blue, Backend = green, Databases = purple
 - **Status**: Prod apps = red, Dev apps = blue, Test apps = yellow
 
-**Why**: Visual organization makes it easier to find apps quickly.
+**Why**: Visual organisation makes it easier to find apps quickly.
 
 ---
 
@@ -782,7 +782,7 @@ PortPilot transforms port and process management from a frustrating chore into a
 **Key takeaways**:
 - Scan ports to see what's running
 - Register apps for one-click start/stop
-- Use badges and colors for visual organization
+- Use badges and colors for visual organisation
 - Master keyboard shortcuts for efficiency
 - Enable auto-scan during active development
 

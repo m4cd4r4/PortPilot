@@ -176,8 +176,8 @@ Auto-resize is called whenever apps change:
 
 **Potential User Settings:**
 - `autoResize`: true/false (enable/disable feature)
-- `minHeight`: 400 (customizable min)
-- `maxHeight`: 1200 (customizable max)
+- `minHeight`: 400 (customisable min)
+- `maxHeight`: 1200 (customisable max)
 - `animateResize`: true/false (smooth vs instant)
 
 **Not implemented yet** - could be added in v1.7.0 if requested.

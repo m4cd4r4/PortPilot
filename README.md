@@ -4,9 +4,9 @@
 
 🌐 **[View Landing Page & Download](https://m4cd4r4.github.io/PortPilot/)** 🌐
 
-[![Version](https://img.shields.io/badge/version-1.6.0-blue.svg)](https://github.com/m4cd4r4/PortPilot/releases/tag/v1.6.0)
+[![Version](https://img.shields.io/badge/version-1.6.1-blue.svg)](https://github.com/m4cd4r4/PortPilot/releases/tag/v1.6.1)
 [![Tests](https://img.shields.io/badge/tests-11%2F11%20passing-brightgreen.svg)](TESTING_SUMMARY.md)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Licence](https://img.shields.io/badge/licence-MIT-green.svg)](LICENSE)
 [![MCP](https://img.shields.io/badge/MCP-enabled-purple.svg)](mcp-server/README.md)
 
 ![PortPilot](docs/screenshots/03-apps-tab.png)
@@ -66,9 +66,9 @@ Control PortPilot with natural language! Works with Claude Code, Cursor, Windsur
 - **WSL Testing** — Full testing support in Windows Subsystem for Linux
 - **Platform Auto-Detection** — Automatically adapts commands for Windows/Linux
 
-### System Tray & Window Behavior
+### System Tray & Window Behaviour
 - **Stop All Apps from Tray** — Right-click tray icon to stop all PortPilot-managed apps without quitting
-- **Configurable Window Behavior** — Choose whether close button minimizes to tray or exits completely
+- **Configurable Window Behaviour** — Choose whether close button minimises to tray or exits completely
 - **Smart Process Cleanup** — Optionally stop all apps when quitting (only affects PortPilot-managed processes)
 - **External Process Safety** — Never touches processes started outside PortPilot
 
@@ -106,7 +106,7 @@ Control PortPilot with natural language! Works with Claude Code, Cursor, Windsur
 
 ### Favorites System
 - **Star Your Apps** — Click the star (⭐/☆) button to mark frequently-used apps as favorites
-- **Organized Sections** — Apps automatically organized into:
+- **Organized Sections** — Apps automatically organised into:
   - **⭐ Favorites** — Starred apps at the top for quick access
   - **📁 Other Projects** — Non-starred apps below
 - **Collapsible Sections** — Click section headers to expand/collapse
@@ -134,7 +134,7 @@ Control PortPilot with natural language! Works with Claude Code, Cursor, Windsur
 - **Requirement Badges** — Visual indicators for Docker, Node.js, Python, and more
 - **Docker Integration** — Click to start Docker Desktop, with status detection
 - **IPv4/IPv6 Awareness** — Shows which protocol your app is bound to
-- **System Tray** — Minimize to tray, "Stop All Apps" menu option, configurable window behavior
+- **System Tray** — Minimize to tray, "Stop All Apps" menu option, configurable window behaviour
 - **Single-Instance Lock** — Only one PortPilot runs at a time, focuses existing window
 - **Multi-Theme Support** — 6 themes including TokyoNight, Brutalist, Nord, Dracula
 - **Knowledge Base** — Built-in help with tips, shortcuts, and common ports reference
@@ -157,7 +157,7 @@ Built-in documentation with System Tray guide, shortcuts, and troubleshooting.
 ![Knowledge](docs/screenshots/05-knowledge-tab.png)
 
 ### Settings
-Choose from 6 themes, configure window behavior, auto-scan, and more.
+Choose from 6 themes, configure window behaviour, auto-scan, and more.
 
 ![Settings](docs/screenshots/06-settings-tab.png)
 
@@ -485,7 +485,7 @@ See [mcp-server/README.md](mcp-server/README.md) for full documentation.
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
-## License
+## Licence
 
 MIT © Macdara
 
