@@ -28,13 +28,15 @@ jobs:
 
       - name: Build Windows
         if: matrix.os == 'windows-latest'
-        run: npm run build:all
+        run: npx electron-builder --win nsis portable --publish never
         env:
-          CSC_IDENTITY_AUTO_DISCOVERY: false  # Disable code signing for CI builds
+          CSC_IDENTITY_AUTO_DISCOVERY: false  # Disable code signing
+          WIN_CSC_LINK: ""  # No certificate
+          WIN_CSC_KEY_PASSWORD: ""  # No password
 
       - name: Build Linux
         if: matrix.os == 'ubuntu-latest'
-        run: npm run build:linux
+        run: npx electron-builder --linux --publish never
 
       - name: Upload Windows artifacts
         if: matrix.os == 'windows-latest'
