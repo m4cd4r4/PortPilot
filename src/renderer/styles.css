@@ -439,14 +439,23 @@ body {
   min-width: 45px;
 }
 
+.port-bind {
+  font-size: 0.9rem;
+  cursor: help;
+}
+
+.port-ip {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  background: var(--bg-tertiary);
+  padding: 1px 4px;
+  border-radius: 2px;
+  font-weight: 600;
+}
+
 .port-actions {
   display: flex;
   gap: 4px;
-}
-
-/* Remove unused port-info styles - keeping for backwards compat */
-.port-info {
-  display: none;
 }
 
 /* ============ Apps List ============ */
