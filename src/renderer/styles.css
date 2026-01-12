@@ -401,20 +401,75 @@ body {
   gap: 6px;
 }
 
-/* v1.6.1: Single-row compact port cards */
+/* v1.6.1: Single-row compact port cards with expandable details */
 .port-card {
   background: var(--bg-secondary);
   border: var(--border-width) solid var(--border-color);
   border-radius: var(--radius);
-  padding: 6px 10px;
   transition: all 0.15s ease;
   display: flex;
-  align-items: center;
-  gap: 10px;
+  flex-direction: column;
 }
 
 .port-card:hover {
   border-color: var(--accent-cyan);
+}
+
+.port-card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  cursor: pointer;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.expand-indicator {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  opacity: 0.6;
+  transition: opacity 0.15s;
+}
+
+.port-card-header:hover .expand-indicator {
+  opacity: 1;
+}
+
+.port-card-details {
+  padding: 8px 10px 10px 10px;
+  border-top: 1px solid var(--border-color);
+  background: var(--bg-tertiary);
+  font-size: 0.75rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.detail-row {
+  display: flex;
+  gap: 6px;
+}
+
+.detail-row.full-width {
+  grid-column: 1 / -1;
+}
+
+.detail-label {
+  color: var(--text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.65rem;
+}
+
+.detail-value {
+  color: var(--text-primary);
+  word-break: break-all;
+}
+
+.loading {
+  color: var(--text-muted);
+  font-style: italic;
 }
 
 .port-number {

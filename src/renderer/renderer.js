@@ -20,7 +20,8 @@ const state = {
   deleteAppId: null,  // Track app being deleted for confirmation modal
   selectedApps: new Set(),  // Multi-select for apps
   selectedProjects: new Set(),  // Multi-select for discovered projects
-  expandedApps: new Set()  // Track which app cards are expanded (v1.6: 1-line compact mode)
+  expandedApps: new Set(),  // Track which app cards are expanded (v1.6: 1-line compact mode)
+  expandedPorts: new Map()  // Track which port cards are expanded (Map: port -> details)
 };
 
 // ============ Requirement Detection ============
@@ -388,19 +389,61 @@ function renderPorts() {
     const cmdLine = p.commandLine || '';
     const exePath = extractExePath(cmdLine);
 
+    // Check if expanded
+    const isExpanded = state.expandedPorts.has(p.port);
+    const details = state.expandedPorts.get(p.port);
+    const expandIcon = isExpanded ? '▼' : '▶';
+
+    // Format details
+    const formatUptime = (seconds) => {
+      if (!seconds) return 'N/A';
+      const hours = Math.floor(seconds / 3600);
+      const minutes = Math.floor((seconds % 3600) / 60);
+      if (hours > 0) return `${hours}h ${minutes}m`;
+      if (minutes > 0) return `${minutes}m`;
+      return `${seconds}s`;
+    };
+
     return `
-    <div class="port-card" data-port="${p.port}" title="${cmdLine ? escapeHtml(cmdLine) : ''}">
-      <span class="port-number">:${p.port}</span>
-      <span class="port-bind" title="${bindTitle}">${bindIcon}</span>
-      <span class="port-ip">${ipVersion}</span>
-      <span class="port-process">${escapeHtml(p.processName || 'Unknown')}</span>
-      <span class="port-pid">${p.pid || ''}</span>
-      <div class="port-actions">
-        <button class="btn btn-small btn-secondary" onclick="openPortInBrowser(${p.port})" title="Open in browser">🌐</button>
-        ${exePath ? `<button class="btn btn-small btn-secondary" onclick="openProcessFolder('${escapeHtml(exePath.replace(/\\/g, '\\\\'))}')" title="Open folder">📂</button>` : ''}
-        <button class="btn btn-small btn-secondary" onclick="copyPort(${p.port})" title="Copy localhost:${p.port}">📋</button>
-        <button class="btn btn-small btn-danger" onclick="killPort(${p.port})" title="Kill process">✕</button>
+    <div class="port-card ${isExpanded ? 'expanded' : 'compact'}" data-port="${p.port}">
+      <div class="port-card-header" onclick="togglePortExpansion(${p.port}, ${p.pid || 0})" title="Click to ${isExpanded ? 'collapse' : 'expand details'}">
+        <span class="expand-indicator">${expandIcon}</span>
+        <span class="port-number">:${p.port}</span>
+        <span class="port-bind" title="${bindTitle}">${bindIcon}</span>
+        <span class="port-ip">${ipVersion}</span>
+        <span class="port-process">${escapeHtml(p.processName || 'Unknown')}</span>
+        <span class="port-pid">${p.pid || ''}</span>
+        <div class="port-actions" onclick="event.stopPropagation()">
+          <button class="btn btn-small btn-secondary" onclick="openPortInBrowser(${p.port})" title="Open in browser">🌐</button>
+          ${exePath ? `<button class="btn btn-small btn-secondary" onclick="openProcessFolder('${escapeHtml(exePath.replace(/\\/g, '\\\\'))}')" title="Open folder">📂</button>` : ''}
+          <button class="btn btn-small btn-secondary" onclick="copyPort(${p.port})" title="Copy localhost:${p.port}">📋</button>
+          <button class="btn btn-small btn-danger" onclick="killPort(${p.port})" title="Kill process">✕</button>
+        </div>
       </div>
+      ${isExpanded ? `
+      <div class="port-card-details">
+        ${details && details.loading ? '<span class="loading">Loading...</span>' : ''}
+        ${details && !details.loading ? `
+        <div class="detail-row">
+          <span class="detail-label">Memory:</span>
+          <span class="detail-value">${details.memory ? details.memory + ' MB' : 'N/A'}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Uptime:</span>
+          <span class="detail-value">${formatUptime(details.uptime)}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Connections:</span>
+          <span class="detail-value">${details.connections !== null ? details.connections : 'N/A'}</span>
+        </div>
+        ${cmdLine ? `
+        <div class="detail-row full-width">
+          <span class="detail-label">Command:</span>
+          <span class="detail-value">${escapeHtml(cmdLine)}</span>
+        </div>` : ''}
+        ` : ''}
+      </div>
+      ` : ''}
     </div>
   `}).join('');
 }
@@ -420,6 +463,32 @@ async function killPort(port) {
 function copyPort(port) {
   navigator.clipboard.writeText(`localhost:${port}`);
   showToast(`Copied localhost:${port}`, 'success');
+}
+
+// Toggle port card expansion and fetch details
+async function togglePortExpansion(port, pid) {
+  if (state.expandedPorts.has(port)) {
+    // Collapse
+    state.expandedPorts.delete(port);
+    renderPorts();
+  } else {
+    // Expand and fetch details
+    state.expandedPorts.set(port, { loading: true });
+    renderPorts();
+
+    try {
+      const result = await window.portpilot.ports.getDetails(pid, port);
+      if (result.success) {
+        state.expandedPorts.set(port, result.details);
+      } else {
+        state.expandedPorts.set(port, { memory: null, uptime: null, connections: null });
+      }
+      renderPorts();
+    } catch (err) {
+      state.expandedPorts.set(port, { memory: null, uptime: null, connections: null });
+      renderPorts();
+    }
+  }
 }
 
 // Open port in browser

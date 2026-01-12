@@ -1,6 +1,131 @@
 const { scanPorts, checkPort, findAvailablePort } = require('./portScanner');
 const { startApp, stopApp, killProcess, killByPort, getRunningApps, getAppLogs } = require('./processManager');
 const path = require('path');
+const { exec } = require('child_process');
+const os = require('os');
+
+/**
+ * Get detailed process information (memory, uptime, connections)
+ * @param {number} pid - Process ID
+ * @param {number} port - Port number (for connection counting)
+ * @returns {Promise<Object>} Process details
+ */
+async function getProcessDetails(pid, port) {
+  const platform = os.platform();
+
+  try {
+    if (platform === 'win32') {
+      return await getProcessDetailsWindows(pid, port);
+    } else {
+      return await getProcessDetailsUnix(pid, port);
+    }
+  } catch (error) {
+    console.error('Failed to get process details:', error);
+    return { memory: null, uptime: null, connections: null };
+  }
+}
+
+/** Windows process details */
+function getProcessDetailsWindows(pid, port) {
+  return new Promise((resolve) => {
+    // Get memory and uptime
+    exec(`wmic process where "ProcessId=${pid}" get WorkingSetSize,CreationDate /format:csv`,
+      { encoding: 'utf8' },
+      (error, stdout) => {
+        let memory = null;
+        let uptime = null;
+
+        if (!error && stdout) {
+          const lines = stdout.trim().split('\n').slice(1);
+          for (const line of lines) {
+            const parts = line.split(',');
+            if (parts.length >= 3) {
+              const creationDate = parts[1]?.trim();
+              const workingSet = parseInt(parts[2]?.trim(), 10);
+
+              if (workingSet) {
+                memory = Math.round(workingSet / 1024 / 1024); // Convert to MB
+              }
+
+              if (creationDate) {
+                // WMIC format: YYYYMMDDHHMMss.mmmmmm+zzz
+                const year = parseInt(creationDate.substring(0, 4), 10);
+                const month = parseInt(creationDate.substring(4, 6), 10) - 1;
+                const day = parseInt(creationDate.substring(6, 8), 10);
+                const hour = parseInt(creationDate.substring(8, 10), 10);
+                const minute = parseInt(creationDate.substring(10, 12), 10);
+                const second = parseInt(creationDate.substring(12, 14), 10);
+
+                const startTime = new Date(year, month, day, hour, minute, second);
+                uptime = Math.floor((Date.now() - startTime.getTime()) / 1000); // seconds
+              }
+            }
+          }
+        }
+
+        // Get connection count
+        exec(`netstat -ano | findstr :${port} | findstr ${pid}`,
+          { encoding: 'utf8' },
+          (connError, connStdout) => {
+            let connections = 0;
+            if (!connError && connStdout) {
+              connections = connStdout.trim().split('\n').filter(Boolean).length;
+            }
+            resolve({ memory, uptime, connections });
+          }
+        );
+      }
+    );
+  });
+}
+
+/** Unix/Linux/Mac process details */
+function getProcessDetailsUnix(pid, port) {
+  return new Promise((resolve) => {
+    // Get memory and uptime using ps
+    exec(`ps -p ${pid} -o rss=,etime=`,
+      { encoding: 'utf8' },
+      (error, stdout) => {
+        let memory = null;
+        let uptime = null;
+
+        if (!error && stdout) {
+          const parts = stdout.trim().split(/\s+/);
+          if (parts.length >= 2) {
+            // RSS is in kilobytes
+            memory = Math.round(parseInt(parts[0], 10) / 1024); // Convert to MB
+
+            // Parse elapsed time (format: [[DD-]HH:]MM:SS or MM:SS)
+            const elapsedStr = parts[1];
+            const elapsedParts = elapsedStr.split(/[-:]/);
+            if (elapsedParts.length === 2) {
+              // MM:SS
+              uptime = parseInt(elapsedParts[0], 10) * 60 + parseInt(elapsedParts[1], 10);
+            } else if (elapsedParts.length === 3) {
+              // HH:MM:SS
+              uptime = parseInt(elapsedParts[0], 10) * 3600 + parseInt(elapsedParts[1], 10) * 60 + parseInt(elapsedParts[2], 10);
+            } else if (elapsedParts.length === 4) {
+              // DD-HH:MM:SS
+              uptime = parseInt(elapsedParts[0], 10) * 86400 + parseInt(elapsedParts[1], 10) * 3600 + parseInt(elapsedParts[2], 10) * 60 + parseInt(elapsedParts[3], 10);
+            }
+          }
+        }
+
+        // Get connection count using lsof or netstat
+        exec(`lsof -iTCP:${port} -sTCP:ESTABLISHED -a -p ${pid} 2>/dev/null || netstat -an | grep :${port} | grep ESTABLISHED`,
+          { encoding: 'utf8' },
+          (connError, connStdout) => {
+            let connections = 0;
+            if (!connError && connStdout) {
+              connections = connStdout.trim().split('\n').filter(Boolean).length;
+            }
+            resolve({ memory, uptime, connections });
+          }
+        );
+      }
+    );
+  });
+}
 
 /**
  * Match scanned ports to registered apps by analyzing command line and working directory
@@ -184,6 +309,16 @@ function setupIpcHandlers(ipcMain, configStore) {
     try {
       const result = await killByPort(port);
       return result;
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+
+  /** Get detailed process info (memory, uptime, connections) */
+  ipcMain.handle('ports:getDetails', async (_, pid, port) => {
+    try {
+      const details = await getProcessDetails(pid, port);
+      return { success: true, details };
     } catch (error) {
       return { success: false, error: error.message };
     }
