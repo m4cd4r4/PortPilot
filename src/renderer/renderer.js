@@ -384,14 +384,20 @@ function renderPorts() {
     const bindTitle = isLocalOnly ? 'Localhost only (127.0.0.1)' : 'All interfaces (0.0.0.0) - Network accessible';
     const ipVersion = isIPv6 ? 'v6' : 'v4';
 
+    // Extract executable path from command line for "Open folder" button
+    const cmdLine = p.commandLine || '';
+    const exePath = extractExePath(cmdLine);
+
     return `
-    <div class="port-card" data-port="${p.port}" title="${p.commandLine ? escapeHtml(p.commandLine) : ''}">
+    <div class="port-card" data-port="${p.port}" title="${cmdLine ? escapeHtml(cmdLine) : ''}">
       <span class="port-number">:${p.port}</span>
       <span class="port-bind" title="${bindTitle}">${bindIcon}</span>
       <span class="port-ip">${ipVersion}</span>
       <span class="port-process">${escapeHtml(p.processName || 'Unknown')}</span>
       <span class="port-pid">${p.pid || ''}</span>
       <div class="port-actions">
+        <button class="btn btn-small btn-secondary" onclick="openPortInBrowser(${p.port})" title="Open in browser">🌐</button>
+        ${exePath ? `<button class="btn btn-small btn-secondary" onclick="openProcessFolder('${escapeHtml(exePath.replace(/\\/g, '\\\\'))}')" title="Open folder">📂</button>` : ''}
         <button class="btn btn-small btn-secondary" onclick="copyPort(${p.port})" title="Copy localhost:${p.port}">📋</button>
         <button class="btn btn-small btn-danger" onclick="killPort(${p.port})" title="Kill process">✕</button>
       </div>
@@ -414,6 +420,54 @@ async function killPort(port) {
 function copyPort(port) {
   navigator.clipboard.writeText(`localhost:${port}`);
   showToast(`Copied localhost:${port}`, 'success');
+}
+
+// Open port in browser
+async function openPortInBrowser(port) {
+  const url = `http://localhost:${port}`;
+  try {
+    await window.portpilot.openExternal(url);
+    showToast(`Opened localhost:${port}`, 'success');
+  } catch (err) {
+    showToast('Failed to open browser', 'error');
+  }
+}
+
+// Open folder containing executable
+async function openProcessFolder(exePath) {
+  if (!exePath) return;
+  try {
+    // Get directory from path
+    const dir = exePath.substring(0, exePath.lastIndexOf('\\')) || exePath.substring(0, exePath.lastIndexOf('/'));
+    if (dir) {
+      await window.portpilot.openExternal(`file:///${dir.replace(/\\/g, '/')}`);
+      showToast('Opened folder', 'success');
+    }
+  } catch (err) {
+    showToast('Failed to open folder', 'error');
+  }
+}
+
+// Extract executable path from command line
+function extractExePath(cmdLine) {
+  if (!cmdLine) return null;
+
+  // Handle quoted paths: "C:\Program Files\app.exe" args
+  if (cmdLine.startsWith('"')) {
+    const endQuote = cmdLine.indexOf('"', 1);
+    if (endQuote > 1) {
+      return cmdLine.substring(1, endQuote);
+    }
+  }
+
+  // Handle unquoted paths: C:\app.exe args
+  const firstSpace = cmdLine.indexOf(' ');
+  if (firstSpace > 0) {
+    return cmdLine.substring(0, firstSpace);
+  }
+
+  // No spaces - entire string is the path
+  return cmdLine;
 }
 
 async function openInBrowser(appId) {
