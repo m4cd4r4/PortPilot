@@ -638,12 +638,46 @@ kbd {
 .screenshot-carousel {
   position: relative;
   width: 100%;
-  max-width: 800px;
+  max-width: 1067px;
   margin: 0 auto;
   border-radius: 12px;
   overflow: hidden;
   box-shadow: var(--shadow);
   background: var(--bg-secondary);
+}
+
+.carousel-menu {
+  background: var(--bg-primary);
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.carousel-menu-btn {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 600;
+}
+
+.carousel-menu-btn:hover {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border-color: var(--accent-cyan);
+}
+
+.carousel-menu-btn.active {
+  background: var(--accent-primary);
+  color: var(--bg-primary);
+  border-color: var(--accent-primary);
 }
 
 .carousel-container {

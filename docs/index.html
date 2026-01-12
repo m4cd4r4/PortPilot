@@ -35,18 +35,30 @@
         </div>
         <div class="hero-mockup">
           <div class="screenshot-carousel">
+            <div class="carousel-menu">
+              <button type="button" class="carousel-menu-btn active" onclick="goToSlide(0)">My Apps</button>
+              <button type="button" class="carousel-menu-btn" onclick="goToSlide(1)">Port Scanner</button>
+              <button type="button" class="carousel-menu-btn" onclick="goToSlide(2)">Port Details</button>
+              <button type="button" class="carousel-menu-btn" onclick="goToSlide(3)">CMD Tooltip</button>
+              <button type="button" class="carousel-menu-btn" onclick="goToSlide(4)">Knowledge Base</button>
+              <button type="button" class="carousel-menu-btn" onclick="goToSlide(5)">Shortcuts</button>
+              <button type="button" class="carousel-menu-btn" onclick="goToSlide(6)">Port Actions</button>
+              <button type="button" class="carousel-menu-btn" onclick="goToSlide(7)">Themes</button>
+              <button type="button" class="carousel-menu-btn" onclick="goToSlide(8)">Settings</button>
+              <button type="button" class="carousel-menu-btn" onclick="goToSlide(9)">Docker</button>
+            </div>
             <button type="button" class="carousel-btn carousel-prev" onclick="prevSlide()">&#10094;</button>
             <div class="carousel-container">
-              <div class="carousel-slide active"><img src="screenshots/slot1.png" alt="PortPilot Screenshot 1"></div>
-              <div class="carousel-slide"><img src="screenshots/slot2.png" alt="PortPilot Screenshot 2"></div>
-              <div class="carousel-slide"><img src="screenshots/slot3.png" alt="PortPilot Screenshot 3"></div>
-              <div class="carousel-slide"><img src="screenshots/slot4.png" alt="PortPilot Screenshot 4"></div>
-              <div class="carousel-slide"><img src="screenshots/slot5.png" alt="PortPilot Screenshot 5"></div>
-              <div class="carousel-slide"><img src="screenshots/slot6.png" alt="PortPilot Screenshot 6"></div>
-              <div class="carousel-slide"><img src="screenshots/slot7.png" alt="PortPilot Screenshot 7"></div>
-              <div class="carousel-slide"><img src="screenshots/slot8.png" alt="PortPilot Screenshot 8"></div>
-              <div class="carousel-slide"><img src="screenshots/slot9.png" alt="PortPilot Screenshot 9"></div>
-              <div class="carousel-slide"><img src="screenshots/slot10.png" alt="PortPilot Screenshot 10"></div>
+              <div class="carousel-slide active"><img src="screenshots/slot1.png" alt="My Apps Tab"></div>
+              <div class="carousel-slide"><img src="screenshots/slot2.png" alt="Port Scanner"></div>
+              <div class="carousel-slide"><img src="screenshots/slot3.png" alt="Port Details"></div>
+              <div class="carousel-slide"><img src="screenshots/slot4.png" alt="CMD Tooltip"></div>
+              <div class="carousel-slide"><img src="screenshots/slot5.png" alt="Knowledge Base"></div>
+              <div class="carousel-slide"><img src="screenshots/slot6.png" alt="Keyboard Shortcuts"></div>
+              <div class="carousel-slide"><img src="screenshots/slot7.png" alt="Port Actions"></div>
+              <div class="carousel-slide"><img src="screenshots/slot8.png" alt="Themes"></div>
+              <div class="carousel-slide"><img src="screenshots/slot9.png" alt="Settings"></div>
+              <div class="carousel-slide"><img src="screenshots/slot10.png" alt="Docker Integration"></div>
             </div>
             <button type="button" class="carousel-btn carousel-next" onclick="nextSlide()">&#10095;</button>
             <div class="carousel-dots">
@@ -278,6 +290,7 @@
     let currentSlide = 0;
     const slides = document.querySelectorAll('.carousel-slide');
     const dots = document.querySelectorAll('.carousel-dots .dot');
+    const menuBtns = document.querySelectorAll('.carousel-menu-btn');
 
     function showSlide(index) {
       // Wrap around
@@ -293,6 +306,11 @@
       // Update dots
       dots.forEach((dot, i) => {
         dot.classList.toggle('active', i === currentSlide);
+      });
+
+      // Update menu buttons
+      menuBtns.forEach((btn, i) => {
+        btn.classList.toggle('active', i === currentSlide);
       });
     }
 
