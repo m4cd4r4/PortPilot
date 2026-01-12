@@ -441,18 +441,20 @@ body {
   border-top: 1px solid var(--border-color);
   background: var(--bg-tertiary);
   font-size: 0.75rem;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
 }
 
 .detail-row {
   display: flex;
   gap: 6px;
+  align-items: center;
 }
 
 .detail-row.full-width {
-  grid-column: 1 / -1;
+  flex: 1 1 100%;
 }
 
 .detail-label {
@@ -464,6 +466,13 @@ body {
 
 .detail-value {
   color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.detail-row.full-width .detail-value {
+  white-space: normal;
   word-break: break-all;
 }
 
