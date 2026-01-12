@@ -42,7 +42,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **⭐ Favorites System** - Star your most-used apps for quick access
   - Star (⭐/☆) button on each app card
-  - Apps organized into collapsible sections:
+  - Apps organised into collapsible sections:
     - **⭐ Favorites** - Starred apps at the top
     - **📁 Other Projects** - Non-starred apps below
   - Section collapse state persists across app restarts
@@ -81,7 +81,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **My Apps Tab**
   - App cards now support favoriting with instant visual feedback
   - Port conflict warnings with globe and kill buttons
-  - Better organization with expandable/collapsible sections
+  - Better organisation with expandable/collapsible sections
   - Section headers show app count (e.g., "⭐ Favorites • 3 apps")
   - Improved toolbar layout with grouped action buttons
 
