@@ -160,12 +160,22 @@ launchApp(devTools)    // Launch PortPilot with DevTools setting
 - [x] Single-instance lock
 - [x] Smart window focusing (second launch focuses existing)
 
+### v1.6.0 - v1.6.1 Features
+- [x] Compact & Sharp UI Redesign (30-40% more density)
+- [x] MCP Auto-Refresh (external changes detection)
+- [x] Smart Window Auto-Resize (dynamic height)
+- [x] Enhanced Port Cards (CMD tooltip, single-row layout)
+- [x] Knowledge Carousel System (13 tabs)
+- [x] App Card Folder Button (open project directory)
+- [x] 4 New Language Detectors (Go, .NET, Rust, Ruby)
+
 ### Partial Coverage (Requires Real Scenarios)
 - [ ] IPv6 app opening (requires IPv6 app)
 - [ ] Multiple apps running simultaneously (requires test apps)
 - [ ] Kill by port fallback (requires external process)
 - [ ] Full port conflict resolution flow (requires port conflicts)
 - [ ] Cross-platform testing (requires Linux runner)
+- [ ] Language detector unit tests (Go, .NET, Rust, Ruby - currently manual testing only)
 
 ## Known Limitations
 
@@ -252,7 +262,36 @@ Following Playwright best practices:
 
 ## Version History
 
-### v1.5.0 (Current)
+### v1.6.1 (Current)
+- **New Features:**
+  - Enhanced Port Cards (CMD icon with hover tooltip and copy button)
+  - Single-Row Layout (removed second row, CMD tooltip replaces expandable command display)
+  - Brighter Stats (improved visibility of Memory, Uptime, and Connections badges)
+  - Knowledge Carousel System (13 tabs with horizontal navigation)
+  - App Card Folder Button (📂 icon opens working directory)
+  - **4 New Language Detectors:**
+    - **Go Detection** (Gin, Fiber, Echo frameworks - port 8080/3000/1323)
+    - **.NET Detection** (ASP.NET Core - port 5000)
+    - **Rust Detection** (Actix-web, Rocket, Axum, Warp - ports 8080/8000/3000/3030)
+    - **Ruby Detection** (Rails, Sinatra, Rack - ports 3000/4567/9292)
+- **Testing:**
+  - Language detectors rely on manual/integration testing
+  - No dedicated unit tests yet (functions work in practice via auto-discovery)
+  - E2E tests remain at 11/11 passing (100%)
+
+### v1.6.0
+- **New Features:**
+  - Compact & Sharp UI Redesign (30-40% more density, 2px corners)
+  - MCP Auto-Refresh (file watcher with 100ms debounce)
+  - Smart Window Auto-Resize (400px min, 1200px max, dynamic height)
+  - 100% Test Coverage (all 11 E2E tests passing)
+  - ConfigStore null reference fix
+- **Testing:**
+  - Integrated test servers (HTTP on 3000, 3001, 8080)
+  - Test mode singleton lock bypass
+  - Improved reliability (fixed visibility issues, better wait strategies)
+
+### v1.5.0
 - **New Features:**
   - Linux Platform Support (AppImage and .deb packages)
   - WSL testing support for cross-platform validation
@@ -321,14 +360,15 @@ Following Playwright best practices:
 
 ## Future Test Enhancements
 
-1. **Visual Regression Testing**: Screenshot comparison
-2. **Performance Profiling**: Memory leak detection
-3. **Accessibility Testing**: ARIA label verification
-4. **Cross-Platform Tests**: Linux and macOS runners
-5. **Integration Tests**: Test with real dev servers
+1. **Language Detector Unit Tests**: Dedicated tests for Go, .NET, Rust, Ruby detectors with mock project structures
+2. **Visual Regression Testing**: Screenshot comparison
+3. **Performance Profiling**: Memory leak detection
+4. **Accessibility Testing**: ARIA label verification
+5. **Cross-Platform Tests**: Linux and macOS runners
+6. **Integration Tests**: Test with real dev servers
 
 ---
 
-**Last Updated**: January 10, 2026
-**Test Coverage**: Core (100%), v1.3.0 (100%), v1.4.0 (100%), v1.5.0 (100%)
+**Last Updated**: January 13, 2026
+**Test Coverage**: Core (100%), v1.3.0 (100%), v1.4.0 (100%), v1.5.0 (100%), v1.6.0 (100%), v1.6.1 (E2E 100%, Language Detectors: Manual Testing)
 **Status**: Production-ready
