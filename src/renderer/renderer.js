@@ -510,32 +510,6 @@ async function fetchAllPortDetails() {
   renderPorts();
 }
 
-// Expand all port commands (for long commands)
-function expandAllPorts() {
-  state.ports.forEach(p => {
-    const cmdLine = p.commandLine || '';
-    if (cmdLine.length > 80) {
-      const existing = state.expandedPorts.get(p.port) || {};
-      state.expandedPorts.set(p.port, existing);
-    }
-  });
-  renderPorts();
-}
-
-// Collapse all port commands
-function collapseAllPorts() {
-  // Keep the details, just remove the expansion flag
-  const newMap = new Map();
-  state.expandedPorts.forEach((details, port) => {
-    // Only keep if it has actual details (not just expansion flag)
-    if (details.memory !== undefined || details.uptime !== undefined) {
-      newMap.set(port, details);
-    }
-  });
-  state.expandedPorts = newMap;
-  renderPorts();
-}
-
 // Open port in browser
 async function openPortInBrowser(port) {
   const url = `http://localhost:${port}`;
