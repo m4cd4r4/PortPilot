@@ -39,6 +39,13 @@ body {
   padding: 0 24px;
 }
 
+@media (min-width: 1024px) {
+  .hero .container {
+    max-width: 1400px;
+    padding: 0 40px;
+  }
+}
+
 /* Header Navigation */
 .header-nav {
   position: sticky;
@@ -148,8 +155,14 @@ body {
 .hero-content {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 60px;
-  align-items: start;
+  gap: 40px;
+  align-items: center;
+}
+
+@media (min-width: 1200px) {
+  .hero-content {
+    gap: 60px;
+  }
 }
 
 .hero h1 {
@@ -872,63 +885,50 @@ kbd {
 .hero-mockup {
   max-width: 100%;
   width: 100%;
-  padding: 30px 0;
-  overflow: visible;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .screenshot-carousel {
   position: relative;
-  width: 150%;
-  max-width: 900px;
-  margin: 0 auto;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
   border-radius: 12px;
   overflow: hidden;
   box-shadow: var(--shadow);
   background: var(--bg-secondary);
-  aspect-ratio: 16 / 10;
 }
 
 @media (max-width: 1024px) {
   .screenshot-carousel {
-    width: 120%;
-    max-width: 700px;
+    border-radius: 10px;
   }
 }
 
 @media (max-width: 768px) {
   .screenshot-carousel {
-    width: 100%;
-    max-width: 100%;
     border-radius: 8px;
-  }
-
-  .hero-mockup {
-    padding: 20px 0;
   }
 }
 
 @media (max-width: 480px) {
   .screenshot-carousel {
     border-radius: 6px;
-    aspect-ratio: 16 / 11;
-  }
-
-  .hero-mockup {
-    padding: 15px 0;
   }
 }
 
 .carousel-container {
   position: relative;
   width: 100%;
-  height: 100%;
   overflow: hidden;
 }
 
 .carousel-slide {
   display: none;
   width: 100%;
-  height: 100%;
   animation: fadeIn 0.5s ease;
 }
 
@@ -938,10 +938,9 @@ kbd {
 
 .carousel-slide img {
   width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: center;
+  height: auto;
   display: block;
+  object-fit: contain;
 }
 
 @keyframes fadeIn {
