@@ -143,7 +143,7 @@ body {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 60px;
-  align-items: center;
+  align-items: start;
 }
 
 .hero h1 {
@@ -775,17 +775,21 @@ kbd {
 /* Screenshot Carousel Styles */
 .hero-mockup {
   max-width: 100%;
+  padding: 60px 0;
 }
 
 .screenshot-carousel {
   position: relative;
   width: 100%;
   max-width: none;
+  min-height: 700px;
   margin: 0 auto;
   border-radius: 12px;
   overflow: hidden;
   box-shadow: var(--shadow);
   background: var(--bg-secondary);
+  transform: scale(1.5);
+  transform-origin: center;
 }
 
 .carousel-container {
