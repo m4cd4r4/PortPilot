@@ -134,7 +134,7 @@ body {
 
 /* Hero Section */
 .hero {
-  padding: 80px 0 100px;
+  padding: 80px 0 120px;
   background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
   border-bottom: 1px solid var(--border-color);
 }
@@ -775,20 +775,20 @@ kbd {
 /* Screenshot Carousel Styles */
 .hero-mockup {
   max-width: 100%;
-  padding: 20px 0;
+  padding: 30px 0;
 }
 
 .screenshot-carousel {
   position: relative;
   width: 100%;
   max-width: none;
-  min-height: 550px;
+  min-height: 600px;
   margin: 0 auto;
   border-radius: 12px;
   overflow: hidden;
   box-shadow: var(--shadow);
   background: var(--bg-secondary);
-  transform: scale(1.25);
+  transform: scale(1.5);
   transform-origin: center;
 }
 
