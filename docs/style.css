@@ -893,23 +893,31 @@ kbd {
 
 .screenshot-carousel {
   position: relative;
-  width: 100%;
-  max-width: 100%;
-  margin: 0;
+  width: 140%;
+  max-width: none;
+  margin: 0 auto;
   border-radius: 12px;
   overflow: hidden;
   box-shadow: var(--shadow);
   background: var(--bg-secondary);
 }
 
+@media (max-width: 1200px) {
+  .screenshot-carousel {
+    width: 130%;
+  }
+}
+
 @media (max-width: 1024px) {
   .screenshot-carousel {
+    width: 120%;
     border-radius: 10px;
   }
 }
 
 @media (max-width: 768px) {
   .screenshot-carousel {
+    width: 100%;
     border-radius: 8px;
   }
 }
