@@ -9,7 +9,7 @@
 [![Licence](https://img.shields.io/badge/licence-MIT-green.svg)](LICENSE)
 [![MCP](https://img.shields.io/badge/MCP-enabled-purple.svg)](mcp-server/README.md)
 
-![PortPilot](docs/screenshots/slot2.png)
+![PortPilot](docs/portpilot-demo.gif)
 
 ### ✨ NEW: AI Agent Integration
 
@@ -173,15 +173,15 @@ Explore all PortPilot features including My Apps management, Active Ports scanne
 
 ### Download (Recommended)
 
-**Latest Release: v1.5.0**
+**Latest Release: v1.6.1**
 
 **Windows:**
-- [PortPilot-1.5.0-x64.exe](https://github.com/m4cd4r4/PortPilot/releases/download/v1.5.0/PortPilot-1.5.0-x64.exe) — NSIS Installer (72 MB)
-- [PortPilot-1.5.0-portable.exe](https://github.com/m4cd4r4/PortPilot/releases/download/v1.5.0/PortPilot-1.5.0-portable.exe) — Portable (72 MB)
+- [PortPilot-1.6.1-x64.exe](https://github.com/m4cd4r4/PortPilot/releases/download/v1.6.1/PortPilot-1.6.1-x64.exe) — NSIS Installer (72 MB)
+- [PortPilot-1.6.1-portable.exe](https://github.com/m4cd4r4/PortPilot/releases/download/v1.6.1/PortPilot-1.6.1-portable.exe) — Portable (72 MB)
 
 **Linux:**
-- [PortPilot-1.5.0-x86_64.AppImage](https://github.com/m4cd4r4/PortPilot/releases/download/v1.5.0/PortPilot-1.5.0-x86_64.AppImage) — Universal Linux (98 MB)
-- [PortPilot-1.5.0-amd64.deb](https://github.com/m4cd4r4/PortPilot/releases/download/v1.5.0/PortPilot-1.5.0-amd64.deb) — Debian/Ubuntu (69 MB)
+- [PortPilot-1.6.1-x86_64.AppImage](https://github.com/m4cd4r4/PortPilot/releases/download/v1.6.1/PortPilot-1.6.1-x86_64.AppImage) — Universal Linux (98 MB)
+- [PortPilot-1.6.1-amd64.deb](https://github.com/m4cd4r4/PortPilot/releases/download/v1.6.1/PortPilot-1.6.1-amd64.deb) — Debian/Ubuntu (69 MB)
 
 **macOS:**
 - Build from source (see below) — macOS is supported but not officially tested
