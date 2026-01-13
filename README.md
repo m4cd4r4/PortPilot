@@ -67,7 +67,7 @@ Complete detection criteria, supported frameworks, port detection methods, and c
 - **Ruby** (Rails, Sinatra, Rack) ✨
 - Static Sites
 
-## What's New in v1.6.2
+## What's New in v1.6.1
 
 ### Enhanced Port Cards
 - **CMD Icon with Hover Tooltip** — Black CMD badge shows full command path on hover with copy button
