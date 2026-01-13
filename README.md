@@ -165,30 +165,9 @@ Control PortPilot with natural language! Works with Claude Code, Cursor, Windsur
 
 ## Screenshots
 
-### My Apps
-Register and manage your development applications with automatic status detection and favorites.
+Explore all PortPilot features including My Apps management, Active Ports scanner, Knowledge Base, Settings, multiple themes, and more.
 
-![My Apps](docs/screenshots/03-apps-tab.png)
-
-### Active Ports
-Scan and view all listening TCP ports with improved readability.
-
-![Active Ports](docs/screenshots/01-ports-tab.png)
-
-### Knowledge Base
-Built-in documentation with System Tray guide, shortcuts, and troubleshooting.
-
-![Knowledge](docs/screenshots/05-knowledge-tab.png)
-
-### Settings
-Choose from 6 themes, configure window behaviour, auto-scan, and more.
-
-![Settings](docs/screenshots/06-settings-tab.png)
-
-### Dark Theme
-Brutalist Dark theme with high contrast and bold design.
-
-![Dark Theme](docs/screenshots/07-brutalist-dark-theme.png)
+![PortPilot Features](docs/portpilot-demo.gif)
 
 ## Installation
 
