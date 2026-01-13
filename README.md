@@ -11,7 +11,7 @@
 
 ![PortPilot](docs/screenshots/slot2.png)
 
-### 🤖 NEW: AI Agent Integration
+### ✨ NEW: AI Agent Integration
 
 Control PortPilot with natural language! Works with Claude Code, Cursor, Windsurf, and any MCP-compatible AI assistant.
 
@@ -404,7 +404,7 @@ npm run screenshots
 
 **Total: 20/20 tests passing** — See [TESTING_SUMMARY.md](TESTING_SUMMARY.md) for details.
 
-## 🤖 AI Agent Integration (MCP)
+## ✨ AI Agent Integration (MCP)
 
 PortPilot includes an MCP (Model Context Protocol) server that lets any compatible AI assistant manage your development environment with natural language.
 

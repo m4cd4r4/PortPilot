@@ -262,6 +262,252 @@ class PythonDetector extends ProjectDetector {
   }
 }
 
+class GoDetector extends ProjectDetector {
+  constructor() {
+    super('Go', 85);
+  }
+
+  async detect(dirPath) {
+    const goModPath = path.join(dirPath, 'go.mod');
+    const mainGoPath = path.join(dirPath, 'main.go');
+
+    const hasGoMod = await fileExists(goModPath);
+    const hasMainGo = await fileExists(mainGoPath);
+
+    if (!hasGoMod && !hasMainGo) return null;
+
+    try {
+      let port = 8080; // Default Go HTTP server port
+      let command = 'go run .';
+      let confidence = 0.8;
+
+      // Check if this is a specific framework
+      if (hasGoMod) {
+        const content = await fs.readFile(goModPath, 'utf8');
+
+        // Detect common Go frameworks
+        if (content.includes('gin-gonic/gin')) {
+          port = 8080;
+          confidence = 0.9;
+        } else if (content.includes('gofiber/fiber')) {
+          port = 3000;
+          confidence = 0.9;
+        } else if (content.includes('labstack/echo')) {
+          port = 1323;
+          confidence = 0.9;
+        }
+      }
+
+      // Check main.go for port configuration
+      if (hasMainGo) {
+        try {
+          const mainContent = await fs.readFile(mainGoPath, 'utf8');
+          const portMatch = mainContent.match(/:(\d{4,5})["'`]/);
+          if (portMatch) {
+            port = parseInt(portMatch[1]);
+            confidence = 0.95;
+          }
+        } catch (err) {
+          // Ignore read errors
+        }
+      }
+
+      return {
+        type: 'Go',
+        name: path.basename(dirPath),
+        command,
+        port,
+        path: dirPath,
+        confidence,
+        env: {}
+      };
+    } catch (err) {
+      return null;
+    }
+  }
+}
+
+class DotNetDetector extends ProjectDetector {
+  constructor() {
+    super('.NET', 85);
+  }
+
+  async detect(dirPath) {
+    try {
+      const entries = await fs.readdir(dirPath);
+      const csprojFiles = entries.filter(f => f.endsWith('.csproj'));
+      const hasSln = entries.some(f => f.endsWith('.sln'));
+
+      if (csprojFiles.length === 0 && !hasSln) return null;
+
+      let port = 5000; // Default ASP.NET Core port
+      let command = 'dotnet run';
+      let confidence = 0.85;
+
+      // Check launchSettings.json for port
+      const launchSettingsPath = path.join(dirPath, 'Properties', 'launchSettings.json');
+      if (await fileExists(launchSettingsPath)) {
+        try {
+          const content = await fs.readFile(launchSettingsPath, 'utf8');
+          const settings = JSON.parse(content);
+
+          // Look for applicationUrl in profiles
+          for (const profile of Object.values(settings.profiles || {})) {
+            if (profile.applicationUrl) {
+              const portMatch = profile.applicationUrl.match(/:(\d+)/);
+              if (portMatch) {
+                port = parseInt(portMatch[1]);
+                confidence = 0.95;
+                break;
+              }
+            }
+          }
+        } catch (err) {
+          // Ignore parse errors
+        }
+      }
+
+      return {
+        type: '.NET',
+        name: csprojFiles[0]?.replace('.csproj', '') || path.basename(dirPath),
+        command,
+        port,
+        path: dirPath,
+        confidence,
+        env: {}
+      };
+    } catch (err) {
+      return null;
+    }
+  }
+}
+
+class RustDetector extends ProjectDetector {
+  constructor() {
+    super('Rust', 85);
+  }
+
+  async detect(dirPath) {
+    const cargoPath = path.join(dirPath, 'Cargo.toml');
+
+    if (!await fileExists(cargoPath)) return null;
+
+    try {
+      const content = await fs.readFile(cargoPath, 'utf8');
+      let port = 8000;
+      let command = 'cargo run';
+      let confidence = 0.85;
+
+      // Detect web frameworks
+      if (content.includes('actix-web')) {
+        port = 8080;
+        confidence = 0.9;
+      } else if (content.includes('rocket')) {
+        port = 8000;
+        confidence = 0.9;
+      } else if (content.includes('axum')) {
+        port = 3000;
+        confidence = 0.9;
+      } else if (content.includes('warp')) {
+        port = 3030;
+        confidence = 0.9;
+      }
+
+      // Check main.rs or lib.rs for port configuration
+      const mainRsPath = path.join(dirPath, 'src', 'main.rs');
+      if (await fileExists(mainRsPath)) {
+        try {
+          const mainContent = await fs.readFile(mainRsPath, 'utf8');
+          const portMatch = mainContent.match(/(?:bind|listen)\([^)]*[":](\\d{4,5})[")]/);
+          if (portMatch) {
+            port = parseInt(portMatch[1]);
+            confidence = 0.95;
+          }
+        } catch (err) {
+          // Ignore read errors
+        }
+      }
+
+      return {
+        type: 'Rust',
+        name: path.basename(dirPath),
+        command,
+        port,
+        path: dirPath,
+        confidence,
+        env: {}
+      };
+    } catch (err) {
+      return null;
+    }
+  }
+}
+
+class RubyDetector extends ProjectDetector {
+  constructor() {
+    super('Ruby', 85);
+  }
+
+  async detect(dirPath) {
+    const gemfilePath = path.join(dirPath, 'Gemfile');
+    const configRuPath = path.join(dirPath, 'config.ru');
+    const rakfilePath = path.join(dirPath, 'Rakefile');
+
+    const hasGemfile = await fileExists(gemfilePath);
+    const hasConfigRu = await fileExists(configRuPath);
+    const hasRakefile = await fileExists(rakfilePath);
+
+    if (!hasGemfile && !hasConfigRu && !hasRakefile) return null;
+
+    try {
+      let port = 3000;
+      let command = 'ruby app.rb';
+      let confidence = 0.7;
+      let framework = null;
+
+      // Detect Rails
+      const railsPath = path.join(dirPath, 'config', 'application.rb');
+      if (await fileExists(railsPath)) {
+        framework = 'rails';
+        command = 'rails server';
+        port = 3000;
+        confidence = 0.95;
+      }
+
+      // Detect Sinatra
+      if (hasGemfile && !framework) {
+        try {
+          const gemfileContent = await fs.readFile(gemfilePath, 'utf8');
+          if (gemfileContent.includes('sinatra')) {
+            framework = 'sinatra';
+            command = 'ruby app.rb';
+            port = 4567;
+            confidence = 0.9;
+          } else if (gemfileContent.includes('rack')) {
+            command = 'rackup';
+            port = 9292;
+            confidence = 0.85;
+          }
+        } catch (err) {
+          // Ignore read errors
+        }
+      }
+
+      return {
+        type: 'Ruby',
+        name: path.basename(dirPath),
+        command,
+        port,
+        path: dirPath,
+        confidence,
+        env: {}
+      };
+    } catch (err) {
+      return null;
+    }
+  }
+}
+
 class StaticSiteDetector extends ProjectDetector {
   constructor() {
     super('Static Site', 50);
@@ -341,6 +587,10 @@ async function scanDirectory(rootPath, options = {}) {
   const detectors = [
     new NodeDetector(),
     new DockerDetector(),
+    new GoDetector(),
+    new DotNetDetector(),
+    new RustDetector(),
+    new RubyDetector(),
     new PythonDetector(),
     new StaticSiteDetector()
   ].sort((a, b) => b.priority - a.priority); // Higher priority first
