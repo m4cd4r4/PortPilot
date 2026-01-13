@@ -2,7 +2,8 @@
 
 **Localhost Port Manager for Windows & Linux** — A desktop app for developers to manage local development ports and applications.
 
-🌐 **[View Landing Page & Download](https://m4cd4r4.github.io/PortPilot/)** 🌐
+**[View Landing Page & Download](https://m4cd4r4.github.io/PortPilot/)**
+**[→ Setup MCP Integration](mcp-server/README.md)**
 
 [![Version](https://img.shields.io/badge/version-1.6.1-blue.svg)](https://github.com/m4cd4r4/PortPilot/releases/tag/v1.6.1)
 [![Tests](https://img.shields.io/badge/tests-11%2F11%20passing-brightgreen.svg)](TESTING_SUMMARY.md)
