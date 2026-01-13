@@ -6,7 +6,7 @@
 
 **[MCP Integration Setup](mcp-server/README.md)**
 
-[![Version](https://img.shields.io/badge/version-1.6.1-blue.svg)](https://github.com/m4cd4r4/PortPilot/releases/tag/v1.6.1)
+[![Version](https://img.shields.io/badge/version-1.6.2-blue.svg)](https://github.com/m4cd4r4/PortPilot/releases/tag/v1.6.2)
 [![Tests](https://img.shields.io/badge/tests-11%2F11%20passing-brightgreen.svg)](TESTING_SUMMARY.md)
 [![Licence](https://img.shields.io/badge/licence-MIT-green.svg)](LICENSE)
 [![MCP](https://img.shields.io/badge/MCP-enabled-purple.svg)](mcp-server/README.md)
@@ -25,7 +25,27 @@ Control PortPilot with natural language! Works with Claude Code, Cursor, Windsur
 
 **[→ Setup MCP Integration](mcp-server/README.md)**
 
-## What's New in v1.6.1
+## What's New in v1.6.2
+
+### Documentation & UI Cleanup
+- **Removed Expand All/Collapse All Buttons** — Commands now show in tooltips, no need for button clutter
+- **Comprehensive Auto Detection Documentation** — README now includes detailed docs for all 8 language detectors
+- **Table of Contents** — Easy navigation through README sections
+- **Updated Landing Page** — Added 4 new language detector badges (Go, .NET, Rust, Ruby)
+- **Knowledge Base Updates** — Framework details for new language detectors
+
+### Language Detector Documentation Added
+Complete detection criteria, supported frameworks, port detection methods, and confidence scoring for:
+- Node.js (React, Next.js, Vue, Angular, Vite, Express, Fastify)
+- Python (FastAPI, Django, Flask)
+- Docker (docker-compose, Dockerfile)
+- **Go** (Gin, Fiber, Echo) ✨
+- **.NET** (ASP.NET Core) ✨
+- **Rust** (Actix-web, Rocket, Axum, Warp) ✨
+- **Ruby** (Rails, Sinatra, Rack) ✨
+- Static Sites
+
+## What's New in v1.6.2
 
 ### Enhanced Port Cards
 - **CMD Icon with Hover Tooltip** — Black CMD badge shows full command path on hover with copy button
@@ -36,7 +56,7 @@ Control PortPilot with natural language! Works with Claude Code, Cursor, Windsur
 ### Knowledge Carousel System
 - **Horizontal Navigation** — 13 tabs for easy access to all help sections
 - **Single Card View** — Clean, focused presentation with smooth transitions
-- **v1.6.1 Documentation** — New sections for Port Cards and Port Actions features
+- **v1.6.2 Documentation** — New sections for Port Cards and Port Actions features
 - **Enhanced Troubleshooting** — Added FAQs for new features (N/A values, bind indicators)
 
 ### App Card Enhancements
@@ -175,15 +195,15 @@ Explore all PortPilot features including My Apps management, Active Ports scanne
 
 ### Download (Recommended)
 
-**Latest Release: v1.6.1**
+**Latest Release: v1.6.2**
 
 **Windows:**
-- [PortPilot-1.6.1-x64.exe](https://github.com/m4cd4r4/PortPilot/releases/download/v1.6.1/PortPilot-1.6.1-x64.exe) — NSIS Installer (72 MB)
-- [PortPilot-1.6.1-portable.exe](https://github.com/m4cd4r4/PortPilot/releases/download/v1.6.1/PortPilot-1.6.1-portable.exe) — Portable (72 MB)
+- [PortPilot-1.6.2-x64.exe](https://github.com/m4cd4r4/PortPilot/releases/download/v1.6.2/PortPilot-1.6.2-x64.exe) — NSIS Installer (72 MB)
+- [PortPilot-1.6.2-portable.exe](https://github.com/m4cd4r4/PortPilot/releases/download/v1.6.2/PortPilot-1.6.2-portable.exe) — Portable (72 MB)
 
 **Linux:**
-- [PortPilot-1.6.1-x86_64.AppImage](https://github.com/m4cd4r4/PortPilot/releases/download/v1.6.1/PortPilot-1.6.1-x86_64.AppImage) — Universal Linux (98 MB)
-- [PortPilot-1.6.1-amd64.deb](https://github.com/m4cd4r4/PortPilot/releases/download/v1.6.1/PortPilot-1.6.1-amd64.deb) — Debian/Ubuntu (69 MB)
+- [PortPilot-1.6.2-x86_64.AppImage](https://github.com/m4cd4r4/PortPilot/releases/download/v1.6.2/PortPilot-1.6.2-x86_64.AppImage) — Universal Linux (98 MB)
+- [PortPilot-1.6.2-amd64.deb](https://github.com/m4cd4r4/PortPilot/releases/download/v1.6.2/PortPilot-1.6.2-amd64.deb) — Debian/Ubuntu (69 MB)
 
 **macOS:**
 - Build from source (see below) — macOS is supported but not officially tested
