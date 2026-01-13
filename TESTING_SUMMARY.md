@@ -262,15 +262,28 @@ Following Playwright best practices:
 
 ## Version History
 
-### v1.6.1 (Current)
+### v1.6.2 (Current)
+- **Changes:**
+  - Removed Expand All/Collapse All buttons from Ports page (commands now show in tooltips)
+  - Updated landing page with 4 new language detector badges
+  - Comprehensive Auto Detection documentation added to README
+- **Documentation:**
+  - Table of Contents added to README
+  - Detailed documentation for all 8 language detectors (Node.js, Python, Docker, Go, .NET, Rust, Ruby, Static Sites)
+  - Updated Knowledge Base card with Go, .NET, Rust, Ruby frameworks
+
+### v1.6.1
 - **New Features:**
   - Enhanced Port Cards (CMD icon with hover tooltip and copy button)
   - Single-Row Layout (removed second row, CMD tooltip replaces expandable command display)
   - Brighter Stats (improved visibility of Memory, Uptime, and Connections badges)
   - Knowledge Carousel System (13 tabs with horizontal navigation)
   - App Card Folder Button (📂 icon opens working directory)
+
+### v1.6.0
+- **New Features:**
   - **4 New Language Detectors:**
-    - **Go Detection** (Gin, Fiber, Echo frameworks - port 8080/3000/1323)
+    - **Go Detection** (Gin, Fiber, Echo frameworks - ports 8080/3000/1323)
     - **.NET Detection** (ASP.NET Core - port 5000)
     - **Rust Detection** (Actix-web, Rocket, Axum, Warp - ports 8080/8000/3000/3030)
     - **Ruby Detection** (Rails, Sinatra, Rack - ports 3000/4567/9292)
@@ -278,19 +291,6 @@ Following Playwright best practices:
   - Language detectors rely on manual/integration testing
   - No dedicated unit tests yet (functions work in practice via auto-discovery)
   - E2E tests remain at 11/11 passing (100%)
-
-### v1.6.0
-- **New Features:**
-  - Compact & Sharp UI Redesign (30-40% more density, 2px corners)
-  - MCP Auto-Refresh (file watcher with 100ms debounce)
-  - Smart Window Auto-Resize (400px min, 1200px max, dynamic height)
-  - 100% Test Coverage (all 11 E2E tests passing)
-  - ConfigStore null reference fix
-- **Testing:**
-  - Integrated test servers (HTTP on 3000, 3001, 8080)
-  - Test mode singleton lock bypass
-  - Improved reliability (fixed visibility issues, better wait strategies)
-
 ### v1.5.0
 - **New Features:**
   - Linux Platform Support (AppImage and .deb packages)
@@ -370,5 +370,5 @@ Following Playwright best practices:
 ---
 
 **Last Updated**: January 13, 2026
-**Test Coverage**: Core (100%), v1.3.0 (100%), v1.4.0 (100%), v1.5.0 (100%), v1.6.0 (100%), v1.6.1 (E2E 100%, Language Detectors: Manual Testing)
+**Test Coverage**: Core (100%), v1.3.0 (100%), v1.4.0 (100%), v1.5.0 (100%), v1.6.0 (100%), v1.6.1 (100%), v1.6.2 (100%)
 **Status**: Production-ready
