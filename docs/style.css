@@ -134,7 +134,7 @@ body {
 
 /* Hero Section */
 .hero {
-  padding: 100px 0 150px;
+  padding: 130px 0 150px;
   background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
   border-bottom: 1px solid var(--border-color);
 }
