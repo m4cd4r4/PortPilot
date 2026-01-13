@@ -24,6 +24,14 @@ TEST_PLAN_*.md
 take-screenshots.md
 screenshots/
 *.ps1
+AUTO-RESIZE-FEATURE.md
+
+# Old release notes (archived)
+RELEASE_NOTES_v*.md
+RELEASE-v*-SUMMARY.md
+v*-IMPLEMENTATION-SUMMARY.md
+v*-RELEASE-SUMMARY.md
+CHANGELOG-v*.md
 
 # Claude local settings (contains personal permissions)
 .claude/
