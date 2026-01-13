@@ -358,6 +358,15 @@
       if (e.key === 'ArrowRight') nextSlide();
     });
 
+    // Logo click - scroll to top
+    document.querySelector('.nav-brand').addEventListener('click', (e) => {
+      e.preventDefault();
+      window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+      });
+    });
+
     // Initialize
     showSlide(0);
   </script>
