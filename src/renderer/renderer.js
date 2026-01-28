@@ -814,11 +814,11 @@ function renderAppCard(app) {
         ${conflict
           ? `<button class="btn btn-small btn-secondary" onclick="openPortInBrowser(${conflict.port})" title="Open http://localhost:${conflict.port} to see what's running">🌐</button>
              <button class="btn btn-small btn-warning" onclick="killConflictingProcess('${app.id}')" title="Kill process occupying port ${conflict.port} (PID ${conflict.occupiedBy.pid})">Kill Blocker</button>
-             <button class="btn btn-small btn-primary" onclick="startApp('${app.id}')">Start</button>`
+             <button class="btn btn-small btn-success" onclick="startApp('${app.id}')" title="Start app">▶</button>`
           : isRunning || starting
             ? `<button class="btn btn-small btn-secondary" onclick="openInBrowser('${app.id}')" title="${starting ? 'Waiting for app to be ready...' : 'Open in browser'}" ${starting ? 'disabled' : ''}>🌐</button>
-               <button class="btn btn-small btn-danger" onclick="stopApp('${app.id}')" ${starting ? 'disabled' : ''}>Stop</button>`
-            : `<button class="btn btn-small btn-primary" onclick="startApp('${app.id}')">Start</button>`
+               <button class="btn btn-small btn-danger" onclick="stopApp('${app.id}')" title="Stop app" ${starting ? 'disabled' : ''}>■</button>`
+            : `<button class="btn btn-small btn-success" onclick="startApp('${app.id}')" title="Start app">▶</button>`
         }
         <button class="btn btn-small btn-secondary" onclick="openAppFolder('${app.id}')" title="Open working directory">📂</button>
         <button class="btn btn-small btn-secondary" onclick="editApp('${app.id}')">Edit</button>

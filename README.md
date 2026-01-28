@@ -50,6 +50,7 @@ Control PortPilot with natural language! Works with Claude Code, Cursor, Windsur
 ## What's New in v1.6.2
 
 ### Documentation & UI Cleanup
+- **Icon-Based Action Buttons** — START/STOP buttons now use intuitive green play (▶) and red square (■) icons for better visual scanning
 - **Removed Expand All/Collapse All Buttons** — Commands now show in tooltips, no need for button clutter
 - **Comprehensive Auto Detection Documentation** — README now includes detailed docs for all 8 language detectors
 - **Table of Contents** — Easy navigation through README sections

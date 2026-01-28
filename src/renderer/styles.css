@@ -200,6 +200,17 @@ body {
   color: var(--accent-primary);
 }
 
+.btn-success {
+  background: var(--accent-green);
+  color: var(--bg-primary);
+  border-color: var(--accent-green);
+}
+
+.btn-success:hover {
+  background: var(--bg-primary);
+  color: var(--accent-green);
+}
+
 .btn-secondary {
   background: var(--bg-tertiary);
   color: var(--text-primary);
