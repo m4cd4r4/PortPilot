@@ -1,6 +1,6 @@
 # PortPilot
 
-**Localhost Port Manager for Windows & Linux** — A desktop app for developers to manage local development ports and applications.
+**Localhost Port Manager for Windows & Linux** - A desktop app for developers to manage local development ports and applications.
 
 **[View Landing Page & Download](https://m4cd4r4.github.io/PortPilot/)**
 
@@ -18,7 +18,8 @@
 ## 📑 Table of Contents
 
 - [✨ AI Agent Integration](#-ai-agent-integration)
-- [What's New](#whats-new-in-v161)
+- [2026 Modernization](#whats-new-in-2026-modernization)
+- [What's New v1.6.2](#whats-new-in-v162)
 - [Features](#features)
 - [Auto Detection](#auto-detection)
 - [Screenshots](#screenshots)
@@ -47,15 +48,40 @@ Control PortPilot with natural language! Works with Claude Code, Cursor, Windsur
 
 **[→ Setup MCP Integration](mcp-server/README.md)**
 
+## What's New in 2026 Modernization
+
+### Landing Page Rebuilt
+- **Glassmorphism design** - Frosted glass cards, backdrop blur, semi-transparent backgrounds
+- **Mobile hamburger menu** - Animated 3-bar toggle with full-width dropdown
+- **Scroll animations** - Cards fade in on scroll with staggered delays via IntersectionObserver
+- **Autoplay carousel** - 5s interval with pause on hover/focus
+- **Strict CSP** - `script-src 'self'` (no unsafe-inline), `frame-src 'none'`, `object-src 'none'`
+- **JSON-LD structured data** - SoftwareApplication schema for search engines
+- **sitemap.xml + robots.txt** - SEO fundamentals
+- **35 ARIA labels** - Skip-to-content, semantic HTML, focus-visible styles
+- **`prefers-reduced-motion`** - Disables all animations for users who prefer it
+- **Print styles** - Hides nav/carousel for clean printing
+- **External JS** - All JavaScript extracted to `main.js`
+
+### Electron App UI Improvements
+- **Overflow protection** - App names, meta, port headers all truncate properly
+- **Content max-width** - Tab content capped at 1400px, settings at 800px
+- **`min()` grid columns** - Prevents grid overflow on narrow windows
+- **Focus-visible styles** - 2px cyan outline on all interactive elements
+- **ARIA roles** - `tablist`, `tab`, `aria-selected` on navigation tabs
+- **Reduced motion** - Respects `prefers-reduced-motion` system preference
+- **Responsive toolbar** - Selection toolbar wraps below 700px
+- **Scrollbar gutter** - `scrollbar-gutter: stable` prevents layout shift
+
 ## What's New in v1.6.2
 
 ### Documentation & UI Cleanup
-- **Icon-Based Action Buttons** — START/STOP buttons now use intuitive green play (▶) and red square (■) icons for better visual scanning
-- **Removed Expand All/Collapse All Buttons** — Commands now show in tooltips, no need for button clutter
-- **Comprehensive Auto Detection Documentation** — README now includes detailed docs for all 8 language detectors
-- **Table of Contents** — Easy navigation through README sections
-- **Updated Landing Page** — Added 4 new language detector badges (Go, .NET, Rust, Ruby)
-- **Knowledge Base Updates** — Framework details for new language detectors
+- **Icon-Based Action Buttons** - START/STOP buttons now use intuitive green play (▶) and red square (■) icons for better visual scanning
+- **Removed Expand All/Collapse All Buttons** - Commands now show in tooltips, no need for button clutter
+- **Comprehensive Auto Detection Documentation** - README now includes detailed docs for all 8 language detectors
+- **Table of Contents** - Easy navigation through README sections
+- **Updated Landing Page** - Added 4 new language detector badges (Go, .NET, Rust, Ruby)
+- **Knowledge Base Updates** - Framework details for new language detectors
 
 ### Language Detector Documentation Added
 Complete detection criteria, supported frameworks, port detection methods, and confidence scoring for:
@@ -71,80 +97,80 @@ Complete detection criteria, supported frameworks, port detection methods, and c
 ## What's New in v1.6.1
 
 ### Enhanced Port Cards
-- **CMD Icon with Hover Tooltip** — Black CMD badge shows full command path on hover with copy button
-- **Single-Row Layout** — Removed second row, CMD tooltip replaces expandable command display
-- **Brighter Stats** — Improved visibility of Memory, Uptime, and Connections badges
-- **Cleaner Design** — More compact while showing all essential information
+- **CMD Icon with Hover Tooltip** - Black CMD badge shows full command path on hover with copy button
+- **Single-Row Layout** - Removed second row, CMD tooltip replaces expandable command display
+- **Brighter Stats** - Improved visibility of Memory, Uptime, and Connections badges
+- **Cleaner Design** - More compact while showing all essential information
 
 ### Knowledge Carousel System
-- **Horizontal Navigation** — 13 tabs for easy access to all help sections
-- **Single Card View** — Clean, focused presentation with smooth transitions
-- **v1.6.2 Documentation** — New sections for Port Cards and Port Actions features
-- **Enhanced Troubleshooting** — Added FAQs for new features (N/A values, bind indicators)
+- **Horizontal Navigation** - 13 tabs for easy access to all help sections
+- **Single Card View** - Clean, focused presentation with smooth transitions
+- **v1.6.2 Documentation** - New sections for Port Cards and Port Actions features
+- **Enhanced Troubleshooting** - Added FAQs for new features (N/A values, bind indicators)
 
 ### App Card Enhancements
-- **Folder Button** — 📂 icon opens app's working directory in file explorer
-- **Consistent UX** — Matches port card folder button functionality
-- **Quick Access** — One-click navigation to project files
+- **Folder Button** - 📂 icon opens app's working directory in file explorer
+- **Consistent UX** - Matches port card folder button functionality
+- **Quick Access** - One-click navigation to project files
 
 ### UI Refinements
-- **Aligned Keyboard Shortcuts** — Fixed grid layout with centered keys
-- **Wider CMD Tooltips** — Increased from 500px to 600px with scrolling support
-- **Better Text Wrapping** — Improved long command path display
+- **Aligned Keyboard Shortcuts** - Fixed grid layout with centered keys
+- **Wider CMD Tooltips** - Increased from 500px to 600px with scrolling support
+- **Better Text Wrapping** - Improved long command path display
 
 ## What's New in v1.6.0
 
 ### Compact & Sharp UI Redesign
-- **30-40% More Density** — See more apps and ports on screen without scrolling
-- **Sharp 2px Corners** — Modern, clean aesthetic (down from 8px)
-- **Tighter Spacing** — Reduced padding and gaps throughout
-- **Compact Port Cards** — Process and PID combined on one line for space efficiency
-- **Smaller Fonts** — Better information density while maintaining readability
+- **30-40% More Density** - See more apps and ports on screen without scrolling
+- **Sharp 2px Corners** - Modern, clean aesthetic (down from 8px)
+- **Tighter Spacing** - Reduced padding and gaps throughout
+- **Compact Port Cards** - Process and PID combined on one line for space efficiency
+- **Smaller Fonts** - Better information density while maintaining readability
 
 ### MCP Auto-Refresh
-- **External Changes Detected** — Automatically refreshes when MCP or other tools modify config
-- **File Watcher** — Monitors config file for changes with 100ms debounce
-- **Toast Notifications** — Visual feedback when apps list updates externally
-- **No Restart Required** — Apps added via MCP appear instantly
+- **External Changes Detected** - Automatically refreshes when MCP or other tools modify config
+- **File Watcher** - Monitors config file for changes with 100ms debounce
+- **Toast Notifications** - Visual feedback when apps list updates externally
+- **No Restart Required** - Apps added via MCP appear instantly
 
 ### Smart Window Auto-Resize
-- **Dynamic Height** — Window grows/shrinks based on number of apps
-- **Optimal Sizing** — 400px minimum, 1200px maximum
-- **Seamless Integration** — Works with MCP auto-refresh
-- **Better UX** — No wasted space, no excessive scrolling
+- **Dynamic Height** - Window grows/shrinks based on number of apps
+- **Optimal Sizing** - 400px minimum, 1200px maximum
+- **Seamless Integration** - Works with MCP auto-refresh
+- **Better UX** - No wasted space, no excessive scrolling
 
 ### Enhanced Testing
-- **100% Test Coverage** — All 11 E2E tests passing
-- **Integrated Test Servers** — HTTP servers on ports 3000, 3001, 8080
-- **Test Mode Support** — Singleton lock bypass for running tests alongside GUI
-- **Improved Reliability** — Fixed visibility issues, better wait strategies
+- **100% Test Coverage** - All 11 E2E tests passing
+- **Integrated Test Servers** - HTTP servers on ports 3000, 3001, 8080
+- **Test Mode Support** - Singleton lock bypass for running tests alongside GUI
+- **Improved Reliability** - Fixed visibility issues, better wait strategies
 
 ### Bug Fixes
-- **ConfigStore Null Reference** — Fixed critical crash on startup
-- **Test Infrastructure** — All tests now passing reliably
-- **Load Strategy** — Improved app initialization wait logic
+- **ConfigStore Null Reference** - Fixed critical crash on startup
+- **Test Infrastructure** - All tests now passing reliably
+- **Load Strategy** - Improved app initialization wait logic
 
 [See full changelog →](CHANGELOG-v1.6.0.md)
 
 ## What's New in v1.5.0
 
 ### Linux Platform Support
-- **Cross-Platform Builds** — Now officially supports Windows AND Linux
-- **AppImage Package** — Universal Linux binary that runs on any distro (98 MB)
-- **.deb Package** — Native Debian/Ubuntu installer (69 MB)
-- **WSL Testing** — Full testing support in Windows Subsystem for Linux
-- **Platform Auto-Detection** — Automatically adapts commands for Windows/Linux
+- **Cross-Platform Builds** - Now officially supports Windows AND Linux
+- **AppImage Package** - Universal Linux binary that runs on any distro (98 MB)
+- **.deb Package** - Native Debian/Ubuntu installer (69 MB)
+- **WSL Testing** - Full testing support in Windows Subsystem for Linux
+- **Platform Auto-Detection** - Automatically adapts commands for Windows/Linux
 
 ### System Tray & Window Behaviour
-- **Stop All Apps from Tray** — Right-click tray icon to stop all PortPilot-managed apps without quitting
-- **Configurable Window Behaviour** — Choose whether close button minimises to tray or exits completely
-- **Smart Process Cleanup** — Optionally stop all apps when quitting (only affects PortPilot-managed processes)
-- **External Process Safety** — Never touches processes started outside PortPilot
+- **Stop All Apps from Tray** - Right-click tray icon to stop all PortPilot-managed apps without quitting
+- **Configurable Window Behaviour** - Choose whether close button minimises to tray or exits completely
+- **Smart Process Cleanup** - Optionally stop all apps when quitting (only affects PortPilot-managed processes)
+- **External Process Safety** - Never touches processes started outside PortPilot
 
 ### Single-Instance Lock
-- **One Instance Only** — Prevents multiple copies of PortPilot from running simultaneously
-- **Smart Window Focusing** — Launching a second instance automatically focuses the existing window
-- **No More Confusion** — Single system tray icon, clear state management
+- **One Instance Only** - Prevents multiple copies of PortPilot from running simultaneously
+- **Smart Window Focusing** - Launching a second instance automatically focuses the existing window
+- **No More Confusion** - Single system tray icon, clear state management
 
 [See full changelog →](CHANGELOG.md)
 
@@ -152,61 +178,61 @@ Complete detection criteria, supported frameworks, port detection methods, and c
 ## What's New in v1.4.0
 
 ### Browse & Auto-detect Project
-- **One-Click Project Setup** — Click "Browse & Auto-detect" in Add App modal to automatically configure any project
-- **Recursive Scanning** — Finds projects up to 2 levels deep in subdirectories
-- **Package Manager Detection** — Auto-detects pnpm, yarn, or npm and uses the correct command
-- **Smart Port Detection** — Only uses explicit port config (no more "everything gets port 3000")
-- **Works with Monorepos** — Finds the actual project inside parent folders (e.g., `manual-build/` inside root)
+- **One-Click Project Setup** - Click "Browse & Auto-detect" in Add App modal to automatically configure any project
+- **Recursive Scanning** - Finds projects up to 2 levels deep in subdirectories
+- **Package Manager Detection** - Auto-detects pnpm, yarn, or npm and uses the correct command
+- **Smart Port Detection** - Only uses explicit port config (no more "everything gets port 3000")
+- **Works with Monorepos** - Finds the actual project inside parent folders (e.g., `manual-build/` inside root)
 
 ### Port Conflict Warnings
-- **Unknown Process Detection** — Warns when unknown processes block your app's preferred port
-- **🌐 Preview Button** — Click globe to see what's running on the blocked port
-- **Kill Blocker Button** — Terminate blocking processes with one click
-- **Toast Notifications** — Visual warnings when port conflicts are detected
-- **Improved Matching** — Two-phase algorithm with keyword extraction prevents false positives
+- **Unknown Process Detection** - Warns when unknown processes block your app's preferred port
+- **🌐 Preview Button** - Click globe to see what's running on the blocked port
+- **Kill Blocker Button** - Terminate blocking processes with one click
+- **Toast Notifications** - Visual warnings when port conflicts are detected
+- **Improved Matching** - Two-phase algorithm with keyword extraction prevents false positives
 
 ### Project Auto-Discovery
-- **Automatic Project Detection** — Scan your project directories to automatically discover Node.js, Docker, Python, and static site projects
-- **Smart Metadata Extraction** — Automatically detects project names, start commands, and ports
-- **User-Configurable Paths** — Add your own scan directories (e.g., `C:\Projects`, `C:\Dev`)
-- **Confidence Scoring** — Shows match confidence (95%, 85%, etc.) for each discovered project
-- **Bulk Import** — Add all discovered projects at once or pick individual ones
-- **Scan Depth Control** — Configure how deep to search (1-5 directory levels)
+- **Automatic Project Detection** - Scan your project directories to automatically discover Node.js, Docker, Python, and static site projects
+- **Smart Metadata Extraction** - Automatically detects project names, start commands, and ports
+- **User-Configurable Paths** - Add your own scan directories (e.g., `C:\Projects`, `C:\Dev`)
+- **Confidence Scoring** - Shows match confidence (95%, 85%, etc.) for each discovered project
+- **Bulk Import** - Add all discovered projects at once or pick individual ones
+- **Scan Depth Control** - Configure how deep to search (1-5 directory levels)
 
 ### Favorites System
-- **Star Your Apps** — Click the star (⭐/☆) button to mark frequently-used apps as favorites
-- **Organized Sections** — Apps automatically organised into:
-  - **⭐ Favorites** — Starred apps at the top for quick access
-  - **📁 Other Projects** — Non-starred apps below
-- **Collapsible Sections** — Click section headers to expand/collapse
-- **Persistent State** — Section collapse state saved across app restarts
+- **Star Your Apps** - Click the star (⭐/☆) button to mark frequently-used apps as favorites
+- **Organized Sections** - Apps automatically organised into:
+  - **⭐ Favorites** - Starred apps at the top for quick access
+  - **📁 Other Projects** - Non-starred apps below
+- **Collapsible Sections** - Click section headers to expand/collapse
+- **Persistent State** - Section collapse state saved across app restarts
 
 ### Delete All
-- **Bulk Delete** — Remove all apps in one click with "Delete All" button
-- **Safety First** — Strong confirmation modal warns before deletion
-- **Export Reminder** — Prompts to export config before deleting
+- **Bulk Delete** - Remove all apps in one click with "Delete All" button
+- **Safety First** - Strong confirmation modal warns before deletion
+- **Export Reminder** - Prompts to export config before deleting
 
 [See full changelog →](CHANGELOG.md)
 
 ## Features
 
-- **🔍 Browse & Auto-detect** — One-click project setup with recursive scanning and package manager detection
-- **⚠️ Port Conflict Warnings** — Visual warnings when unknown processes block app ports, with preview and kill options
-- **🔍 Project Auto-Discovery** — Scan directories to automatically find and import dev projects (Node.js, Docker, Python, static sites)
-- **⭐ Favorites** — Star frequently-used apps for quick access with collapsible sections
-- **🗑 Bulk Operations** — Delete all apps at once with safety confirmations
-- **Port Scanner** — Discover all active TCP ports with process details (name, PID, command line)
-- **One-Click Kill** — Free up stuck ports instantly
-- **App Registry** — Register your dev projects with start commands and preferred ports
-- **Process Management** — Start/stop apps directly from PortPilot
-- **Smart Port Matching** — Two-phase algorithm with CWD validation and keyword extraction for accurate detection
-- **Requirement Badges** — Visual indicators for Docker, Node.js, Python, and more
-- **Docker Integration** — Click to start Docker Desktop, with status detection
-- **IPv4/IPv6 Awareness** — Shows which protocol your app is bound to
-- **System Tray** — Minimize to tray, "Stop All Apps" menu option, configurable window behaviour
-- **Single-Instance Lock** — Only one PortPilot runs at a time, focuses existing window
-- **Multi-Theme Support** — 6 themes including TokyoNight, Brutalist, Nord, Dracula
-- **Knowledge Base** — Built-in help with tips, shortcuts, and common ports reference
+- **🔍 Browse & Auto-detect** - One-click project setup with recursive scanning and package manager detection
+- **⚠️ Port Conflict Warnings** - Visual warnings when unknown processes block app ports, with preview and kill options
+- **🔍 Project Auto-Discovery** - Scan directories to automatically find and import dev projects (Node.js, Docker, Python, static sites)
+- **⭐ Favorites** - Star frequently-used apps for quick access with collapsible sections
+- **🗑 Bulk Operations** - Delete all apps at once with safety confirmations
+- **Port Scanner** - Discover all active TCP ports with process details (name, PID, command line)
+- **One-Click Kill** - Free up stuck ports instantly
+- **App Registry** - Register your dev projects with start commands and preferred ports
+- **Process Management** - Start/stop apps directly from PortPilot
+- **Smart Port Matching** - Two-phase algorithm with CWD validation and keyword extraction for accurate detection
+- **Requirement Badges** - Visual indicators for Docker, Node.js, Python, and more
+- **Docker Integration** - Click to start Docker Desktop, with status detection
+- **IPv4/IPv6 Awareness** - Shows which protocol your app is bound to
+- **System Tray** - Minimize to tray, "Stop All Apps" menu option, configurable window behaviour
+- **Single-Instance Lock** - Only one PortPilot runs at a time, focuses existing window
+- **Multi-Theme Support** - 6 themes including TokyoNight, Brutalist, Nord, Dracula
+- **Knowledge Base** - Built-in help with tips, shortcuts, and common ports reference
 
 ## Auto Detection
 
@@ -375,14 +401,14 @@ PortPilot automatically detects 8 different languages and platforms when you use
 
 Detectors run in priority order (highest to lowest):
 
-1. **Docker** (95) — Most explicit configuration
-2. **Node.js** (90) — Very common, well-structured
+1. **Docker** (95) - Most explicit configuration
+2. **Node.js** (90) - Very common, well-structured
 3. **Go** (85)
 4. **.NET** (85)
 5. **Rust** (85)
 6. **Ruby** (85)
-7. **Python** (80) — Lower due to less standardized structure
-8. **Static Sites** (60) — Fallback for simple projects
+7. **Python** (80) - Lower due to less standardized structure
+8. **Static Sites** (60) - Fallback for simple projects
 
 If multiple detectors match, the highest-priority one wins.
 
@@ -408,15 +434,15 @@ Explore all PortPilot features including My Apps management, Active Ports scanne
 **Latest Release: v1.6.2**
 
 **Windows:**
-- [PortPilot-1.6.2-x64.exe](https://github.com/m4cd4r4/PortPilot/releases/download/v1.6.2/PortPilot-1.6.2-x64.exe) — NSIS Installer (72 MB)
-- [PortPilot-1.6.2-portable.exe](https://github.com/m4cd4r4/PortPilot/releases/download/v1.6.2/PortPilot-1.6.2-portable.exe) — Portable (72 MB)
+- [PortPilot-1.6.2-x64.exe](https://github.com/m4cd4r4/PortPilot/releases/download/v1.6.2/PortPilot-1.6.2-x64.exe) - NSIS Installer (72 MB)
+- [PortPilot-1.6.2-portable.exe](https://github.com/m4cd4r4/PortPilot/releases/download/v1.6.2/PortPilot-1.6.2-portable.exe) - Portable (72 MB)
 
 **Linux:**
-- [PortPilot-1.6.2-x86_64.AppImage](https://github.com/m4cd4r4/PortPilot/releases/download/v1.6.2/PortPilot-1.6.2-x86_64.AppImage) — Universal Linux (98 MB)
-- [PortPilot-1.6.2-amd64.deb](https://github.com/m4cd4r4/PortPilot/releases/download/v1.6.2/PortPilot-1.6.2-amd64.deb) — Debian/Ubuntu (69 MB)
+- [PortPilot-1.6.2-x86_64.AppImage](https://github.com/m4cd4r4/PortPilot/releases/download/v1.6.2/PortPilot-1.6.2-x86_64.AppImage) - Universal Linux (98 MB)
+- [PortPilot-1.6.2-amd64.deb](https://github.com/m4cd4r4/PortPilot/releases/download/v1.6.2/PortPilot-1.6.2-amd64.deb) - Debian/Ubuntu (69 MB)
 
 **macOS:**
-- Build from source (see below) — macOS is supported but not officially tested
+- Build from source (see below) - macOS is supported but not officially tested
 
 ### Build from Source
 
@@ -498,14 +524,14 @@ PortPilot automatically detects app requirements and shows badges:
 
 ### Docker Integration
 
-- **Yellow pulsing 🐳** — Docker Desktop is not running (click to start)
-- **Green 🐳** — Docker Desktop is running and ready
+- **Yellow pulsing 🐳** - Docker Desktop is not running (click to start)
+- **Green 🐳** - Docker Desktop is running and ready
 
 ### IPv4/IPv6 Indicators
 
 When apps are running, PortPilot shows `v4` or `v6` to indicate the IP protocol:
-- **v4** — Bound to IPv4 (e.g., `0.0.0.0:3000`)
-- **v6** — Bound to IPv6 (e.g., `[::]:3000`)
+- **v4** - Bound to IPv4 (e.g., `0.0.0.0:3000`)
+- **v6** - Bound to IPv6 (e.g., `[::]:3000`)
 
 This ensures the browser button opens the correct URL.
 
@@ -613,7 +639,7 @@ npm run screenshots
 - ✅ DevTools toggling (100%)
 - ✅ App configuration editing (100%)
 
-**Total: 20/20 tests passing** — See [TESTING_SUMMARY.md](TESTING_SUMMARY.md) for details.
+**Total: 20/20 tests passing** - See [TESTING_SUMMARY.md](TESTING_SUMMARY.md) for details.
 
 ## ✨ AI Agent Integration (MCP)
 
@@ -680,24 +706,30 @@ See [mcp-server/README.md](mcp-server/README.md) for full documentation.
 
 ## Tech Stack
 
-- **Electron 27** — Cross-platform desktop framework
-- **Node.js** — Process management and port scanning
-- **Playwright** — End-to-end testing
-- **Vanilla JS** — No framework bloat, lightweight and fast
-- **CSS Variables** — Powerful theme system
-- **Native Commands** — `netstat` (Windows) / `lsof` (Mac/Linux)
+- **Electron 27** - Cross-platform desktop framework
+- **Node.js** - Process management and port scanning
+- **Playwright** - End-to-end testing
+- **Vanilla JS** - No framework bloat, lightweight and fast
+- **CSS Variables** - Powerful theme system
+- **Native Commands** - `netstat` (Windows) / `lsof` (Mac/Linux)
 
 ## Version History
 
-### v1.4.0 (2026-01-06) — Current Release
-- 🔍 **Browse & Auto-detect** — One-click project setup with recursive scanning
-- 📦 **Package Manager Detection** — Auto-detects pnpm, yarn, npm
-- ⚠️ **Port Conflict Warnings** — Visual warnings with preview and kill options
-- 🔍 **Project Auto-Discovery** — Bulk scan and import projects
-- ⭐ **Favorites System** — Star apps for quick access
-- 🗑 **Delete All** — Bulk delete with safety confirmations
-- ✨ **Improved Port Matching** — Two-phase algorithm with keyword extraction
-- ✨ **Smart Port Detection** — No more hard-coded framework defaults
+### v1.6.2 (2026-03-21) - Current Release
+- Landing page modernization (glassmorphism, SEO, accessibility, CSP)
+- Electron app UI hardening (overflow, focus styles, ARIA, reduced motion)
+- Icon-based START/STOP buttons
+- 4 new language detector badges (Go, .NET, Rust, Ruby)
+
+### v1.4.0 (2026-01-06)
+- 🔍 **Browse & Auto-detect** - One-click project setup with recursive scanning
+- 📦 **Package Manager Detection** - Auto-detects pnpm, yarn, npm
+- ⚠️ **Port Conflict Warnings** - Visual warnings with preview and kill options
+- 🔍 **Project Auto-Discovery** - Bulk scan and import projects
+- ⭐ **Favorites System** - Star apps for quick access
+- 🗑 **Delete All** - Bulk delete with safety confirmations
+- ✨ **Improved Port Matching** - Two-phase algorithm with keyword extraction
+- ✨ **Smart Port Detection** - No more hard-coded framework defaults
 
 ### v1.3.0 (2026-01-05)
 - 7 new features (DevTools, process cleanup, port conflict detection, etc.)
