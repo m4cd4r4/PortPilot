@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://m4cd4r4.github.io/PortPilot/sitemap.xml

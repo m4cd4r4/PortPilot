@@ -111,7 +111,7 @@
 }
 
 /* ============ Reset & Base ============ */
-* {
+*, *::before, *::after {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
@@ -121,10 +121,11 @@ body {
   font-family: var(--font-family);
   background: var(--bg-primary);
   color: var(--text-primary);
-  line-height: 1.3;  /* v1.6: Tighter (was 1.4) */
+  line-height: 1.35;
   min-height: 100vh;
   transition: background 0.2s, color 0.2s;
-  font-size: 13px;  /* v1.6: Smaller base (was 14px) */
+  font-size: 13px;
+  -webkit-font-smoothing: antialiased;
 }
 
 #app {
@@ -132,6 +133,7 @@ body {
   flex-direction: column;
   height: 100vh;
   overflow: hidden;
+  max-width: 100vw;
 }
 
 /* ============ Header ============ */
@@ -139,30 +141,43 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 20px;
+  padding: 10px 20px;
   background: var(--bg-secondary);
   border-bottom: var(--border-width) solid var(--border-color);
   -webkit-app-region: drag;
+  flex-shrink: 0;
+  min-height: 48px;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  overflow: hidden;
 }
 
 .header-left h1 {
-  font-size: 1.25rem;
-  font-weight: 600;
+  font-size: 1.2rem;
+  font-weight: 700;
   display: inline;
   text-transform: uppercase;
   letter-spacing: 1px;
+  white-space: nowrap;
 }
 
 .subtitle {
-  margin-left: 12px;
   color: var(--text-muted);
-  font-size: 0.875rem;
+  font-size: 0.8rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .header-right {
   display: flex;
   gap: 8px;
   -webkit-app-region: no-drag;
+  flex-shrink: 0;
 }
 
 /* ============ Buttons ============ */
@@ -326,11 +341,14 @@ body {
 .content {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 16px 20px;
+  scrollbar-gutter: stable;
 }
 
 .tab-content {
   display: none;
+  max-width: 1400px;
 }
 
 .tab-content.active {
@@ -342,7 +360,9 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 /* Selection Toolbar */
@@ -387,12 +407,14 @@ body {
   color: var(--text-primary);
   font-size: 0.875rem;
   width: 300px;
+  max-width: 100%;
   font-family: var(--font-family);
 }
 
 .input-search:focus {
   outline: none;
   border-color: var(--accent-cyan);
+  box-shadow: 0 0 0 2px rgba(125, 207, 255, 0.15);
 }
 
 .count-badge {
@@ -655,8 +677,8 @@ body {
 /* ============ Apps List ============ */
 .apps-list {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(500px, 1fr));
-  gap: 5px;  /* v1.6: Tighter (was 8px) */
+  grid-template-columns: repeat(auto-fill, minmax(min(480px, 100%), 1fr));
+  gap: 5px;
 }
 
 /* Single column on narrow screens */
@@ -670,13 +692,14 @@ body {
   background: var(--bg-secondary);
   border: var(--border-width) solid var(--border-color);
   border-radius: var(--radius);
-  padding: 5px 8px;  /* v1.6: Reduced (was 8px 12px) */
+  padding: 6px 10px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   transition: all 0.15s ease;
-  min-height: 42px;  /* v1.6: Compact height */
-  cursor: pointer;  /* v1.6: Clickable for expansion */
+  min-height: 42px;
+  cursor: pointer;
+  overflow: hidden;
 }
 
 .app-card:hover {
@@ -1623,19 +1646,23 @@ kbd {
 
 /* ============ v1.4.0 - Favorites & Sections ============ */
 .app-section {
-  margin-bottom: 15px;  /* v1.6: Reduced (was 20px) */
+  margin-bottom: 16px;
+}
+
+.app-section:last-child {
+  margin-bottom: 0;
 }
 
 .section-header {
   display: flex;
   align-items: center;
-  gap: 8px;  /* v1.6: Reduced (was 10px) */
-  padding: 6px 10px;  /* v1.6: Reduced (was 10px 14px) */
+  gap: 8px;
+  padding: 8px 12px;
   background: var(--bg-tertiary);
   border: var(--border-width) solid var(--border-color);
   border-radius: var(--radius);
   cursor: pointer;
-  margin-bottom: 5px;  /* v1.6: Reduced (was 8px) */
+  margin-bottom: 6px;
   transition: all 0.15s ease;
   -webkit-user-select: none;
   user-select: none;
@@ -1674,8 +1701,8 @@ kbd {
 
 .section-apps {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(500px, 1fr));
-  gap: 5px;  /* v1.6: Tighter (was 8px) */
+  grid-template-columns: repeat(auto-fill, minmax(min(480px, 100%), 1fr));
+  gap: 5px;
   overflow: hidden;
   transition: max-height 0.3s ease, opacity 0.2s ease;
   max-height: 10000px;
@@ -1980,5 +2007,119 @@ kbd {
 @media (max-width: 1100px) {
   .section-apps {
     grid-template-columns: 1fr;
+  }
+}
+
+/* ============ v2.0 - Enhanced Focus & Accessibility ============ */
+button:focus-visible,
+input:focus-visible,
+.app-card:focus-visible,
+.port-card:focus-visible,
+.section-header:focus-visible {
+  outline: 2px solid var(--accent-cyan);
+  outline-offset: 1px;
+  border-radius: var(--radius);
+}
+
+/* ============ v2.0 - Better Empty State ============ */
+.empty-state {
+  text-align: center;
+  padding: 40px 24px;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  border: var(--border-width) dashed var(--border-color);
+  border-radius: var(--radius);
+  background: var(--bg-secondary);
+}
+
+/* ============ v2.0 - Spacing Constraints ============ */
+
+/* Prevent port card details from being too wide */
+.cmd-tooltip {
+  max-width: min(600px, 90vw);
+}
+
+/* Constrain app name overflow */
+.app-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+/* Ensure app meta command doesn't overflow */
+.app-meta {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+/* Port card header overflow protection */
+.port-card-header {
+  overflow: hidden;
+  min-width: 0;
+}
+
+.port-process {
+  min-width: 0;
+}
+
+/* Settings max-width for readability */
+.settings-section {
+  max-width: 800px;
+}
+
+/* Modal max-height safety */
+.modal-content {
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.discoveries-list {
+  max-height: min(500px, 60vh);
+}
+
+/* Knowledge carousel max-height */
+.knowledge-carousel {
+  max-height: calc(100vh - 200px);
+  overflow-y: auto;
+}
+
+/* ============ v2.0 - Smooth Transitions ============ */
+.tab {
+  transition: all 0.15s ease;
+}
+
+.settings-section {
+  transition: border-color 0.15s ease;
+}
+
+.settings-section:hover {
+  border-color: var(--accent-yellow);
+}
+
+/* ============ v2.0 - Selection Toolbar Responsive ============ */
+@media (max-width: 700px) {
+  .selection-toolbar {
+    left: 12px;
+    right: 12px;
+    transform: none;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .selection-actions {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+}
+
+/* ============ v2.0 - Reduced Motion ============ */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }
