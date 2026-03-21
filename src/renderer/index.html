@@ -8,11 +8,11 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <div id="app">
+  <div id="app" role="application" aria-label="PortPilot - Localhost Port Manager">
     <!-- Header -->
-    <header class="header">
+    <header class="header" role="banner">
       <div class="header-left">
-        <h1>⚓ PortPilot</h1>
+        <h1>&#9875; PortPilot</h1>
         <span class="subtitle">Localhost Port Manager</span>
       </div>
       <div class="header-right">
@@ -26,15 +26,15 @@
     </header>
 
     <!-- Tab Navigation -->
-    <nav class="tabs">
-      <button class="tab active" data-tab="ports">Active Ports</button>
-      <button class="tab" data-tab="apps">My Apps</button>
-      <button class="tab" data-tab="knowledge">Knowledge</button>
-      <button class="tab" data-tab="settings">Settings</button>
+    <nav class="tabs" role="tablist" aria-label="Main navigation">
+      <button class="tab active" data-tab="ports" role="tab" aria-selected="true" aria-controls="tab-ports">Active Ports</button>
+      <button class="tab" data-tab="apps" role="tab" aria-selected="false" aria-controls="tab-apps">My Apps</button>
+      <button class="tab" data-tab="knowledge" role="tab" aria-selected="false" aria-controls="tab-knowledge">Knowledge</button>
+      <button class="tab" data-tab="settings" role="tab" aria-selected="false" aria-controls="tab-settings">Settings</button>
     </nav>
 
     <!-- Main Content -->
-    <main class="content">
+    <main class="content" role="main">
       <!-- Ports Tab -->
       <section id="tab-ports" class="tab-content active">
         <div class="toolbar">

@@ -4,381 +4,555 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>PortPilot - Localhost Port Manager for Developers</title>
-  <meta name="description" content="Free desktop app to manage local development ports. Scan ports, kill stuck processes, register apps, and control your dev environment.">
-  <meta name="keywords" content="port manager, localhost, developer tools, electron, windows, port scanner">
+  <meta name="description" content="Free desktop app to manage local development ports. Scan ports, kill stuck processes, register apps, and control your dev environment. Open source for Windows and Linux.">
+  <meta name="keywords" content="port manager, localhost, developer tools, electron, windows, linux, port scanner, kill port, dev tools, process manager">
+  <meta name="author" content="Macdara">
+  <meta name="theme-color" content="#1a1b26">
+
+  <!-- Open Graph -->
   <meta property="og:title" content="PortPilot - Free Desktop Port Manager for Developers">
-  <meta property="og:description" content="Scan active ports, kill stuck processes, register your dev apps, and auto-detect running services. Free, open-source Electron app for Windows.">
+  <meta property="og:description" content="Scan active ports, kill stuck processes, register your dev apps, and auto-detect running services. Free, open-source Electron app for Windows and Linux.">
   <meta property="og:image" content="https://m4cd4r4.github.io/PortPilot/og-image.png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   <meta property="og:url" content="https://m4cd4r4.github.io/PortPilot/">
   <meta property="og:type" content="website">
+  <meta property="og:site_name" content="PortPilot">
+
+  <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="PortPilot - Free Desktop Port Manager for Developers">
-  <meta name="twitter:description" content="Scan active ports, kill stuck processes, register your dev apps, and auto-detect running services. Free, open-source Electron app for Windows.">
+  <meta name="twitter:description" content="Scan active ports, kill stuck processes, register your dev apps, and auto-detect running services. Free, open-source Electron app for Windows and Linux.">
   <meta name="twitter:image" content="https://m4cd4r4.github.io/PortPilot/og-image.png">
+
   <link rel="canonical" href="https://m4cd4r4.github.io/PortPilot/">
+  <link rel="icon" type="image/svg+xml" href="../public/icon.svg">
   <link rel="icon" type="image/png" href="../public/icon.png">
+
+  <!-- CSP for static GitHub Pages site -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' https://m4cd4r4.github.io; connect-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none';">
+
+  <!-- Preload critical assets -->
+  <link rel="preload" href="style.css" as="style">
+  <link rel="preload" href="screenshots/slot1.png" as="image">
+
   <link rel="stylesheet" href="style.css">
+
+  <!-- JSON-LD Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "PortPilot",
+    "description": "Free desktop app to manage local development ports. Scan ports, kill stuck processes, register apps, and control your dev environment.",
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "Windows 10, Windows 11, Linux",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "softwareVersion": "1.6.2",
+    "author": {
+      "@type": "Person",
+      "name": "Macdara",
+      "url": "https://github.com/m4cd4r4"
+    },
+    "url": "https://m4cd4r4.github.io/PortPilot/",
+    "downloadUrl": "https://github.com/m4cd4r4/PortPilot/releases/latest",
+    "screenshot": "https://m4cd4r4.github.io/PortPilot/screenshots/slot1.png",
+    "license": "https://opensource.org/licenses/MIT",
+    "isAccessibleForFree": true,
+    "featureList": [
+      "Port scanning with process details",
+      "One-click port killing",
+      "App registry with start/stop control",
+      "Project auto-discovery",
+      "Docker integration",
+      "6 color themes",
+      "System tray support",
+      "MCP AI agent integration",
+      "Keyboard shortcuts",
+      "Cross-platform (Windows + Linux)"
+    ]
+  }
+  </script>
 </head>
 <body>
+  <!-- Skip to content for accessibility -->
+  <a href="#main-content" class="skip-link">Skip to main content</a>
+
   <!-- Header Navigation -->
-  <nav class="header-nav">
+  <nav class="header-nav" role="navigation" aria-label="Main navigation">
     <div class="nav-container">
-      <a href="#" class="nav-brand">
-        <span class="icon">&#9875;</span> PortPilot
+      <a href="#" class="nav-brand" aria-label="PortPilot - scroll to top">
+        <span class="brand-icon" aria-hidden="true">&#9875;</span> PortPilot
       </a>
-      <div class="nav-links">
-        <a href="#features" class="nav-link">Features</a>
-        <a href="#knowledge" class="nav-link">Knowledge Base</a>
-        <a href="#smart-detection" class="nav-link">Smart Detection</a>
-        <a href="#getting-started" class="nav-link">Getting Started</a>
-        <a href="#shortcuts" class="nav-link">Shortcuts</a>
-        <a href="#mcp" class="nav-link"><span class="ai-icon">✨</span> AI Agent</a>
-        <a href="#download" class="nav-link nav-link-download">Download</a>
+
+      <!-- Mobile menu toggle -->
+      <button class="nav-toggle" aria-label="Toggle navigation menu" aria-expanded="false" aria-controls="nav-menu">
+        <span class="nav-toggle-bar"></span>
+        <span class="nav-toggle-bar"></span>
+        <span class="nav-toggle-bar"></span>
+      </button>
+
+      <div class="nav-links" id="nav-menu" role="menubar">
+        <a href="#features" class="nav-link" role="menuitem">Features</a>
+        <a href="#knowledge" class="nav-link" role="menuitem">Knowledge Base</a>
+        <a href="#smart-detection" class="nav-link" role="menuitem">Detection</a>
+        <a href="#getting-started" class="nav-link" role="menuitem">Getting Started</a>
+        <a href="#shortcuts" class="nav-link" role="menuitem">Shortcuts</a>
+        <a href="#mcp" class="nav-link" role="menuitem">AI Agent</a>
+        <a href="#download" class="nav-link nav-link-download" role="menuitem">Download</a>
       </div>
     </div>
   </nav>
 
-  <header class="hero">
-    <div class="container">
-      <div class="hero-content">
-        <div class="hero-text">
-          <h1><span class="icon">&#9875;</span> PortPilot</h1>
-          <p class="tagline">Localhost Port Manager for Developers</p>
-          <p class="description">Scan active ports, kill stuck processes, register your dev apps, and take control of your local development environment. Free and open source.</p>
-          <div class="cta-buttons">
-            <a href="#download" class="btn btn-primary"><span class="btn-icon">&#11015;</span> Download v1.6.2</a>
-            <a href="https://github.com/m4cd4r4/PortPilot/blob/master/README.md" class="btn btn-secondary"><span class="btn-icon">&#11088;</span> View on GitHub</a>
-          </div>
-          <p class="version-note">Windows 10/11 &amp; Linux | v1.6.2 | MIT Licence</p>
-        </div>
-        <div class="hero-mockup">
-          <div class="screenshot-carousel">
-            <div class="carousel-container">
-              <div class="carousel-slide active"><img src="screenshots/slot1.png" alt="My Apps Tab"></div>
-              <div class="carousel-slide"><img src="screenshots/slot2.png" alt="Port Scanner"></div>
-              <div class="carousel-slide"><img src="screenshots/slot3.png" alt="Port Details"></div>
-              <div class="carousel-slide"><img src="screenshots/slot4.png" alt="CMD Tooltip"></div>
-              <div class="carousel-slide"><img src="screenshots/slot5.png" alt="Knowledge Base"></div>
-              <div class="carousel-slide"><img src="screenshots/slot6.png" alt="Keyboard Shortcuts"></div>
-              <div class="carousel-slide"><img src="screenshots/slot7.png" alt="Port Actions"></div>
-              <div class="carousel-slide"><img src="screenshots/slot8.png" alt="Themes"></div>
-              <div class="carousel-slide"><img src="screenshots/slot9.png" alt="Settings"></div>
-              <div class="carousel-slide"><img src="screenshots/slot10.png" alt="Docker Integration"></div>
+  <main id="main-content">
+    <!-- Hero Section -->
+    <header class="hero">
+      <div class="container">
+        <div class="hero-content">
+          <div class="hero-text">
+            <div class="hero-badge">Open Source &middot; Free &middot; MIT Licence</div>
+            <h1><span class="brand-icon" aria-hidden="true">&#9875;</span> PortPilot</h1>
+            <p class="tagline">Localhost Port Manager for Developers</p>
+            <p class="description">Scan active ports, kill stuck processes, register your dev apps, and take control of your local development environment.</p>
+            <div class="cta-buttons">
+              <a href="#download" class="btn btn-primary">
+                <span class="btn-icon" aria-hidden="true">&#11015;</span> Download v1.6.2
+              </a>
+              <a href="https://github.com/m4cd4r4/PortPilot" class="btn btn-secondary" rel="noopener">
+                <span class="btn-icon" aria-hidden="true">&#11088;</span> View on GitHub
+              </a>
             </div>
-            <button type="button" class="carousel-btn carousel-prev" onclick="prevSlide()">&#10094;</button>
-            <button type="button" class="carousel-btn carousel-next" onclick="nextSlide()">&#10095;</button>
-            <div class="carousel-dots">
-              <span class="dot active" onclick="goToSlide(0)"></span>
-              <span class="dot" onclick="goToSlide(1)"></span>
-              <span class="dot" onclick="goToSlide(2)"></span>
-              <span class="dot" onclick="goToSlide(3)"></span>
-              <span class="dot" onclick="goToSlide(4)"></span>
-              <span class="dot" onclick="goToSlide(5)"></span>
-              <span class="dot" onclick="goToSlide(6)"></span>
-              <span class="dot" onclick="goToSlide(7)"></span>
-              <span class="dot" onclick="goToSlide(8)"></span>
-              <span class="dot" onclick="goToSlide(9)"></span>
+            <p class="version-note">Windows 10/11 &amp; Linux &middot; v1.6.2 &middot; MIT Licence</p>
+          </div>
+          <div class="hero-mockup">
+            <div class="screenshot-carousel" role="region" aria-label="Screenshot carousel" aria-roledescription="carousel">
+              <div class="carousel-container">
+                <div class="carousel-slide active" role="tabpanel" aria-label="Slide 1 of 10">
+                  <img src="screenshots/slot1.png" alt="PortPilot My Apps tab showing registered development applications with start/stop controls" width="800" height="500" loading="eager">
+                </div>
+                <div class="carousel-slide" role="tabpanel" aria-label="Slide 2 of 10">
+                  <img src="screenshots/slot2.png" alt="Port Scanner view displaying active TCP ports with process info" width="800" height="500" loading="lazy">
+                </div>
+                <div class="carousel-slide" role="tabpanel" aria-label="Slide 3 of 10">
+                  <img src="screenshots/slot3.png" alt="Port details showing memory, uptime, connections, and process info" width="800" height="500" loading="lazy">
+                </div>
+                <div class="carousel-slide" role="tabpanel" aria-label="Slide 4 of 10">
+                  <img src="screenshots/slot4.png" alt="Command tooltip showing full command path for a process" width="800" height="500" loading="lazy">
+                </div>
+                <div class="carousel-slide" role="tabpanel" aria-label="Slide 5 of 10">
+                  <img src="screenshots/slot5.png" alt="Built-in knowledge base with developer documentation" width="800" height="500" loading="lazy">
+                </div>
+                <div class="carousel-slide" role="tabpanel" aria-label="Slide 6 of 10">
+                  <img src="screenshots/slot6.png" alt="Keyboard shortcuts reference panel" width="800" height="500" loading="lazy">
+                </div>
+                <div class="carousel-slide" role="tabpanel" aria-label="Slide 7 of 10">
+                  <img src="screenshots/slot7.png" alt="Port action buttons for browsing, opening folder, copying, and killing" width="800" height="500" loading="lazy">
+                </div>
+                <div class="carousel-slide" role="tabpanel" aria-label="Slide 8 of 10">
+                  <img src="screenshots/slot8.png" alt="Multiple theme options including TokyoNight, Nord, and Dracula" width="800" height="500" loading="lazy">
+                </div>
+                <div class="carousel-slide" role="tabpanel" aria-label="Slide 9 of 10">
+                  <img src="screenshots/slot9.png" alt="Settings panel with auto-scan, theme, and window behavior options" width="800" height="500" loading="lazy">
+                </div>
+                <div class="carousel-slide" role="tabpanel" aria-label="Slide 10 of 10">
+                  <img src="screenshots/slot10.png" alt="Docker integration with status badges and one-click start" width="800" height="500" loading="lazy">
+                </div>
+              </div>
+              <button type="button" class="carousel-btn carousel-prev" aria-label="Previous screenshot">&#10094;</button>
+              <button type="button" class="carousel-btn carousel-next" aria-label="Next screenshot">&#10095;</button>
+              <div class="carousel-dots" role="tablist" aria-label="Screenshot slides">
+                <button class="dot active" role="tab" aria-label="Show slide 1" aria-selected="true"></button>
+                <button class="dot" role="tab" aria-label="Show slide 2" aria-selected="false"></button>
+                <button class="dot" role="tab" aria-label="Show slide 3" aria-selected="false"></button>
+                <button class="dot" role="tab" aria-label="Show slide 4" aria-selected="false"></button>
+                <button class="dot" role="tab" aria-label="Show slide 5" aria-selected="false"></button>
+                <button class="dot" role="tab" aria-label="Show slide 6" aria-selected="false"></button>
+                <button class="dot" role="tab" aria-label="Show slide 7" aria-selected="false"></button>
+                <button class="dot" role="tab" aria-label="Show slide 8" aria-selected="false"></button>
+                <button class="dot" role="tab" aria-label="Show slide 9" aria-selected="false"></button>
+                <button class="dot" role="tab" aria-label="Show slide 10" aria-selected="false"></button>
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
-  </header>
+    </header>
 
-  <section class="features" id="features">
-    <div class="container">
-      <h2>Features</h2>
-      <div class="features-grid">
-        <div class="feature-card"><span class="feature-icon">&#128269;</span><div class="feature-text"><h3>Browse &amp; Auto-detect</h3><p>One-click project setup with package manager detection.</p></div></div>
-        <div class="feature-card"><span class="feature-icon">&#9888;&#65039;</span><div class="feature-text"><h3>Port Conflict Warnings</h3><p>Visual warnings when unknown processes block app ports.</p></div></div>
-        <div class="feature-card"><span class="feature-icon">&#11088;</span><div class="feature-text"><h3>Favorites System</h3><p>Star frequently-used apps for quick access.</p></div></div>
-        <div class="feature-card"><span class="feature-icon">&#128039;</span><div class="feature-text"><h3>Cross-Platform</h3><p>Works on Windows 10/11 and Linux (AppImage + .deb).</p></div></div>
-        <div class="feature-card"><span class="feature-icon">&#9906;</span><div class="feature-text"><h3>Port Scanner</h3><p>Scan all TCP ports with process name, PID, and command line.</p></div></div>
-        <div class="feature-card"><span class="feature-icon">&#10005;</span><div class="feature-text"><h3>One-Click Kill</h3><p>Free up stuck ports instantly without Task Manager.</p></div></div>
-        <div class="feature-card"><span class="feature-icon">&#9654;</span><div class="feature-text"><h3>Process Control</h3><p>Start/stop apps with automatic port detection.</p></div></div>
-        <div class="feature-card"><span class="feature-icon">&#128051;</span><div class="feature-text"><h3>Docker</h3><p>Detect Docker apps, launch Desktop with one click.</p></div></div>
-        <div class="feature-card"><span class="feature-icon">&#9670;</span><div class="feature-text"><h3>5 themes</h3><p>TokyoNight, Brutalist, Nord, Dracula, and more.</p></div></div>
-        <div class="feature-card"><span class="feature-icon">&#128421;&#65039;</span><div class="feature-text"><h3>System Tray</h3><p>Stop all apps from tray menu, configurable window behaviour.</p></div></div>
-        <div class="feature-card"><span class="feature-icon">&#128274;</span><div class="feature-text"><h3>Single Instance</h3><p>Only one PortPilot runs at a time, focuses existing window.</p></div></div>
-      </div>
-    </div>
-  </section>
-  <section class="knowledge-section" id="knowledge">
-    <div class="container">
-      <h2>Knowledge Base</h2>
-      <p class="section-subtitle">Everything you need to know about PortPilot</p>
-      <div class="knowledge-grid">
-        <div class="knowledge-card">
-          <h3>&#9881;&#65039; How It Works</h3>
-          <p>PortPilot scans your system for active TCP ports using native OS commands.</p>
-          <ul class="knowledge-list">
-            <li>Scans via <code>netstat</code> (Windows) or <code>lsof</code> (Mac/Linux)</li>
-            <li>Shows process name, PID, and command line</li>
-            <li>One-click kill for stuck processes</li>
-            <li>Register apps with preferred ports</li>
-          </ul>
-        </div>
-        <div class="knowledge-card">
-          <h3>&#128640; Quick Start</h3>
-          <ol class="knowledge-list numbered">
-            <li><strong>Scan Ports</strong> &#8212; Click the button to discover active ports</li>
-            <li><strong>Add Apps</strong> &#8212; Register your dev projects with start commands</li>
-            <li><strong>Start/Stop</strong> &#8212; Control apps from the My Apps tab</li>
-            <li><strong>Kill Ports</strong> &#8212; Free up stuck ports with one click</li>
-          </ol>
-        </div>
-        <div class="knowledge-card">
-          <h3>&#128268; Common Dev Ports</h3>
-          <div class="port-reference">
-            <div class="port-item"><span class="port-num">3000</span> React, Next.js, Express</div>
-            <div class="port-item"><span class="port-num">4200</span> Angular CLI</div>
-            <div class="port-item"><span class="port-num">5173</span> Vite</div>
-            <div class="port-item"><span class="port-num">5432</span> PostgreSQL</div>
-            <div class="port-item"><span class="port-num">6379</span> Redis</div>
-            <div class="port-item"><span class="port-num">8000</span> Django, FastAPI</div>
-            <div class="port-item"><span class="port-num">8080</span> Tomcat, Live Server</div>
-            <div class="port-item"><span class="port-num">27017</span> MongoDB</div>
+    <!-- Features Section -->
+    <section class="features" id="features" aria-labelledby="features-heading">
+      <div class="container">
+        <h2 id="features-heading">Features</h2>
+        <div class="features-grid">
+          <div class="feature-card">
+            <span class="feature-icon" aria-hidden="true">&#128269;</span>
+            <div class="feature-text">
+              <h3>Browse &amp; Auto-detect</h3>
+              <p>One-click project setup. Scans directories for Node.js, Python, Go, .NET, Rust, Ruby, and Docker projects.</p>
+            </div>
+          </div>
+          <div class="feature-card">
+            <span class="feature-icon" aria-hidden="true">&#9888;&#65039;</span>
+            <div class="feature-text">
+              <h3>Port Conflict Warnings</h3>
+              <p>Visual warnings when unknown processes block your app ports. Preview and kill with one click.</p>
+            </div>
+          </div>
+          <div class="feature-card">
+            <span class="feature-icon" aria-hidden="true">&#11088;</span>
+            <div class="feature-text">
+              <h3>Favorites System</h3>
+              <p>Star frequently-used apps for quick access with collapsible sections.</p>
+            </div>
+          </div>
+          <div class="feature-card">
+            <span class="feature-icon" aria-hidden="true">&#128039;</span>
+            <div class="feature-text">
+              <h3>Cross-Platform</h3>
+              <p>Works on Windows 10/11 and Linux (AppImage + .deb). No admin rights needed to install.</p>
+            </div>
+          </div>
+          <div class="feature-card">
+            <span class="feature-icon" aria-hidden="true">&#9906;</span>
+            <div class="feature-text">
+              <h3>Port Scanner</h3>
+              <p>Scan all TCP ports with process name, PID, command line, memory, uptime, and connection count.</p>
+            </div>
+          </div>
+          <div class="feature-card">
+            <span class="feature-icon" aria-hidden="true">&#10005;</span>
+            <div class="feature-text">
+              <h3>One-Click Kill</h3>
+              <p>Free up stuck ports instantly without Task Manager or terminal commands.</p>
+            </div>
+          </div>
+          <div class="feature-card">
+            <span class="feature-icon" aria-hidden="true">&#9654;</span>
+            <div class="feature-text">
+              <h3>Process Control</h3>
+              <p>Start/stop apps with automatic port detection, fallback ranges, and countdown feedback.</p>
+            </div>
+          </div>
+          <div class="feature-card">
+            <span class="feature-icon" aria-hidden="true">&#128051;</span>
+            <div class="feature-text">
+              <h3>Docker Integration</h3>
+              <p>Detect Docker apps, see live status badges, launch Docker Desktop with one click.</p>
+            </div>
+          </div>
+          <div class="feature-card">
+            <span class="feature-icon" aria-hidden="true">&#127912;</span>
+            <div class="feature-text">
+              <h3>6 Themes</h3>
+              <p>TokyoNight, Brutalist Dark/Light, Nord, Dracula, and Solarized Light.</p>
+            </div>
+          </div>
+          <div class="feature-card">
+            <span class="feature-icon" aria-hidden="true">&#128421;&#65039;</span>
+            <div class="feature-text">
+              <h3>System Tray</h3>
+              <p>Stop all apps from tray menu. Configurable minimize-to-tray and quit behaviour.</p>
+            </div>
+          </div>
+          <div class="feature-card">
+            <span class="feature-icon" aria-hidden="true">&#128274;</span>
+            <div class="feature-text">
+              <h3>Single Instance</h3>
+              <p>Only one PortPilot runs at a time. Second launch focuses the existing window.</p>
+            </div>
+          </div>
+          <div class="feature-card">
+            <span class="feature-icon" aria-hidden="true">&#127760;</span>
+            <div class="feature-text">
+              <h3>IPv4/IPv6 Aware</h3>
+              <p>Shows bind type (localhost vs all interfaces) and IP protocol version for each port.</p>
+            </div>
           </div>
         </div>
-        <div class="knowledge-card">
-          <h3>&#127991;&#65039; App Badges</h3>
-          <p>PortPilot auto-detects app requirements and shows badges:</p>
-          <div class="badge-reference">
-            <div class="badge-ref-item"><span>&#128051;</span> <strong>Docker</strong> &#8212; Click to start Docker Desktop</div>
-            <div class="badge-ref-item"><span>&#128230;</span> <strong>Node.js</strong> &#8212; npm, yarn, pnpm, bun</div>
-            <div class="badge-ref-item"><span>&#128013;</span> <strong>Python</strong> &#8212; uvicorn, flask, django</div>
-            <div class="badge-ref-item"><span>&#128310;</span> <strong>Go</strong> &#8212; Gin, Fiber, Echo</div>
-            <div class="badge-ref-item"><span>&#9881;</span> <strong>.NET</strong> &#8212; ASP.NET Core</div>
-            <div class="badge-ref-item"><span>&#129408;</span> <strong>Rust</strong> &#8212; Actix-web, Rocket, Axum, Warp</div>
-            <div class="badge-ref-item"><span>&#128142;</span> <strong>Ruby</strong> &#8212; Rails, Sinatra, Rack</div>
-            <div class="badge-ref-item"><span>&#128451;&#65039;</span> <strong>Database</strong> &#8212; postgres, mysql, redis</div>
-            <div class="badge-ref-item"><span>&#9889;</span> <strong>Auto-start</strong> &#8212; Launches on app startup</div>
-          </div>
-        </div>
-        <div class="knowledge-card">
-          <h3>&#128187; System Tray</h3>
-          <p>PortPilot lives in your system tray for quick access:</p>
-          <ul class="knowledge-list">
-            <li><strong>Left-click</strong> &#8212; Show/hide window</li>
-            <li><strong>Right-click</strong> &#8212; Menu: Show, Scan Ports, Stop All Apps, Quit</li>
-          </ul>
-        </div>
-        <div class="knowledge-card">
-          <h3>&#128051; Docker Integration</h3>
-          <p>Smart Docker Desktop integration:</p>
-          <ul class="knowledge-list">
-            <li><strong>Yellow pulsing</strong> &#8212; Docker not running</li>
-            <li><strong>Green badge</strong> &#8212; Docker ready</li>
-            <li><strong>Click badge</strong> &#8212; Starts Docker Desktop</li>
-          </ul>
-        </div>
-        <div class="knowledge-card">
-          <h3>&#128736;&#65039; Troubleshooting</h3>
-          <details class="faq-item"><summary>Port won't kill?</summary><p>Some system processes require admin. Run PortPilot as Administrator.</p></details>
-          <details class="faq-item"><summary>App won't start?</summary><p>Check working directory and command. View app logs for errors.</p></details>
-          <details class="faq-item"><summary>Docker app fails?</summary><p>Make sure Docker Desktop is running. Click the yellow badge to start it.</p></details>
-        </div>
-        <div class="knowledge-card">
-          <h3>&#127760; IPv4 vs IPv6</h3>
-          <p>PortPilot shows which IP protocol apps are bound to:</p>
-          <ul class="knowledge-list">
-            <li><strong>v4</strong> &#8212; IPv4 (<code>0.0.0.0:3000</code>)</li>
-            <li><strong>v6</strong> &#8212; IPv6 (<code>[::]:3000</code>)</li>
-          </ul>
-          <p class="note">Browsers may prefer IPv6. PortPilot opens the correct URL.</p>
-        </div>
       </div>
-    </div>
-  </section>
+    </section>
 
-  <section class="badges-section" id="smart-detection">
-    <div class="container">
-      <h2>Smart App Detection</h2>
-      <p class="section-subtitle">PortPilot automatically detects app requirements and shows visual badges</p>
-      <div class="badges-grid">
-        <div class="badge-item"><span class="badge-icon">&#128051;</span> <strong>Docker</strong></div>
-        <div class="badge-item"><span class="badge-icon">&#128230;</span> <strong>Node.js</strong></div>
-        <div class="badge-item"><span class="badge-icon">&#128013;</span> <strong>Python</strong></div>
-        <div class="badge-item"><span class="badge-icon">&#128310;</span> <strong>Go</strong></div>
-        <div class="badge-item"><span class="badge-icon">&#9881;</span> <strong>.NET</strong></div>
-        <div class="badge-item"><span class="badge-icon">&#129408;</span> <strong>Rust</strong></div>
-        <div class="badge-item"><span class="badge-icon">&#128142;</span> <strong>Ruby</strong></div>
-        <div class="badge-item"><span class="badge-icon">&#128451;&#65039;</span> <strong>Database</strong></div>
-        <div class="badge-item"><span class="badge-icon">&#9889;</span> <strong>Auto-start</strong></div>
-        <div class="badge-item"><span class="badge-icon">&#127760;</span> <strong>Remote</strong></div>
-      </div>
-    </div>
-  </section>
-  <section class="getting-started" id="getting-started">
-    <div class="container">
-      <h2>Getting Started</h2>
-      <div class="steps">
-        <div class="step"><div class="step-number">1</div><div class="step-content"><h3>Download</h3><p>Get the installer from GitHub Releases.</p><a href="#download" class="btn btn-small">Download v1.6.2</a></div></div>
-        <div class="step"><div class="step-number">2</div><div class="step-content"><h3>Install</h3><p>Run the installer. No admin rights needed.</p></div></div>
-        <div class="step"><div class="step-number">3</div><div class="step-content"><h3>Scan Ports</h3><p>Click Scan Ports to discover active ports.</p></div></div>
-        <div class="step"><div class="step-number">4</div><div class="step-content"><h3>Register Apps</h3><p>Add your dev projects.</p></div></div>
-      </div>
-    </div>
-  </section>
-  <section class="shortcuts-section" id="shortcuts">
-    <div class="container">
-      <h2>Keyboard Shortcuts</h2>
-      <div class="shortcuts-grid">
-        <div class="shortcut"><kbd>Ctrl</kbd>+<kbd>R</kbd> <span>Refresh</span></div>
-        <div class="shortcut"><kbd>Ctrl</kbd>+<kbd>N</kbd> <span>Add App</span></div>
-        <div class="shortcut"><kbd>Ctrl</kbd>+<kbd>1-4</kbd> <span>Switch Tabs</span></div>
-        <div class="shortcut"><kbd>Escape</kbd> <span>Close Modal</span></div>
-      </div>
-    </div>
-  </section>
-  <section class="mcp-section" id="mcp">
-    <div class="container">
-      <h2><span class="ai-icon">✨</span> AI Agent Integration</h2>
-      <p class="section-subtitle">Control PortPilot with natural language via MCP</p>
-      <div class="mcp-content">
-        <div class="mcp-commands">
-          <h3>Example Commands</h3>
-          <div class="command-list">
-            <div class="command-item"><span class="command-quote">List all my PortPilot apps</span></div>
-            <div class="command-item"><span class="command-quote">Start the azure-exam app</span></div>
-            <div class="command-item"><span class="command-quote">Kill port 3000</span></div>
+    <!-- Knowledge Base Section -->
+    <section class="knowledge-section" id="knowledge" aria-labelledby="knowledge-heading">
+      <div class="container">
+        <h2 id="knowledge-heading">Knowledge Base</h2>
+        <p class="section-subtitle">Everything you need to know about PortPilot</p>
+        <div class="knowledge-grid">
+          <div class="knowledge-card">
+            <h3>&#9881;&#65039; How It Works</h3>
+            <p>PortPilot scans your system for active TCP ports using native OS commands.</p>
+            <ul class="knowledge-list">
+              <li>Scans via <code>netstat</code> (Windows) or <code>lsof</code> (Mac/Linux)</li>
+              <li>Shows process name, PID, and command line</li>
+              <li>One-click kill for stuck processes</li>
+              <li>Register apps with preferred ports</li>
+            </ul>
+          </div>
+          <div class="knowledge-card">
+            <h3>&#128640; Quick Start</h3>
+            <ol class="knowledge-list numbered">
+              <li><strong>Scan Ports</strong> - Click the button to discover active ports</li>
+              <li><strong>Add Apps</strong> - Register your dev projects with start commands</li>
+              <li><strong>Start/Stop</strong> - Control apps from the My Apps tab</li>
+              <li><strong>Kill Ports</strong> - Free up stuck ports with one click</li>
+            </ol>
+          </div>
+          <div class="knowledge-card">
+            <h3>&#128268; Common Dev Ports</h3>
+            <div class="port-reference">
+              <div class="port-item"><span class="port-num">3000</span> React, Next.js, Express</div>
+              <div class="port-item"><span class="port-num">4200</span> Angular CLI</div>
+              <div class="port-item"><span class="port-num">5173</span> Vite</div>
+              <div class="port-item"><span class="port-num">5432</span> PostgreSQL</div>
+              <div class="port-item"><span class="port-num">6379</span> Redis</div>
+              <div class="port-item"><span class="port-num">8000</span> Django, FastAPI</div>
+              <div class="port-item"><span class="port-num">8080</span> Tomcat, Live Server</div>
+              <div class="port-item"><span class="port-num">27017</span> MongoDB</div>
+            </div>
+          </div>
+          <div class="knowledge-card">
+            <h3>&#127991;&#65039; App Badges</h3>
+            <p>PortPilot auto-detects app requirements and shows badges:</p>
+            <div class="badge-reference">
+              <div class="badge-ref-item"><span aria-hidden="true">&#128051;</span> <strong>Docker</strong> - Click to start Docker Desktop</div>
+              <div class="badge-ref-item"><span aria-hidden="true">&#128230;</span> <strong>Node.js</strong> - npm, yarn, pnpm, bun</div>
+              <div class="badge-ref-item"><span aria-hidden="true">&#128013;</span> <strong>Python</strong> - uvicorn, flask, django</div>
+              <div class="badge-ref-item"><span aria-hidden="true">&#128310;</span> <strong>Go</strong> - Gin, Fiber, Echo</div>
+              <div class="badge-ref-item"><span aria-hidden="true">&#9881;</span> <strong>.NET</strong> - ASP.NET Core</div>
+              <div class="badge-ref-item"><span aria-hidden="true">&#129408;</span> <strong>Rust</strong> - Actix-web, Rocket, Axum, Warp</div>
+              <div class="badge-ref-item"><span aria-hidden="true">&#128142;</span> <strong>Ruby</strong> - Rails, Sinatra, Rack</div>
+              <div class="badge-ref-item"><span aria-hidden="true">&#128451;&#65039;</span> <strong>Database</strong> - postgres, mysql, redis</div>
+              <div class="badge-ref-item"><span aria-hidden="true">&#9889;</span> <strong>Auto-start</strong> - Launches on app startup</div>
+            </div>
+          </div>
+          <div class="knowledge-card">
+            <h3>&#128187; System Tray</h3>
+            <p>PortPilot lives in your system tray for quick access:</p>
+            <ul class="knowledge-list">
+              <li><strong>Left-click</strong> - Show/hide window</li>
+              <li><strong>Right-click</strong> - Menu: Show, Scan Ports, Stop All Apps, Quit</li>
+            </ul>
+          </div>
+          <div class="knowledge-card">
+            <h3>&#128051; Docker Integration</h3>
+            <p>Smart Docker Desktop integration:</p>
+            <ul class="knowledge-list">
+              <li><strong>Yellow pulsing</strong> - Docker not running</li>
+              <li><strong>Green badge</strong> - Docker ready</li>
+              <li><strong>Click badge</strong> - Starts Docker Desktop</li>
+            </ul>
+          </div>
+          <div class="knowledge-card">
+            <h3>&#128736;&#65039; Troubleshooting</h3>
+            <details class="faq-item">
+              <summary>Port won't kill?</summary>
+              <p>Some system processes require admin. Run PortPilot as Administrator.</p>
+            </details>
+            <details class="faq-item">
+              <summary>App won't start?</summary>
+              <p>Check working directory and command. View app logs for errors.</p>
+            </details>
+            <details class="faq-item">
+              <summary>Docker app fails?</summary>
+              <p>Make sure Docker Desktop is running. Click the yellow badge to start it.</p>
+            </details>
+          </div>
+          <div class="knowledge-card">
+            <h3>&#127760; IPv4 vs IPv6</h3>
+            <p>PortPilot shows which IP protocol apps are bound to:</p>
+            <ul class="knowledge-list">
+              <li><strong>v4</strong> - IPv4 (<code>0.0.0.0:3000</code>)</li>
+              <li><strong>v6</strong> - IPv6 (<code>[::]:3000</code>)</li>
+            </ul>
+            <p class="note">Browsers may prefer IPv6. PortPilot opens the correct URL.</p>
           </div>
         </div>
-        <div class="mcp-info">
-          <h3>Compatible With</h3>
-          <div class="mcp-tools">
-            <span class="mcp-tool">Claude Code</span>
-            <span class="mcp-tool">Claude Desktop</span>
-            <span class="mcp-tool">Cursor</span>
-            <span class="mcp-tool">Windsurf</span>
-            <span class="mcp-tool">Cline</span>
-          </div>
-          <a href="https://github.com/m4cd4r4/PortPilot/tree/master/mcp-server" class="btn btn-small">Setup Guide</a>
+      </div>
+    </section>
+
+    <!-- Smart Detection Section -->
+    <section class="badges-section" id="smart-detection" aria-labelledby="detection-heading">
+      <div class="container">
+        <h2 id="detection-heading">Smart App Detection</h2>
+        <p class="section-subtitle">PortPilot automatically detects app requirements and shows visual badges</p>
+        <div class="badges-grid">
+          <div class="badge-item"><span class="badge-icon" aria-hidden="true">&#128051;</span> <strong>Docker</strong></div>
+          <div class="badge-item"><span class="badge-icon" aria-hidden="true">&#128230;</span> <strong>Node.js</strong></div>
+          <div class="badge-item"><span class="badge-icon" aria-hidden="true">&#128013;</span> <strong>Python</strong></div>
+          <div class="badge-item"><span class="badge-icon" aria-hidden="true">&#128310;</span> <strong>Go</strong></div>
+          <div class="badge-item"><span class="badge-icon" aria-hidden="true">&#9881;</span> <strong>.NET</strong></div>
+          <div class="badge-item"><span class="badge-icon" aria-hidden="true">&#129408;</span> <strong>Rust</strong></div>
+          <div class="badge-item"><span class="badge-icon" aria-hidden="true">&#128142;</span> <strong>Ruby</strong></div>
+          <div class="badge-item"><span class="badge-icon" aria-hidden="true">&#128451;&#65039;</span> <strong>Database</strong></div>
+          <div class="badge-item"><span class="badge-icon" aria-hidden="true">&#9889;</span> <strong>Auto-start</strong></div>
+          <div class="badge-item"><span class="badge-icon" aria-hidden="true">&#127760;</span> <strong>Remote</strong></div>
         </div>
       </div>
-    </div>
-  </section>
-  <section class="download-section" id="download">
-    <div class="container">
-      <h2>Download PortPilot <span class="version-badge">v1.6.2</span></h2>
-      <p class="section-subtitle">Free, open source, no account required</p>
-      <h3 style="margin-top:2rem;color:#88c0d0;">Windows</h3>
-      <div class="download-options">
-        <a href="https://github.com/m4cd4r4/PortPilot/releases/download/v1.6.2/PortPilot-1.6.2-x64.exe" class="download-card"><div class="download-icon">&#128230;</div><h3>Windows Installer</h3><p>NSIS installer</p><span class="download-size">~72 MB</span></a>
-        <a href="https://github.com/m4cd4r4/PortPilot/releases/download/v1.6.2/PortPilot-1.6.2-portable.exe" class="download-card"><div class="download-icon">&#128188;</div><h3>Portable</h3><p>No install needed</p><span class="download-size">~72 MB</span></a>
+    </section>
+
+    <!-- Getting Started Section -->
+    <section class="getting-started" id="getting-started" aria-labelledby="started-heading">
+      <div class="container">
+        <h2 id="started-heading">Getting Started</h2>
+        <div class="steps">
+          <div class="step">
+            <div class="step-number" aria-hidden="true">1</div>
+            <div class="step-content">
+              <h3>Download</h3>
+              <p>Get the installer from GitHub Releases.</p>
+              <a href="#download" class="btn btn-small">Download v1.6.2</a>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-number" aria-hidden="true">2</div>
+            <div class="step-content">
+              <h3>Install</h3>
+              <p>Run the installer. No admin rights needed.</p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-number" aria-hidden="true">3</div>
+            <div class="step-content">
+              <h3>Scan Ports</h3>
+              <p>Click Scan Ports to discover active ports.</p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-number" aria-hidden="true">4</div>
+            <div class="step-content">
+              <h3>Register Apps</h3>
+              <p>Add your dev projects with start commands and preferred ports.</p>
+            </div>
+          </div>
+        </div>
       </div>
-      <h3 style="margin-top:2rem;color:#88c0d0;">&#128039; Linux</h3>
-      <div class="download-options">
-        <a href="https://github.com/m4cd4r4/PortPilot/releases/download/v1.6.2/PortPilot-1.6.2-x86_64.AppImage" class="download-card"><div class="download-icon">&#128039;</div><h3>AppImage</h3><p>Universal</p><span class="download-size">~98 MB</span></a>
-        <a href="https://github.com/m4cd4r4/PortPilot/releases/download/v1.6.2/PortPilot-1.6.2-amd64.deb" class="download-card"><div class="download-icon">&#128230;</div><h3>.deb</h3><p>Debian/Ubuntu</p><span class="download-size">~69 MB</span></a>
+    </section>
+
+    <!-- Shortcuts Section -->
+    <section class="shortcuts-section" id="shortcuts" aria-labelledby="shortcuts-heading">
+      <div class="container">
+        <h2 id="shortcuts-heading">Keyboard Shortcuts</h2>
+        <div class="shortcuts-grid">
+          <div class="shortcut"><kbd>Ctrl</kbd>+<kbd>R</kbd> <span>Refresh</span></div>
+          <div class="shortcut"><kbd>Ctrl</kbd>+<kbd>N</kbd> <span>Add App</span></div>
+          <div class="shortcut"><kbd>Ctrl</kbd>+<kbd>1-4</kbd> <span>Switch Tabs</span></div>
+          <div class="shortcut"><kbd>Escape</kbd> <span>Close Modal</span></div>
+        </div>
       </div>
-      <h3 style="margin-top:2rem;color:#88c0d0;">Source</h3>
-      <div class="download-options">
-        <a href="https://github.com/m4cd4r4/PortPilot" class="download-card"><div class="download-icon">&#128295;</div><h3>GitHub</h3><p>npm install, npm start</p><span class="download-size">Source</span></a>
+    </section>
+
+    <!-- MCP / AI Agent Section -->
+    <section class="mcp-section" id="mcp" aria-labelledby="mcp-heading">
+      <div class="container">
+        <h2 id="mcp-heading">AI Agent Integration</h2>
+        <p class="section-subtitle">Control PortPilot with natural language via MCP (Model Context Protocol)</p>
+        <div class="mcp-content">
+          <div class="mcp-commands">
+            <h3>Example Commands</h3>
+            <div class="command-list">
+              <div class="command-item"><span class="command-quote">"List all my PortPilot apps"</span></div>
+              <div class="command-item"><span class="command-quote">"Start the azure-exam app"</span></div>
+              <div class="command-item"><span class="command-quote">"Kill port 3000"</span></div>
+              <div class="command-item"><span class="command-quote">"What's running on port 8080?"</span></div>
+            </div>
+          </div>
+          <div class="mcp-info">
+            <h3>Compatible With</h3>
+            <div class="mcp-tools">
+              <span class="mcp-tool">Claude Code</span>
+              <span class="mcp-tool">Claude Desktop</span>
+              <span class="mcp-tool">Cursor</span>
+              <span class="mcp-tool">Windsurf</span>
+              <span class="mcp-tool">Cline</span>
+            </div>
+            <a href="https://github.com/m4cd4r4/PortPilot/tree/master/mcp-server" class="btn btn-small" rel="noopener">Setup Guide</a>
+          </div>
+        </div>
       </div>
-    </div>
-  </section>
-  <footer class="footer">
+    </section>
+
+    <!-- Download Section -->
+    <section class="download-section" id="download" aria-labelledby="download-heading">
+      <div class="container">
+        <h2 id="download-heading">Download PortPilot <span class="version-badge">v1.6.2</span></h2>
+        <p class="section-subtitle">Free, open source, no account required</p>
+
+        <h3 class="platform-heading">Windows</h3>
+        <div class="download-options">
+          <a href="https://github.com/m4cd4r4/PortPilot/releases/download/v1.6.2/PortPilot-1.6.2-x64.exe" class="download-card" rel="noopener">
+            <div class="download-icon" aria-hidden="true">&#128230;</div>
+            <div class="download-info">
+              <h4>Windows Installer</h4>
+              <p>NSIS installer for Windows 10/11</p>
+            </div>
+            <span class="download-size">~72 MB</span>
+          </a>
+          <a href="https://github.com/m4cd4r4/PortPilot/releases/download/v1.6.2/PortPilot-1.6.2-portable.exe" class="download-card" rel="noopener">
+            <div class="download-icon" aria-hidden="true">&#128188;</div>
+            <div class="download-info">
+              <h4>Portable</h4>
+              <p>No install needed, run anywhere</p>
+            </div>
+            <span class="download-size">~72 MB</span>
+          </a>
+        </div>
+
+        <h3 class="platform-heading">&#128039; Linux</h3>
+        <div class="download-options">
+          <a href="https://github.com/m4cd4r4/PortPilot/releases/download/v1.6.2/PortPilot-1.6.2-x86_64.AppImage" class="download-card" rel="noopener">
+            <div class="download-icon" aria-hidden="true">&#128039;</div>
+            <div class="download-info">
+              <h4>AppImage</h4>
+              <p>Universal Linux package</p>
+            </div>
+            <span class="download-size">~98 MB</span>
+          </a>
+          <a href="https://github.com/m4cd4r4/PortPilot/releases/download/v1.6.2/PortPilot-1.6.2-amd64.deb" class="download-card" rel="noopener">
+            <div class="download-icon" aria-hidden="true">&#128230;</div>
+            <div class="download-info">
+              <h4>.deb</h4>
+              <p>Debian / Ubuntu</p>
+            </div>
+            <span class="download-size">~69 MB</span>
+          </a>
+        </div>
+
+        <h3 class="platform-heading">Source</h3>
+        <div class="download-options">
+          <a href="https://github.com/m4cd4r4/PortPilot" class="download-card" rel="noopener">
+            <div class="download-icon" aria-hidden="true">&#128295;</div>
+            <div class="download-info">
+              <h4>GitHub</h4>
+              <p><code>npm install</code> then <code>npm start</code></p>
+            </div>
+            <span class="download-size">Source</span>
+          </a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer" role="contentinfo">
     <div class="container">
       <div class="footer-content">
-        <div class="footer-brand"><h3>&#9875; PortPilot</h3><p>Made by <a href="https://github.com/m4cd4r4">Macdara</a></p></div>
-        <div class="footer-links">
-          <a href="https://github.com/m4cd4r4/PortPilot">GitHub</a>
-          <a href="https://github.com/m4cd4r4/PortPilot/issues">Report Issue</a>
-          <a href="https://github.com/m4cd4r4/PortPilot/releases">Releases</a>
+        <div class="footer-brand">
+          <h3>&#9875; PortPilot</h3>
+          <p>Made by <a href="https://github.com/m4cd4r4" rel="noopener">Macdara</a></p>
         </div>
+        <nav class="footer-links" aria-label="Footer navigation">
+          <a href="https://github.com/m4cd4r4/PortPilot" rel="noopener">GitHub</a>
+          <a href="https://github.com/m4cd4r4/PortPilot/issues" rel="noopener">Report Issue</a>
+          <a href="https://github.com/m4cd4r4/PortPilot/releases" rel="noopener">Releases</a>
+        </nav>
       </div>
-      <p class="copyright">MIT Licence | 2026 Macdara</p>
+      <p class="copyright">MIT Licence &middot; 2026 Macdara</p>
     </div>
   </footer>
-  <script>
-    // Smooth scroll for anchor links
-    document.querySelectorAll("a[href^='#']").forEach(anchor => {
-      anchor.addEventListener("click", function (e) {
-        e.preventDefault();
-        document.querySelector(this.getAttribute("href")).scrollIntoView({behavior: "smooth"});
-      });
-    });
 
-    // Active nav link on scroll
-    const sections = document.querySelectorAll('section[id]');
-    const navLinks = document.querySelectorAll('.nav-link');
-
-    function updateActiveNavLink() {
-      let current = '';
-
-      sections.forEach(section => {
-        const sectionTop = section.offsetTop;
-        const sectionHeight = section.clientHeight;
-        if (window.pageYOffset >= sectionTop - 100) {
-          current = section.getAttribute('id');
-        }
-      });
-
-      navLinks.forEach(link => {
-        link.classList.remove('active');
-        if (link.getAttribute('href') === '#' + current) {
-          link.classList.add('active');
-        }
-      });
-    }
-
-    window.addEventListener('scroll', updateActiveNavLink);
-    updateActiveNavLink();
-
-    // Screenshot carousel
-    let currentSlide = 0;
-    const slides = document.querySelectorAll('.carousel-slide');
-    const dots = document.querySelectorAll('.carousel-dots .dot');
-
-    function showSlide(index) {
-      // Wrap around
-      if (index >= slides.length) currentSlide = 0;
-      else if (index < 0) currentSlide = slides.length - 1;
-      else currentSlide = index;
-
-      // Update slides
-      slides.forEach((slide, i) => {
-        slide.classList.toggle('active', i === currentSlide);
-      });
-
-      // Update dots
-      dots.forEach((dot, i) => {
-        dot.classList.toggle('active', i === currentSlide);
-      });
-    }
-
-    function nextSlide() {
-      showSlide(currentSlide + 1);
-    }
-
-    function prevSlide() {
-      showSlide(currentSlide - 1);
-    }
-
-    function goToSlide(index) {
-      showSlide(index);
-    }
-
-    // Keyboard navigation
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'ArrowLeft') prevSlide();
-      if (e.key === 'ArrowRight') nextSlide();
-    });
-
-    // Logo click - scroll to top
-    document.querySelector('.nav-brand').addEventListener('click', (e) => {
-      e.preventDefault();
-      window.scrollTo({
-        top: 0,
-        behavior: 'smooth'
-      });
-    });
-
-    // Initialize
-    showSlide(0);
-  </script>
+  <script src="main.js"></script>
 </body>
 </html>
