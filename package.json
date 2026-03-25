@@ -1,6 +1,6 @@
 {
   "name": "portpilot",
-  "version": "1.6.2",
+  "version": "1.7.0",
   "description": "Localhost port and app manager for developers",
   "main": "src/main/main.js",
   "author": {
@@ -14,11 +14,13 @@
     "url": "https://github.com/m4cd4r4/PortPilot.git"
   },
   "scripts": {
-    "start": "node launch.js",
-    "dev": "node launch.js --dev",
+    "start": "node scripts/launch.js",
+    "dev": "node scripts/launch.js --dev",
     "test": "node tests/run-comprehensive.js",
     "test:v1.3": "node tests/v1.3.0-features.spec.js",
-    "test:all": "node tests/run-comprehensive.js && node tests/v1.3.0-features.spec.js",
+    "test:v1.7": "node tests/run-v1.7-features.js",
+    "test:groups": "node tests/run-groups.js",
+    "test:all": "node tests/run-comprehensive.js && node tests/run-groups.js && node tests/run-v1.7-features.js",
     "screenshots": "node take-screenshots.js",
     "build": "electron-builder --win",
     "build:linux": "electron-builder --linux",

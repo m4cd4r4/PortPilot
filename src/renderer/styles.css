@@ -264,6 +264,13 @@ body {
   font-size: 0.65rem;  /* v1.6: Smaller (was 0.75rem) */
 }
 
+.btn:disabled,
+.btn[disabled] {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
 .btn-full-width {
   width: 100%;
 }
@@ -370,7 +377,7 @@ body {
   position: fixed;
   bottom: 20px;
   left: 50%;
-  transform: translateX(-50%);
+  transform: translateX(-50%) translateY(0);
   background: var(--bg-tertiary);
   border: var(--border-width) solid var(--accent-cyan);
   border-radius: var(--radius);
@@ -382,6 +389,12 @@ body {
   z-index: 100;
   -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
+  animation: toolbarSlideUp 0.18s ease;
+}
+
+@keyframes toolbarSlideUp {
+  from { transform: translateX(-50%) translateY(16px); opacity: 0; }
+  to   { transform: translateX(-50%) translateY(0);   opacity: 1; }
 }
 
 .selection-toolbar.hidden {
@@ -776,8 +789,9 @@ body {
 
 .app-card.drag-over {
   border-color: var(--accent-cyan);
-  border-top-width: 2px;
-  background: rgba(125, 207, 255, 0.1);
+  border-top: 3px solid var(--accent-cyan);
+  background: rgba(125, 207, 255, 0.08);
+  box-shadow: 0 -2px 8px rgba(125, 207, 255, 0.25);
 }
 
 /* App Checkbox for Multi-Select */
@@ -1210,6 +1224,12 @@ body {
   bottom: 24px;
   right: 24px;
   z-index: 200;
+  transition: bottom 0.18s ease;
+}
+
+/* Push toasts up when selection toolbar is visible */
+body:has(.selection-toolbar:not(.hidden)) #toast-container {
+  bottom: 80px;
 }
 
 .toast {
@@ -1715,6 +1735,62 @@ kbd {
   margin-bottom: 0;
 }
 
+/* Group header - extends .section-header with action buttons */
+.group-header {
+  cursor: default;
+}
+
+.group-header .section-toggle,
+.group-header .section-title {
+  cursor: pointer;
+}
+
+.section-actions {
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.group-header:hover .section-actions {
+  opacity: 1;
+}
+
+.btn-group-action {
+  background: none;
+  border: none;
+  padding: 2px 5px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  transition: all 0.15s ease;
+  line-height: 1;
+}
+
+.btn-group-action:hover {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+.btn-group-delete:hover {
+  color: var(--accent-red, #ef4444);
+}
+
+.group-empty {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  padding: 8px 12px;
+  font-style: italic;
+  text-align: center;
+}
+
+/* modal-small for group create/rename */
+.modal-small {
+  max-width: 340px;
+}
+
 /* Star Button */
 .btn-star {
   background: none;
@@ -2121,5 +2197,191 @@ input:focus-visible,
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+/* ============ v2.1 - UX Improvements ============ */
+
+/* Header running summary badge */
+.header-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.header-running-summary {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  letter-spacing: 0.03em;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.header-running-summary.has-running {
+  background: rgba(158, 206, 106, 0.15);
+  color: var(--accent-green);
+  border: 1px solid rgba(158, 206, 106, 0.3);
+  opacity: 1;
+}
+
+.header-running-summary.all-stopped {
+  background: rgba(86, 95, 137, 0.15);
+  color: var(--text-muted);
+  border: 1px solid var(--border-color);
+  opacity: 1;
+}
+
+/* Apps toolbar with search */
+.apps-toolbar {
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.app-search-input {
+  flex: 1;
+  min-width: 120px;
+  max-width: 220px;
+  height: 28px;
+  padding: 4px 10px;
+  font-size: 12px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  border-radius: var(--radius-sm);
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.app-search-input:focus {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 2px rgba(122, 162, 247, 0.15);
+}
+
+.app-search-input::placeholder {
+  color: var(--text-muted);
+}
+
+/* Sort select styled as button */
+#app-sort {
+  cursor: pointer;
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+  padding: 3px 6px;
+  font-size: 11px;
+  border-radius: var(--radius-sm);
+}
+
+#app-sort:focus {
+  border-color: var(--accent-primary);
+  outline: none;
+}
+
+/* Group color dot in section header */
+.group-color-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 4px;
+  flex-shrink: 0;
+  vertical-align: middle;
+}
+
+/* Color swatches in group modal */
+.color-swatches {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+
+.color-swatch {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  padding: 0;
+  outline: none;
+  transition: transform 0.15s, border-color 0.15s;
+}
+
+.color-swatch:hover {
+  transform: scale(1.2);
+}
+
+.color-swatch.selected {
+  border-color: var(--text-primary);
+  transform: scale(1.15);
+  box-shadow: 0 0 0 1px var(--bg-primary);
+}
+
+/* Quick Add modal */
+.quick-add-subtitle {
+  color: var(--text-muted);
+  font-size: 12px;
+  margin: 4px 0 16px;
+  padding: 0 4px;
+}
+
+.quick-add-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  padding: 0 4px;
+}
+
+.quick-add-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 14px 8px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, transform 0.1s;
+  text-align: center;
+}
+
+.quick-add-tile:hover {
+  background: var(--bg-tertiary);
+  border-color: var(--accent-primary);
+  transform: translateY(-1px);
+}
+
+.quick-add-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  line-height: 1;
+}
+
+.quick-add-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.quick-add-desc {
+  font-size: 10px;
+  color: var(--text-muted);
+  font-family: monospace;
+  word-break: break-all;
+}
+
+/* Responsive quick-add grid */
+@media (max-width: 600px) {
+  .quick-add-grid {
+    grid-template-columns: repeat(2, 1fr);
   }
 }

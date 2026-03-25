@@ -12,13 +12,16 @@ delete process.env.ELECTRON_RUN_AS_NODE;
 // Get electron path
 const electronPath = require('electron');
 
+// Project root is one level up from scripts/
+const projectRoot = path.join(__dirname, '..');
+
 // Get args (skip 'node' and 'launch.js')
-const args = ['.', ...process.argv.slice(2)];
+const args = [projectRoot, ...process.argv.slice(2)];
 
 // Spawn electron
 const child = spawn(electronPath, args, {
   stdio: 'inherit',
-  cwd: __dirname,
+  cwd: projectRoot,
   env: process.env
 });
 

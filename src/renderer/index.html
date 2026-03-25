@@ -12,14 +12,17 @@
     <!-- Header -->
     <header class="header" role="banner">
       <div class="header-left">
-        <h1>&#9875; PortPilot</h1>
+        <div class="header-title-row">
+          <h1>&#9875; PortPilot</h1>
+          <span id="header-running-summary" class="header-running-summary"></span>
+        </div>
         <span class="subtitle">Localhost Port Manager</span>
       </div>
       <div class="header-right">
-        <button id="btn-scan" class="btn btn-primary">
+        <button id="btn-scan" class="btn btn-primary" title="Scan ports (Ctrl+R)">
           <span class="icon">🔄</span> Scan Ports
         </button>
-        <button id="btn-add-app" class="btn btn-secondary">
+        <button id="btn-add-app" class="btn btn-secondary" title="Add app (Ctrl+N)">
           <span class="icon">➕</span> Add App
         </button>
       </div>
@@ -48,10 +51,20 @@
 
       <!-- Apps Tab -->
       <section id="tab-apps" class="tab-content">
-        <div class="toolbar">
-          <button type="button" id="btn-refresh-apps" class="btn btn-secondary">🔄 Refresh</button>
-          <button type="button" id="btn-expand-all" class="btn btn-small btn-secondary" onclick="expandAllApps()" title="Expand all app cards">▼ Expand All</button>
-          <button type="button" id="btn-collapse-all" class="btn btn-small btn-secondary" onclick="collapseAllApps()" title="Collapse all app cards">▶ Collapse All</button>
+        <div class="toolbar apps-toolbar">
+          <button type="button" id="btn-refresh-apps" class="btn btn-secondary" title="Refresh apps (Ctrl+R)">🔄 Refresh</button>
+          <input type="text" id="app-search" placeholder="Search apps..." class="input-search app-search-input" title="Filter apps (Ctrl+F)" autocomplete="off">
+          <select id="app-sort" class="btn btn-small btn-secondary" title="Sort apps">
+            <option value="default">Default</option>
+            <option value="name-asc">Name A-Z</option>
+            <option value="name-desc">Name Z-A</option>
+            <option value="status">By Status</option>
+            <option value="port">By Port</option>
+          </select>
+          <button type="button" id="btn-expand-all" class="btn btn-small btn-secondary" onclick="expandAllApps()" title="Expand all">▼</button>
+          <button type="button" id="btn-collapse-all" class="btn btn-small btn-secondary" onclick="collapseAllApps()" title="Collapse all">▶</button>
+          <button type="button" class="btn btn-small btn-secondary" onclick="openNewGroupModal()" title="New group (Ctrl+G)">📂</button>
+          <button type="button" id="btn-quick-add" class="btn btn-small btn-primary" title="Quick add from template (Ctrl+Q)">⚡ Quick Add</button>
           <span id="apps-count" class="count-badge">0 apps</span>
         </div>
         <div id="apps-list" class="apps-list">
@@ -65,6 +78,9 @@
             <button type="button" class="btn btn-small btn-secondary" onclick="selectAllApps()">Select All</button>
             <button type="button" class="btn btn-small btn-primary" onclick="favoriteSelected()">⭐ Favorite</button>
             <button type="button" class="btn btn-small btn-secondary" onclick="unfavoriteSelected()">☆ Unfavorite</button>
+            <select id="selection-group-select" class="btn btn-small btn-secondary" onchange="moveSelectedToGroup(this.value); this.selectedIndex = 0;" title="Move selected apps to a group">
+              <option value="" disabled selected>📂 Move to Group</option>
+            </select>
             <button type="button" class="btn btn-small btn-danger" onclick="deleteSelected()">🗑 Delete</button>
             <button type="button" class="btn btn-small btn-secondary" onclick="clearSelection()">Clear</button>
           </div>
@@ -158,10 +174,14 @@
               <div class="shortcut-grid">
                 <div class="shortcut"><kbd>Ctrl</kbd>+<kbd>R</kbd><span>Refresh/Scan</span></div>
                 <div class="shortcut"><kbd>Ctrl</kbd>+<kbd>N</kbd><span>Add New App</span></div>
+                <div class="shortcut"><kbd>Ctrl</kbd>+<kbd>F</kbd><span>Focus Search</span></div>
+                <div class="shortcut"><kbd>Ctrl</kbd>+<kbd>Q</kbd><span>Quick Add</span></div>
+                <div class="shortcut"><kbd>Ctrl</kbd>+<kbd>G</kbd><span>New Group</span></div>
                 <div class="shortcut"><kbd>Ctrl</kbd>+<kbd>1</kbd><span>Ports Tab</span></div>
                 <div class="shortcut"><kbd>Ctrl</kbd>+<kbd>2</kbd><span>Apps Tab</span></div>
                 <div class="shortcut"><kbd>Ctrl</kbd>+<kbd>3</kbd><span>Knowledge</span></div>
                 <div class="shortcut"><kbd>Ctrl</kbd>+<kbd>4</kbd><span>Settings</span></div>
+                <div class="shortcut"><kbd>Esc</kbd><span>Close Modal</span></div>
               </div>
             </div>
 
@@ -449,6 +469,12 @@
               Auto-start on launch
             </label>
           </div>
+          <div class="form-group">
+            <label for="app-group">Group</label>
+            <select id="app-group">
+              <option value="">Other Projects (no group)</option>
+            </select>
+          </div>
           <div class="modal-footer">
             <button type="button" class="btn btn-secondary" id="btn-cancel">Cancel</button>
             <button type="submit" class="btn btn-primary">Save App</button>
@@ -501,6 +527,44 @@
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" id="btn-delete-cancel">Cancel</button>
           <button type="button" class="btn btn-danger" id="btn-delete-confirm">Delete This App</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Group Modal (create / rename) -->
+    <div id="modal-group" class="modal hidden">
+      <div class="modal-content modal-small">
+        <div class="modal-header">
+          <h2 id="group-modal-title">New Group</h2>
+          <button type="button" class="btn-close" onclick="closeGroupModal()">✕</button>
+        </div>
+        <div class="form-group" style="padding: 16px 0 8px;">
+          <label for="group-name-input">Group Name</label>
+          <input type="text" id="group-name-input" placeholder="e.g., Frontend, Backend, Tools" maxlength="40">
+        </div>
+        <div class="form-group" style="padding: 0 0 8px;">
+          <label>Color</label>
+          <div id="group-color-swatches" class="color-swatches"></div>
+          <input type="hidden" id="group-color-input" value="">
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeGroupModal()">Cancel</button>
+          <button type="button" class="btn btn-primary" onclick="saveGroupModal()">Save</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Add Modal -->
+    <div id="modal-quick-add" class="modal hidden">
+      <div class="modal-content modal-wide">
+        <div class="modal-header">
+          <h2>Quick Add App</h2>
+          <button type="button" class="btn-close" onclick="closeQuickAddModal()">✕</button>
+        </div>
+        <p class="quick-add-subtitle">Choose a template to pre-fill the form</p>
+        <div class="quick-add-grid" id="quick-add-grid"></div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeQuickAddModal()">Cancel</button>
         </div>
       </div>
     </div>
