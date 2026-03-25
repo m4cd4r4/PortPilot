@@ -326,6 +326,7 @@ function setupEventListeners() {
       if (e.key === 'Escape') {
         closeModal();
         closeGroupModal();
+        closeQuickAddModal();
         closeDeleteConfirm();
         document.getElementById('modal-discoveries').classList.add('hidden');
       }
@@ -378,6 +379,8 @@ function setupEventListeners() {
       }
     } else if (e.key === 'Escape') {
       closeModal();
+      closeGroupModal();
+      closeQuickAddModal();
       closeDeleteConfirm();
       document.getElementById('modal-discoveries').classList.add('hidden');
     }
