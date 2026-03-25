@@ -91,25 +91,33 @@ function scanPorts() {
     let output;
 
     if (platform === 'win32') {
-      output = execSync('netstat -ano | findstr LISTENING', { encoding: 'utf-8', timeout: 10000 });
-      const lines = output.split('\n').filter(l => l.trim());
+      // Run netstat without findstr - state strings are locale-dependent (German: ABHÖREN,
+      // French: EN ÉCOUTE, etc). Listening sockets always have foreign address port :0,
+      // which is locale-independent on every Windows installation.
+      output = execSync('netstat -ano', { encoding: 'utf-8', timeout: 15000 });
+      const lines = output.split('\n').filter(l => /^\s*TCP\b/i.test(l));
 
       for (const line of lines) {
-        const match = line.match(/:(\d+)\s+.*LISTENING\s+(\d+)/);
-        if (match) {
-          const port = parseInt(match[1]);
-          const pid = parseInt(match[2]);
-          if (port >= 1024 && port <= 65535) {
-            // Get process name
-            let processName = 'Unknown';
-            try {
-              const wmicOutput = execSync(`wmic process where ProcessId=${pid} get Name /value`, { encoding: 'utf-8', timeout: 5000 });
-              const nameMatch = wmicOutput.match(/Name=(.+)/);
-              if (nameMatch) processName = nameMatch[1].trim();
-            } catch {}
+        const parts = line.trim().split(/\s+/);
+        if (parts.length < 5) continue;
+        const localPart = parts[1];
+        const foreignPart = parts[2];
+        const pid = parseInt(parts[4], 10);
+        // Only listening sockets have foreign port 0 - locale-independent check
+        if (!foreignPart || !foreignPart.match(/:0$/)) continue;
+        const portMatch = localPart.match(/:(\d+)$/);
+        if (!portMatch) continue;
+        const port = parseInt(portMatch[1]);
+        if (port >= 1024 && port <= 65535) {
+          // Get process name
+          let processName = 'Unknown';
+          try {
+            const wmicOutput = execSync(`wmic process where ProcessId=${pid} get Name /value`, { encoding: 'utf-8', timeout: 5000 });
+            const nameMatch = wmicOutput.match(/Name=(.+)/);
+            if (nameMatch) processName = nameMatch[1].trim();
+          } catch {}
 
-            ports.push({ port, pid, processName });
-          }
+          ports.push({ port, pid, processName });
         }
       }
     } else if (platform === 'darwin') {
