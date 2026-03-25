@@ -63,13 +63,15 @@ function getProcessDetailsWindows(pid, port) {
           }
         }
 
-        // Get connection count
-        exec(`netstat -ano | findstr :${port} | findstr ${pid}`,
-          { encoding: 'utf8' },
+        // Get connection count - filter in JS to avoid findstr locale/encoding issues
+        exec('netstat -ano', { encoding: 'utf8' },
           (connError, connStdout) => {
             let connections = 0;
             if (!connError && connStdout) {
-              connections = connStdout.trim().split('\n').filter(Boolean).length;
+              const portStr = `:${port}`;
+              const pidStr = `${pid}`;
+              connections = connStdout.trim().split('\n')
+                .filter(l => l.includes(portStr) && l.includes(pidStr)).length;
             }
             resolve({ memory, uptime, connections });
           }

@@ -25,20 +25,30 @@ async function scanPorts() {
 /** Windows port scanning using netstat */
 function scanPortsWindows() {
   return new Promise((resolve, reject) => {
-    exec('netstat -ano | findstr LISTENING | findstr TCP', { encoding: 'utf8' }, (error, stdout) => {
+    // Run netstat without findstr so the output is not filtered by locale-specific
+    // state strings (e.g. German "ABHÖREN", French "EN ÉCOUTE", Spanish "ESCUCHANDO").
+    // Instead we identify LISTENING sockets in JS: they always have a foreign address
+    // of "0.0.0.0:0" or "[::]:0" (port :0 = no remote connection), which is
+    // locale-independent on every Windows installation.
+    exec('netstat -ano', { encoding: 'utf8', timeout: 15000 }, (error, stdout) => {
       if (error && !stdout) {
         resolve([]);
         return;
       }
 
-      const lines = stdout.trim().split('\n').filter(Boolean);
+      const lines = stdout.trim().split('\n')
+        .filter(l => /^\s*TCP\b/i.test(l));  // TCP lines only
       const portMap = new Map();
 
       for (const line of lines) {
         const parts = line.trim().split(/\s+/);
         if (parts.length >= 5) {
           const localAddress = parts[1];
+          const foreignAddress = parts[2];
           const pid = parseInt(parts[4], 10);
+
+          // Only listening sockets have foreign port 0 - locale-independent check
+          if (!foreignAddress || !foreignAddress.match(/:0$/)) continue;
 
           // Extract port from address (e.g., "0.0.0.0:3000" or "[::]:3000" or "[::1]:3000")
           const portMatch = localAddress.match(/:(\d+)$/);
