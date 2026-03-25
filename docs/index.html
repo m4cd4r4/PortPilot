@@ -52,7 +52,7 @@
       "price": "0",
       "priceCurrency": "USD"
     },
-    "softwareVersion": "1.6.2",
+    "softwareVersion": "1.7.0",
     "author": {
       "@type": "Person",
       "name": "Macdara",
@@ -120,13 +120,13 @@
             <p class="description">Scan active ports, kill stuck processes, register your dev apps, and take control of your local development environment.</p>
             <div class="cta-buttons">
               <a href="#download" class="btn btn-primary">
-                <span class="btn-icon" aria-hidden="true">&#11015;</span> Download v1.6.2
+                <span class="btn-icon" aria-hidden="true">&#11015;</span> Download v1.7.0
               </a>
               <a href="https://github.com/m4cd4r4/PortPilot" class="btn btn-secondary" rel="noopener">
                 <span class="btn-icon" aria-hidden="true">&#11088;</span> View on GitHub
               </a>
             </div>
-            <p class="version-note">Windows 10/11 &amp; Linux &middot; v1.6.2 &middot; MIT Licence</p>
+            <p class="version-note">Windows 10/11 &amp; Linux &middot; v1.7.0 &middot; MIT Licence</p>
           </div>
           <div class="hero-mockup">
             <div class="screenshot-carousel" role="region" aria-label="Screenshot carousel" aria-roledescription="carousel">
@@ -187,6 +187,27 @@
       <div class="container">
         <h2 id="features-heading">Features</h2>
         <div class="features-grid">
+          <div class="feature-card">
+            <span class="feature-icon" aria-hidden="true">&#128269;</span>
+            <div class="feature-text">
+              <h3>App Search &amp; Sort</h3>
+              <p>Live search across My Apps by name, command, or directory. Sort by name, running status, or port.</p>
+            </div>
+          </div>
+          <div class="feature-card">
+            <span class="feature-icon" aria-hidden="true">&#9889;</span>
+            <div class="feature-text">
+              <h3>Quick Add Wizard</h3>
+              <p>8 one-click templates for npm, Vite, Next.js, Angular, Flask, FastAPI, Docker, and static sites.</p>
+            </div>
+          </div>
+          <div class="feature-card">
+            <span class="feature-icon" aria-hidden="true">&#127912;</span>
+            <div class="feature-text">
+              <h3>Group Colours</h3>
+              <p>Assign a colour to each group for visual organisation. Colour accents appear on group headers.</p>
+            </div>
+          </div>
           <div class="feature-card">
             <span class="feature-icon" aria-hidden="true">&#128269;</span>
             <div class="feature-text">
@@ -253,8 +274,8 @@
           <div class="feature-card">
             <span class="feature-icon" aria-hidden="true">&#128421;&#65039;</span>
             <div class="feature-text">
-              <h3>System Tray</h3>
-              <p>Stop all apps from tray menu. Configurable minimize-to-tray and quit behaviour.</p>
+              <h3>Rich Tray Menu</h3>
+              <p>Running apps listed in the tray with individual Stop buttons. Live app count in tooltip.</p>
             </div>
           </div>
           <div class="feature-card">
@@ -333,7 +354,8 @@
             <p>PortPilot lives in your system tray for quick access:</p>
             <ul class="knowledge-list">
               <li><strong>Left-click</strong> - Show/hide window</li>
-              <li><strong>Right-click</strong> - Menu: Show, Scan Ports, Stop All Apps, Quit</li>
+              <li><strong>Right-click</strong> - Running apps with Stop buttons, Scan Ports, Stop All, Quit</li>
+              <li><strong>Tooltip</strong> - Live app count ("3 apps running")</li>
             </ul>
           </div>
           <div class="knowledge-card">
@@ -358,6 +380,10 @@
             <details class="faq-item">
               <summary>Docker app fails?</summary>
               <p>Make sure Docker Desktop is running. Click the yellow badge to start it.</p>
+            </details>
+            <details class="faq-item">
+              <summary>Ports not showing on non-English Windows?</summary>
+              <p>Fixed in v1.7.0. Port scanning now works on all Windows locales (German, French, Spanish, etc.).</p>
             </details>
           </div>
           <div class="knowledge-card">
@@ -403,7 +429,7 @@
             <div class="step-content">
               <h3>Download</h3>
               <p>Get the installer from GitHub Releases.</p>
-              <a href="#download" class="btn btn-small">Download v1.6.2</a>
+              <a href="#download" class="btn btn-small">Download v1.7.0</a>
             </div>
           </div>
           <div class="step">
@@ -438,6 +464,9 @@
         <div class="shortcuts-grid">
           <div class="shortcut"><kbd>Ctrl</kbd>+<kbd>R</kbd> <span>Refresh</span></div>
           <div class="shortcut"><kbd>Ctrl</kbd>+<kbd>N</kbd> <span>Add App</span></div>
+          <div class="shortcut"><kbd>Ctrl</kbd>+<kbd>F</kbd> <span>Search Apps</span></div>
+          <div class="shortcut"><kbd>Ctrl</kbd>+<kbd>Q</kbd> <span>Quick Add</span></div>
+          <div class="shortcut"><kbd>Ctrl</kbd>+<kbd>G</kbd> <span>New Group</span></div>
           <div class="shortcut"><kbd>Ctrl</kbd>+<kbd>1-4</kbd> <span>Switch Tabs</span></div>
           <div class="shortcut"><kbd>Escape</kbd> <span>Close Modal</span></div>
         </div>
@@ -477,12 +506,12 @@
     <!-- Download Section -->
     <section class="download-section" id="download" aria-labelledby="download-heading">
       <div class="container">
-        <h2 id="download-heading">Download PortPilot <span class="version-badge">v1.6.2</span></h2>
+        <h2 id="download-heading">Download PortPilot <span class="version-badge">v1.7.0</span></h2>
         <p class="section-subtitle">Free, open source, no account required</p>
 
         <h3 class="platform-heading">Windows</h3>
         <div class="download-options">
-          <a href="https://github.com/m4cd4r4/PortPilot/releases/download/v1.6.2/PortPilot-1.6.2-x64.exe" class="download-card" rel="noopener">
+          <a href="https://github.com/m4cd4r4/PortPilot/releases/download/v1.7.0/PortPilot-1.7.0-x64.exe" class="download-card" rel="noopener">
             <div class="download-icon" aria-hidden="true">&#128230;</div>
             <div class="download-info">
               <h4>Windows Installer</h4>
@@ -490,7 +519,7 @@
             </div>
             <span class="download-size">~72 MB</span>
           </a>
-          <a href="https://github.com/m4cd4r4/PortPilot/releases/download/v1.6.2/PortPilot-1.6.2-portable.exe" class="download-card" rel="noopener">
+          <a href="https://github.com/m4cd4r4/PortPilot/releases/download/v1.7.0/PortPilot-1.7.0-portable.exe" class="download-card" rel="noopener">
             <div class="download-icon" aria-hidden="true">&#128188;</div>
             <div class="download-info">
               <h4>Portable</h4>
@@ -502,7 +531,7 @@
 
         <h3 class="platform-heading">&#128039; Linux</h3>
         <div class="download-options">
-          <a href="https://github.com/m4cd4r4/PortPilot/releases/download/v1.6.2/PortPilot-1.6.2-x86_64.AppImage" class="download-card" rel="noopener">
+          <a href="https://github.com/m4cd4r4/PortPilot/releases/download/v1.7.0/PortPilot-1.7.0-x86_64.AppImage" class="download-card" rel="noopener">
             <div class="download-icon" aria-hidden="true">&#128039;</div>
             <div class="download-info">
               <h4>AppImage</h4>
@@ -510,7 +539,7 @@
             </div>
             <span class="download-size">~98 MB</span>
           </a>
-          <a href="https://github.com/m4cd4r4/PortPilot/releases/download/v1.6.2/PortPilot-1.6.2-amd64.deb" class="download-card" rel="noopener">
+          <a href="https://github.com/m4cd4r4/PortPilot/releases/download/v1.7.0/PortPilot-1.7.0-amd64.deb" class="download-card" rel="noopener">
             <div class="download-icon" aria-hidden="true">&#128230;</div>
             <div class="download-info">
               <h4>.deb</h4>

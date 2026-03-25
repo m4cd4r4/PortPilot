@@ -6,8 +6,8 @@
 
 **[MCP Integration Setup](mcp-server/README.md)**
 
-[![Version](https://img.shields.io/badge/version-1.6.2-blue.svg)](https://github.com/m4cd4r4/PortPilot/releases/tag/v1.6.2)
-[![Tests](https://img.shields.io/badge/tests-11%2F11%20passing-brightgreen.svg)](TESTING_SUMMARY.md)
+[![Version](https://img.shields.io/badge/version-1.7.0-blue.svg)](https://github.com/m4cd4r4/PortPilot/releases/tag/v1.7.0)
+[![Tests](https://img.shields.io/badge/tests-36%2F36%20passing-brightgreen.svg)](TESTING_SUMMARY.md)
 [![Licence](https://img.shields.io/badge/licence-MIT-green.svg)](LICENSE)
 [![MCP](https://img.shields.io/badge/MCP-enabled-purple.svg)](mcp-server/README.md)
 
@@ -18,6 +18,7 @@
 ## 📑 Table of Contents
 
 - [✨ AI Agent Integration](#-ai-agent-integration)
+- [What's New v1.7.0](#whats-new-in-v170)
 - [2026 Modernization](#whats-new-in-2026-modernization)
 - [What's New v1.6.2](#whats-new-in-v162)
 - [Features](#features)
@@ -47,6 +48,19 @@ Control PortPilot with natural language! Works with Claude Code, Cursor, Windsur
 ```
 
 **[→ Setup MCP Integration](mcp-server/README.md)**
+
+## What's New in v1.7.0
+
+### UX Improvements & International Fix
+
+- **App Search & Filter** - Live search on the My Apps tab filters by name, command, or working directory with 150ms debounce
+- **Running Apps Summary** - Header shows a live count badge ("3 running" / "all stopped") at a glance
+- **Sort Options** - Sort apps by name A-Z, name Z-A, running status, or port number
+- **Group Colours** - Assign a colour to each group; a matching left-border and dot appear on the group header
+- **Quick Add Wizard** - 8 pre-built templates (npm dev, Vite, Next.js, Angular, Flask, FastAPI, Docker Compose, Static) pre-fill the add-app form in one click
+- **Keyboard Shortcuts** - `Ctrl+F` (focus search), `Ctrl+Q` (open Quick Add), `Ctrl+G` (new group)
+- **Rich Tray Menu** - System tray now lists each running app with a one-click Stop button; tooltip shows live app count
+- **Bug fix: non-English Windows** - Port scanning now works on all Windows locales (German, French, Spanish, etc.) by checking the foreign-address column instead of matching locale-specific state strings like "ABHÖREN" or "EN ÉCOUTE"
 
 ## What's New in 2026 Modernization
 
@@ -216,6 +230,12 @@ Complete detection criteria, supported frameworks, port detection methods, and c
 
 ## Features
 
+- **🔍 Search & Filter** - Live search on My Apps tab, filter by name/command/cwd
+- **⬆️ Sort Options** - Sort apps by name, running status, or port
+- **🎨 Group Colours** - Colour-coded groups with left-border accent
+- **⚡ Quick Add** - 8 one-click templates for common project types
+- **⌨️ Keyboard Shortcuts** - Ctrl+F, Ctrl+Q, Ctrl+G for power users
+- **🖥️ Rich Tray Menu** - Running apps listed in tray with per-app Stop buttons
 - **🔍 Browse & Auto-detect** - One-click project setup with recursive scanning and package manager detection
 - **⚠️ Port Conflict Warnings** - Visual warnings when unknown processes block app ports, with preview and kill options
 - **🔍 Project Auto-Discovery** - Scan directories to automatically find and import dev projects (Node.js, Docker, Python, static sites)
@@ -431,15 +451,15 @@ Explore all PortPilot features including My Apps management, Active Ports scanne
 
 ### Download (Recommended)
 
-**Latest Release: v1.6.2**
+**Latest Release: v1.7.0**
 
 **Windows:**
-- [PortPilot-1.6.2-x64.exe](https://github.com/m4cd4r4/PortPilot/releases/download/v1.6.2/PortPilot-1.6.2-x64.exe) - NSIS Installer (72 MB)
-- [PortPilot-1.6.2-portable.exe](https://github.com/m4cd4r4/PortPilot/releases/download/v1.6.2/PortPilot-1.6.2-portable.exe) - Portable (72 MB)
+- [PortPilot-1.7.0-x64.exe](https://github.com/m4cd4r4/PortPilot/releases/download/v1.7.0/PortPilot-1.7.0-x64.exe) - NSIS Installer (~72 MB)
+- [PortPilot-1.7.0-portable.exe](https://github.com/m4cd4r4/PortPilot/releases/download/v1.7.0/PortPilot-1.7.0-portable.exe) - Portable (~72 MB)
 
 **Linux:**
-- [PortPilot-1.6.2-x86_64.AppImage](https://github.com/m4cd4r4/PortPilot/releases/download/v1.6.2/PortPilot-1.6.2-x86_64.AppImage) - Universal Linux (98 MB)
-- [PortPilot-1.6.2-amd64.deb](https://github.com/m4cd4r4/PortPilot/releases/download/v1.6.2/PortPilot-1.6.2-amd64.deb) - Debian/Ubuntu (69 MB)
+- [PortPilot-1.7.0-x86_64.AppImage](https://github.com/m4cd4r4/PortPilot/releases/download/v1.7.0/PortPilot-1.7.0-x86_64.AppImage) - Universal Linux (~98 MB)
+- [PortPilot-1.7.0-amd64.deb](https://github.com/m4cd4r4/PortPilot/releases/download/v1.7.0/PortPilot-1.7.0-amd64.deb) - Debian/Ubuntu (~69 MB)
 
 **macOS:**
 - Build from source (see below) - macOS is supported but not officially tested
@@ -552,6 +572,9 @@ This ensures the browser button opens the correct URL.
 |----------|--------|
 | `Ctrl+R` | Refresh/Scan ports |
 | `Ctrl+N` | Add new app |
+| `Ctrl+F` | Focus app search |
+| `Ctrl+Q` | Open Quick Add wizard |
+| `Ctrl+G` | New group |
 | `Ctrl+1` | Ports tab |
 | `Ctrl+2` | Apps tab |
 | `Ctrl+3` | Knowledge tab |
@@ -616,14 +639,17 @@ npm run build:all
 PortPilot includes a comprehensive Playwright E2E test suite with **100% test coverage**.
 
 ```bash
-# Run all tests (20 tests)
+# Run all tests (36 tests)
 npm run test:all
 
 # Run core functionality tests (11 tests)
 npm test
 
-# Run v1.3.0 feature tests (9 tests)
-npm run test:v1.3
+# Run groups tests (8 tests)
+npm run test:groups
+
+# Run v1.7.0 feature tests (17 tests)
+npm run test:v1.7
 
 # Generate UI screenshots
 npm run screenshots
@@ -636,10 +662,13 @@ npm run screenshots
 - ✅ Port killing (100%)
 - ✅ Process cleanup (100%)
 - ✅ Settings persistence (100%)
-- ✅ DevTools toggling (100%)
-- ✅ App configuration editing (100%)
+- ✅ App search, sort, and filter (100%)
+- ✅ Group colours and management (100%)
+- ✅ Quick Add wizard (100%)
+- ✅ Keyboard shortcuts (100%)
+- ✅ Header running summary (100%)
 
-**Total: 20/20 tests passing** - See [TESTING_SUMMARY.md](TESTING_SUMMARY.md) for details.
+**Total: 36/36 tests passing** - See [TESTING_SUMMARY.md](TESTING_SUMMARY.md) for details.
 
 ## ✨ AI Agent Integration (MCP)
 
@@ -715,7 +744,17 @@ See [mcp-server/README.md](mcp-server/README.md) for full documentation.
 
 ## Version History
 
-### v1.6.2 (2026-03-21) - Current Release
+### v1.7.0 (2026-03-25) - Current Release
+- App search and filter on My Apps tab
+- Running apps summary badge in header
+- Sort options (name, status, port)
+- Group colour picker with left-border accent
+- Quick Add wizard with 8 project templates
+- Keyboard shortcuts: Ctrl+F, Ctrl+Q, Ctrl+G
+- Rich tray menu with per-app Stop buttons
+- Bug fix: locale-independent port scanning (non-English Windows)
+
+### v1.6.2 (2026-03-21)
 - Landing page modernization (glassmorphism, SEO, accessibility, CSP)
 - Electron app UI hardening (overflow, focus styles, ARIA, reduced motion)
 - Icon-based START/STOP buttons
