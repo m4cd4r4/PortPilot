@@ -7,12 +7,15 @@
 const state = {
   ports: [],
   apps: [],
+  groups: [],  // Ordered array of group objects {id, name, expanded, color}
   runningApps: [],
   detectedApps: {},  // Map of appId -> detected port info
   unknownConflicts: [],  // Array of port conflicts with unknown processes
   startingApps: {},  // Map of appId -> { countdown, interval, port }
   settings: {},
   filter: '',
+  appSearch: '',  // Search/filter text for My Apps tab
+  appSort: 'default',  // Sort order: default, name-asc, name-desc, status, port
   theme: 'tokyonight',
   dockerRunning: false,  // Track Docker Desktop status
   favoritesExpanded: true,  // Favorites section collapse state
@@ -220,15 +223,39 @@ function setupEventListeners() {
   document.getElementById('btn-add-app').addEventListener('click', () => openAppModal());
   document.getElementById('btn-refresh-apps').addEventListener('click', refreshApps);
 
+  // App search - debounced
+  let appSearchDebounce = null;
+  document.getElementById('app-search').addEventListener('input', (e) => {
+    state.appSearch = e.target.value;
+    clearTimeout(appSearchDebounce);
+    appSearchDebounce = setTimeout(() => renderApps(), 150);
+  });
+
+  // App sort
+  document.getElementById('app-sort').addEventListener('change', (e) => {
+    state.appSort = e.target.value;
+    renderApps();
+  });
+
+  // Quick Add
+  document.getElementById('btn-quick-add').addEventListener('click', openQuickAddModal);
+
+  // Close quick-add on backdrop click
+  document.getElementById('modal-quick-add').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('modal-quick-add')) closeQuickAddModal();
+  });
+
   // Tabs
   document.querySelectorAll('.tab').forEach(tab => {
     tab.addEventListener('click', () => switchTab(tab.dataset.tab));
   });
 
-  // Filter
+  // Filter - debounced to avoid re-rendering on every keystroke
+  let filterDebounce = null;
   dom.portFilter.addEventListener('input', (e) => {
     state.filter = e.target.value.toLowerCase();
-    renderPorts();
+    clearTimeout(filterDebounce);
+    filterDebounce = setTimeout(() => renderPorts(), 120);
   });
 
   // Modal
@@ -298,8 +325,13 @@ function setupEventListeners() {
       // Allow Escape to close modals even when in input
       if (e.key === 'Escape') {
         closeModal();
+        closeGroupModal();
         closeDeleteConfirm();
         document.getElementById('modal-discoveries').classList.add('hidden');
+      }
+      if (e.key === 'Enter' && e.target.id === 'group-name-input') {
+        e.preventDefault();
+        saveGroupModal();
       }
       return;
     }
@@ -330,6 +362,19 @@ function setupEventListeners() {
           e.preventDefault();
           switchTab('settings');
           break;
+        case 'f':
+          e.preventDefault();
+          switchTab('apps');
+          document.getElementById('app-search')?.focus();
+          break;
+        case 'q':
+          e.preventDefault();
+          openQuickAddModal();
+          break;
+        case 'g':
+          e.preventDefault();
+          openNewGroupModal();
+          break;
       }
     } else if (e.key === 'Escape') {
       closeModal();
@@ -340,16 +385,22 @@ function setupEventListeners() {
 }
 
 // ============ Tab Navigation ============
+let _lastTabLoad = {};
 function switchTab(tabId) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-  
+
   document.querySelector(`[data-tab="${tabId}"]`).classList.add('active');
   document.getElementById(`tab-${tabId}`).classList.add('active');
 
-  // Refresh data when switching tabs
-  if (tabId === 'ports') scanPorts();
-  if (tabId === 'apps') loadApps();
+  // Only reload if tab hasn't been loaded recently (within 10s) to avoid hammering on quick switches
+  const now = Date.now();
+  const stale = !_lastTabLoad[tabId] || (now - _lastTabLoad[tabId]) > 10000;
+  if (stale) {
+    _lastTabLoad[tabId] = now;
+    if (tabId === 'ports') scanPorts();
+    if (tabId === 'apps') loadApps();
+  }
 }
 
 // ============ Port Operations ============
@@ -426,12 +477,12 @@ function renderPorts() {
         <span class="port-number">:${p.port}</span>
         <span class="port-bind" title="${bindTitle}">${bindIcon}</span>
         <span class="port-ip">${ipVersion}</span>
-        <span class="port-process">${escapeHtml(p.processName || 'Unknown')}</span>
+        <span class="port-process" title="${escapeHtml(p.processName || 'Unknown')}">${escapeHtml(p.processName || 'Unknown')}</span>
         ${details ? `
-        <span class="port-stat" title="Memory usage">${details.memory ? details.memory + ' MB' : 'N/A'}</span>
-        <span class="port-stat" title="Uptime">${formatUptime(details.uptime) || 'N/A'}</span>
-        <span class="port-stat" title="Active connections">${details.connections !== null ? details.connections + ' conn' : 'N/A'}</span>
-        ` : '<span class="port-stat-loading">⏳</span>'}
+        <span class="port-stat" title="${details.memory ? 'Memory usage' : 'Memory unavailable - may require elevated permissions'}">${details.memory ? details.memory + ' MB' : '—'}</span>
+        <span class="port-stat" title="${details.uptime ? 'Process uptime' : 'Uptime unavailable'}">${formatUptime(details.uptime) || '—'}</span>
+        <span class="port-stat" title="${details.connections !== null ? 'Active TCP connections' : 'Connection count unavailable'}">${details.connections !== null ? details.connections + ' conn' : '—'}</span>
+        ` : '<span class="port-stat-loading" title="Loading process details...">⏳</span>'}
         <span class="port-pid">${p.pid || ''}</span>
         ${cmdLine ? `
         <span class="port-cmd-icon" onclick="event.stopPropagation()" title="Command path">
@@ -597,13 +648,15 @@ async function openInBrowser(appId) {
 // ============ App Operations ============
 async function loadApps() {
   try {
-    const [configResult, runningResult, scanResult] = await Promise.all([
+    const [configResult, groupsResult, runningResult, scanResult] = await Promise.all([
       window.portpilot.config.getApps(),
+      window.portpilot.config.getGroups(),
       window.portpilot.process.list(),
       window.portpilot.ports.scanWithApps()
     ]);
 
     if (configResult.success) state.apps = configResult.apps;
+    if (groupsResult.success) state.groups = groupsResult.groups;
     if (runningResult.success) state.runningApps = runningResult.apps;
     if (scanResult.success) {
       state.ports = scanResult.ports;
@@ -634,7 +687,7 @@ async function loadApps() {
 async function refreshApps() {
   const btn = document.getElementById('btn-refresh-apps');
   btn.disabled = true;
-  btn.innerHTML = '⏳ Refreshing...';
+  btn.innerHTML = '<span class="icon">⏳</span> Refreshing...';
 
   try {
     await loadApps();
@@ -649,32 +702,111 @@ async function refreshApps() {
 
 function updateAppsCount() {
   const countBadge = document.getElementById('apps-count');
-  if (countBadge) {
-    const runningCount = state.apps.filter(app => {
-      const managedRunning = state.runningApps.find(r => r.id === app.id && r.running);
-      const detected = state.detectedApps[app.id];
-      return managedRunning || detected;
-    }).length;
+  const summary = document.getElementById('header-running-summary');
 
+  const runningCount = state.apps.filter(app => {
+    const managedRunning = state.runningApps.find(r => r.id === app.id && r.running);
+    const detected = state.detectedApps[app.id];
+    return managedRunning || detected;
+  }).length;
+
+  if (countBadge) {
     countBadge.textContent = `${state.apps.length} apps • ${runningCount} running`;
+  }
+
+  if (summary) {
+    if (state.apps.length === 0) {
+      summary.textContent = '';
+      summary.className = 'header-running-summary';
+    } else if (runningCount > 0) {
+      summary.textContent = `${runningCount} running`;
+      summary.className = 'header-running-summary has-running';
+    } else {
+      summary.textContent = 'all stopped';
+      summary.className = 'header-running-summary all-stopped';
+    }
+  }
+
+  // Update tray with current running apps
+  _updateTrayMenu();
+}
+
+function _updateTrayMenu() {
+  if (!window.portpilot?.tray) return;
+  const running = state.apps
+    .filter(app => state.runningApps.find(r => r.id === app.id && r.running) || state.detectedApps[app.id])
+    .map(app => ({ id: app.id, name: app.name }));
+  window.portpilot.tray.update(running).catch(() => {});
+}
+
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+// Filter and sort helper for renderApps
+function _filterApps(apps) {
+  if (!state.appSearch) return apps;
+  const q = state.appSearch.toLowerCase();
+  return apps.filter(a =>
+    a.name.toLowerCase().includes(q) ||
+    a.command.toLowerCase().includes(q) ||
+    (a.cwd || '').toLowerCase().includes(q)
+  );
+}
+
+function _sortApps(apps) {
+  const sorted = [...apps];
+  switch (state.appSort) {
+    case 'name-asc':  return sorted.sort((a, b) => a.name.localeCompare(b.name));
+    case 'name-desc': return sorted.sort((a, b) => b.name.localeCompare(a.name));
+    case 'status': return sorted.sort((a, b) => {
+      const aOn = !!(state.runningApps.find(r => r.id === a.id && r.running) || state.detectedApps[a.id]);
+      const bOn = !!(state.runningApps.find(r => r.id === b.id && r.running) || state.detectedApps[b.id]);
+      return bOn - aOn;
+    });
+    case 'port': return sorted.sort((a, b) => (a.preferredPort || 99999) - (b.preferredPort || 99999));
+    default: return sorted;
   }
 }
 
 function renderApps() {
-  if (state.apps.length === 0) {
+  if (state.apps.length === 0 && state.groups.length === 0) {
     dom.appsList.innerHTML = `<div class="empty-state">
       No apps registered. Click "Add App" to register your first app.
     </div>`;
     return;
   }
 
-  // Separate favorites and non-favorites
-  const favorites = state.apps.filter(app => app.isFavorite);
-  const others = state.apps.filter(app => !app.isFavorite);
+  const favorites = _sortApps(_filterApps(state.apps.filter(app => app.isFavorite)));
+
+  // Build per-group app lists (with filter + sort)
+  const groupedApps = {};
+  const ungroupedApps = [];
+  const validGroupIds = new Set(state.groups.map(g => g.id));
+
+  for (const app of _sortApps(_filterApps(state.apps.filter(a => !a.isFavorite)))) {
+    if (app.group && validGroupIds.has(app.group)) {
+      if (!groupedApps[app.group]) groupedApps[app.group] = [];
+      groupedApps[app.group].push(app);
+    } else {
+      ungroupedApps.push(app);
+    }
+  }
+
+  // Show no-results state when searching with no matches
+  const totalVisible = favorites.length + ungroupedApps.length + Object.values(groupedApps).reduce((s, a) => s + a.length, 0);
+  if (state.appSearch && totalVisible === 0) {
+    dom.appsList.innerHTML = `<div class="empty-state">No apps match "<strong>${escapeHtml(state.appSearch)}</strong>"</div>`;
+    return;
+  }
 
   let html = '';
 
-  // Favorites Section (only if favorites exist)
+  // Favorites section
   if (favorites.length > 0) {
     html += `
       <div class="app-section">
@@ -690,23 +822,50 @@ function renderApps() {
     `;
   }
 
-  // Other Projects Section
-  if (others.length > 0) {
+  // Custom groups
+  for (const group of state.groups) {
+    const apps = groupedApps[group.id] || [];
+    const isExpanded = group.expanded !== false;
+    const groupColor = group.color || 'var(--border-color)';
+    html += `
+      <div class="app-section" data-group-id="${group.id}" style="border-left: 3px solid ${groupColor}">
+        <div class="section-header group-header">
+          <span class="section-toggle" onclick="toggleGroup('${group.id}')">${isExpanded ? '▼' : '▶'}</span>
+          <span class="group-color-dot" style="background:${groupColor}"></span>
+          <span class="section-title" onclick="toggleGroup('${group.id}')">${escapeHtml(group.name)}</span>
+          <span class="section-count">${apps.length} app${apps.length !== 1 ? 's' : ''}</span>
+          <div class="section-actions">
+            <button class="btn-group-action" onclick="openRenameGroupModal('${group.id}')" title="Rename group">✏️</button>
+            <button class="btn-group-action btn-group-delete" onclick="confirmDeleteGroup('${group.id}')" title="Delete group">✕</button>
+          </div>
+        </div>
+        <div class="section-apps ${isExpanded ? '' : 'collapsed'}">
+          ${apps.length > 0
+            ? apps.map(app => renderAppCard(app)).join('')
+            : '<div class="group-empty">No apps in this group - drag apps here or use the edit form</div>'}
+        </div>
+      </div>
+    `;
+  }
+
+  // Ungrouped / Other Projects
+  if (ungroupedApps.length > 0 || state.groups.length === 0) {
     html += `
       <div class="app-section">
         <div class="section-header" onclick="toggleSection('others')">
           <span class="section-toggle">${state.otherProjectsExpanded ? '▼' : '▶'}</span>
           <span class="section-title">📁 Other Projects</span>
-          <span class="section-count">${others.length} app${others.length !== 1 ? 's' : ''}</span>
+          <span class="section-count">${ungroupedApps.length} app${ungroupedApps.length !== 1 ? 's' : ''}</span>
         </div>
         <div class="section-apps ${state.otherProjectsExpanded ? '' : 'collapsed'}">
-          ${others.map(app => renderAppCard(app)).join('')}
+          ${ungroupedApps.map(app => renderAppCard(app)).join('')}
         </div>
       </div>
     `;
   }
 
   dom.appsList.innerHTML = html;
+  updateGroupSelects();
 }
 
 function renderAppCard(app) {
@@ -1036,6 +1195,122 @@ async function toggleSection(section) {
   renderApps();
 }
 
+// ============ Groups ============
+
+async function toggleGroup(groupId) {
+  const group = state.groups.find(g => g.id === groupId);
+  if (!group) return;
+  group.expanded = !group.expanded;
+  await window.portpilot.config.saveGroup(group);
+  renderApps();
+}
+
+let _editingGroupId = null;
+
+function openNewGroupModal() {
+  _editingGroupId = null;
+  document.getElementById('group-modal-title').textContent = 'New Group';
+  document.getElementById('group-name-input').value = '';
+  renderGroupColorSwatches(null);
+  document.getElementById('modal-group').classList.remove('hidden');
+  document.getElementById('group-name-input').focus();
+}
+
+function openRenameGroupModal(groupId) {
+  const group = state.groups.find(g => g.id === groupId);
+  if (!group) return;
+  _editingGroupId = groupId;
+  document.getElementById('group-modal-title').textContent = 'Rename Group';
+  document.getElementById('group-name-input').value = group.name;
+  renderGroupColorSwatches(group.color || GROUP_COLORS[0]);
+  document.getElementById('modal-group').classList.remove('hidden');
+  document.getElementById('group-name-input').focus();
+}
+
+function closeGroupModal() {
+  document.getElementById('modal-group').classList.add('hidden');
+  _editingGroupId = null;
+}
+
+async function saveGroupModal() {
+  const name = document.getElementById('group-name-input').value.trim();
+  if (!name) {
+    showToast('Group name is required', 'error');
+    return;
+  }
+
+  const color = document.getElementById('group-color-input')?.value || GROUP_COLORS[0];
+  const groupConfig = { id: _editingGroupId || undefined, name, expanded: true, color };
+  const result = await window.portpilot.config.saveGroup(groupConfig);
+
+  if (result.success) {
+    if (_editingGroupId) {
+      const idx = state.groups.findIndex(g => g.id === _editingGroupId);
+      if (idx >= 0) state.groups[idx] = result.group;
+    } else {
+      state.groups.push(result.group);
+    }
+    closeGroupModal();
+    renderApps();
+    showToast(`Group "${name}" ${_editingGroupId ? 'renamed' : 'created'}`, 'success');
+  } else {
+    showToast('Failed to save group: ' + result.error, 'error');
+  }
+}
+
+async function confirmDeleteGroup(groupId) {
+  const group = state.groups.find(g => g.id === groupId);
+  if (!group) return;
+  if (!confirm(`Delete group "${group.name}"?\nApps in this group will move to Other Projects.`)) return;
+
+  const result = await window.portpilot.config.deleteGroup(groupId);
+  if (result.success) {
+    state.groups = state.groups.filter(g => g.id !== groupId);
+    state.apps = state.apps.map(app => app.group === groupId ? { ...app, group: null } : app);
+    renderApps();
+    showToast(`Group "${group.name}" deleted`, 'success');
+  } else {
+    showToast('Failed to delete group: ' + result.error, 'error');
+  }
+}
+
+async function moveSelectedToGroup(groupId) {
+  if (state.selectedApps.size === 0) return;
+
+  for (const appId of state.selectedApps) {
+    const app = state.apps.find(a => a.id === appId);
+    if (app) {
+      app.group = groupId || null;
+      await window.portpilot.config.saveApp(app);
+    }
+  }
+
+  clearSelection();
+  renderApps();
+  const groupName = groupId
+    ? (state.groups.find(g => g.id === groupId)?.name || 'group')
+    : 'Other Projects';
+  showToast(`Apps moved to ${groupName}`, 'success');
+}
+
+function updateGroupSelects() {
+  // Update the selection toolbar "Move to Group" dropdown
+  const selSelect = document.getElementById('selection-group-select');
+  if (selSelect) {
+    selSelect.innerHTML = '<option value="" disabled selected>📂 Move to Group</option>';
+    const noneOpt = document.createElement('option');
+    noneOpt.value = '';
+    noneOpt.textContent = 'Other Projects (no group)';
+    selSelect.appendChild(noneOpt);
+    for (const group of state.groups) {
+      const opt = document.createElement('option');
+      opt.value = group.id;
+      opt.textContent = group.name;
+      selSelect.appendChild(opt);
+    }
+  }
+}
+
 // ============ App Card Expansion (v1.6: 1-line compact mode) ============
 function toggleAppExpansion(appId) {
   if (state.expandedApps.has(appId)) {
@@ -1091,10 +1366,16 @@ async function handleDrop(event, targetAppId) {
   const draggedApp = state.apps.find(a => a.id === draggedAppId);
   const targetApp = state.apps.find(a => a.id === targetAppId);
 
-  // Only allow reordering within same section (favorites vs non-favorites)
+  // Cannot drag to/from Favorites section
   if (draggedApp.isFavorite !== targetApp.isFavorite) {
-    showToast('Cannot move between Favorites and Other Projects sections', 'warning');
+    showToast('Cannot drag between Favorites and other sections', 'warning');
     return;
+  }
+
+  // If dragged to a different group, reassign group membership
+  if (!draggedApp.isFavorite && draggedApp.group !== targetApp.group) {
+    draggedApp.group = targetApp.group;
+    await window.portpilot.config.saveApp(draggedApp);
   }
 
   // Reorder apps array
@@ -1501,6 +1782,76 @@ function updateDiscoverySelectionButtons() {
   }
 }
 
+// ============ Quick Add ============
+const QUICK_ADD_TEMPLATES = [
+  { type: 'npm',     icon: '📦', label: 'Node / npm',     desc: 'npm run dev',               command: 'npm run dev',               port: 3000, color: '#10B981' },
+  { type: 'vite',    icon: '⚡', label: 'Vite',           desc: 'Vite dev server (port 5173)', command: 'npm run dev',               port: 5173, color: '#646CFF' },
+  { type: 'nextjs',  icon: '▲',  label: 'Next.js',        desc: 'next dev',                   command: 'npm run dev',               port: 3000, color: '#ffffff' },
+  { type: 'angular', icon: '🔴', label: 'Angular',        desc: 'ng serve',                   command: 'ng serve',                  port: 4200, color: '#DD0031' },
+  { type: 'flask',   icon: '🐍', label: 'Flask',          desc: 'python app.py',              command: 'python app.py',             port: 5000, color: '#3B82F6' },
+  { type: 'fastapi', icon: '🚀', label: 'FastAPI',        desc: 'uvicorn main:app --reload',  command: 'uvicorn main:app --reload', port: 8000, color: '#059669' },
+  { type: 'docker',  icon: '🐳', label: 'Docker Compose', desc: 'docker compose up',          command: 'docker compose up',         port: null, color: '#2563EB' },
+  { type: 'static',  icon: '🌐', label: 'Static Site',   desc: 'npx serve -p 8080',          command: 'npx serve -p 8080',         port: 8080, color: '#8B5CF6' }
+];
+
+function openQuickAddModal() {
+  const grid = document.getElementById('quick-add-grid');
+  grid.innerHTML = QUICK_ADD_TEMPLATES.map(t => `
+    <button type="button" class="quick-add-tile" onclick="applyQuickAddTemplate('${t.type}')">
+      <span class="quick-add-icon" style="background:${t.color}">${t.icon}</span>
+      <span class="quick-add-label">${t.label}</span>
+      <span class="quick-add-desc">${escapeHtml(t.desc)}</span>
+    </button>
+  `).join('');
+  document.getElementById('modal-quick-add').classList.remove('hidden');
+}
+
+function closeQuickAddModal() {
+  document.getElementById('modal-quick-add').classList.add('hidden');
+}
+
+function applyQuickAddTemplate(type) {
+  const t = QUICK_ADD_TEMPLATES.find(t => t.type === type);
+  if (!t) return;
+  closeQuickAddModal();
+  openAppModal(null);
+  document.getElementById('app-command').value = t.command;
+  if (t.port) {
+    document.getElementById('app-port').value = t.port;
+    document.getElementById('app-fallback').value = `${t.port + 1}-${t.port + 10}`;
+  }
+  document.getElementById('app-name').focus();
+}
+
+// ============ Group Colors ============
+const GROUP_COLORS = [
+  '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6',
+  '#EC4899', '#06B6D4', '#84CC16', '#F97316', '#6366F1'
+];
+
+function renderGroupColorSwatches(selected) {
+  const container = document.getElementById('group-color-swatches');
+  if (!container) return;
+  const current = selected || GROUP_COLORS[0];
+  container.innerHTML = GROUP_COLORS.map(c => `
+    <button type="button"
+            class="color-swatch ${c === current ? 'selected' : ''}"
+            style="background:${c}"
+            onclick="selectGroupColor('${c}')"
+            title="${c}">
+    </button>
+  `).join('');
+  document.getElementById('group-color-input').value = current;
+}
+
+function selectGroupColor(color) {
+  document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected'));
+  const swatch = document.querySelector(`.color-swatch[title="${color}"]`);
+  if (swatch) swatch.classList.add('selected');
+  const input = document.getElementById('group-color-input');
+  if (input) input.value = color;
+}
+
 // ============ Modal ============
 function openAppModal(app = null) {
   document.getElementById('modal-title').textContent = app ? 'Edit App' : 'Add App';
@@ -1509,10 +1860,21 @@ function openAppModal(app = null) {
   document.getElementById('app-command').value = app?.command || '';
   document.getElementById('app-cwd').value = app?.cwd || '';
   document.getElementById('app-port').value = app?.preferredPort || '';
-  document.getElementById('app-fallback').value = app?.fallbackRange ? 
+  document.getElementById('app-fallback').value = app?.fallbackRange ?
     `${app.fallbackRange[0]}-${app.fallbackRange[1]}` : '';
   document.getElementById('app-autostart').checked = app?.autoStart || false;
-  
+
+  // Populate group dropdown
+  const groupSelect = document.getElementById('app-group');
+  groupSelect.innerHTML = '<option value="">Other Projects (no group)</option>';
+  for (const group of state.groups) {
+    const opt = document.createElement('option');
+    opt.value = group.id;
+    opt.textContent = group.name;
+    if (app?.group === group.id) opt.selected = true;
+    groupSelect.appendChild(opt);
+  }
+
   dom.modal.classList.remove('hidden');
   document.getElementById('app-name').focus();
 }
@@ -1630,7 +1992,8 @@ async function handleAppSubmit(e) {
     cwd: document.getElementById('app-cwd').value,
     preferredPort: parseInt(document.getElementById('app-port').value) || null,
     fallbackRange,
-    autoStart: document.getElementById('app-autostart').checked
+    autoStart: document.getElementById('app-autostart').checked,
+    group: document.getElementById('app-group').value || null
   };
 
   const result = await window.portpilot.config.saveApp(appConfig);
@@ -1741,15 +2104,20 @@ function setTheme(themeName, showNotification = true) {
 
 // ============ Utilities ============
 function showToast(message, type = 'success') {
+  // Remove oldest toast if already at limit
+  const existing = dom.toastContainer.querySelectorAll('.toast');
+  if (existing.length >= 3) existing[0].remove();
+
   const toast = document.createElement('div');
   toast.className = `toast ${type}`;
   toast.textContent = message;
   dom.toastContainer.appendChild(toast);
-  
-  setTimeout(() => {
+
+  const remove = () => {
     toast.style.opacity = '0';
-    setTimeout(() => toast.remove(), 200);
-  }, 3000);
+    setTimeout(() => toast.isConnected && toast.remove(), 200);
+  };
+  setTimeout(remove, 3000);
 }
 
 function escapeHtml(str) {
@@ -1806,3 +2174,7 @@ window.toggleProjectSelection = toggleProjectSelection;
 window.selectAllProjects = selectAllProjects;
 window.clearProjectSelection = clearProjectSelection;
 window.addSelectedProjects = addSelectedProjects;
+window.openQuickAddModal = openQuickAddModal;
+window.closeQuickAddModal = closeQuickAddModal;
+window.applyQuickAddTemplate = applyQuickAddTemplate;
+window.selectGroupColor = selectGroupColor;

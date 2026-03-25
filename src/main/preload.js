@@ -35,7 +35,10 @@ contextBridge.exposeInMainWorld('portpilot', {
     getSettings: () => ipcRenderer.invoke('config:getSettings'),
     updateSettings: (settings) => ipcRenderer.invoke('config:updateSettings', settings),
     export: () => ipcRenderer.invoke('config:export'),
-    import: (json) => ipcRenderer.invoke('config:import', json)
+    import: (json) => ipcRenderer.invoke('config:import', json),
+    getGroups: () => ipcRenderer.invoke('config:getGroups'),
+    saveGroup: (group) => ipcRenderer.invoke('config:saveGroup', group),
+    deleteGroup: (groupId) => ipcRenderer.invoke('config:deleteGroup', groupId)
   },
 
   // Discovery operations
@@ -69,5 +72,10 @@ contextBridge.exposeInMainWorld('portpilot', {
   // Window operations
   window: {
     autoResize: (appCount) => ipcRenderer.invoke('window:autoResize', appCount)
+  },
+
+  // Tray operations
+  tray: {
+    update: (runningApps) => ipcRenderer.invoke('tray:update', runningApps)
   }
 });

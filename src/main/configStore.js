@@ -68,6 +68,7 @@ class ConfigStore {
     // Default config
     return {
       apps: [],
+      groups: [],
       settings: {
         startMinimized: false,
         autoScan: true,
@@ -146,6 +147,7 @@ class ConfigStore {
       env: appConfig.env || {},
       autoStart: appConfig.autoStart || false,
       isFavorite: appConfig.isFavorite || false,
+      group: appConfig.group || null,
       color: appConfig.color || this.getRandomColor(),
       createdAt: appConfig.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString()
@@ -199,6 +201,49 @@ class ConfigStore {
     return this.config.settings;
   }
 
+  /** Get all groups */
+  getGroups() {
+    return this.config.groups || [];
+  }
+
+  /** Add or update a group */
+  saveGroup(groupConfig) {
+    if (!groupConfig.name) throw new Error('Group must have a name');
+
+    if (!groupConfig.id) {
+      groupConfig.id = `group_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    }
+
+    if (!this.config.groups) this.config.groups = [];
+
+    const existingIndex = this.config.groups.findIndex(g => g.id === groupConfig.id);
+    const group = {
+      id: groupConfig.id,
+      name: groupConfig.name,
+      expanded: groupConfig.expanded !== false,
+      color: typeof groupConfig.color === 'string' ? groupConfig.color.slice(0, 20) : null
+    };
+
+    if (existingIndex >= 0) {
+      this.config.groups[existingIndex] = group;
+    } else {
+      this.config.groups.push(group);
+    }
+
+    this.save();
+    return group;
+  }
+
+  /** Delete a group and ungroup its apps */
+  deleteGroup(groupId) {
+    this.config.apps = this.config.apps.map(app => {
+      if (app.group === groupId) return { ...app, group: null };
+      return app;
+    });
+    this.config.groups = (this.config.groups || []).filter(g => g.id !== groupId);
+    this.save();
+  }
+
   /** Generate a random color for app identification */
   getRandomColor() {
     const colors = [
@@ -217,12 +262,37 @@ class ConfigStore {
   import(jsonString) {
     try {
       const imported = JSON.parse(jsonString);
-      if (imported.apps && Array.isArray(imported.apps)) {
-        this.config = imported;
-        this.save();
-        return true;
+      if (!imported.apps || !Array.isArray(imported.apps)) return false;
+
+      // Sanitize each app: only keep known safe fields, enforce types
+      imported.apps = imported.apps.map(app => ({
+        id: typeof app.id === 'string' ? app.id.slice(0, 100) : undefined,
+        name: typeof app.name === 'string' ? app.name.slice(0, 200) : 'Unnamed',
+        command: typeof app.command === 'string' ? app.command.slice(0, 1000) : '',
+        cwd: typeof app.cwd === 'string' ? app.cwd.slice(0, 500) : '',
+        preferredPort: Number.isInteger(app.preferredPort) && app.preferredPort > 0 && app.preferredPort <= 65535 ? app.preferredPort : null,
+        fallbackRange: app.fallbackRange || null,
+        env: (app.env && typeof app.env === 'object' && !Array.isArray(app.env)) ? app.env : {},
+        autoStart: Boolean(app.autoStart),
+        isFavorite: Boolean(app.isFavorite),
+        group: typeof app.group === 'string' ? app.group : null,
+        color: typeof app.color === 'string' ? app.color : this.getRandomColor(),
+        createdAt: app.createdAt || new Date().toISOString(),
+        updatedAt: app.updatedAt || new Date().toISOString()
+      })).filter(app => app.name && app.command);
+
+      if (imported.groups && Array.isArray(imported.groups)) {
+        imported.groups = imported.groups.map(g => ({
+          id: typeof g.id === 'string' ? g.id.slice(0, 100) : undefined,
+          name: typeof g.name === 'string' ? g.name.slice(0, 100) : 'Group',
+          expanded: g.expanded !== false,
+          color: typeof g.color === 'string' ? g.color.slice(0, 20) : null
+        })).filter(g => g.name);
       }
-      return false;
+
+      this.config = imported;
+      this.save();
+      return true;
     } catch (error) {
       console.error('Failed to import config:', error);
       return false;

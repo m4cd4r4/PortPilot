@@ -50,6 +50,52 @@ function createWindow(configStore) {
   return mainWindow;
 }
 
+/** Build tray context menu - called on create and when running apps change */
+function buildTrayMenu(runningApps = []) {
+  const template = [
+    { label: 'Show PortPilot', click: () => mainWindow?.show() },
+    { label: 'Scan Ports', click: () => mainWindow?.webContents.send('trigger-scan') },
+    { type: 'separator' }
+  ];
+
+  if (runningApps.length > 0) {
+    template.push({ label: `Running (${runningApps.length})`, enabled: false });
+    for (const runApp of runningApps) {
+      template.push({
+        label: `  ■ Stop ${runApp.name}`,
+        click: async () => {
+          try {
+            const { stopApp } = require('./processManager');
+            await stopApp(runApp.id);
+          } catch (err) {
+            console.error('Tray stop error:', err);
+          }
+        }
+      });
+    }
+    template.push({ type: 'separator' });
+  }
+
+  template.push(
+    {
+      label: 'Stop All Apps',
+      click: async () => {
+        try {
+          const { cleanupAllProcesses } = require('./processManager');
+          await cleanupAllProcesses();
+          mainWindow?.webContents.send('toast', { type: 'success', message: 'Stopped all running apps' });
+        } catch (err) {
+          console.error('Error stopping all apps:', err);
+        }
+      }
+    },
+    { type: 'separator' },
+    { label: 'Quit', click: () => { app.isQuitting = true; app.quit(); } }
+  );
+
+  return Menu.buildFromTemplate(template);
+}
+
 /** Create system tray icon and menu */
 function createTray() {
   // Create a simple tray icon (16x16 blue circle)
@@ -61,47 +107,11 @@ function createTray() {
   );
 
   tray = new Tray(icon);
-  
-  const contextMenu = Menu.buildFromTemplate([
-    {
-      label: 'Show PortPilot',
-      click: () => mainWindow.show()
-    },
-    {
-      label: 'Scan Ports',
-      click: () => mainWindow.webContents.send('trigger-scan')
-    },
-    { type: 'separator' },
-    {
-      label: 'Stop All Apps',
-      click: async () => {
-        try {
-          const { cleanupAllProcesses } = require('./processManager');
-          await cleanupAllProcesses();
-          mainWindow.webContents.send('toast', {
-            type: 'success',
-            message: 'Stopped all running apps'
-          });
-        } catch (err) {
-          console.error('Error stopping apps:', err);
-        }
-      }
-    },
-    { type: 'separator' },
-    {
-      label: 'Quit',
-      click: () => {
-        app.isQuitting = true;
-        app.quit();
-      }
-    }
-  ]);
-
   tray.setToolTip('PortPilot - Port Manager');
-  tray.setContextMenu(contextMenu);
-  
+  tray.setContextMenu(buildTrayMenu([]));
+
   tray.on('click', () => {
-    mainWindow.isVisible() ? mainWindow.hide() : mainWindow.show();
+    mainWindow?.isVisible() ? mainWindow.hide() : mainWindow?.show();
   });
 }
 
@@ -141,6 +151,21 @@ if (!gotTheLock) {
     configStore = new ConfigStore(window);
     createTray();
     setupIpcHandlers(ipcMain, configStore);
+
+    // Tray update - renderer sends running apps list whenever state changes
+    ipcMain.handle('tray:update', (event, runningApps) => {
+      try {
+        if (!tray) return { success: false };
+        const apps = Array.isArray(runningApps) ? runningApps.slice(0, 20) : [];
+        tray.setContextMenu(buildTrayMenu(apps));
+        tray.setToolTip(apps.length > 0
+          ? `PortPilot - ${apps.length} app${apps.length !== 1 ? 's' : ''} running`
+          : 'PortPilot - Port Manager');
+        return { success: true };
+      } catch (err) {
+        return { success: false, error: err.message };
+      }
+    });
 
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) {

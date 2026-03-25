@@ -317,7 +317,16 @@ function setupIpcHandlers(ipcMain, configStore) {
   /** Get detailed process info (memory, uptime, connections) */
   ipcMain.handle('ports:getDetails', async (_, pid, port) => {
     try {
-      const details = await getProcessDetails(pid, port);
+      // Validate: pid and port must be positive integers within safe ranges
+      const safePid = parseInt(pid, 10);
+      const safePort = parseInt(port, 10);
+      if (!Number.isInteger(safePid) || safePid < 1 || safePid > 4194304) {
+        return { success: false, error: 'Invalid PID' };
+      }
+      if (!Number.isInteger(safePort) || safePort < 1 || safePort > 65535) {
+        return { success: false, error: 'Invalid port' };
+      }
+      const details = await getProcessDetails(safePid, safePort);
       return { success: true, details };
     } catch (error) {
       return { success: false, error: error.message };
@@ -488,6 +497,38 @@ function setupIpcHandlers(ipcMain, configStore) {
     }
   });
 
+  // ============ Group Operations ============
+
+  /** Get all groups */
+  ipcMain.handle('config:getGroups', async () => {
+    try {
+      const groups = configStore.getGroups();
+      return { success: true, groups };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+
+  /** Save a group (create or update) */
+  ipcMain.handle('config:saveGroup', async (_, groupConfig) => {
+    try {
+      const group = configStore.saveGroup(groupConfig);
+      return { success: true, group };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+
+  /** Delete a group and ungroup its apps */
+  ipcMain.handle('config:deleteGroup', async (_, groupId) => {
+    try {
+      configStore.deleteGroup(groupId);
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+
   // ============ Window Management ============
 
   /** Auto-resize window based on app count (v1.6 feature) */
@@ -641,6 +682,11 @@ function setupIpcHandlers(ipcMain, configStore) {
   /** Open URL in default browser */
   ipcMain.handle('shell:openExternal', async (_, url) => {
     try {
+      // Only allow http/https URLs - block file://, javascript:, cmd:, etc.
+      const parsed = new URL(url);
+      if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+        return { success: false, error: 'Only http/https URLs are allowed' };
+      }
       const { shell } = require('electron');
       await shell.openExternal(url);
       return { success: true };

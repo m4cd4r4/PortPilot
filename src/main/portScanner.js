@@ -163,7 +163,8 @@ function getProcessNames(portInfos) {
       }
     }
 
-    const pids = [...allPids];
+    // Only keep numeric PIDs to prevent WMI query injection
+    const pids = [...allPids].filter(p => Number.isInteger(p) && p > 0 && p <= 4194304);
     if (pids.length === 0) {
       resolve(portInfos);
       return;
