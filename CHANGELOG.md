@@ -5,6 +5,33 @@ All notable changes to PortPilot will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2026-04-14
+
+### Added
+- **Single-Pane Layout** - Removed 4-tab system, unified apps and ports in one scrollable view
+- **Settings Slide-out Panel** - Right-edge panel with backdrop blur replaces Settings tab
+- **SVG Icon System** - 21 inline SVG icons replace all emoji (play, stop, browser, folder, trash, edit, star, gear, search, plus, close, more, plug, copy, refresh, grip, chevron, docker, kill, home, globe)
+- **Glassmorphism Cards** - `rgba(255,255,255,0.03)` background with `backdrop-filter: blur(12px)`
+- **Glass Theme** - 7th theme with extra transparency
+- **Global Search** - Header search bar filters both apps and ports simultaneously
+- **MCP v2.0** - Rewritten with McpServer high-level API and Zod schemas on SDK 1.29.0
+- **6 New MCP Tools** - `get_status`, `check_port`, `bulk_start`, `bulk_stop`, `list_groups`, `move_to_group`
+- **VS Code Status Bar** - "PP: N running" counter with click-to-refresh
+- **VS Code Groups** - Apps grouped under collapsible folder nodes in tree view
+- **VS Code Full CRUD** - Add, edit, delete apps, change ports, toggle favourites from sidebar
+
+### Removed
+- Knowledge tab (13 help sections moved to GitHub docs)
+- Quick Add modal (normal Add App modal is sufficient)
+- Header subtitle "Localhost Port Manager"
+- 4-tab navigation system (replaced by single-pane)
+
+### Changed
+- App cards redesigned: status dot + drag handle + name + port (cyan mono) + star + actions
+- Running apps show memory, uptime, PID inline on cards
+- Codebase reduced 28%: 5,148 to 3,706 lines across renderer files
+- MCP SDK updated from 0.5.0 to 1.29.0
+
 ## [1.4.0] - 2026-01-06
 
 ### Added
@@ -198,7 +225,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Release Schedule
 
-- **v1.5.0** - January 10, 2026 (Current)
+- **v2.0.0** - April 14, 2026 (Current)
+- **v1.7.0** - March 25, 2026
+- **v1.6.2** - March 21, 2026
+- **v1.5.0** - January 10, 2026
 - **v1.4.0** - January 6, 2026
 - **v1.3.0** - January 5, 2026
 - **v1.2.0** - December 2025

@@ -6,7 +6,7 @@
 
 **[MCP Integration Setup](mcp-server/README.md)**
 
-[![Version](https://img.shields.io/badge/version-1.7.0-blue.svg)](https://github.com/m4cd4r4/PortPilot/releases/tag/v1.7.0)
+[![Version](https://img.shields.io/badge/version-2.0.0-blue.svg)](https://github.com/m4cd4r4/PortPilot/releases/tag/v2.0.0)
 [![Tests](https://img.shields.io/badge/tests-36%2F36%20passing-brightgreen.svg)](TESTING_SUMMARY.md)
 [![Licence](https://img.shields.io/badge/licence-MIT-green.svg)](LICENSE)
 [![MCP](https://img.shields.io/badge/MCP-enabled-purple.svg)](mcp-server/README.md)
@@ -18,9 +18,8 @@
 ## 📑 Table of Contents
 
 - [✨ AI Agent Integration](#-ai-agent-integration)
-- [What's New v1.7.0](#whats-new-in-v170)
-- [2026 Modernization](#whats-new-in-2026-modernization)
-- [What's New v1.6.2](#whats-new-in-v162)
+- [What's New in v2.0.0](#whats-new-in-v200)
+- [What's New in v1.7.0](#whats-new-in-v170)
 - [Features](#features)
 - [Auto Detection](#auto-detection)
 - [Screenshots](#screenshots)
@@ -49,6 +48,34 @@ Control PortPilot with natural language! Works with Claude Code, Cursor, Windsur
 
 **[→ Setup MCP Integration](mcp-server/README.md)**
 
+## What's New in v2.0.0
+
+### Full UI Redesign
+
+- **Single-pane unified layout** - Removed the 4-tab system (Active Ports / My Apps / Knowledge / Settings)
+- **Settings moved to a slide-out panel** with backdrop blur
+- **Knowledge tab removed** - documentation moved to the GitHub wiki
+- **All emoji replaced** with crisp SVG icons (21 inline SVGs)
+- **Glassmorphism card design** with backdrop-filter blur
+- **New "Glass" theme added** (7 themes total)
+- **Global search bar** filters both apps and ports simultaneously
+- **App cards show running status inline** (memory, uptime, PID)
+
+### MCP Server v2.0
+
+- Updated from SDK 0.5.0 to 1.29.0 (was broken, now fixed)
+- Rewritten with modern McpServer high-level API and Zod schemas
+- **6 new tools**: `get_status`, `check_port`, `bulk_start`, `bulk_stop`, `list_groups`, `move_to_group`
+- `list_apps` now includes running status inline (no separate call needed)
+- **18 total tools** available
+
+### VS Code Extension v1.2.0
+
+- Status bar item showing "PP: N running" with click-to-refresh
+- Groups rendered as collapsible tree nodes
+- Full CRUD: add, edit, delete apps, change ports, toggle favourites
+- Syncs with the Electron app via shared config file
+
 ## What's New in v1.7.0
 
 ### UX Improvements & International Fix
@@ -58,173 +85,9 @@ Control PortPilot with natural language! Works with Claude Code, Cursor, Windsur
 - **Sort Options** - Sort apps by name A-Z, name Z-A, running status, or port number
 - **Group Colours** - Assign a colour to each group; a matching left-border and dot appear on the group header
 - **Quick Add Wizard** - 8 pre-built templates (npm dev, Vite, Next.js, Angular, Flask, FastAPI, Docker Compose, Static) pre-fill the add-app form in one click
-- **Keyboard Shortcuts** - `Ctrl+F` (focus search), `Ctrl+Q` (open Quick Add), `Ctrl+G` (new group)
+- **Keyboard Shortcuts** - `Ctrl+F` (focus search), `Ctrl+G` (new group)
 - **Rich Tray Menu** - System tray now lists each running app with a one-click Stop button; tooltip shows live app count
 - **Bug fix: non-English Windows** - Port scanning now works on all Windows locales (German, French, Spanish, etc.) by checking the foreign-address column instead of matching locale-specific state strings like "ABHÖREN" or "EN ÉCOUTE"
-
-## What's New in 2026 Modernization
-
-### Landing Page Rebuilt
-- **Glassmorphism design** - Frosted glass cards, backdrop blur, semi-transparent backgrounds
-- **Mobile hamburger menu** - Animated 3-bar toggle with full-width dropdown
-- **Scroll animations** - Cards fade in on scroll with staggered delays via IntersectionObserver
-- **Autoplay carousel** - 5s interval with pause on hover/focus
-- **Strict CSP** - `script-src 'self'` (no unsafe-inline), `frame-src 'none'`, `object-src 'none'`
-- **JSON-LD structured data** - SoftwareApplication schema for search engines
-- **sitemap.xml + robots.txt** - SEO fundamentals
-- **35 ARIA labels** - Skip-to-content, semantic HTML, focus-visible styles
-- **`prefers-reduced-motion`** - Disables all animations for users who prefer it
-- **Print styles** - Hides nav/carousel for clean printing
-- **External JS** - All JavaScript extracted to `main.js`
-
-### Electron App UI Improvements
-- **Overflow protection** - App names, meta, port headers all truncate properly
-- **Content max-width** - Tab content capped at 1400px, settings at 800px
-- **`min()` grid columns** - Prevents grid overflow on narrow windows
-- **Focus-visible styles** - 2px cyan outline on all interactive elements
-- **ARIA roles** - `tablist`, `tab`, `aria-selected` on navigation tabs
-- **Reduced motion** - Respects `prefers-reduced-motion` system preference
-- **Responsive toolbar** - Selection toolbar wraps below 700px
-- **Scrollbar gutter** - `scrollbar-gutter: stable` prevents layout shift
-
-## What's New in v1.6.2
-
-### Documentation & UI Cleanup
-- **Icon-Based Action Buttons** - START/STOP buttons now use intuitive green play (▶) and red square (■) icons for better visual scanning
-- **Removed Expand All/Collapse All Buttons** - Commands now show in tooltips, no need for button clutter
-- **Comprehensive Auto Detection Documentation** - README now includes detailed docs for all 8 language detectors
-- **Table of Contents** - Easy navigation through README sections
-- **Updated Landing Page** - Added 4 new language detector badges (Go, .NET, Rust, Ruby)
-- **Knowledge Base Updates** - Framework details for new language detectors
-
-### Language Detector Documentation Added
-Complete detection criteria, supported frameworks, port detection methods, and confidence scoring for:
-- Node.js (React, Next.js, Vue, Angular, Vite, Express, Fastify)
-- Python (FastAPI, Django, Flask)
-- Docker (docker-compose, Dockerfile)
-- **Go** (Gin, Fiber, Echo) ✨
-- **.NET** (ASP.NET Core) ✨
-- **Rust** (Actix-web, Rocket, Axum, Warp) ✨
-- **Ruby** (Rails, Sinatra, Rack) ✨
-- Static Sites
-
-## What's New in v1.6.1
-
-### Enhanced Port Cards
-- **CMD Icon with Hover Tooltip** - Black CMD badge shows full command path on hover with copy button
-- **Single-Row Layout** - Removed second row, CMD tooltip replaces expandable command display
-- **Brighter Stats** - Improved visibility of Memory, Uptime, and Connections badges
-- **Cleaner Design** - More compact while showing all essential information
-
-### Knowledge Carousel System
-- **Horizontal Navigation** - 13 tabs for easy access to all help sections
-- **Single Card View** - Clean, focused presentation with smooth transitions
-- **v1.6.2 Documentation** - New sections for Port Cards and Port Actions features
-- **Enhanced Troubleshooting** - Added FAQs for new features (N/A values, bind indicators)
-
-### App Card Enhancements
-- **Folder Button** - 📂 icon opens app's working directory in file explorer
-- **Consistent UX** - Matches port card folder button functionality
-- **Quick Access** - One-click navigation to project files
-
-### UI Refinements
-- **Aligned Keyboard Shortcuts** - Fixed grid layout with centered keys
-- **Wider CMD Tooltips** - Increased from 500px to 600px with scrolling support
-- **Better Text Wrapping** - Improved long command path display
-
-## What's New in v1.6.0
-
-### Compact & Sharp UI Redesign
-- **30-40% More Density** - See more apps and ports on screen without scrolling
-- **Sharp 2px Corners** - Modern, clean aesthetic (down from 8px)
-- **Tighter Spacing** - Reduced padding and gaps throughout
-- **Compact Port Cards** - Process and PID combined on one line for space efficiency
-- **Smaller Fonts** - Better information density while maintaining readability
-
-### MCP Auto-Refresh
-- **External Changes Detected** - Automatically refreshes when MCP or other tools modify config
-- **File Watcher** - Monitors config file for changes with 100ms debounce
-- **Toast Notifications** - Visual feedback when apps list updates externally
-- **No Restart Required** - Apps added via MCP appear instantly
-
-### Smart Window Auto-Resize
-- **Dynamic Height** - Window grows/shrinks based on number of apps
-- **Optimal Sizing** - 400px minimum, 1200px maximum
-- **Seamless Integration** - Works with MCP auto-refresh
-- **Better UX** - No wasted space, no excessive scrolling
-
-### Enhanced Testing
-- **100% Test Coverage** - All 11 E2E tests passing
-- **Integrated Test Servers** - HTTP servers on ports 3000, 3001, 8080
-- **Test Mode Support** - Singleton lock bypass for running tests alongside GUI
-- **Improved Reliability** - Fixed visibility issues, better wait strategies
-
-### Bug Fixes
-- **ConfigStore Null Reference** - Fixed critical crash on startup
-- **Test Infrastructure** - All tests now passing reliably
-- **Load Strategy** - Improved app initialization wait logic
-
-[See full changelog →](CHANGELOG-v1.6.0.md)
-
-## What's New in v1.5.0
-
-### Linux Platform Support
-- **Cross-Platform Builds** - Now officially supports Windows AND Linux
-- **AppImage Package** - Universal Linux binary that runs on any distro (98 MB)
-- **.deb Package** - Native Debian/Ubuntu installer (69 MB)
-- **WSL Testing** - Full testing support in Windows Subsystem for Linux
-- **Platform Auto-Detection** - Automatically adapts commands for Windows/Linux
-
-### System Tray & Window Behaviour
-- **Stop All Apps from Tray** - Right-click tray icon to stop all PortPilot-managed apps without quitting
-- **Configurable Window Behaviour** - Choose whether close button minimises to tray or exits completely
-- **Smart Process Cleanup** - Optionally stop all apps when quitting (only affects PortPilot-managed processes)
-- **External Process Safety** - Never touches processes started outside PortPilot
-
-### Single-Instance Lock
-- **One Instance Only** - Prevents multiple copies of PortPilot from running simultaneously
-- **Smart Window Focusing** - Launching a second instance automatically focuses the existing window
-- **No More Confusion** - Single system tray icon, clear state management
-
-[See full changelog →](CHANGELOG.md)
-
-
-## What's New in v1.4.0
-
-### Browse & Auto-detect Project
-- **One-Click Project Setup** - Click "Browse & Auto-detect" in Add App modal to automatically configure any project
-- **Recursive Scanning** - Finds projects up to 2 levels deep in subdirectories
-- **Package Manager Detection** - Auto-detects pnpm, yarn, or npm and uses the correct command
-- **Smart Port Detection** - Only uses explicit port config (no more "everything gets port 3000")
-- **Works with Monorepos** - Finds the actual project inside parent folders (e.g., `manual-build/` inside root)
-
-### Port Conflict Warnings
-- **Unknown Process Detection** - Warns when unknown processes block your app's preferred port
-- **🌐 Preview Button** - Click globe to see what's running on the blocked port
-- **Kill Blocker Button** - Terminate blocking processes with one click
-- **Toast Notifications** - Visual warnings when port conflicts are detected
-- **Improved Matching** - Two-phase algorithm with keyword extraction prevents false positives
-
-### Project Auto-Discovery
-- **Automatic Project Detection** - Scan your project directories to automatically discover Node.js, Docker, Python, and static site projects
-- **Smart Metadata Extraction** - Automatically detects project names, start commands, and ports
-- **User-Configurable Paths** - Add your own scan directories (e.g., `C:\Projects`, `C:\Dev`)
-- **Confidence Scoring** - Shows match confidence (95%, 85%, etc.) for each discovered project
-- **Bulk Import** - Add all discovered projects at once or pick individual ones
-- **Scan Depth Control** - Configure how deep to search (1-5 directory levels)
-
-### Favorites System
-- **Star Your Apps** - Click the star (⭐/☆) button to mark frequently-used apps as favorites
-- **Organized Sections** - Apps automatically organised into:
-  - **⭐ Favorites** - Starred apps at the top for quick access
-  - **📁 Other Projects** - Non-starred apps below
-- **Collapsible Sections** - Click section headers to expand/collapse
-- **Persistent State** - Section collapse state saved across app restarts
-
-### Delete All
-- **Bulk Delete** - Remove all apps in one click with "Delete All" button
-- **Safety First** - Strong confirmation modal warns before deletion
-- **Export Reminder** - Prompts to export config before deleting
 
 [See full changelog →](CHANGELOG.md)
 
@@ -234,7 +97,7 @@ Complete detection criteria, supported frameworks, port detection methods, and c
 - **⬆️ Sort Options** - Sort apps by name, running status, or port
 - **🎨 Group Colours** - Colour-coded groups with left-border accent
 - **⚡ Quick Add** - 8 one-click templates for common project types
-- **⌨️ Keyboard Shortcuts** - Ctrl+F, Ctrl+Q, Ctrl+G for power users
+- **⌨️ Keyboard Shortcuts** - Ctrl+F, Ctrl+G for power users
 - **🖥️ Rich Tray Menu** - Running apps listed in tray with per-app Stop buttons
 - **🔍 Browse & Auto-detect** - One-click project setup with recursive scanning and package manager detection
 - **⚠️ Port Conflict Warnings** - Visual warnings when unknown processes block app ports, with preview and kill options
@@ -251,8 +114,9 @@ Complete detection criteria, supported frameworks, port detection methods, and c
 - **IPv4/IPv6 Awareness** - Shows which protocol your app is bound to
 - **System Tray** - Minimize to tray, "Stop All Apps" menu option, configurable window behaviour
 - **Single-Instance Lock** - Only one PortPilot runs at a time, focuses existing window
-- **Multi-Theme Support** - 6 themes including TokyoNight, Brutalist, Nord, Dracula
-- **Knowledge Base** - Built-in help with tips, shortcuts, and common ports reference
+- **Multi-Theme Support** - 7 themes including TokyoNight, Brutalist, Nord, Dracula, Glass
+- **VS Code Extension** - Status bar counter, collapsible groups, full CRUD from the sidebar
+- **MCP v2.0 with 18 tools** - Manage your entire dev environment via any MCP-compatible AI assistant
 
 ## Auto Detection
 
@@ -443,7 +307,7 @@ If multiple detectors match, the highest-priority one wins.
 
 ## Screenshots
 
-Explore all PortPilot features including My Apps management, Active Ports scanner, Knowledge Base, Settings, multiple themes, and more.
+Explore all PortPilot features including app management, the Active Ports scanner, Settings panel, multiple themes, and more.
 
 ![PortPilot Features](docs/portpilot-demo.gif)
 
@@ -451,15 +315,15 @@ Explore all PortPilot features including My Apps management, Active Ports scanne
 
 ### Download (Recommended)
 
-**Latest Release: v1.7.0**
+**Latest Release: v2.0.0**
 
 **Windows:**
-- [PortPilot-1.7.0-x64.exe](https://github.com/m4cd4r4/PortPilot/releases/download/v1.7.0/PortPilot-1.7.0-x64.exe) - NSIS Installer (~72 MB)
-- [PortPilot-1.7.0-portable.exe](https://github.com/m4cd4r4/PortPilot/releases/download/v1.7.0/PortPilot-1.7.0-portable.exe) - Portable (~72 MB)
+- [PortPilot-2.0.0-x64.exe](https://github.com/m4cd4r4/PortPilot/releases/download/v2.0.0/PortPilot-2.0.0-x64.exe) - NSIS Installer (~72 MB)
+- [PortPilot-2.0.0-portable.exe](https://github.com/m4cd4r4/PortPilot/releases/download/v2.0.0/PortPilot-2.0.0-portable.exe) - Portable (~72 MB)
 
 **Linux:**
-- [PortPilot-1.7.0-x86_64.AppImage](https://github.com/m4cd4r4/PortPilot/releases/download/v1.7.0/PortPilot-1.7.0-x86_64.AppImage) - Universal Linux (~98 MB)
-- [PortPilot-1.7.0-amd64.deb](https://github.com/m4cd4r4/PortPilot/releases/download/v1.7.0/PortPilot-1.7.0-amd64.deb) - Debian/Ubuntu (~69 MB)
+- [PortPilot-2.0.0-x86_64.AppImage](https://github.com/m4cd4r4/PortPilot/releases/download/v2.0.0/PortPilot-2.0.0-x86_64.AppImage) - Universal Linux (~98 MB)
+- [PortPilot-2.0.0-amd64.deb](https://github.com/m4cd4r4/PortPilot/releases/download/v2.0.0/PortPilot-2.0.0-amd64.deb) - Debian/Ubuntu (~69 MB)
 
 **macOS:**
 - Build from source (see below) - macOS is supported but not officially tested
@@ -565,6 +429,7 @@ This ensures the browser button opens the correct URL.
 | **Nord** | Cool arctic blues |
 | **Dracula** | Purple/pink dark theme |
 | **Solarized Light** | Warm, easy on the eyes |
+| **Glass** | Translucent glassmorphism with extra transparency |
 
 ## Keyboard Shortcuts
 
@@ -572,14 +437,9 @@ This ensures the browser button opens the correct URL.
 |----------|--------|
 | `Ctrl+R` | Refresh/Scan ports |
 | `Ctrl+N` | Add new app |
-| `Ctrl+F` | Focus app search |
-| `Ctrl+Q` | Open Quick Add wizard |
+| `Ctrl+F` | Focus global search |
 | `Ctrl+G` | New group |
-| `Ctrl+1` | Ports tab |
-| `Ctrl+2` | Apps tab |
-| `Ctrl+3` | Knowledge tab |
-| `Ctrl+4` | Settings tab |
-| `Escape` | Close modal |
+| `Escape` | Close modal / Settings panel |
 
 ## Config Location
 
@@ -718,18 +578,24 @@ Just ask in natural language:
 
 | Tool | Description |
 |------|-------------|
-| `list_apps` | List all registered apps |
+| `list_apps` | List all registered apps with running status inline |
 | `get_app` | Get details of a specific app |
+| `get_status` | Get overall PortPilot status summary |
 | `start_app` | Start an app by name or ID |
 | `stop_app` | Stop a running app |
+| `bulk_start` | Start multiple apps at once |
+| `bulk_stop` | Stop multiple apps at once |
 | `add_app` | Register a new app |
 | `update_app` | Update app configuration |
 | `delete_app` | Remove an app |
 | `list_running` | Show currently running apps |
 | `scan_ports` | Scan for active ports |
+| `check_port` | Check what is running on a specific port |
 | `kill_port` | Kill process on a port |
 | `toggle_favorite` | Star/unstar an app |
 | `delete_all_apps` | Remove all apps (requires confirmation) |
+| `list_groups` | List all app groups |
+| `move_to_group` | Move an app to a different group |
 
 See [mcp-server/README.md](mcp-server/README.md) for full documentation.
 
@@ -744,46 +610,26 @@ See [mcp-server/README.md](mcp-server/README.md) for full documentation.
 
 ## Version History
 
-### v1.7.0 (2026-03-25) - Current Release
+### v2.0.0 (2026-04-14) - Current Release
+- Full UI redesign - single-pane layout replaces 4-tab system
+- Settings moved to slide-out panel with backdrop blur
+- Knowledge tab removed (docs moved to GitHub wiki)
+- 21 inline SVG icons replace all emoji
+- Glassmorphism card design with backdrop-filter blur
+- New Glass theme (7 themes total)
+- Global search bar filters apps and ports simultaneously
+- MCP Server v2.0 - rewritten with McpServer API and Zod schemas on SDK 1.29.0
+- 6 new MCP tools (18 total): get_status, check_port, bulk_start, bulk_stop, list_groups, move_to_group
+- VS Code Extension v1.2.0 - status bar, collapsible groups, full CRUD
+
+### v1.7.0 (2026-03-25)
 - App search and filter on My Apps tab
 - Running apps summary badge in header
 - Sort options (name, status, port)
 - Group colour picker with left-border accent
 - Quick Add wizard with 8 project templates
-- Keyboard shortcuts: Ctrl+F, Ctrl+Q, Ctrl+G
 - Rich tray menu with per-app Stop buttons
 - Bug fix: locale-independent port scanning (non-English Windows)
-
-### v1.6.2 (2026-03-21)
-- Landing page modernization (glassmorphism, SEO, accessibility, CSP)
-- Electron app UI hardening (overflow, focus styles, ARIA, reduced motion)
-- Icon-based START/STOP buttons
-- 4 new language detector badges (Go, .NET, Rust, Ruby)
-
-### v1.4.0 (2026-01-06)
-- 🔍 **Browse & Auto-detect** - One-click project setup with recursive scanning
-- 📦 **Package Manager Detection** - Auto-detects pnpm, yarn, npm
-- ⚠️ **Port Conflict Warnings** - Visual warnings with preview and kill options
-- 🔍 **Project Auto-Discovery** - Bulk scan and import projects
-- ⭐ **Favorites System** - Star apps for quick access
-- 🗑 **Delete All** - Bulk delete with safety confirmations
-- ✨ **Improved Port Matching** - Two-phase algorithm with keyword extraction
-- ✨ **Smart Port Detection** - No more hard-coded framework defaults
-
-### v1.3.0 (2026-01-05)
-- 7 new features (DevTools, process cleanup, port conflict detection, etc.)
-- 7 UI/UX improvements (larger port numbers, better spacing, improved readability)
-- 100% test coverage (20/20 tests passing)
-- Comprehensive documentation (CHANGELOG.md, TESTING_SUMMARY.md)
-
-### v1.2.0
-- Fixed port kill functionality
-- Added comprehensive test suite
-
-### v1.1.0
-- Initial release with core features
-- Multi-theme support
-- App registry and management
 
 [Full changelog →](CHANGELOG.md)
 

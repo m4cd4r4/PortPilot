@@ -8,360 +8,100 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <div id="app" role="application" aria-label="PortPilot - Localhost Port Manager">
+  <div id="app" role="application" aria-label="PortPilot">
     <!-- Header -->
     <header class="header" role="banner">
       <div class="header-left">
-        <div class="header-title-row">
-          <h1>&#9875; PortPilot</h1>
-          <span id="header-running-summary" class="header-running-summary"></span>
+        <h1 class="header-title">PortPilot</h1>
+      </div>
+      <div class="header-center">
+        <div class="search-wrapper">
+          <span class="search-icon" aria-hidden="true"></span>
+          <input type="text" id="global-search" placeholder="Search apps and ports... (Ctrl+F)" class="input-search global-search" autocomplete="off">
         </div>
-        <span class="subtitle">Localhost Port Manager</span>
       </div>
       <div class="header-right">
-        <button id="btn-scan" class="btn btn-primary" title="Scan ports (Ctrl+R)">
-          <span class="icon">🔄</span> Scan Ports
+        <button id="btn-scan" class="btn btn-icon" title="Scan ports (Ctrl+R)">
+          <span class="btn-icon-svg"></span>
         </button>
-        <button id="btn-add-app" class="btn btn-secondary" title="Add app (Ctrl+N)">
-          <span class="icon">➕</span> Add App
+        <button id="btn-add-app" class="btn btn-primary" title="Add app (Ctrl+N)">
+          <span class="btn-icon-svg"></span> Add App
+        </button>
+        <button id="btn-settings" class="btn btn-icon" title="Settings" aria-label="Open settings">
+          <span class="btn-icon-svg"></span>
         </button>
       </div>
     </header>
 
-    <!-- Tab Navigation -->
-    <nav class="tabs" role="tablist" aria-label="Main navigation">
-      <button class="tab active" data-tab="ports" role="tab" aria-selected="true" aria-controls="tab-ports">Active Ports</button>
-      <button class="tab" data-tab="apps" role="tab" aria-selected="false" aria-controls="tab-apps">My Apps</button>
-      <button class="tab" data-tab="knowledge" role="tab" aria-selected="false" aria-controls="tab-knowledge">Knowledge</button>
-      <button class="tab" data-tab="settings" role="tab" aria-selected="false" aria-controls="tab-settings">Settings</button>
-    </nav>
-
-    <!-- Main Content -->
+    <!-- Main Content - Single Pane -->
     <main class="content" role="main">
-      <!-- Ports Tab -->
-      <section id="tab-ports" class="tab-content active">
-        <div class="toolbar">
-          <input type="text" id="port-filter" placeholder="Filter by port or process..." class="input-search">
-          <span id="port-count" class="count-badge">0 ports</span>
-        </div>
-        <div id="ports-list" class="ports-grid">
-          <div class="empty-state">Click "Scan Ports" to discover active ports</div>
-        </div>
-      </section>
-
-      <!-- Apps Tab -->
-      <section id="tab-apps" class="tab-content">
-        <div class="toolbar apps-toolbar">
-          <button type="button" id="btn-refresh-apps" class="btn btn-secondary" title="Refresh apps (Ctrl+R)">🔄 Refresh</button>
-          <input type="text" id="app-search" placeholder="Search apps..." class="input-search app-search-input" title="Filter apps (Ctrl+F)" autocomplete="off">
-          <select id="app-sort" class="btn btn-small btn-secondary" title="Sort apps">
-            <option value="default">Default</option>
-            <option value="name-asc">Name A-Z</option>
-            <option value="name-desc">Name Z-A</option>
-            <option value="status">By Status</option>
-            <option value="port">By Port</option>
-          </select>
-          <button type="button" id="btn-expand-all" class="btn btn-small btn-secondary" onclick="expandAllApps()" title="Expand all">▼</button>
-          <button type="button" id="btn-collapse-all" class="btn btn-small btn-secondary" onclick="collapseAllApps()" title="Collapse all">▶</button>
-          <button type="button" class="btn btn-small btn-secondary" onclick="openNewGroupModal()" title="New group (Ctrl+G)">📂</button>
-          <button type="button" id="btn-quick-add" class="btn btn-small btn-primary" title="Quick add from template (Ctrl+Q)">⚡ Quick Add</button>
+      <!-- Apps Section -->
+      <section id="apps-section" class="section">
+        <div class="section-toolbar">
+          <div class="toolbar-left">
+            <select id="app-sort" class="btn btn-small btn-secondary" title="Sort apps">
+              <option value="default">Default</option>
+              <option value="name-asc">Name A-Z</option>
+              <option value="name-desc">Name Z-A</option>
+              <option value="status">By Status</option>
+              <option value="port">By Port</option>
+            </select>
+            <button type="button" id="btn-expand-all" class="btn btn-small btn-secondary" title="Expand all">Expand</button>
+            <button type="button" id="btn-collapse-all" class="btn btn-small btn-secondary" title="Collapse all">Collapse</button>
+            <button type="button" id="btn-new-group" class="btn btn-small btn-secondary" title="New group (Ctrl+G)">Group</button>
+          </div>
           <span id="apps-count" class="count-badge">0 apps</span>
         </div>
         <div id="apps-list" class="apps-list">
           <div class="empty-state">No apps registered. Click "Add App" to get started.</div>
         </div>
+      </section>
 
-        <!-- Selection Toolbar (appears when apps are selected) -->
-        <div id="selection-toolbar" class="selection-toolbar hidden">
-          <span id="selection-count" class="selection-count">0 selected</span>
-          <div class="selection-actions">
-            <button type="button" class="btn btn-small btn-secondary" onclick="selectAllApps()">Select All</button>
-            <button type="button" class="btn btn-small btn-primary" onclick="favoriteSelected()">⭐ Favorite</button>
-            <button type="button" class="btn btn-small btn-secondary" onclick="unfavoriteSelected()">☆ Unfavorite</button>
-            <select id="selection-group-select" class="btn btn-small btn-secondary" onchange="moveSelectedToGroup(this.value); this.selectedIndex = 0;" title="Move selected apps to a group">
-              <option value="" disabled selected>📂 Move to Group</option>
-            </select>
-            <button type="button" class="btn btn-small btn-danger" onclick="deleteSelected()">🗑 Delete</button>
-            <button type="button" class="btn btn-small btn-secondary" onclick="clearSelection()">Clear</button>
-          </div>
+      <!-- Active Ports Section (unmatched) -->
+      <section id="ports-section" class="section collapsible">
+        <div class="section-header-bar" id="ports-section-toggle">
+          <span class="section-chevron"></span>
+          <span class="section-label">Unmatched Ports</span>
+          <span id="port-count" class="count-badge count-badge-small">0</span>
+        </div>
+        <div id="ports-list" class="ports-grid">
+          <div class="empty-state">Click scan to discover active ports</div>
         </div>
       </section>
 
-      <!-- Knowledge Tab -->
-      <section id="tab-knowledge" class="tab-content">
-        <div class="knowledge-grid">
-          <!-- Navigation -->
-          <div class="knowledge-navigation">
-            <button class="knowledge-nav-btn active" data-section="how-it-works">How It Works</button>
-            <button class="knowledge-nav-btn" data-section="quick-start">Quick Start</button>
-            <button class="knowledge-nav-btn" data-section="port-info">Port Cards</button>
-            <button class="knowledge-nav-btn" data-section="port-actions">Port Actions</button>
-            <button class="knowledge-nav-btn" data-section="shortcuts">Shortcuts</button>
-            <button class="knowledge-nav-btn" data-section="tips">Tips</button>
-            <button class="knowledge-nav-btn" data-section="tray">System Tray</button>
-            <button class="knowledge-nav-btn" data-section="ports">Common Ports</button>
-            <button class="knowledge-nav-btn" data-section="badges">App Badges</button>
-            <button class="knowledge-nav-btn" data-section="ipv">IPv4/IPv6</button>
-            <button class="knowledge-nav-btn" data-section="docker">Docker</button>
-            <button class="knowledge-nav-btn" data-section="troubleshoot">Troubleshooting</button>
-            <button class="knowledge-nav-btn" data-section="mcp">MCP/AI</button>
-          </div>
-
-          <!-- Carousel Card -->
-          <div class="knowledge-carousel">
-            <!-- How It Works -->
-            <div class="knowledge-section active" data-section="how-it-works">
-              <h3>How It Works</h3>
-              <p>PortPilot scans your system for active TCP ports using native OS commands. It identifies which processes are using each port, letting you manage your development environment efficiently.</p>
-              <ul class="knowledge-list">
-                <li>Scans ports via <code>netstat</code> (Windows) or <code>lsof</code> (Mac/Linux)</li>
-                <li>Displays process name, PID, and command line</li>
-                <li>One-click kill for stuck processes</li>
-                <li>Register apps with preferred ports</li>
-              </ul>
-            </div>
-
-            <!-- Quick Start -->
-            <div class="knowledge-section" data-section="quick-start">
-              <h3>Quick Start</h3>
-              <ol class="knowledge-list numbered">
-                <li><strong>Scan Ports</strong> — Click the button to discover active ports</li>
-                <li><strong>Add Apps</strong> — Register your dev projects with their start commands</li>
-                <li><strong>Start/Stop</strong> — Control apps from the My Apps tab</li>
-                <li><strong>Kill Ports</strong> — Free up stuck ports with one click</li>
-              </ol>
-            </div>
-
-            <!-- Port Card Information (NEW in v1.6.1) -->
-            <div class="knowledge-section" data-section="port-info">
-              <h3>Port Card Information</h3>
-              <p>Each port card displays comprehensive process information automatically:</p>
-              <ul class="knowledge-list">
-                <li><strong>:port</strong> — Port number in cyan (e.g., :3000)</li>
-                <li><strong>🏠 / 🌐</strong> — Bind type indicator:
-                  <ul style="margin-left: 20px; margin-top: 4px;">
-                    <li>🏠 = Localhost only (127.0.0.1) — Not accessible from network</li>
-                    <li>🌐 = All interfaces (0.0.0.0) — Accessible from network</li>
-                  </ul>
-                </li>
-                <li><strong>v4 / v6</strong> — IP protocol version badge</li>
-                <li><strong>process.exe</strong> — Process name</li>
-                <li><strong>Memory</strong> — RAM usage in MB (e.g., 142 MB)</li>
-                <li><strong>Uptime</strong> — How long process has been running (e.g., 2h 15m)</li>
-                <li><strong>Connections</strong> — Number of active TCP connections (e.g., 3 conn)</li>
-                <li><strong>PID</strong> — Process ID for advanced troubleshooting</li>
-                <li><strong>CMD</strong> — Hover to see full command path with copy button</li>
-              </ul>
-              <p><em>Process details are automatically fetched when you scan ports. No extra clicks needed!</em></p>
-            </div>
-
-            <!-- Port Actions (NEW in v1.6.1) -->
-            <div class="knowledge-section" data-section="port-actions">
-              <h3>Port Actions</h3>
-              <p>Quick actions available for each port:</p>
-              <div class="badge-reference">
-                <div class="badge-item"><span class="badge-icon">🌐</span> <strong>Open in Browser</strong> — Launch localhost:PORT in default browser</div>
-                <div class="badge-item"><span class="badge-icon">📂</span> <strong>Open Folder</strong> — Open directory containing the process executable</div>
-                <div class="badge-item"><span class="badge-icon">📋</span> <strong>Copy</strong> — Copy "localhost:PORT" to clipboard</div>
-                <div class="badge-item"><span class="badge-icon">✕</span> <strong>Kill Process</strong> — Terminate the process using this port</div>
-              </div>
-              <p><strong>CMD Icon:</strong> Hover over the black <code>CMD</code> badge to see the full command path in a tooltip. Click the Copy button to copy it to clipboard.</p>
-            </div>
-
-            <!-- Keyboard Shortcuts -->
-            <div class="knowledge-section" data-section="shortcuts">
-              <h3>Keyboard Shortcuts</h3>
-              <div class="shortcut-grid">
-                <div class="shortcut"><kbd>Ctrl</kbd>+<kbd>R</kbd><span>Refresh/Scan</span></div>
-                <div class="shortcut"><kbd>Ctrl</kbd>+<kbd>N</kbd><span>Add New App</span></div>
-                <div class="shortcut"><kbd>Ctrl</kbd>+<kbd>F</kbd><span>Focus Search</span></div>
-                <div class="shortcut"><kbd>Ctrl</kbd>+<kbd>Q</kbd><span>Quick Add</span></div>
-                <div class="shortcut"><kbd>Ctrl</kbd>+<kbd>G</kbd><span>New Group</span></div>
-                <div class="shortcut"><kbd>Ctrl</kbd>+<kbd>1</kbd><span>Ports Tab</span></div>
-                <div class="shortcut"><kbd>Ctrl</kbd>+<kbd>2</kbd><span>Apps Tab</span></div>
-                <div class="shortcut"><kbd>Ctrl</kbd>+<kbd>3</kbd><span>Knowledge</span></div>
-                <div class="shortcut"><kbd>Ctrl</kbd>+<kbd>4</kbd><span>Settings</span></div>
-                <div class="shortcut"><kbd>Esc</kbd><span>Close Modal</span></div>
-              </div>
-            </div>
-
-            <!-- Tips & Tricks -->
-            <div class="knowledge-section" data-section="tips">
-              <h3>Tips & Tricks</h3>
-              <ul class="knowledge-list">
-                <li>Use <strong>fallback port ranges</strong> when your preferred port is busy</li>
-                <li>Click the <strong>copy button</strong> to get <code>localhost:PORT</code> to clipboard</li>
-                <li>Minimize to <strong>system tray</strong> — click the tray icon to restore</li>
-                <li>Right-click the <strong>tray icon</strong> for quick access to "Stop All Apps"</li>
-                <li>Set <strong>auto-start</strong> on apps you always need running</li>
-                <li><strong>Export config</strong> to back up your app registrations</li>
-              </ul>
-            </div>
-
-            <!-- System Tray -->
-            <div class="knowledge-section" data-section="tray">
-              <h3>System Tray</h3>
-              <p>PortPilot lives in your system tray for quick access:</p>
-              <ul class="knowledge-list">
-                <li><strong>Left-click</strong> the tray icon to show/hide the window</li>
-                <li><strong>Right-click</strong> for the menu:
-                  <ul style="margin-left: 20px; margin-top: 5px;">
-                    <li>Show PortPilot — Restore the window</li>
-                    <li>Scan Ports — Run a port scan</li>
-                    <li><strong>Stop All Apps</strong> — Stop all PortPilot-managed apps without quitting</li>
-                    <li>Quit — Exit PortPilot</li>
-                  </ul>
-                </li>
-                <li>Configure <strong>window behavior</strong> in Settings:
-                  <ul style="margin-left: 20px; margin-top: 5px;">
-                    <li>Minimize to tray on close (default: on)</li>
-                    <li>Stop running apps when quitting (default: on)</li>
-                  </ul>
-                </li>
-              </ul>
-              <p><em>Note: Only apps started by PortPilot are affected. External processes are never touched.</em></p>
-            </div>
-
-            <!-- Common Ports -->
-            <div class="knowledge-section" data-section="ports">
-              <h3>Common Dev Ports</h3>
-              <div class="port-reference">
-                <div class="port-item"><span class="port-num">3000</span> React, Next.js, Express</div>
-                <div class="port-item"><span class="port-num">4200</span> Angular CLI</div>
-                <div class="port-item"><span class="port-num">5173</span> Vite</div>
-                <div class="port-item"><span class="port-num">5432</span> PostgreSQL</div>
-                <div class="port-item"><span class="port-num">6379</span> Redis</div>
-                <div class="port-item"><span class="port-num">8000</span> Django, FastAPI</div>
-                <div class="port-item"><span class="port-num">8080</span> Tomcat, Live Server</div>
-                <div class="port-item"><span class="port-num">27017</span> MongoDB</div>
-              </div>
-            </div>
-
-            <!-- App Badges -->
-            <div class="knowledge-section" data-section="badges">
-              <h3>App Badges</h3>
-              <p>PortPilot automatically detects app requirements and shows badges:</p>
-              <div class="badge-reference">
-                <div class="badge-item"><span class="badge-icon">🐳</span> <strong>Docker</strong> — App uses Docker/Compose (click to start Docker Desktop)</div>
-                <div class="badge-item"><span class="badge-icon">📦</span> <strong>Node.js</strong> — Uses npm, npx, pnpm, yarn, or bun</div>
-                <div class="badge-item"><span class="badge-icon">🐍</span> <strong>Python</strong> — Uses python, uvicorn, flask, or django</div>
-                <div class="badge-item"><span class="badge-icon">🗄️</span> <strong>Database</strong> — Uses postgres, mysql, redis, or mongo</div>
-                <div class="badge-item"><span class="badge-icon">⚡</span> <strong>Auto-start</strong> — App starts automatically on launch</div>
-                <div class="badge-item"><span class="badge-icon">🌐</span> <strong>Remote</strong> — App runs on a remote server/VPS</div>
-              </div>
-            </div>
-
-            <!-- IPv4/IPv6 -->
-            <div class="knowledge-section" data-section="ipv">
-              <h3>IPv4 vs IPv6</h3>
-              <p>When apps are running, PortPilot shows which IP protocol they're bound to:</p>
-              <ul class="knowledge-list">
-                <li><strong>v4</strong> — App is bound to IPv4 (e.g., <code>0.0.0.0:3000</code> or <code>127.0.0.1:3000</code>)</li>
-                <li><strong>v6</strong> — App is bound to IPv6 (e.g., <code>[::]:3000</code> or <code>[::1]:3000</code>)</li>
-              </ul>
-              <p>This matters because browsers may prefer IPv6. PortPilot opens the correct URL based on the binding.</p>
-              <p><strong>New in v1.6.1:</strong> Port cards now show v4/v6 badges inline for instant visibility.</p>
-            </div>
-
-            <!-- Docker Integration -->
-            <div class="knowledge-section" data-section="docker">
-              <h3>Docker Integration</h3>
-              <p>PortPilot integrates with Docker Desktop:</p>
-              <ul class="knowledge-list">
-                <li><strong>Yellow pulsing 🐳</strong> — Docker Desktop is not running</li>
-                <li><strong>Green 🐳</strong> — Docker Desktop is running and ready</li>
-                <li><strong>Click the badge</strong> — Starts Docker Desktop automatically</li>
-                <li>PortPilot polls until Docker is ready, then updates the display</li>
-              </ul>
-              <p>Docker apps will fail to start if Docker Desktop isn't running first.</p>
-            </div>
-
-            <!-- Troubleshooting -->
-            <div class="knowledge-section" data-section="troubleshoot">
-              <h3>Troubleshooting</h3>
-              <div class="faq-list">
-                <details class="faq-item">
-                  <summary>Port won't kill?</summary>
-                  <p>Some system processes require admin privileges. Try running PortPilot as Administrator.</p>
-                </details>
-                <details class="faq-item">
-                  <summary>App won't start?</summary>
-                  <p>Check the working directory path and ensure the command is correct. View app logs for errors.</p>
-                </details>
-                <details class="faq-item">
-                  <summary>Scan shows nothing?</summary>
-                  <p>No apps are using TCP ports. This is normal if nothing is running locally.</p>
-                </details>
-                <details class="faq-item">
-                  <summary>Docker app fails?</summary>
-                  <p>Make sure Docker Desktop is running first. Click the yellow 🐳 badge to start it.</p>
-                </details>
-                <details class="faq-item">
-                  <summary>Wrong app opens in browser?</summary>
-                  <p>Multiple apps may share a port on IPv4 vs IPv6. Check the v4/v6 indicator.</p>
-                </details>
-                <details class="faq-item">
-                  <summary>Why does a port show "N/A" for memory or uptime?</summary>
-                  <p>PortPilot couldn't retrieve process details (permission denied or process ended). The port scan shows what's listening, but extended info requires process access. Try running PortPilot as Administrator for system processes.</p>
-                </details>
-                <details class="faq-item">
-                  <summary>What does 🏠 vs 🌐 mean on port cards?</summary>
-                  <p>🏠 means the service only listens on localhost (127.0.0.1) and isn't accessible from other computers. 🌐 means it's bound to all network interfaces (0.0.0.0) and can be accessed from other devices on your network.</p>
-                </details>
-              </div>
-            </div>
-
-            <!-- MCP Integration -->
-            <div class="knowledge-section" data-section="mcp">
-              <h3>AI Agent Integration (MCP)</h3>
-              <p>Control PortPilot with natural language via any MCP-compatible AI assistant:</p>
-              <div class="mcp-commands">
-                <div class="mcp-command">"List all my PortPilot apps"</div>
-                <div class="mcp-command">"Start the azure-practice-exam-platform app"</div>
-                <div class="mcp-command">"What's running on port 3001?"</div>
-                <div class="mcp-command">"Kill whatever is running on port 3000"</div>
-                <div class="mcp-command">"Favorite the AzurePrep app"</div>
-              </div>
-              <p class="mcp-compat"><strong>Works with:</strong> Claude Code, Claude Desktop, Cursor, Windsurf, Cline</p>
-              <a href="#" class="mcp-setup-link" onclick="openExternal('https://github.com/m4cd4r4/PortPilot/tree/master/mcp-server')">Setup Guide →</a>
-            </div>
-          </div>
+      <!-- Selection Toolbar -->
+      <div id="selection-toolbar" class="selection-toolbar hidden">
+        <span id="selection-count" class="selection-count">0 selected</span>
+        <div class="selection-actions">
+          <button type="button" class="btn btn-small btn-secondary" onclick="selectAllApps()">Select All</button>
+          <button type="button" class="btn btn-small btn-primary" onclick="favoriteSelected()">Favorite</button>
+          <button type="button" class="btn btn-small btn-secondary" onclick="unfavoriteSelected()">Unfavorite</button>
+          <select id="selection-group-select" class="btn btn-small btn-secondary" onchange="moveSelectedToGroup(this.value); this.selectedIndex = 0;" title="Move selected apps to a group">
+            <option value="" disabled selected>Move to Group</option>
+          </select>
+          <button type="button" class="btn btn-small btn-danger" onclick="deleteSelected()">Delete</button>
+          <button type="button" class="btn btn-small btn-secondary" onclick="clearSelection()">Clear</button>
         </div>
+      </div>
+    </main>
 
-        <!-- Footer Links -->
-        <div class="knowledge-footer">
-          <a href="#" class="footer-link" onclick="openExternal('https://github.com/m4cd4r4/PortPilot#readme')">
-            <span class="link-icon">📖</span>
-            <span>Documentation</span>
-          </a>
-          <a href="#" class="footer-link" onclick="openExternal('https://github.com/m4cd4r4/PortPilot/discussions')">
-            <span class="link-icon">💬</span>
-            <span>Community</span>
-          </a>
-          <a href="#" class="footer-link" onclick="openExternal('https://github.com/m4cd4r4/PortPilot/issues/new')">
-            <span class="link-icon">🐛</span>
-            <span>Report Issue</span>
-          </a>
-          <a href="#" class="footer-link" onclick="openExternal('https://github.com/m4cd4r4/PortPilot')">
-            <span class="link-icon">⭐</span>
-            <span>Star on GitHub</span>
-          </a>
-        </div>
-      </section>
-
-      <!-- Settings Tab -->
-      <section id="tab-settings" class="tab-content">
+    <!-- Settings Slide-out Panel -->
+    <div id="settings-backdrop" class="settings-backdrop hidden"></div>
+    <aside id="settings-panel" class="settings-panel hidden" role="dialog" aria-label="Settings">
+      <div class="settings-header">
+        <h2>Settings</h2>
+        <button class="btn-close" id="settings-close" aria-label="Close settings"></button>
+      </div>
+      <div class="settings-body">
         <div class="settings-section">
           <h3>Theme</h3>
-          <div class="setting-row">
-            <span>Select Theme</span>
-            <div class="theme-selector" id="theme-selector">
-              <button class="theme-btn active" data-theme="tokyonight">TokyoNight</button>
-              <button class="theme-btn" data-theme="brutalist-dark">Brutalist Dark</button>
-              <button class="theme-btn" data-theme="nord">Nord</button>
-              <button class="theme-btn" data-theme="dracula">Dracula</button>
-              <button class="theme-btn" data-theme="solarized-light">Solarized</button>
-            </div>
+          <div class="theme-selector" id="theme-selector">
+            <button class="theme-btn active" data-theme="tokyonight">TokyoNight</button>
+            <button class="theme-btn" data-theme="brutalist-dark">Brutalist Dark</button>
+            <button class="theme-btn" data-theme="nord">Nord</button>
+            <button class="theme-btn" data-theme="dracula">Dracula</button>
+            <button class="theme-btn" data-theme="solarized-light">Solarized</button>
+            <button class="theme-btn" data-theme="glass">Glass</button>
           </div>
         </div>
         <div class="settings-section">
@@ -375,12 +115,12 @@
             <input type="number" id="setting-interval" value="5" min="1" max="60" class="input-small">
           </label>
           <label class="setting-row">
-            <span>Open DevTools on startup (dev mode only)</span>
+            <span>Open DevTools on startup</span>
             <input type="checkbox" id="setting-devtools">
           </label>
         </div>
         <div class="settings-section">
-          <h3>Window Behavior</h3>
+          <h3>Window</h3>
           <label class="setting-row">
             <span>Minimize to tray on close</span>
             <input type="checkbox" id="setting-close-to-tray" checked>
@@ -389,9 +129,6 @@
             <span>Stop running apps when quitting</span>
             <input type="checkbox" id="setting-stop-apps-on-quit" checked>
           </label>
-          <p class="setting-description">
-            When enabled, PortPilot will automatically stop all apps it started when you quit the application. External processes will not be affected.
-          </p>
         </div>
         <div class="settings-section">
           <h3>Data</h3>
@@ -400,8 +137,6 @@
             <button id="btn-import" class="btn btn-secondary">Import Config</button>
           </div>
         </div>
-
-        <!-- Project Discovery -->
         <div class="settings-section">
           <h3>Project Discovery</h3>
           <label class="setting-row">
@@ -414,24 +149,20 @@
           </div>
           <div class="form-group">
             <label>Scan Paths</label>
-            <div id="scan-paths-list" class="scan-paths-list">
-              <!-- Dynamically populated -->
-            </div>
-            <button id="btn-add-scan-path" class="btn btn-secondary">Add Path</button>
+            <div id="scan-paths-list" class="scan-paths-list"></div>
+            <button id="btn-add-scan-path" class="btn btn-secondary btn-small">Add Path</button>
           </div>
-          <button id="btn-discover-projects" class="btn btn-primary">
-            <span class="icon">🔍</span> Discover Projects
-          </button>
+          <button id="btn-discover-projects" class="btn btn-primary">Discover Projects</button>
         </div>
-      </section>
-    </main>
+      </div>
+    </aside>
 
     <!-- App Modal -->
     <div id="modal-app" class="modal hidden">
       <div class="modal-content">
         <div class="modal-header">
           <h2 id="modal-title">Add App</h2>
-          <button class="btn-close" id="modal-close">✕</button>
+          <button class="btn-close" id="modal-close" aria-label="Close"></button>
         </div>
         <form id="app-form">
           <input type="hidden" id="app-id">
@@ -447,7 +178,7 @@
             <label for="app-cwd">Working Directory</label>
             <input type="text" id="app-cwd" placeholder="e.g., C:\Projects\myapp">
             <button type="button" class="btn btn-secondary btn-full-width btn-auto-detect" id="btn-auto-detect">
-              🔍 Browse & Auto-detect Project
+              Browse & Auto-detect Project
             </button>
           </div>
           <div class="form-row">
@@ -489,11 +220,9 @@
         <div class="modal-header">
           <h2>Discovered Projects</h2>
           <span id="discoveries-count" class="count-badge">0 found</span>
-          <button type="button" class="btn-close" id="discoveries-close">✕</button>
+          <button type="button" class="btn-close" id="discoveries-close" aria-label="Close"></button>
         </div>
-        <div class="discoveries-list" id="discoveries-list">
-          <!-- Dynamically populated -->
-        </div>
+        <div class="discoveries-list" id="discoveries-list"></div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" id="btn-discoveries-cancel">Close</button>
           <button type="button" class="btn btn-secondary" id="btn-select-all-projects">Select All</button>
@@ -507,17 +236,12 @@
     <div id="modal-delete-confirm" class="modal hidden">
       <div class="modal-content modal-danger">
         <div class="modal-header">
-          <h2>⚠️ Delete App</h2>
-          <button type="button" class="btn-close" id="delete-confirm-close">✕</button>
+          <h2>Delete App</h2>
+          <button type="button" class="btn-close" id="delete-confirm-close" aria-label="Close"></button>
         </div>
         <div class="modal-body">
-          <p class="warning-text">
-            Delete "<strong id="delete-app-name"></strong>"?
-          </p>
-          <p class="danger-text">
-            ⚠️ This action cannot be undone.
-          </p>
-          <!-- Discrete Delete All option -->
+          <p class="warning-text">Delete "<strong id="delete-app-name"></strong>"?</p>
+          <p class="danger-text">This action cannot be undone.</p>
           <div class="delete-all-option">
             <button type="button" class="btn-link-danger" id="btn-delete-all-instead">
               Delete all <span id="total-apps-count">0</span> apps instead
@@ -531,12 +255,12 @@
       </div>
     </div>
 
-    <!-- Group Modal (create / rename) -->
+    <!-- Group Modal -->
     <div id="modal-group" class="modal hidden">
       <div class="modal-content modal-small">
         <div class="modal-header">
           <h2 id="group-modal-title">New Group</h2>
-          <button type="button" class="btn-close" onclick="closeGroupModal()">✕</button>
+          <button type="button" class="btn-close" onclick="closeGroupModal()" aria-label="Close"></button>
         </div>
         <div class="form-group" style="padding: 16px 0 8px;">
           <label for="group-name-input">Group Name</label>
@@ -550,21 +274,6 @@
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" onclick="closeGroupModal()">Cancel</button>
           <button type="button" class="btn btn-primary" onclick="saveGroupModal()">Save</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Quick Add Modal -->
-    <div id="modal-quick-add" class="modal hidden">
-      <div class="modal-content modal-wide">
-        <div class="modal-header">
-          <h2>Quick Add App</h2>
-          <button type="button" class="btn-close" onclick="closeQuickAddModal()">✕</button>
-        </div>
-        <p class="quick-add-subtitle">Choose a template to pre-fill the form</p>
-        <div class="quick-add-grid" id="quick-add-grid"></div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" onclick="closeQuickAddModal()">Cancel</button>
         </div>
       </div>
     </div>

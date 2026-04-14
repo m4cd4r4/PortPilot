@@ -1,0 +1,203 @@
+{
+  "name": "portpilot",
+  "displayName": "PortPilot",
+  "description": "Manage localhost dev servers and ports from the VS Code sidebar",
+  "version": "1.2.0",
+  "publisher": "macdara",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": ["Other"],
+  "activationEvents": [],
+  "main": "./out/extension.js",
+  "license": "MIT",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "portpilot",
+          "title": "PortPilot",
+          "icon": "media/portpilot-icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "portpilot": [
+        {
+          "id": "portpilot.apps",
+          "name": "Apps"
+        },
+        {
+          "id": "portpilot.activePorts",
+          "name": "Active Ports"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "portpilot.refresh",
+        "title": "Refresh",
+        "icon": "$(refresh)",
+        "category": "PortPilot"
+      },
+      {
+        "command": "portpilot.startApp",
+        "title": "Start App",
+        "icon": "$(play)",
+        "category": "PortPilot"
+      },
+      {
+        "command": "portpilot.stopApp",
+        "title": "Stop App",
+        "icon": "$(debug-stop)",
+        "category": "PortPilot"
+      },
+      {
+        "command": "portpilot.killPort",
+        "title": "Kill Port",
+        "icon": "$(close)",
+        "category": "PortPilot"
+      },
+      {
+        "command": "portpilot.openInBrowser",
+        "title": "Open in Browser",
+        "icon": "$(globe)",
+        "category": "PortPilot"
+      },
+      {
+        "command": "portpilot.openFolder",
+        "title": "Open Folder",
+        "icon": "$(folder-opened)",
+        "category": "PortPilot"
+      },
+      {
+        "command": "portpilot.scanPorts",
+        "title": "Scan Ports",
+        "icon": "$(search)",
+        "category": "PortPilot"
+      },
+      {
+        "command": "portpilot.addApp",
+        "title": "Add App",
+        "icon": "$(add)",
+        "category": "PortPilot"
+      },
+      {
+        "command": "portpilot.editApp",
+        "title": "Edit App",
+        "icon": "$(edit)",
+        "category": "PortPilot"
+      },
+      {
+        "command": "portpilot.deleteApp",
+        "title": "Delete App",
+        "icon": "$(trash)",
+        "category": "PortPilot"
+      },
+      {
+        "command": "portpilot.toggleFavorite",
+        "title": "Toggle Favorite",
+        "icon": "$(star)",
+        "category": "PortPilot"
+      },
+      {
+        "command": "portpilot.changePort",
+        "title": "Change Port",
+        "icon": "$(symbol-number)",
+        "category": "PortPilot"
+      },
+      {
+        "command": "portpilot.deleteAllApps",
+        "title": "Delete All Apps",
+        "icon": "$(clear-all)",
+        "category": "PortPilot"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "portpilot.addApp",
+          "when": "view == portpilot.apps",
+          "group": "navigation"
+        },
+        {
+          "command": "portpilot.refresh",
+          "when": "view == portpilot.apps || view == portpilot.activePorts",
+          "group": "navigation"
+        },
+        {
+          "command": "portpilot.deleteAllApps",
+          "when": "view == portpilot.apps",
+          "group": "2_manage"
+        },
+        {
+          "command": "portpilot.scanPorts",
+          "when": "view == portpilot.activePorts",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "portpilot.startApp",
+          "when": "view == portpilot.apps && viewItem == app-stopped",
+          "group": "inline@1"
+        },
+        {
+          "command": "portpilot.stopApp",
+          "when": "view == portpilot.apps && viewItem == app-running",
+          "group": "inline@1"
+        },
+        {
+          "command": "portpilot.openInBrowser",
+          "when": "view == portpilot.apps && viewItem == app-running",
+          "group": "inline@2"
+        },
+        {
+          "command": "portpilot.toggleFavorite",
+          "when": "view == portpilot.apps",
+          "group": "inline@3"
+        },
+        {
+          "command": "portpilot.editApp",
+          "when": "view == portpilot.apps",
+          "group": "1_edit@1"
+        },
+        {
+          "command": "portpilot.changePort",
+          "when": "view == portpilot.apps",
+          "group": "1_edit@2"
+        },
+        {
+          "command": "portpilot.openFolder",
+          "when": "view == portpilot.apps",
+          "group": "1_edit@3"
+        },
+        {
+          "command": "portpilot.deleteApp",
+          "when": "view == portpilot.apps",
+          "group": "3_danger"
+        },
+        {
+          "command": "portpilot.killPort",
+          "when": "view == portpilot.activePorts && viewItem == active-port",
+          "group": "inline"
+        },
+        {
+          "command": "portpilot.openInBrowser",
+          "when": "view == portpilot.activePorts && viewItem == active-port",
+          "group": "inline"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "package": "npx @vscode/vsce package --no-dependencies"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.85.0",
+    "typescript": "^5.3.0"
+  }
+}
