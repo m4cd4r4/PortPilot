@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, nativeTheme } = require('electron');
+const { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, nativeTheme, Notification } = require('electron');
 const path = require('path');
 const { setupIpcHandlers } = require('./ipcHandlers');
 const { ConfigStore } = require('./configStore');
@@ -153,6 +153,19 @@ if (!gotTheLock) {
     configStore = new ConfigStore(window);
     createTray();
     setupIpcHandlers(ipcMain, configStore);
+
+    // Notify (OS notification + in-app toast) when a running app crashes.
+    const { onAppCrash } = require('./processManager');
+    onAppCrash(({ name, code }) => {
+      if (configStore.getSettings().notifyOnCrash === false) return;
+      const body = `${name} exited unexpectedly${code != null ? ` (code ${code})` : ''}.`;
+      try {
+        if (Notification.isSupported()) {
+          new Notification({ title: 'PortPilot - app stopped', body }).show();
+        }
+      } catch (err) { console.error('Crash notification failed:', err); }
+      mainWindow?.webContents.send('toast', { type: 'error', message: body });
+    });
 
     // Reflect the persisted "start on login" preference (default on). Packaged
     // only - in dev the exec path is electron.exe and would pollute startup.

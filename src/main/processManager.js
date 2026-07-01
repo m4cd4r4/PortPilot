@@ -5,6 +5,15 @@ const path = require('path');
 // Track running child processes
 const runningProcesses = new Map();
 
+// Listeners notified when an app that was running exits unexpectedly (i.e. not
+// via stopApp). The Electron main process registers one to raise an OS
+// notification; the web agent can register one to push a toast over SSE.
+const crashListeners = new Set();
+function onAppCrash(cb) { crashListeners.add(cb); return () => crashListeners.delete(cb); }
+function emitCrash(info) {
+  for (const cb of crashListeners) { try { cb(info); } catch { /* ignore */ } }
+}
+
 /**
  * Start an application
  * @param {Object} appConfig - App configuration
@@ -77,6 +86,11 @@ async function startApp(appConfig) {
         if (processInfo) {
           processInfo.exitCode = code;
           processInfo.running = false;
+          // Announce only crashes: the app had started successfully (announced)
+          // and the user did not ask to stop it (userStopped).
+          if (processInfo.announced && !processInfo.userStopped) {
+            emitCrash({ id, name, code });
+          }
         }
       });
 
@@ -103,6 +117,8 @@ async function startApp(appConfig) {
             exitCode: childProcess.exitCode
           });
         } else {
+          const info = runningProcesses.get(id);
+          if (info) info.announced = true; // eligible for crash notification from now on
           resolve({
             success: true,
             pid: childProcess.pid,
@@ -129,6 +145,7 @@ async function stopApp(appId) {
     return { success: false, error: 'App not found or not running' };
   }
 
+  processInfo.userStopped = true; // suppress the crash notification for a deliberate stop
   return killProcess(processInfo.pid);
 }
 
@@ -258,5 +275,6 @@ module.exports = {
   killByPort,
   getRunningApps,
   getAppLogs,
-  cleanupAllProcesses
+  cleanupAllProcesses,
+  onAppCrash
 };

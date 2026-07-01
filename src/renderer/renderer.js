@@ -388,6 +388,7 @@ function setupEventListeners() {
   document.getElementById('setting-close-to-tray').addEventListener('change', saveSettings);
   document.getElementById('setting-stop-apps-on-quit').addEventListener('change', saveSettings);
   document.getElementById('setting-auto-resize').addEventListener('change', saveSettings);
+  document.getElementById('setting-notify-crash').addEventListener('change', saveSettings);
   document.getElementById('btn-export').addEventListener('click', exportConfig);
   document.getElementById('btn-import').addEventListener('click', importConfig);
 
@@ -2218,6 +2219,7 @@ async function loadSettings() {
     document.getElementById('setting-close-to-tray').checked = state.settings.closeToTray !== false;
     document.getElementById('setting-stop-apps-on-quit').checked = state.settings.stopAppsOnQuit !== false;
     document.getElementById('setting-auto-resize').checked = state.settings.autoResizeWindow === true;
+    document.getElementById('setting-notify-crash').checked = state.settings.notifyOnCrash !== false;
     document.getElementById('setting-open-at-login').checked = state.settings.openAtLogin !== false;
     state.favoritesExpanded = result.settings.favoritesExpanded !== false;
     state.otherProjectsExpanded = result.settings.otherProjectsExpanded !== false;
@@ -2241,6 +2243,7 @@ async function saveSettings() {
     closeToTray: document.getElementById('setting-close-to-tray').checked,
     stopAppsOnQuit: document.getElementById('setting-stop-apps-on-quit').checked,
     autoResizeWindow: document.getElementById('setting-auto-resize').checked,
+    notifyOnCrash: document.getElementById('setting-notify-crash').checked,
     openAtLogin: document.getElementById('setting-open-at-login').checked
   };
   await window.portpilot.config.updateSettings(settings);

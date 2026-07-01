@@ -83,6 +83,7 @@ class ConfigStore {
         stopAppsOnQuit: true,  // Stop PortPilot-managed apps when quitting
         openAtLogin: true,  // Start PortPilot (and the shared MCP server) at login
         autoResizeWindow: false,  // Auto-grow/shrink window height to app count (off by default - it fights manual resizing)
+        notifyOnCrash: true,  // OS notification + toast when a running app exits unexpectedly
 
         // Favorites system
         favoritesExpanded: true,
