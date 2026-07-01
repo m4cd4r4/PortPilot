@@ -260,6 +260,8 @@ function setupDelegation() {
     togglePortGroup: el => togglePortGroup(el.dataset.portgroup),
     toggleGroup: el => toggleGroup(el.dataset.group),
     openRenameGroupModal: el => openRenameGroupModal(el.dataset.group),
+    startGroup: el => startGroup(el.dataset.group),
+    stopGroup: el => stopGroup(el.dataset.group),
     confirmDeleteGroup: el => confirmDeleteGroup(el.dataset.group),
     startDocker: () => startDocker(),
     killConflictingProcess: el => killConflictingProcess(el.dataset.id),
@@ -941,6 +943,8 @@ function renderApps() {
           <span class="section-title" data-act="toggleGroup" data-group="${group.id}">${escapeHtml(group.name)}</span>
           <span class="section-count">${apps.length}</span>
           <div class="section-actions">
+            <button class="btn-group-action" data-act="startGroup" data-group="${group.id}" title="Start all in group">${icon('play', 12)}</button>
+            <button class="btn-group-action" data-act="stopGroup" data-group="${group.id}" title="Stop all in group">${icon('stop', 12)}</button>
             <button class="btn-group-action" data-act="openRenameGroupModal" data-group="${group.id}" title="Rename">${icon('edit', 12)}</button>
             <button class="btn-group-action btn-group-delete" data-act="confirmDeleteGroup" data-group="${group.id}" title="Delete">${icon('kill', 12)}</button>
           </div>
@@ -1329,6 +1333,41 @@ function openNewGroupModal() {
   renderGroupColorSwatches(null);
   document.getElementById('modal-group').classList.remove('hidden');
   document.getElementById('group-name-input').focus();
+}
+
+// Start/stop every app in a group as a one-click "stack preset". Branches
+// (child worktrees) are included. Runs sequentially with a small stagger so
+// ports settle; a single toast summarises the result.
+async function startGroup(groupId) {
+  const apps = state.apps.filter(a => a.group === groupId);
+  if (apps.length === 0) { showToast('No apps in this group', 'info'); return; }
+  showToast(`Starting ${apps.length} app(s)...`, 'success');
+  let started = 0;
+  for (const app of apps) {
+    const running = state.runningApps.find(r => r.id === app.id && r.running) || state.detectedApps[app.id];
+    if (running) continue;
+    try {
+      const res = await window.portpilot.process.start(app);
+      if (res.success) started++;
+    } catch { /* keep going */ }
+    await new Promise(r => setTimeout(r, 400));
+  }
+  showToast(`Started ${started} app(s) in group`, started ? 'success' : 'info');
+  await loadApps();
+}
+
+async function stopGroup(groupId) {
+  const apps = state.apps.filter(a => a.group === groupId);
+  if (apps.length === 0) { showToast('No apps in this group', 'info'); return; }
+  let stopped = 0;
+  for (const app of apps) {
+    try {
+      const res = await window.portpilot.process.stop(app.id);
+      if (res.success) stopped++;
+    } catch { /* keep going */ }
+  }
+  showToast(`Stopped ${stopped} app(s) in group`, stopped ? 'success' : 'info');
+  await loadApps();
 }
 
 function openRenameGroupModal(groupId) {
