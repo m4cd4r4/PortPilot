@@ -164,6 +164,7 @@ class ConfigStore {
       description: has('description') ? (appConfig.description || null) : (existing.description || null),
       startupDelay: has('startupDelay') ? appConfig.startupDelay : (existing.startupDelay ?? null),
       healthPath: has('healthPath') ? (appConfig.healthPath || null) : (existing.healthPath || null),
+      reservePort: has('reservePort') ? !!appConfig.reservePort : !!existing.reservePort,
       // Worktree / branch awareness (Wave 3). All optional; null on plain apps.
       parentId: has('parentId') ? (appConfig.parentId || null) : (existing.parentId || null),
       branch: has('branch') ? (appConfig.branch || null) : (existing.branch || null),
@@ -301,6 +302,7 @@ class ConfigStore {
         branch: typeof app.branch === 'string' ? app.branch.slice(0, 200) : null,
         worktreePath: typeof app.worktreePath === 'string' ? app.worktreePath.slice(0, 500) : null,
         healthPath: typeof app.healthPath === 'string' ? app.healthPath.slice(0, 500) : null,
+        reservePort: Boolean(app.reservePort),
         colorSource: ['peacock', 'manual', 'auto'].includes(app.colorSource) ? app.colorSource : null,
         color: typeof app.color === 'string' ? app.color : this.getRandomColor(),
         createdAt: app.createdAt || new Date().toISOString(),

@@ -19,6 +19,7 @@ const {
 const { matchPortsToApps, getProcessDetails, detectWorktrees, detectStaleWorktrees } = require('../main/ipcHandlers');
 const { probe } = require('../main/healthCheck');
 const { shareInfo } = require('../main/shareInfo');
+const reserver = require('../main/portReserver');
 
 function createDispatcher(configStore) {
   const handlers = {
@@ -45,8 +46,18 @@ function createDispatcher(configStore) {
 
     // ---- Processes ----
     'process:kill': async (pid) => killProcess(pid),
-    'process:start': async (appConfig) => startApp(appConfig),
-    'process:stop': async (appId) => stopApp(appId),
+    'process:start': async (appConfig) => {
+      // Free our own reservation first so the real app can bind the port.
+      if (appConfig && appConfig.id) await reserver.release(appConfig.id);
+      return startApp(appConfig);
+    },
+    'process:stop': async (appId) => {
+      const result = await stopApp(appId);
+      // Re-acquire the reservation if the app opted in.
+      const app = configStore.getApp(appId);
+      if (app && app.reservePort) await reserver.reserve(app);
+      return result;
+    },
     'process:list': async () => ({ success: true, apps: getRunningApps() }),
     'process:logs': async (appId) => ({ success: true, ...getAppLogs(appId) }),
 
@@ -94,6 +105,29 @@ function createDispatcher(configStore) {
 
     // ---- Share ----
     'net:shareInfo': async (port) => shareInfo(port),
+
+    // ---- Port reservation ----
+    'reserve:enable': async (appId) => {
+      const app = configStore.getApp(appId);
+      if (!app) return { success: false, error: 'App not found' };
+      if (!app.preferredPort) return { success: false, error: 'App has no preferred port to reserve' };
+      app.reservePort = true;
+      app.updatedAt = new Date().toISOString();
+      configStore.saveApp(app);
+      const running = getRunningApps().some(a => a.id === appId && a.running);
+      const r = running ? { ok: true } : await reserver.reserve(app);
+      if (!r.ok) return { success: false, error: `Port ${app.preferredPort} is already in use (${r.reason})` };
+      return { success: true, reserved: !running };
+    },
+    'reserve:disable': async (appId) => {
+      const app = configStore.getApp(appId);
+      if (!app) return { success: false, error: 'App not found' };
+      app.reservePort = false;
+      app.updatedAt = new Date().toISOString();
+      configStore.saveApp(app);
+      await reserver.release(appId);
+      return { success: true };
+    },
 
     // ---- Worktrees ----
     'worktrees:detect': async (appId) => detectWorktrees(configStore, appId),

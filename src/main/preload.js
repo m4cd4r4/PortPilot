@@ -57,6 +57,12 @@ contextBridge.exposeInMainWorld('portpilot', {
     shareInfo: (port) => ipcRenderer.invoke('net:shareInfo', port)
   },
 
+  // Port reservation
+  reserve: {
+    enable: (appId) => ipcRenderer.invoke('reserve:enable', appId),
+    disable: (appId) => ipcRenderer.invoke('reserve:disable', appId)
+  },
+
   // Discovery operations
   discovery: {
     scan: (scanPaths) => ipcRenderer.invoke('discovery:scan', scanPaths),

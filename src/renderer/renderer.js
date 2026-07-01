@@ -290,6 +290,7 @@ function setupDelegation() {
     confirmAddWorktrees: () => confirmAddWorktrees(),
     closeWorktreesModal: () => closeWorktreesModal(),
     shareApp: el => openShareModal(el.dataset.id, +el.dataset.port),
+    toggleReserve: el => toggleReserve(el.dataset.id),
     closeShareModal: () => closeShareModal(),
     copyShareLocal: () => copyText(document.getElementById('share-local-url').value, 'Local URL copied'),
     copyShareLan: () => copyText(document.getElementById('share-lan-url').value, 'LAN URL copied')
@@ -1059,6 +1060,7 @@ function renderAppCard(app, branchCount = 0) {
   if (reqs.database) badges.push(`<span class="req-badge" title="Database">DB</span>`);
   if (reqs.autoStart) badges.push(`<span class="req-badge" title="Auto-start">${icon('play', 10)}</span>`);
   if (reqs.remote) badges.push(`<span class="req-badge" title="Remote">${icon('globe', 10)}</span>`);
+  if (app.reservePort) badges.push(`<span class="req-badge" title="Port ${app.preferredPort} reserved">R</span>`);
 
   const isSelected = state.selectedApps.has(app.id);
   const isActive = state.drawerAppId === app.id;
@@ -1536,6 +1538,7 @@ function openAppDrawer(appId) {
     `<button class="btn btn-secondary" data-act="copyCmdPath" data-cmd="${escapeHtml(app.command)}">${icon('copy', 12)} Copy cmd</button>`,
     !app.parentId ? `<button class="btn btn-secondary" data-act="addBranch" data-id="${app.id}">${icon('branch', 12)} Add branch</button>` : '',
     !app.parentId ? `<button class="btn btn-secondary" data-act="detectWorktrees" data-id="${app.id}">${icon('branch', 12)} Add worktrees</button>` : '',
+    app.preferredPort ? `<button class="btn ${app.reservePort ? 'btn-warning' : 'btn-secondary'}" data-act="toggleReserve" data-id="${app.id}" title="Hold port ${app.preferredPort} while stopped so nothing else takes it">${app.reservePort ? 'Reserved ✓' : 'Reserve port'}</button>` : '',
     `<button class="btn btn-secondary" data-act="editApp" data-id="${app.id}">${icon('edit', 12)} Edit</button>`,
     `<button class="btn btn-secondary" data-act="deleteApp" data-id="${app.id}">${icon('trash', 12)} Delete</button>`,
   ].filter(Boolean).join('');
@@ -1634,6 +1637,24 @@ async function openShareModal(appId, port) {
 
 function closeShareModal() {
   document.getElementById('modal-share').classList.add('hidden');
+}
+
+// Toggle a "squatter" reservation on an app's preferred port so nothing else
+// can grab it while the app is stopped.
+async function toggleReserve(appId) {
+  const app = state.apps.find(a => a.id === appId);
+  if (!app) return;
+  const enabling = !app.reservePort;
+  const res = enabling
+    ? await window.portpilot.reserve.enable(appId)
+    : await window.portpilot.reserve.disable(appId);
+  if (res && res.success) {
+    showToast(enabling ? `Port ${app.preferredPort} reserved` : 'Port reservation removed', 'success');
+    await loadApps();
+    if (state.drawerAppId === appId) openAppDrawer(appId);
+  } else {
+    showToast((res && res.error) || 'Reservation failed', 'error');
+  }
 }
 
 async function confirmAddWorktrees() {

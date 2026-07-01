@@ -82,6 +82,10 @@
     net: {
       shareInfo: (port) => call('net:shareInfo', port)
     },
+    reserve: {
+      enable: (appId) => call('reserve:enable', appId),
+      disable: (appId) => call('reserve:disable', appId)
+    },
     discovery: {
       scan: (scanPaths) => call('discovery:scan', scanPaths),
       addScanPath: (p) => call('discovery:addScanPath', p),

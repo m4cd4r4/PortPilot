@@ -6,6 +6,7 @@ const { exec, execSync } = require('child_process');
 const os = require('os');
 const { probe } = require('./healthCheck');
 const { shareInfo } = require('./shareInfo');
+const reserver = require('./portReserver');
 
 // Read the Peacock window colour from a worktree's .vscode/settings.json so a
 // detected branch can be coloured to match its VS Code window. settings.json is
@@ -476,6 +477,8 @@ function setupIpcHandlers(ipcMain, configStore) {
   /** Start an app */
   ipcMain.handle('process:start', async (_, appConfig) => {
     try {
+      // Release our port reservation first so the real app can bind it.
+      if (appConfig && appConfig.id) await reserver.release(appConfig.id);
       const result = await startApp(appConfig);
       return result;
     } catch (error) {
@@ -487,7 +490,41 @@ function setupIpcHandlers(ipcMain, configStore) {
   ipcMain.handle('process:stop', async (_, appId) => {
     try {
       const result = await stopApp(appId);
+      const app = configStore.getApp(appId);
+      if (app && app.reservePort) await reserver.reserve(app);
       return result;
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+
+  /** Enable/disable port reservation for an app */
+  ipcMain.handle('reserve:enable', async (_, appId) => {
+    try {
+      const app = configStore.getApp(appId);
+      if (!app) return { success: false, error: 'App not found' };
+      if (!app.preferredPort) return { success: false, error: 'App has no preferred port to reserve' };
+      app.reservePort = true;
+      app.updatedAt = new Date().toISOString();
+      configStore.saveApp(app);
+      const running = getRunningApps().some(a => a.id === appId && a.running);
+      const r = running ? { ok: true } : await reserver.reserve(app);
+      if (!r.ok) return { success: false, error: `Port ${app.preferredPort} is already in use (${r.reason})` };
+      return { success: true, reserved: !running };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('reserve:disable', async (_, appId) => {
+    try {
+      const app = configStore.getApp(appId);
+      if (!app) return { success: false, error: 'App not found' };
+      app.reservePort = false;
+      app.updatedAt = new Date().toISOString();
+      configStore.saveApp(app);
+      await reserver.release(appId);
+      return { success: true };
     } catch (error) {
       return { success: false, error: error.message };
     }

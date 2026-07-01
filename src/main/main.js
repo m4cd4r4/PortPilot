@@ -155,17 +155,26 @@ if (!gotTheLock) {
     setupIpcHandlers(ipcMain, configStore);
 
     // Notify (OS notification + in-app toast) when a running app crashes.
-    const { onAppCrash } = require('./processManager');
-    onAppCrash(({ name, code }) => {
-      if (configStore.getSettings().notifyOnCrash === false) return;
-      const body = `${name} exited unexpectedly${code != null ? ` (code ${code})` : ''}.`;
-      try {
-        if (Notification.isSupported()) {
-          new Notification({ title: 'PortPilot - app stopped', body }).show();
-        }
-      } catch (err) { console.error('Crash notification failed:', err); }
-      mainWindow?.webContents.send('toast', { type: 'error', message: body });
+    const { onAppCrash, getRunningApps } = require('./processManager');
+    const reserver = require('./portReserver');
+    onAppCrash(({ id, name, code }) => {
+      if (configStore.getSettings().notifyOnCrash !== false) {
+        const body = `${name} exited unexpectedly${code != null ? ` (code ${code})` : ''}.`;
+        try {
+          if (Notification.isSupported()) {
+            new Notification({ title: 'PortPilot - app stopped', body }).show();
+          }
+        } catch (err) { console.error('Crash notification failed:', err); }
+        mainWindow?.webContents.send('toast', { type: 'error', message: body });
+      }
+      // Re-acquire the port reservation the crashed app left behind.
+      const app = configStore.getApp(id);
+      if (app && app.reservePort) reserver.reserve(app);
     });
+
+    // Hold reserved ports for opted-in, stopped apps at startup.
+    reserver.sync(configStore.getApps(), (id) => getRunningApps().some(a => a.id === id && a.running))
+      .catch((err) => console.error('Port reservation sync failed:', err));
 
     // Reflect the persisted "start on login" preference (default on). Packaged
     // only - in dev the exec path is electron.exe and would pollute startup.
@@ -275,6 +284,9 @@ app.on('window-all-closed', () => {
 
 app.on('before-quit', async (event) => {
   app.isQuitting = true;
+
+  // Drop all port reservations so we don't leave sockets held after exit.
+  try { await require('./portReserver').releaseAll(); } catch (err) { console.error('Error releasing reservations:', err); }
 
   // Stop the web agent if it was enabled
   if (webAgent) {
