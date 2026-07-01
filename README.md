@@ -10,7 +10,7 @@ One dashboard for every local dev server across all your projects - including se
 
 *Local-first. No accounts, no telemetry, no cloud. It runs entirely on your machine.*
 
-[![Version](https://img.shields.io/badge/version-3.2.0-blue.svg)](https://github.com/m4cd4r4/PortPilot/releases/tag/v3.2.0)
+[![Version](https://img.shields.io/badge/version-3.3.0-blue.svg)](https://github.com/m4cd4r4/PortPilot/releases/tag/v3.3.0)
 [![Tests](https://img.shields.io/badge/tests-Playwright%20E2E-blue.svg)](tests/)
 [![Licence](https://img.shields.io/badge/licence-MIT-green.svg)](LICENSE)
 [![MCP](https://img.shields.io/badge/MCP-enabled-purple.svg)](mcp-server/README.md)
@@ -27,6 +27,7 @@ One dashboard for every local dev server across all your projects - including se
 ## 📑 Table of Contents
 
 - [✨ AI Agent Integration](#-ai-agent-integration)
+- [What's New in v3.3.0](#whats-new-in-v330)
 - [What's New in v3.2.0](#whats-new-in-v320)
 - [What's New in v3.1.0](#whats-new-in-v310)
 - [What's New in v3.0.0](#whats-new-in-v300)
@@ -59,6 +60,24 @@ Control PortPilot with natural language! Works with Claude Code, Cursor, Windsur
 ```
 
 **[→ Setup MCP Integration](mcp-server/README.md)**
+
+## What's New in v3.3.0
+
+### Port Intelligence - PortPilot now manages ports, not just watches them
+
+Registering an app never used to reserve its port, and a running server only told you the port was open, not whether it worked. v3.3.0 closes those gaps.
+
+- **Port reservation** - opt in per app and PortPilot holds a placeholder socket on its port while it's stopped, so nothing else can grab it. The instant you start the app, the reservation is released so the real server binds; on stop or crash it's re-acquired. Toggle it in the detail drawer; reserved apps show an `R` badge.
+- **Health checks** - running apps are probed on the loopback address and shown as healthy (2xx/3xx), not responding (an amber pulsing dot on the previously-unused error state), or down. Set a custom health path per app.
+- **Conflict resolution** - when an app's preferred port is squatted, resolve it inline: kill the blocker and start, or start on the next free port (without changing the saved port).
+- **Framework auto-detect** - Add-App now suggests the conventional dev port for Next, Nuxt, Astro, SvelteKit, Gatsby, Remix, Vite, CRA, Vue and Angular when no explicit port is configured.
+- **Stack presets** - Start all / Stop all for a whole group in one click.
+- **Crash notifications** - an OS notification + in-app toast when a running app exits unexpectedly (a deliberate stop stays quiet). Toggle in Settings.
+- **Share to phone** - copy an app's local or LAN URL, or scan a QR code, to open it on your phone on the same Wi-Fi.
+
+### Themes: a proper Light mode + Auto
+
+A crisp GitHub-style **Light** theme and an **Auto** option that follows your OS light/dark setting and updates live. The dated Brutalist Dark and low-contrast Solarized Light themes were retired (saved preferences migrate automatically).
 
 ## What's New in v3.2.0
 
@@ -154,6 +173,18 @@ The extension's tree views adopt the shared model: branches nest under their pro
 [See full changelog →](CHANGELOG.md)
 
 ## Features
+
+### Port Intelligence (v3.3.0)
+
+- **🔒 Port Reservation** - Hold an app's port with a placeholder socket while it's stopped so nothing else takes it; released automatically when the app starts
+- **💓 Health Checks** - Loopback probe shows running apps as healthy / not responding / down, with an optional per-app health path
+- **🛠 Conflict Resolution** - Kill the blocker and start, or start on the next free port, right from a conflicted row
+- **🧭 Framework Auto-detect** - Suggests the conventional dev port for Next, Nuxt, Astro, SvelteKit, Gatsby, Remix, Vite, CRA, Vue, Angular
+- **▶️ Stack Presets** - Start all / Stop all for a whole group in one click
+- **🔔 Crash Notifications** - OS notification + toast when a running app exits unexpectedly
+- **📱 Share to Phone** - Copy an app's local/LAN URL or scan a QR code to open it on your phone
+
+### Everything else
 
 - **🔍 Search & Filter** - Live search on My Apps tab, filter by name/command/cwd
 - **⬆️ Sort Options** - Sort apps by name, running status, or port
@@ -379,15 +410,15 @@ Explore all PortPilot features including app management, the Active Ports scanne
 
 ### Download (Recommended)
 
-**Latest Release: v3.2.0**
+**Latest Release: v3.3.0**
 
 **Windows:**
-- [PortPilot-3.2.0-x64.exe](https://github.com/m4cd4r4/PortPilot/releases/download/v3.2.0/PortPilot-3.2.0-x64.exe) - NSIS Installer (~75 MB)
-- [PortPilot-3.2.0-portable.exe](https://github.com/m4cd4r4/PortPilot/releases/download/v3.2.0/PortPilot-3.2.0-portable.exe) - Portable (~75 MB)
+- [PortPilot-3.3.0-x64.exe](https://github.com/m4cd4r4/PortPilot/releases/download/v3.3.0/PortPilot-3.3.0-x64.exe) - NSIS Installer (~75 MB)
+- [PortPilot-3.3.0-portable.exe](https://github.com/m4cd4r4/PortPilot/releases/download/v3.3.0/PortPilot-3.3.0-portable.exe) - Portable (~75 MB)
 
 **Linux:**
-- [PortPilot-3.2.0-x86_64.AppImage](https://github.com/m4cd4r4/PortPilot/releases/download/v3.2.0/PortPilot-3.2.0-x86_64.AppImage) - AppImage (~98 MB)
-- [PortPilot-3.2.0-amd64.deb](https://github.com/m4cd4r4/PortPilot/releases/download/v3.2.0/PortPilot-3.2.0-amd64.deb) - Debian/Ubuntu (~69 MB)
+- [PortPilot-3.3.0-x86_64.AppImage](https://github.com/m4cd4r4/PortPilot/releases/download/v3.3.0/PortPilot-3.3.0-x86_64.AppImage) - AppImage (~98 MB)
+- [PortPilot-3.3.0-amd64.deb](https://github.com/m4cd4r4/PortPilot/releases/download/v3.3.0/PortPilot-3.3.0-amd64.deb) - Debian/Ubuntu (~69 MB)
 
 **macOS:**
 - Build from source (see below) - macOS is supported but not officially tested
@@ -684,7 +715,16 @@ started processes separately).
 
 ## Version History
 
-### v3.2.0 (2026-07-01) - Current Release
+### v3.3.0 (2026-07-01) - Current Release
+- Port Intelligence: PortPilot now actively manages ports rather than only observing them
+- Port reservation - hold an app's port with a placeholder socket while it's stopped; released on start, re-acquired on stop/crash
+- Health checks - loopback liveness probe (healthy / not responding / down) with an optional per-app health path
+- Conflict resolution - kill the blocker and start, or start on the next free port, from a conflicted row
+- Framework auto-detect - suggests the conventional dev port for Next/Nuxt/Astro/SvelteKit/Gatsby/Remix/Vite/CRA/Vue/Angular
+- Stack presets - Start all / Stop all per group; crash notifications (OS + toast); Share to phone (local/LAN URL + QR)
+- Themes - new crisp Light mode and an Auto option that follows the OS; retired Brutalist Dark and Solarized Light
+
+### v3.2.0 (2026-07-01)
 - Branch & worktree awareness - run multiple git branches of one project at once, each on its own port, nested under the parent and colour-coded to match its VS Code (Peacock) window
 - "Add worktrees" auto-detects a repo's git worktrees and bulk-adds them; `add_worktree` MCP tool + CLI register a worktree under its parent (19 MCP tools total)
 - Detail drawer on row click (command, cwd, PID, uptime, branch; Start/Stop/Open/Copy/Remove); denser rows with hover-revealed actions; ports and requirements as chips

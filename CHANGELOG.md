@@ -5,6 +5,31 @@ All notable changes to PortPilot will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.3.0] - 2026-07-01
+
+### Added
+- **Port reservation** - opt in per app to hold its `preferredPort` with a lightweight placeholder socket while the app is stopped, so nothing else can take it. Released the instant the app starts (so the real server can bind) and re-acquired on stop/crash. Toggle in the detail drawer; reserved apps show an `R` badge.
+- **Health checks** - running apps are probed on the loopback address and shown as healthy (2xx/3xx), not responding (an amber pulsing dot using the previously-unused error state), or down. Optional per-app health path (default `/`).
+- **Conflict resolution** - when an app's preferred port is squatted, resolve it inline: kill the blocker and start, or start on the next free port (without changing the saved port).
+- **Framework auto-detect** - Add-App suggests the conventional dev port for Next, Nuxt, Astro, SvelteKit, Gatsby, Remix, Vite, CRA, Vue and Angular when no explicit port is configured.
+- **Stack presets** - Start all / Stop all for a whole group in one click.
+- **Crash notifications** - an OS notification + in-app toast when a running app exits unexpectedly (deliberate stops stay quiet). New `notifyOnCrash` setting (default on).
+- **Share to phone** - copy an app's local or LAN URL, or scan a QR code, to open it on a phone on the same network. QR is generated server-side as a `data:` URL (no external calls). Adds the `qrcode` dependency.
+- **Light theme + Auto** - a crisp GitHub-style Light theme and an Auto option that follows the OS light/dark setting and updates live.
+
+### Changed
+- Retired the Brutalist Dark and Solarized Light themes; saved preferences migrate automatically (`brutalist-dark` → `tokyonight`, `solarized-light` → `light`).
+
+## [3.2.0] - 2026-07-01
+
+### Added
+- **Branch & worktree awareness** - run several git branches/worktrees of one project at once, each on its own port, nested under the parent project and colour-coded to match its VS Code (Peacock) window.
+- **Add worktrees** - detect a repo's git worktrees (`git worktree list`) and bulk-add the unregistered ones, reading each one's Peacock colour from `.vscode/settings.json`.
+- **`add_worktree` MCP tool + `register-worktree` CLI** - register a worktree under its parent in one call (19 MCP tools total).
+- **Detail drawer** - clicking a row opens a slide-over with full command, cwd, PID, uptime and branch, plus Start/Stop/Open/Copy/Add-branch/Remove. Denser rows with hover-revealed actions; ports and requirements as chips.
+- **Stale-worktree pruning** - a branch whose folder is gone is flagged `STALE` and one-click removable.
+- **VS Code extension parity** - branches nest in the tree; Active Ports grouped into Dev / Other / System with kill gated off system-owned ports.
+
 ## [3.1.0] - 2026-06-08
 
 ### Added
