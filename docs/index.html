@@ -136,10 +136,10 @@
             <div class="screenshot-carousel" role="region" aria-label="Screenshot carousel" aria-roledescription="carousel">
               <div class="carousel-container">
                 <div class="carousel-slide active" role="tabpanel" aria-label="Slide 1 of 2">
-                  <img src="screenshots/slot1.png" alt="PortPilot showing branches nested under their project, colour-coded, with active ports grouped into Dev, Other and System" width="800" height="500" loading="eager">
+                  <img src="screenshots/slot1.png" alt="PortPilot showing branches nested under their project, colour-coded, with active ports grouped into Dev, Other and System" width="800" height="500" loading="eager" class="zoomable" tabindex="0" title="Click to enlarge">
                 </div>
                 <div class="carousel-slide" role="tabpanel" aria-label="Slide 2 of 2">
-                  <img src="screenshots/slot2.png" alt="PortPilot detail drawer showing a running app's branch, port, memory, uptime, command and actions" width="800" height="500" loading="lazy">
+                  <img src="screenshots/slot2.png" alt="PortPilot detail drawer showing a running app's branch, port, memory, uptime, command and actions" width="800" height="500" loading="lazy" class="zoomable" tabindex="0" title="Click to enlarge">
                 </div>
               </div>
               <button type="button" class="carousel-btn carousel-prev" aria-label="Previous screenshot">&#10094;</button>
@@ -585,6 +585,11 @@
       <p class="copyright">MIT Licence &middot; 2026 Macdara</p>
     </div>
   </footer>
+
+  <div id="lightbox" class="lightbox" role="dialog" aria-modal="true" aria-label="Enlarged screenshot" hidden>
+    <button type="button" class="lightbox-close" aria-label="Close">&#10005;</button>
+    <img id="lightbox-img" class="lightbox-img" src="" alt="">
+  </div>
 
   <script src="main.js"></script>
 </body>

@@ -133,6 +133,45 @@
     if (e.key === 'ArrowRight') { nextSlide(); startAutoplay(); }
   });
 
+  // --- Screenshot Lightbox (click a carousel shot to enlarge) ---
+  var lightbox = document.getElementById('lightbox');
+  var lightboxImg = document.getElementById('lightbox-img');
+  var lightboxClose = lightbox ? lightbox.querySelector('.lightbox-close') : null;
+
+  function openLightbox(src, alt) {
+    if (!lightbox) return;
+    lightboxImg.src = src;
+    lightboxImg.alt = alt || '';
+    lightbox.hidden = false;
+    document.body.classList.add('lightbox-open');
+    stopAutoplay();
+    if (lightboxClose) lightboxClose.focus();
+  }
+
+  function closeLightbox() {
+    if (!lightbox || lightbox.hidden) return;
+    lightbox.hidden = true;
+    lightboxImg.src = '';
+    document.body.classList.remove('lightbox-open');
+    startAutoplay();
+  }
+
+  document.querySelectorAll('.carousel-slide img.zoomable').forEach(function (img) {
+    img.addEventListener('click', function () { openLightbox(img.src, img.alt); });
+    img.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openLightbox(img.src, img.alt); }
+    });
+  });
+
+  if (lightbox) {
+    lightbox.addEventListener('click', function (e) {
+      if (e.target === lightbox || e.target === lightboxClose) closeLightbox();
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') closeLightbox();
+    });
+  }
+
   // Logo click - scroll to top
   var brand = document.querySelector('.nav-brand');
   if (brand) {
