@@ -288,7 +288,11 @@ function setupDelegation() {
     closeAppDrawer: () => closeAppDrawer(),
     detectWorktrees: el => detectWorktrees(el.dataset.id),
     confirmAddWorktrees: () => confirmAddWorktrees(),
-    closeWorktreesModal: () => closeWorktreesModal()
+    closeWorktreesModal: () => closeWorktreesModal(),
+    shareApp: el => openShareModal(el.dataset.id, +el.dataset.port),
+    closeShareModal: () => closeShareModal(),
+    copyShareLocal: () => copyText(document.getElementById('share-local-url').value, 'Local URL copied'),
+    copyShareLan: () => copyText(document.getElementById('share-lan-url').value, 'LAN URL copied')
   };
   const CHANGE = {
     toggleAppSelection: el => toggleAppSelection(el.dataset.id),
@@ -482,6 +486,7 @@ function setupEventListeners() {
       closeSettings();
       closeAppDrawer();
       closeWorktreesModal();
+      closeShareModal();
       document.getElementById('modal-discoveries').classList.add('hidden');
     }
   });
@@ -1525,6 +1530,7 @@ function openAppDrawer(appId) {
 
   const secondary = [
     port ? `<button class="btn btn-secondary" data-act="openInBrowser" data-id="${app.id}">${icon('browser', 12)} Open</button>` : '',
+    (isRunning && port) ? `<button class="btn btn-secondary" data-act="shareApp" data-id="${app.id}" data-port="${port}">${icon('globe', 12)} Share</button>` : '',
     managedRunning ? `<button class="btn btn-secondary" data-act="viewLogs" data-id="${app.id}">${icon('logs', 12)} Logs</button>` : '',
     app.cwd ? `<button class="btn btn-secondary" data-act="openAppFolder" data-id="${app.id}">${icon('folder', 12)} Folder</button>` : '',
     `<button class="btn btn-secondary" data-act="copyCmdPath" data-cmd="${escapeHtml(app.command)}">${icon('copy', 12)} Copy cmd</button>`,
@@ -1591,6 +1597,43 @@ function openWorktreesModal(ctx) {
 function closeWorktreesModal() {
   document.getElementById('modal-worktrees').classList.add('hidden');
   worktreeCtx = null;
+}
+
+// ---- Share: local/LAN URL + QR for a running app ----
+function copyText(text, msg) {
+  if (!text) return;
+  navigator.clipboard.writeText(text);
+  showToast(msg || 'Copied', 'success');
+}
+
+async function openShareModal(appId, port) {
+  const app = state.apps.find(a => a.id === appId);
+  if (!app || !port) return;
+  document.getElementById('share-app-name').textContent = app.name;
+  document.getElementById('modal-share').classList.remove('hidden');
+
+  const res = await window.portpilot.net.shareInfo(port);
+  if (!res || !res.success) { showToast('Could not build share links', 'error'); return; }
+
+  document.getElementById('share-local-url').value = res.localUrl || '';
+  const lanRow = document.getElementById('share-lan-row');
+  const qrWrap = document.getElementById('share-qr-wrap');
+  const noLan = document.getElementById('share-no-lan');
+  if (res.lanUrl) {
+    document.getElementById('share-lan-url').value = res.lanUrl;
+    document.getElementById('share-qr').src = res.qrDataUrl || '';
+    lanRow.classList.remove('hidden');
+    qrWrap.classList.toggle('hidden', !res.qrDataUrl);
+    noLan.classList.add('hidden');
+  } else {
+    lanRow.classList.add('hidden');
+    qrWrap.classList.add('hidden');
+    noLan.classList.remove('hidden');
+  }
+}
+
+function closeShareModal() {
+  document.getElementById('modal-share').classList.add('hidden');
 }
 
 async function confirmAddWorktrees() {

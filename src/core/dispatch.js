@@ -18,6 +18,7 @@ const {
 } = require('../main/processManager');
 const { matchPortsToApps, getProcessDetails, detectWorktrees, detectStaleWorktrees } = require('../main/ipcHandlers');
 const { probe } = require('../main/healthCheck');
+const { shareInfo } = require('../main/shareInfo');
 
 function createDispatcher(configStore) {
   const handlers = {
@@ -90,6 +91,9 @@ function createDispatcher(configStore) {
       const state = await probe(target, app.healthPath || '/');
       return { success: true, appId, port: target, state };
     },
+
+    // ---- Share ----
+    'net:shareInfo': async (port) => shareInfo(port),
 
     // ---- Worktrees ----
     'worktrees:detect': async (appId) => detectWorktrees(configStore, appId),

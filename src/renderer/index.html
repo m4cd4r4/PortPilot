@@ -341,6 +341,36 @@
     </div>
 
     <!-- Logs Modal -->
+    <div id="modal-share" class="modal hidden">
+      <div class="modal-content modal-small">
+        <div class="modal-header">
+          <h2>Share — <span id="share-app-name"></span></h2>
+          <button type="button" class="btn-close" data-act="closeShareModal" aria-label="Close"></button>
+        </div>
+        <div class="share-body">
+          <div class="share-url-row">
+            <label>Local</label>
+            <div class="input-with-button">
+              <input type="text" id="share-local-url" readonly>
+              <button type="button" class="btn btn-small" data-act="copyShareLocal">Copy</button>
+            </div>
+          </div>
+          <div class="share-url-row" id="share-lan-row">
+            <label>On your network (open on your phone)</label>
+            <div class="input-with-button">
+              <input type="text" id="share-lan-url" readonly>
+              <button type="button" class="btn btn-small" data-act="copyShareLan">Copy</button>
+            </div>
+          </div>
+          <div id="share-qr-wrap" class="share-qr-wrap">
+            <img id="share-qr" alt="QR code for the LAN URL" width="220" height="220">
+            <p class="share-qr-hint">Scan with your phone camera (same Wi-Fi)</p>
+          </div>
+          <p id="share-no-lan" class="share-no-lan hidden">Not connected to a network - only the local URL is available.</p>
+        </div>
+      </div>
+    </div>
+
     <div id="modal-logs" class="modal hidden">
       <div class="modal-content modal-wide modal-logs">
         <div class="modal-header">

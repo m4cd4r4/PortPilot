@@ -52,6 +52,11 @@ contextBridge.exposeInMainWorld('portpilot', {
     check: (appId, port) => ipcRenderer.invoke('health:check', appId, port)
   },
 
+  // Share (local/LAN URL + QR)
+  net: {
+    shareInfo: (port) => ipcRenderer.invoke('net:shareInfo', port)
+  },
+
   // Discovery operations
   discovery: {
     scan: (scanPaths) => ipcRenderer.invoke('discovery:scan', scanPaths),

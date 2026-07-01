@@ -79,6 +79,9 @@
     health: {
       check: (appId, port) => call('health:check', appId, port)
     },
+    net: {
+      shareInfo: (port) => call('net:shareInfo', port)
+    },
     discovery: {
       scan: (scanPaths) => call('discovery:scan', scanPaths),
       addScanPath: (p) => call('discovery:addScanPath', p),

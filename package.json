@@ -117,5 +117,8 @@
       "category": "Development",
       "artifactName": "${productName}-${version}-${arch}.${ext}"
     }
+  },
+  "dependencies": {
+    "qrcode": "^1.5.4"
   }
 }

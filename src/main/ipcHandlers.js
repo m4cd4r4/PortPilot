@@ -5,6 +5,7 @@ const fs = require('fs');
 const { exec, execSync } = require('child_process');
 const os = require('os');
 const { probe } = require('./healthCheck');
+const { shareInfo } = require('./shareInfo');
 
 // Read the Peacock window colour from a worktree's .vscode/settings.json so a
 // detected branch can be coloured to match its VS Code window. settings.json is
@@ -524,6 +525,12 @@ function setupIpcHandlers(ipcMain, configStore) {
     } catch (error) {
       return { success: false, error: error.message };
     }
+  });
+
+  /** Build shareable local/LAN URLs + a QR code of the LAN URL for a port */
+  ipcMain.handle('net:shareInfo', async (_, port) => {
+    try { return await shareInfo(port); }
+    catch (error) { return { success: false, error: error.message }; }
   });
 
   // ============ Config Operations ============

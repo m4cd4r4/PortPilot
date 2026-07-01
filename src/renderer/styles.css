@@ -1024,6 +1024,26 @@ body {
   box-shadow: 0 0 6px var(--accent-red);
 }
 
+/* Share modal */
+.share-body { display: flex; flex-direction: column; gap: 14px; }
+.share-url-row label {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+.share-qr-wrap { text-align: center; }
+.share-qr-wrap img {
+  border-radius: var(--radius);
+  background: #fff;
+  padding: 8px;
+}
+.share-qr-hint, .share-no-lan {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin: 6px 0 0;
+}
+
 /* Running but failing its health probe */
 .status-dot.error {
   background: var(--accent-yellow);
