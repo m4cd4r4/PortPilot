@@ -30,6 +30,7 @@ function icon(name, size = 16) {
     globe: `<svg width="${size}" height="${size}" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M2 8h12M8 2c-2 2-2 4 0 6s2 4 0 6"/></svg>`,
     logs: `<svg width="${size}" height="${size}" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 4h10M3 8h10M3 12h6"/></svg>`,
     branch: `<svg width="${size}" height="${size}" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="4" cy="3" r="2"/><circle cx="4" cy="13" r="2"/><circle cx="12" cy="5" r="2"/><path d="M4 5v6M12 7c0 3-4 2-8 4"/></svg>`,
+    qr: `<svg width="${size}" height="${size}" viewBox="0 0 16 16" fill="currentColor"><path d="M1 1h5v5H1V1zm1.5 1.5v2h2v-2h-2zM10 1h5v5h-5V1zm1.5 1.5v2h2v-2h-2zM1 10h5v5H1v-5zm1.5 1.5v2h2v-2h-2zM10 10h2v2h-2v-2zm3 0h2v2h-2v-2zm-3 3h2v2h-2v-2zm3 0h2v2h-2v-2z"/></svg>`,
   };
   return icons[name] || '';
 }
@@ -1532,7 +1533,7 @@ function openAppDrawer(appId) {
 
   const secondary = [
     port ? `<button class="btn btn-secondary" data-act="openInBrowser" data-id="${app.id}">${icon('browser', 12)} Open</button>` : '',
-    (isRunning && port) ? `<button class="btn btn-secondary" data-act="shareApp" data-id="${app.id}" data-port="${port}">${icon('globe', 12)} Share</button>` : '',
+    (isRunning && port) ? `<button class="btn btn-secondary" data-act="shareApp" data-id="${app.id}" data-port="${port}">${icon('qr', 12)} Share</button>` : '',
     managedRunning ? `<button class="btn btn-secondary" data-act="viewLogs" data-id="${app.id}">${icon('logs', 12)} Logs</button>` : '',
     app.cwd ? `<button class="btn btn-secondary" data-act="openAppFolder" data-id="${app.id}">${icon('folder', 12)} Folder</button>` : '',
     `<button class="btn btn-secondary" data-act="copyCmdPath" data-cmd="${escapeHtml(app.command)}">${icon('copy', 12)} Copy cmd</button>`,

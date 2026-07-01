@@ -5,34 +5,63 @@
  * with a plain <img> under the app's strict CSP (img-src 'self' data:).
  */
 const os = require('os');
+const dgram = require('dgram');
 const QRCode = require('qrcode');
 
-// Interface names that are virtual adapters (WSL, VirtualBox, VMware, Hyper-V,
-// Docker) - their IPs are not reachable from a phone on the real LAN, so they
-// rank last.
-const VIRTUAL_RE = /vethernet|virtualbox|vmware|hyper-v|docker|loopback|vbox|wsl/i;
+// VirtualBox's default host-only network. Docker Desktop's default NAT range.
+// Both can appear as ordinary-looking 192.168.x adapters, so they need an
+// explicit blacklist rather than relying on interface naming (which varies -
+// e.g. VirtualBox often shows up as a generic "Ethernet 2", not "VirtualBox...").
+const KNOWN_VIRTUAL_SUBNETS = [/^192\.168\.56\./, /^172\.17\./];
+const VIRTUAL_NAME_RE = /vethernet|virtualbox|vmware|hyper-v|docker|loopback|vbox|wsl/i;
 
 /**
- * Best non-internal IPv4 address for LAN sharing, or null if the host is
- * offline. Prefers real adapters and common private LAN ranges over virtual
- * adapters (WSL/VirtualBox/etc.) so the QR/LAN URL actually reaches a phone.
+ * Ask the OS routing table which local address it would use to reach the
+ * outside world, by connecting a UDP socket (no packets are actually sent -
+ * UDP "connect" only resolves a route). This is far more reliable than
+ * guessing from interface names/ranges, since it reflects the OS's own
+ * default-route choice - the same adapter a phone on the LAN would reach.
+ * Resolves null if there's no route at all (fully offline, no adapters).
  */
-function lanAddress() {
+function routedAddress() {
+  return new Promise((resolve) => {
+    let settled = false;
+    const done = (v) => { if (!settled) { settled = true; resolve(v); } };
+    try {
+      const sock = dgram.createSocket('udp4');
+      sock.once('error', () => { try { sock.close(); } catch { /* ignore */ } done(null); });
+      sock.connect(80, '8.8.8.8', () => {
+        let address = null;
+        try { address = sock.address().address; } catch { /* ignore */ }
+        try { sock.close(); } catch { /* ignore */ }
+        done(address && address !== '0.0.0.0' ? address : null);
+      });
+    } catch { done(null); }
+  });
+}
+
+/** Fallback when there's no default route: best-guess from interface list. */
+function heuristicAddress() {
   const nets = os.networkInterfaces();
   const candidates = [];
   for (const name of Object.keys(nets)) {
     for (const net of nets[name] || []) {
       if (net.family !== 'IPv4' || net.internal) continue;
-      const virtual = VIRTUAL_RE.test(name);
-      const homeLan = /^192\.168\./.test(net.address);
-      const privateLan = homeLan || /^10\./.test(net.address) || /^172\.(1[6-9]|2\d|3[01])\./.test(net.address);
-      // Lower score = preferred.
-      const score = (virtual ? 100 : 0) + (privateLan ? 0 : 10) + (homeLan ? 0 : 1);
+      const virtual = VIRTUAL_NAME_RE.test(name) || KNOWN_VIRTUAL_SUBNETS.some((re) => re.test(net.address));
+      const privateLan = /^(192\.168\.|10\.|172\.(1[6-9]|2\d|3[01])\.)/.test(net.address);
+      const score = (virtual ? 100 : 0) + (privateLan ? 0 : 10);
       candidates.push({ address: net.address, score });
     }
   }
   candidates.sort((a, b) => a.score - b.score);
   return candidates.length ? candidates[0].address : null;
+}
+
+/** Best IPv4 address for LAN sharing, or null if the host is offline. */
+async function lanAddress() {
+  const routed = await routedAddress();
+  if (routed && !KNOWN_VIRTUAL_SUBNETS.some((re) => re.test(routed))) return routed;
+  return heuristicAddress();
 }
 
 /**
@@ -42,7 +71,7 @@ function lanAddress() {
 async function shareInfo(port) {
   const p = parseInt(port, 10);
   if (!Number.isInteger(p) || p < 1 || p > 65535) return { success: false, error: 'Invalid port' };
-  const ip = lanAddress();
+  const ip = await lanAddress();
   const localUrl = `http://localhost:${p}`;
   const lanUrl = ip ? `http://${ip}:${p}` : null;
   let qrDataUrl = null;
