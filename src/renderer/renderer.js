@@ -263,6 +263,7 @@ function setupDelegation() {
     confirmDeleteGroup: el => confirmDeleteGroup(el.dataset.group),
     startDocker: () => startDocker(),
     killConflictingProcess: el => killConflictingProcess(el.dataset.id),
+    startOnFreePort: el => startOnFreePort(el.dataset.id),
     startApp: el => startApp(el.dataset.id),
     openInBrowser: el => openInBrowser(el.dataset.id),
     viewLogs: el => viewLogs(el.dataset.id),
@@ -1058,8 +1059,9 @@ function renderAppCard(app, branchCount = 0) {
   if (conflict) {
     actionsHtml = `
       <button class="btn btn-small btn-secondary" data-act="openPortInBrowser" data-port="${conflict.port}" title="Open port">${icon('browser', 12)}</button>
-      <button class="btn btn-small btn-warning" data-act="killConflictingProcess" data-id="${app.id}" title="Kill blocker">${icon('kill', 12)}</button>
-      <button class="btn btn-small btn-success" data-act="startApp" data-id="${app.id}" title="Start">${icon('play', 12)}</button>`;
+      <button class="btn btn-small btn-warning" data-act="killConflictingProcess" data-id="${app.id}" title="Kill blocker & free the port">${icon('kill', 12)}</button>
+      <button class="btn btn-small btn-secondary" data-act="startOnFreePort" data-id="${app.id}" title="Start on next free port">+</button>
+      <button class="btn btn-small btn-success" data-act="startApp" data-id="${app.id}" title="Kill blocker & start">${icon('play', 12)}</button>`;
   } else if (isRunning || starting) {
     actionsHtml = `
       <button class="btn btn-small btn-secondary" data-act="openInBrowser" data-id="${app.id}" title="Open" ${starting ? 'disabled' : ''}>${icon('browser', 12)}</button>
@@ -1222,6 +1224,28 @@ async function killConflictingProcess(appId) {
   } else {
     showToast(`Failed to kill process: ${result.error}`, 'error');
   }
+}
+
+// Start a conflicted app on the next free port instead of fighting for its
+// preferred one. Non-destructive: overrides PORT for this run only, does not
+// change the saved preferredPort.
+async function startOnFreePort(appId) {
+  const app = state.apps.find(a => a.id === appId);
+  if (!app) return;
+  const from = (app.preferredPort || 3000) + 1;
+  const res = await window.portpilot.ports.findAvailable(from, from + 50);
+  const freePort = res && res.port;
+  if (!freePort) { showToast('No free port found nearby', 'error'); return; }
+
+  showToast(`Starting ${app.name} on free port ${freePort}...`, 'success');
+  const result = await window.portpilot.process.start({ ...app, preferredPort: freePort });
+  if (result.success) {
+    showToast(`${app.name} started on ${freePort} (PID ${result.pid})`, 'success');
+    startPortReadinessCheck(appId, freePort, detectStartupDelay(app));
+  } else {
+    showToast(`Failed to start: ${result.error}`, 'error');
+  }
+  await loadApps();
 }
 
 function editApp(appId) {
@@ -1451,8 +1475,8 @@ function openAppDrawer(appId) {
   // Primary action: Start XOR Stop (never both).
   let primary;
   if (conflict) {
-    primary = `<button class="btn btn-warning" data-act="killConflictingProcess" data-id="${app.id}">${icon('kill', 12)} Kill blocker</button>
-               <button class="btn btn-success" data-act="startApp" data-id="${app.id}">${icon('play', 12)} Start</button>`;
+    primary = `<button class="btn btn-secondary" data-act="startOnFreePort" data-id="${app.id}">${icon('play', 12)} Start on free port</button>
+               <button class="btn btn-success" data-act="startApp" data-id="${app.id}">${icon('kill', 12)} Kill blocker & start</button>`;
   } else if (isRunning || starting) {
     primary = `<button class="btn btn-danger" data-act="stopApp" data-id="${app.id}" ${starting ? 'disabled' : ''}>${icon('stop', 12)} Stop</button>`;
   } else {
