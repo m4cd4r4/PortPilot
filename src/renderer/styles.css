@@ -1043,6 +1043,20 @@ body {
   color: var(--text-muted);
   margin: 6px 0 0;
 }
+.share-caveat {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  border-top: 1px solid var(--border-color);
+  padding-top: 10px;
+  margin: 4px 0 0;
+  line-height: 1.5;
+}
+.share-caveat code {
+  background: var(--bg-tertiary);
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 0.9em;
+}
 
 /* Running but failing its health probe */
 .status-dot.error {
