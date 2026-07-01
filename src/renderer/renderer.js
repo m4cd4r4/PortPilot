@@ -2113,16 +2113,19 @@ async function browseAndAutoDetect() {
     }
 
     const project = detectResult.project;
+    // Use the explicit port if found, else the framework's conventional default.
+    const port = project.port || project.suggestedPort || null;
     document.getElementById('app-name').value = project.name || '';
     document.getElementById('app-command').value = project.command || '';
     document.getElementById('app-cwd').value = project.path || dirPath;
-    document.getElementById('app-port').value = project.port || '';
+    document.getElementById('app-port').value = port || '';
 
-    if (project.port) {
-      document.getElementById('app-fallback').value = `${project.port + 1}-${project.port + 10}`;
+    if (port) {
+      document.getElementById('app-fallback').value = `${port + 1}-${port + 10}`;
     }
 
-    showToast(`Detected ${project.type} project: ${project.name}`, 'success');
+    const portNote = project.port ? '' : (project.suggestedPort ? ` (default port ${project.suggestedPort})` : '');
+    showToast(`Detected ${project.type} project: ${project.name}${portNote}`, 'success');
   } catch (error) {
     showToast('Error detecting project: ' + error.message, 'error');
   } finally {

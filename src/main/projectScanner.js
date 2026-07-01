@@ -141,14 +141,17 @@ class NodeDetector extends ProjectDetector {
         }
       }
 
-      // DON'T use framework defaults - leave as null if not explicitly configured
-      // This prevents false positives where everything gets port 3000
+      // Keep `port` explicit-only (avoids everything defaulting to 3000). But
+      // expose the framework's conventional default separately as a *suggestion*
+      // the UI can prefill when no explicit port was found.
+      const suggestedPort = detectFrameworkPort({ ...pkg.dependencies, ...pkg.devDependencies });
 
       return {
         type: 'Node.js',
         name: pkg.name || path.basename(dirPath),
         command,
         port,
+        suggestedPort,
         path: dirPath,
         confidence: 0.95,
         env: {}
@@ -659,11 +662,18 @@ function extractPortFromScripts(scripts) {
 function detectFrameworkPort(dependencies = {}) {
   const allDeps = { ...dependencies };
 
-  // Common framework default ports
-  if (allDeps.vite) return 5173;
-  if (allDeps.react || allDeps['react-scripts']) return 3000;
+  // Common framework default ports (most specific first)
   if (allDeps.next) return 3000;
-  if (allDeps.vue || allDeps['@vue/cli-service']) return 8080;
+  if (allDeps.nuxt || allDeps.nuxt3) return 3000;
+  if (allDeps.astro) return 4321;
+  if (allDeps['@sveltejs/kit'] || allDeps.svelte) return 5173;
+  if (allDeps.gatsby) return 8000;
+  if (allDeps['@remix-run/dev'] || allDeps['@remix-run/node']) return 3000;
+  if (allDeps.vite) return 5173;
+  if (allDeps['react-scripts']) return 3000;
+  if (allDeps.react) return 3000;
+  if (allDeps['@vue/cli-service']) return 8080;
+  if (allDeps.vue) return 8080;
   if (allDeps['@angular/core']) return 4200;
   if (allDeps.express) return 3000;
   if (allDeps.fastify) return 3000;
