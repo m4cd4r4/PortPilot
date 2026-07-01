@@ -2174,30 +2174,55 @@ async function importConfig() {
 }
 
 // ============ Theme ============
-function loadTheme() {
-  const savedTheme = localStorage.getItem('portpilot-theme') || 'tokyonight';
-  setTheme(savedTheme, false);
+const THEME_LABELS = {
+  'auto': 'Auto',
+  'light': 'Light',
+  'tokyonight': 'TokyoNight',
+  'nord': 'Nord',
+  'dracula': 'Dracula',
+  'glass': 'Glass'
+};
+
+// Retired themes fall back to the closest surviving one.
+const RETIRED_THEMES = {
+  'brutalist-dark': 'tokyonight',
+  'solarized-light': 'light'
+};
+
+let systemThemeQuery = null;
+
+function resolveTheme(choice) {
+  if (choice === 'auto') {
+    const prefersLight = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
+    return prefersLight ? 'light' : 'tokyonight';
+  }
+  return choice;
 }
 
-function setTheme(themeName, showNotification = true) {
-  state.theme = themeName;
-  document.body.setAttribute('data-theme', themeName);
-  localStorage.setItem('portpilot-theme', themeName);
+function loadTheme() {
+  let saved = localStorage.getItem('portpilot-theme') || 'tokyonight';
+  if (RETIRED_THEMES[saved]) saved = RETIRED_THEMES[saved];
+  setTheme(saved, false);
+}
+
+function setTheme(choice, showNotification = true) {
+  if (RETIRED_THEMES[choice]) choice = RETIRED_THEMES[choice];
+  state.theme = choice;
+  localStorage.setItem('portpilot-theme', choice);
+  document.body.setAttribute('data-theme', resolveTheme(choice));
+
+  if (systemThemeQuery) systemThemeQuery.onchange = null;
+  if (choice === 'auto' && window.matchMedia) {
+    systemThemeQuery = window.matchMedia('(prefers-color-scheme: light)');
+    systemThemeQuery.onchange = () => document.body.setAttribute('data-theme', resolveTheme('auto'));
+  }
 
   document.querySelectorAll('.theme-btn').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.theme === themeName);
+    btn.classList.toggle('active', btn.dataset.theme === choice);
   });
 
   if (showNotification) {
-    const themeLabels = {
-      'tokyonight': 'TokyoNight',
-      'brutalist-dark': 'Brutalist Dark',
-      'nord': 'Nord',
-      'dracula': 'Dracula',
-      'solarized-light': 'Solarized Light',
-      'glass': 'Glass'
-    };
-    showToast(`Theme: ${themeLabels[themeName] || themeName}`, 'success');
+    showToast(`Theme: ${THEME_LABELS[choice] || choice}`, 'success');
   }
 }
 
