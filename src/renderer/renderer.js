@@ -55,6 +55,7 @@ const state = {
   selectedProjects: new Set(),
   drawerAppId: null,
   staleApps: new Set(),
+  health: {},
   expandedPorts: new Map(),
   portsCollapsed: false,
   portGroupExpanded: { dev: true, other: true, system: false },
@@ -768,6 +769,7 @@ async function loadApps() {
     renderApps();
     renderPorts();
     updateAppsCount();
+    refreshHealth();
 
     if (state.settings.autoResizeWindow) {
       try {
@@ -779,6 +781,34 @@ async function loadApps() {
   } catch (error) {
     showToast('Failed to load apps: ' + error.message, 'error');
   }
+}
+
+// Probe running apps for liveness (only when the window is visible, to stay cheap)
+// and re-render if any health state changed. Never blocks loadApps.
+async function refreshHealth() {
+  if (document.hidden) return;
+  const running = state.apps.filter(app => {
+    const managed = state.runningApps.find(r => r.id === app.id && r.running);
+    return managed || state.detectedApps[app.id];
+  });
+  const live = new Set(running.map(a => a.id));
+  // Drop health for apps no longer running
+  let changed = false;
+  for (const id of Object.keys(state.health)) {
+    if (!live.has(id)) { delete state.health[id]; changed = true; }
+  }
+  await Promise.all(running.map(async (app) => {
+    const detected = state.detectedApps[app.id];
+    const port = (detected && detected.port) || app.preferredPort;
+    if (!port) return;
+    try {
+      const res = await window.portpilot.health.check(app.id, port);
+      if (res && res.success && res.state && res.state !== 'unknown') {
+        if (state.health[app.id] !== res.state) { state.health[app.id] = res.state; changed = true; }
+      }
+    } catch { /* probe failures are non-fatal */ }
+  }));
+  if (changed) renderApps();
 }
 
 function updateAppsCount() {
@@ -963,9 +993,14 @@ function renderAppCard(app, branchCount = 0) {
   const conflict = state.unknownConflicts.find(c => c.appId === app.id);
 
   // Status
+  const health = state.health[app.id];
   let statusClass = 'stopped';
+  let statusTitle = '';
   if (starting) statusClass = 'starting';
-  else if (detected || managedRunning) statusClass = 'running';
+  else if (detected || managedRunning) {
+    if (health === 'unhealthy') { statusClass = 'error'; statusTitle = 'Running but not responding (health check failed)'; }
+    else { statusClass = 'running'; statusTitle = health === 'healthy' ? 'Running and responding' : 'Running'; }
+  }
   else if (conflict) statusClass = 'conflict';
 
   // Port display
@@ -1051,7 +1086,7 @@ function renderAppCard(app, branchCount = 0) {
              data-id="${app.id}"
              aria-label="Select ${escapeHtml(app.name)}"
              title="Select">
-      <span class="status-dot ${statusClass}"></span>
+      <span class="status-dot ${statusClass}"${statusTitle ? ` title="${escapeHtml(statusTitle)}"` : ''}></span>
       <div class="app-name-area">
         <button class="btn-star ${app.isFavorite ? 'starred' : ''}"
                 data-act="toggleFavorite" data-id="${app.id}"
@@ -1384,10 +1419,15 @@ function openAppDrawer(appId) {
   const port = detected?.port ?? app.preferredPort;
   const details = detected ? state.expandedPorts.get(detected.port) : null;
 
+  const health = state.health[app.id];
   let statusClass = 'stopped', statusWord = 'Stopped';
   if (starting) { statusClass = 'starting'; statusWord = 'Starting'; }
-  else if (isRunning) { statusClass = 'running'; statusWord = 'Running'; }
+  else if (isRunning) {
+    if (health === 'unhealthy') { statusClass = 'error'; statusWord = 'Not responding'; }
+    else { statusClass = 'running'; statusWord = 'Running'; }
+  }
   else if (conflict) { statusClass = 'conflict'; statusWord = 'Port blocked'; }
+  const healthLabel = { healthy: 'Responding (2xx/3xx)', unhealthy: 'Not responding (error status)', down: 'No response' }[health];
 
   document.getElementById('app-drawer-status').className = `status-dot ${statusClass}`;
   document.getElementById('app-drawer-title').textContent = app.name;
@@ -1398,6 +1438,7 @@ function openAppDrawer(appId) {
 
   const fields = [
     field('Status', statusWord + (managedRunning && detected?.pid ? ` · PID ${detected.pid}` : '')),
+    isRunning ? field('Health', healthLabel || 'Checking...') : '',
     field('Branch', app.branch),
     port ? field('Port', `:${port}${app.fallbackRange ? `  (fallback ${app.fallbackRange[0]}-${app.fallbackRange[1]})` : ''}`, true) : '',
     field('Memory', details?.memory ? details.memory + ' MB' : ''),
@@ -1961,6 +2002,7 @@ function openAppModal(app = null, opts = {}) {
     ? `${app.fallbackRange[0]}-${app.fallbackRange[1]}`
     : (branchOf?.fallbackRange ? `${branchOf.fallbackRange[0]}-${branchOf.fallbackRange[1]}` : '');
   document.getElementById('app-autostart').checked = app?.autoStart || false;
+  document.getElementById('app-health-path').value = app?.healthPath || '';
 
   const branchGroup = document.getElementById('app-branch-group');
   if (branchGroup) branchGroup.classList.toggle('hidden', !branchMode);
@@ -2085,7 +2127,8 @@ async function handleAppSubmit(e) {
     autoStart: document.getElementById('app-autostart').checked,
     group: document.getElementById('app-group').value || null,
     parentId: document.getElementById('app-parent-id').value || null,
-    branch: document.getElementById('app-branch').value.trim() || null
+    branch: document.getElementById('app-branch').value.trim() || null,
+    healthPath: document.getElementById('app-health-path').value.trim() || null
   };
 
   const result = await window.portpilot.config.saveApp(appConfig);

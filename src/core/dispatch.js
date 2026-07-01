@@ -17,6 +17,7 @@ const {
   startApp, stopApp, killProcess, killByPort, getRunningApps, getAppLogs
 } = require('../main/processManager');
 const { matchPortsToApps, getProcessDetails, detectWorktrees, detectStaleWorktrees } = require('../main/ipcHandlers');
+const { probe } = require('../main/healthCheck');
 
 function createDispatcher(configStore) {
   const handlers = {
@@ -79,6 +80,16 @@ function createDispatcher(configStore) {
     'config:getGroups': async () => ({ success: true, groups: configStore.getGroups() }),
     'config:saveGroup': async (groupConfig) => ({ success: true, group: configStore.saveGroup(groupConfig) }),
     'config:deleteGroup': async (groupId) => { configStore.deleteGroup(groupId); return { success: true }; },
+
+    // ---- Health ----
+    'health:check': async (appId, port) => {
+      const app = configStore.getApp(appId);
+      if (!app) return { success: false, error: 'App not found' };
+      const target = port || app.preferredPort;
+      if (!target) return { success: true, appId, state: 'unknown' };
+      const state = await probe(target, app.healthPath || '/');
+      return { success: true, appId, port: target, state };
+    },
 
     // ---- Worktrees ----
     'worktrees:detect': async (appId) => detectWorktrees(configStore, appId),

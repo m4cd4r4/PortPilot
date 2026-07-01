@@ -4,6 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const { exec, execSync } = require('child_process');
 const os = require('os');
+const { probe } = require('./healthCheck');
 
 // Read the Peacock window colour from a worktree's .vscode/settings.json so a
 // detected branch can be coloured to match its VS Code window. settings.json is
@@ -506,6 +507,20 @@ function setupIpcHandlers(ipcMain, configStore) {
     try {
       const logs = getAppLogs(appId);
       return { success: true, ...logs };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+
+  /** Probe an app's liveness (2xx/3xx = healthy, other = unhealthy, refused = down) */
+  ipcMain.handle('health:check', async (_, appId, port) => {
+    try {
+      const app = configStore.getApp(appId);
+      if (!app) return { success: false, error: 'App not found' };
+      const target = port || app.preferredPort;
+      if (!target) return { success: true, appId, state: 'unknown' };
+      const state = await probe(target, app.healthPath || '/');
+      return { success: true, appId, port: target, state };
     } catch (error) {
       return { success: false, error: error.message };
     }

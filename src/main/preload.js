@@ -47,6 +47,11 @@ contextBridge.exposeInMainWorld('portpilot', {
     stale: () => ipcRenderer.invoke('worktrees:stale')
   },
 
+  // Health probe
+  health: {
+    check: (appId, port) => ipcRenderer.invoke('health:check', appId, port)
+  },
+
   // Discovery operations
   discovery: {
     scan: (scanPaths) => ipcRenderer.invoke('discovery:scan', scanPaths),

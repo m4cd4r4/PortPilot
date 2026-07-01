@@ -76,6 +76,9 @@
       detect: (appId) => call('worktrees:detect', appId),
       stale: () => call('worktrees:stale')
     },
+    health: {
+      check: (appId, port) => call('health:check', appId, port)
+    },
     discovery: {
       scan: (scanPaths) => call('discovery:scan', scanPaths),
       addScanPath: (p) => call('discovery:addScanPath', p),

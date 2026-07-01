@@ -1024,6 +1024,13 @@ body {
   box-shadow: 0 0 6px var(--accent-red);
 }
 
+/* Running but failing its health probe */
+.status-dot.error {
+  background: var(--accent-yellow);
+  box-shadow: 0 0 6px var(--accent-yellow);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
 @keyframes pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.4; }
