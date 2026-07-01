@@ -176,7 +176,7 @@ The extension's tree views adopt the shared model: branches nest under their pro
 - **IPv4/IPv6 Awareness** - Shows which protocol your app is bound to
 - **System Tray** - Minimize to tray, "Stop All Apps" menu option, configurable window behaviour
 - **Single-Instance Lock** - Only one PortPilot runs at a time, focuses existing window
-- **Multi-Theme Support** - 6 themes including TokyoNight, Brutalist Dark, Nord, Dracula, Glass
+- **Multi-Theme Support** - 6 themes plus Auto (follows your OS light/dark): Light, TokyoNight, Nord, Dracula, Glass
 - **VS Code Extension** - Status bar counter, collapsible groups, full CRUD from the sidebar
 - **Branch & worktree awareness** - run multiple git branches of one project at once, nested and colour-coded; detect a repo's worktrees and bulk-add them; stale entries flagged for removal
 - **Detail drawer** - slide-over with full command, cwd, PID, uptime, branch and safe Start/Stop/Open/Copy/Remove actions
@@ -487,11 +487,11 @@ This ensures the browser button opens the correct URL.
 
 | Theme | Description |
 |-------|-------------|
+| **Auto** | Follows your OS light/dark setting (Light or TokyoNight), updates live |
+| **Light** | Crisp GitHub-style neutral - white surfaces, high-contrast text |
 | **TokyoNight** | Dark blue with cyan/magenta accents (default) |
-| **Brutalist Dark** | Pure black, yellow/cyan, monospace |
 | **Nord** | Cool arctic blues |
 | **Dracula** | Purple/pink dark theme |
-| **Solarized Light** | Warm, easy on the eyes |
 | **Glass** | Translucent glassmorphism with extra transparency |
 
 ## Keyboard Shortcuts
