@@ -18,7 +18,7 @@ Inputs: the 2026-10-05 audit (summary under "Baseline" below) and [`docs/ux-rese
 | 0 | mcp-http-origin-guard | Host/Origin allowlist on MCP HTTP mode + `tests/mcp-http-guard.test.mjs` | merged (PR #30) | 0 | done |
 | 1 | release-3-3-1 | Version bump, changelog, build, GitHub release carrying the #30 fix. Publishing is ask-first | merged (PR #32, v3.3.1 published 2026-10-05) | 1 | done |
 | 2 | electron-upgrade | Electron 27 -> current stable; fix breakage; `npm test` (Playwright-Electron) green | merged (PR #33, 27.3.11 -> 44.5.1) | 1 | done |
-| 3 | ci-baseline | GitHub Actions: `test:unit` + `test:mcp` on push/PR (Windows + Linux); Electron suite under xvfb if cheap (deferred: replaced by an unpacked package + bundled-MCP smoke on both OSes) | materialised (feat/ci-baseline; also fixes release builds shipping without mcp-server deps) | 1 | S |
+| 3 | ci-baseline | GitHub Actions: `test:unit` + `test:mcp` on push/PR (Windows + Linux); Electron suite under xvfb if cheap (deferred: replaced by an unpacked package + bundled-MCP smoke on both OSes) | merged (PR #34; also fixes release builds shipping without mcp-server deps) | 1 | done |
 | 4 | config-atomic-write | Write config via tmp + rename with a lock file, shared by app, agent, MCP; a test with two concurrent writers | later | 1 | S |
 | 5 | status-provenance | D1 + D3: `startedBy {kind, surface, sessionId?, at}` in `src/core/status.js`, MCP `start_app` stamps `claude`; canonical status vocabulary table. No UI | later | 1 | M |
 | 6 | plugin-scaffold | `plugin/` + root `marketplace.json` (clear-resume layout): bundled stdio MCP (single-file build, no `npm install`), a `portpilot` skill ("start servers through PortPilot, never bare Bash"), `claude plugin eval` cases | later | 2 | M |
