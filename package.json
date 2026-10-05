@@ -38,7 +38,7 @@
   ],
   "license": "MIT",
   "devDependencies": {
-    "electron": "^27.3.11",
+    "electron": "^44.5.1",
     "electron-builder": "^26.0.12",
     "playwright": "^1.57.0",
     "png-to-ico": "^3.0.1"
