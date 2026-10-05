@@ -40,7 +40,7 @@ describe('PortPilot Comprehensive Tests', () => {
     console.log('🚀 Launching PortPilot...');
 
     electronApp = await electron.launch({
-      executablePath: path.join(__dirname, '../node_modules/electron/dist/electron.exe'),
+      executablePath: require('electron'),
       args: [path.join(__dirname, '..')],
       cwd: path.join(__dirname, '..'),
       env: {
@@ -252,7 +252,7 @@ async function runTests() {
     // Launch app
     console.log('🚀 Launching PortPilot...');
     electronApp = await electron.launch({
-      executablePath: path.join(__dirname, '../node_modules/electron/dist/electron.exe'),
+      executablePath: require('electron'),
       args: [path.join(__dirname, '..')],
       cwd: path.join(__dirname, '..'),
       env: {
