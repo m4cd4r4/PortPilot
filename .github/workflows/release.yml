@@ -26,6 +26,11 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      # extraResources ships mcp-server/node_modules; electron-builder only
+      # warns when it is missing, so install it explicitly.
+      - name: Install MCP server dependencies
+        run: npm ci --prefix mcp-server
+
       - name: Build Windows
         if: matrix.os == 'windows-latest'
         run: npx electron-builder --win nsis portable --publish never
@@ -34,9 +39,17 @@ jobs:
           WIN_CSC_LINK: ""  # No certificate
           WIN_CSC_KEY_PASSWORD: ""  # No password
 
+      - name: Bundled MCP server starts under the packaged runtime (Windows)
+        if: matrix.os == 'windows-latest'
+        run: node tests/packaged-mcp-smoke.cjs
+
       - name: Build Linux
         if: matrix.os == 'ubuntu-latest'
         run: npx electron-builder --linux --publish never
+
+      - name: Bundled MCP server starts under the packaged runtime (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: node tests/packaged-mcp-smoke.cjs
 
       - name: Upload Windows artifacts
         if: matrix.os == 'windows-latest'
