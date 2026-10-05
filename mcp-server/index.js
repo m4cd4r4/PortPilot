@@ -892,10 +892,24 @@ function createServer() {
 async function startHttp(port, host) {
   const transports = {};
 
+  // Same Host/Origin allowlists as the web agent (src/agent/server.js). Without
+  // them a web page can DNS-rebind to this port and call add_app + start_app,
+  // i.e. run any command. MCP clients send no Origin; browsers always do.
+  const loopback = [`127.0.0.1:${port}`, `localhost:${port}`];
+  const allowedHosts = new Set(loopback);
+  const allowedOrigins = new Set(loopback.map((h) => `http://${h}`));
+
   const httpServer = http.createServer(async (req, res) => {
     const url = (req.url || '').split('?')[0];
     if (url !== '/mcp') {
       res.writeHead(404).end('Not found');
+      return;
+    }
+
+    const origin = req.headers.origin;
+    if (!allowedHosts.has((req.headers.host || '').toLowerCase()) ||
+        (origin !== undefined && !allowedOrigins.has(origin.toLowerCase()))) {
+      res.writeHead(403).end('Forbidden');
       return;
     }
 

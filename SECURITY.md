@@ -79,6 +79,17 @@ Probed against a running agent (`npm run agent`):
 - **One backend at a time.** Apps started by the agent and apps started by the
   desktop app are tracked in separate process tables. Run one or the other.
 
+## MCP server in HTTP mode
+
+While the desktop app runs it also serves the MCP server over HTTP at
+`http://127.0.0.1:8788/mcp` (override with `PORTPILOT_MCP_PORT`). It binds to
+loopback only and refuses any request whose `Host` is not `127.0.0.1:<port>` or
+`localhost:<port>`, or that carries an `Origin` other than those two. That closes
+DNS rebinding and cross-site browser calls; MCP clients such as Claude Code send
+no `Origin` and pass. There is no token: any process running as you can reach it,
+the same trust boundary as the config file it edits. Before v3.3.1 these checks
+were missing. Test: `node tests/mcp-http-guard.test.mjs`.
+
 ## Reporting
 
 Found an issue? Please open a GitHub issue (or a private report for anything
