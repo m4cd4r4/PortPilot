@@ -5,6 +5,11 @@ All notable changes to PortPilot will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.3.1] - 2026-10-05
+
+### Security
+- **MCP HTTP mode refuses DNS rebinding and cross-origin calls.** While the desktop app runs it serves the MCP server on `127.0.0.1:8788`, which checked neither `Host` nor `Origin`. A web page could rebind a hostname to loopback and call `add_app` + `start_app` to run any command. It now applies the same Host/Origin allowlists as the web agent; MCP clients such as Claude Code are unaffected. Update if you run the desktop app.
+
 ## [3.3.0] - 2026-07-01
 
 ### Added
