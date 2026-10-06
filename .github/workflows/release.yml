@@ -124,8 +124,11 @@ jobs:
           name: vscode-extension
           path: dist/
 
+      # Created as a DRAFT so nobody sees it until the assets have been
+      # checked; a missing asset fails the job. Publish with:
+      #   gh release edit vX.Y.Z --repo m4cd4r4/PortPilot --draft=false
       - name: Create Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           files: |
             dist/PortPilot-*-x64.exe
@@ -133,7 +136,8 @@ jobs:
             dist/PortPilot-*-x86_64.AppImage
             dist/PortPilot-*-amd64.deb
             dist/portpilot-*.vsix
-          draft: false
+          draft: true
+          fail_on_unmatched_files: true
           prerelease: false
           generate_release_notes: true
         env:
