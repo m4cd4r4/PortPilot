@@ -20,8 +20,15 @@ const { matchPortsToApps, getProcessDetails, detectWorktrees, detectStaleWorktre
 const { probe } = require('../main/healthCheck');
 const { shareInfo } = require('../main/shareInfo');
 const reserver = require('../main/portReserver');
+const { recordStart, recordStop } = require('./configFile');
+const { makeStartedBy } = require('./status');
 
-function createDispatcher(configStore) {
+/**
+ * @param {object} configStore
+ * @param {object} [opts]
+ * @param {string} [opts.surface='web']  which surface a human start is stamped with
+ */
+function createDispatcher(configStore, { surface = 'web' } = {}) {
   const handlers = {
     // ---- Ports ----
     'ports:scan': async () => ({ success: true, ports: await scanPorts() }),
@@ -49,10 +56,16 @@ function createDispatcher(configStore) {
     'process:start': async (appConfig) => {
       // Free our own reservation first so the real app can bind the port.
       if (appConfig && appConfig.id) await reserver.release(appConfig.id);
-      return startApp(appConfig);
+      const result = await startApp(appConfig);
+      if (result && result.success && appConfig && appConfig.id) {
+        recordStart(configStore.configPath, appConfig.id, makeStartedBy({ kind: 'human', surface }),
+          { pid: result.pid, port: appConfig.preferredPort });
+      }
+      return result;
     },
     'process:stop': async (appId) => {
       const result = await stopApp(appId);
+      if (result && result.success) recordStop(configStore.configPath, appId);
       // Re-acquire the reservation if the app opted in.
       const app = configStore.getApp(appId);
       if (app && app.reservePort) await reserver.reserve(app);

@@ -41,17 +41,20 @@ function getConfigPath() {
   return path.join(configDir, 'portpilot-config.json');
 }
 
-// Lock + atomic-write helpers shared with the desktop app, agent and VS Code
-// extension. Packaged builds ship a copy next to this file (electron-builder
-// extraResources); from a repo checkout it is loaded from src/core.
+// Core modules shared with the desktop app, agent and VS Code extension: the
+// lock + atomic-write helpers (configFile) and the status/provenance model
+// (status). Packaged builds ship a copy next to this file (electron-builder
+// extraResources); from a repo checkout they are loaded from src/core.
 const require = createRequire(import.meta.url);
-function loadConfigFile() {
-  for (const p of ['./configFile.cjs', '../src/core/configFile.js']) {
+function loadCore(name) {
+  const candidates = [`./${name}.cjs`, `../src/core/${name}.js`];
+  for (const p of candidates) {
     try { return require(p); } catch (err) { if (err.code !== 'MODULE_NOT_FOUND') throw err; }
   }
-  throw new Error('PortPilot MCP: configFile helper not found (expected ./configFile.cjs or ../src/core/configFile.js)');
+  throw new Error(`PortPilot MCP: ${name} helper not found (expected ${candidates.join(' or ')})`);
 }
-const configFile = loadConfigFile();
+const configFile = loadCore('configFile');
+const status = loadCore('status');
 const emptyConfig = () => ({ apps: [], settings: {}, groups: [] });
 
 function readConfig() {
@@ -446,6 +449,22 @@ function startApp(app) {
   });
 }
 
+/**
+ * Record that Claude started `app` through this server, so every surface shows
+ * "claude <session>". Best-effort: returns false (never throws) on a bad
+ * session id or a failed write - the start itself already succeeded.
+ */
+function stampStart(configPath, app, sessionId) {
+  if (!app || !app.id) return false;
+  let startedBy;
+  try {
+    startedBy = status.makeStartedBy({ kind: 'claude', surface: 'mcp', sessionId });
+  } catch {
+    return false;
+  }
+  return configFile.recordStart(configPath, app.id, startedBy, { port: app.preferredPort });
+}
+
 function stopApp(app) {
   const activePorts = scanPorts();
   const portInfo = activePorts.find(p => p.port === app.preferredPort);
@@ -579,12 +598,16 @@ function createServer() {
   server.tool(
     'start_app',
     'Start an app by ID or name',
-    { identifier: z.string().describe('App ID or name') },
-    async ({ identifier }) => {
+    {
+      identifier: z.string().describe('App ID or name'),
+      sessionId: z.string().max(200).optional().describe('Your Claude Code session id, so PortPilot can show which session started the app')
+    },
+    async ({ identifier, sessionId }) => {
       const config = readConfig();
       const app = findApp(config.apps || [], identifier);
       if (!app) return { content: [{ type: 'text', text: `App not found: ${identifier}` }], isError: true };
       const result = await startApp(app);
+      if (result.success) stampStart(getConfigPath(), app, sessionId);
       return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }], isError: !result.success };
     }
   );
@@ -600,6 +623,7 @@ function createServer() {
       const app = findApp(config.apps || [], identifier);
       if (!app) return { content: [{ type: 'text', text: `App not found: ${identifier}` }], isError: true };
       const result = stopApp(app);
+      if (result.success) configFile.recordStop(getConfigPath(), app.id);
       return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }], isError: !result.success };
     }
   );
@@ -611,9 +635,10 @@ function createServer() {
     'Start multiple apps at once by group name, or all favorites',
     {
       group: z.string().optional().describe('Start all apps in this group'),
-      favorites: z.boolean().optional().describe('Start all favorite apps')
+      favorites: z.boolean().optional().describe('Start all favorite apps'),
+      sessionId: z.string().max(200).optional().describe('Your Claude Code session id, so PortPilot can show which session started the apps')
     },
-    async ({ group, favorites }) => {
+    async ({ group, favorites, sessionId }) => {
       const config = readConfig();
       let apps = config.apps || [];
 
@@ -621,7 +646,11 @@ function createServer() {
       else if (favorites) apps = apps.filter(a => a.isFavorite);
       else return { content: [{ type: 'text', text: 'Specify group or favorites: true' }], isError: true };
 
-      const results = await Promise.all(apps.map(async a => ({ name: a.name, ...(await startApp(a)) })));
+      const results = await Promise.all(apps.map(async a => {
+        const result = await startApp(a);
+        if (result.success) stampStart(getConfigPath(), a, sessionId);
+        return { name: a.name, ...result };
+      }));
       const ok = results.filter(r => r.success).length;
       return { content: [{ type: 'text', text: JSON.stringify({ attempted: results.length, succeeded: ok, results }, null, 2) }] };
     }
@@ -647,7 +676,11 @@ function createServer() {
 
       const ports = scanPorts();
       const running = apps.filter(a => a.preferredPort && ports.some(p => p.port === a.preferredPort));
-      const results = running.map(a => ({ name: a.name, ...stopApp(a) }));
+      const results = running.map(a => {
+        const result = stopApp(a);
+        if (result.success) configFile.recordStop(getConfigPath(), a.id);
+        return { name: a.name, ...result };
+      });
       return { content: [{ type: 'text', text: JSON.stringify({ stopped: results.length, results }, null, 2) }] };
     }
   );
@@ -1026,4 +1059,4 @@ async function main() {
 const isMain = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
 if (isMain) main().catch(console.error);
 
-export { normPath, pickColor, resolveWorktreeGit, registerWorktree };
+export { normPath, pickColor, resolveWorktreeGit, registerWorktree, stampStart };

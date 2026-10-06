@@ -7,6 +7,8 @@ const os = require('os');
 const { probe } = require('./healthCheck');
 const { shareInfo } = require('./shareInfo');
 const reserver = require('./portReserver');
+const { recordStart, recordStop } = require('../core/configFile');
+const { makeStartedBy } = require('../core/status');
 
 // Read the Peacock window colour from a worktree's .vscode/settings.json so a
 // detected branch can be coloured to match its VS Code window. settings.json is
@@ -480,6 +482,10 @@ function setupIpcHandlers(ipcMain, configStore) {
       // Release our port reservation first so the real app can bind it.
       if (appConfig && appConfig.id) await reserver.release(appConfig.id);
       const result = await startApp(appConfig);
+      if (result && result.success && appConfig && appConfig.id) {
+        recordStart(configStore.configPath, appConfig.id, makeStartedBy({ kind: 'human', surface: 'desktop' }),
+          { pid: result.pid, port: appConfig.preferredPort });
+      }
       return result;
     } catch (error) {
       return { success: false, error: error.message };
@@ -490,6 +496,7 @@ function setupIpcHandlers(ipcMain, configStore) {
   ipcMain.handle('process:stop', async (_, appId) => {
     try {
       const result = await stopApp(appId);
+      if (result && result.success) recordStop(configStore.configPath, appId);
       const app = configStore.getApp(appId);
       if (app && app.reservePort) await reserver.reserve(app);
       return result;

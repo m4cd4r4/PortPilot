@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import { exec } from 'child_process';
 import * as os from 'os';
-import { getConfigPath, readConfig, updateConfig, generateId, PortPilotApp } from './config';
+import { getConfigPath, readConfig, updateConfig, generateId, PortPilotApp, recordHumanStart, recordAppStop } from './config';
 import { AppsTreeProvider, AppTreeItem, GroupTreeItem } from './appsTreeProvider';
 import { PortsTreeProvider, PortTreeItem } from './portsTreeProvider';
 import { killPort } from './portScanner';
@@ -104,6 +104,7 @@ export function activate(context: vscode.ExtensionContext) {
         shellArgs: [shellFlag, app.command]
       });
       terminal.show();
+      recordHumanStart(app);
 
       // Refresh after a delay to pick up the new port
       setTimeout(() => refreshAll(), 3000);
@@ -123,6 +124,7 @@ export function activate(context: vscode.ExtensionContext) {
         if (error) {
           vscode.window.showErrorMessage(`Failed to stop ${item.app.name}: ${error.message}`);
         } else {
+          recordAppStop(item.app.id);
           vscode.window.showInformationMessage(`Stopped ${item.app.name} (PID ${pid})`);
           setTimeout(() => refreshAll(), 1000);
         }

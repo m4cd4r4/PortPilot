@@ -20,7 +20,7 @@ Inputs: the 2026-10-05 audit (summary under "Baseline" below) and [`docs/ux-rese
 | 2 | electron-upgrade | Electron 27 -> current stable; fix breakage; `npm test` (Playwright-Electron) green | merged (PR #33, 27.3.11 -> 44.5.1) | 1 | done |
 | 3 | ci-baseline | GitHub Actions: `test:unit` + `test:mcp` on push/PR (Windows + Linux); Electron suite under xvfb if cheap (deferred: replaced by an unpacked package + bundled-MCP smoke on both OSes) | merged (PR #34; also fixes release builds shipping without mcp-server deps) | 1 | done |
 | 4 | config-atomic-write | Write config via tmp + rename with a lock file, shared by app, agent, MCP; a test with two concurrent writers | merged (PR #36) | 1 | S |
-| 5 | status-provenance | D1 + D3: `startedBy {kind, surface, sessionId?, at}` in `src/core/status.js`, MCP `start_app` stamps `claude`; canonical status vocabulary table. No UI | later | 1 | M |
+| 5 | status-provenance | D1 + D3: `startedBy {kind, surface, sessionId?, at}` in `src/core/status.js`, MCP `start_app` stamps `claude`; canonical status vocabulary table. No UI | merged (PR #37) | 1 | M |
 | 6 | plugin-scaffold | `plugin/` + root `marketplace.json` (clear-resume layout): bundled stdio MCP (single-file build, no `npm install`), a `portpilot` skill ("start servers through PortPilot, never bare Bash"), `claude plugin eval` cases | later | 2 | M |
 | 7 | mod-status-guard | Mod in the plugin: C1 status line (`⚓ 3 up · :3000 web`, worst state first); C3 dev-server guard on `tool.call` Bash (busy port -> deny with "reuse :3000"; free -> route through `start_app`); `claude plugin test` coverage | later | 2 | M |
 | 8 | ux-row-state | A1 state word + reason on every row; B1 status-aware VS Code tree items; B3 status bar item | later | 2 | S-M |

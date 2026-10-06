@@ -19,26 +19,31 @@
   'use strict';
 
   // ---- Status model -------------------------------------------------------
-  // Five states, shape-differentiated so they survive greyscale, colour-blind
+  // Six states, shape-differentiated so they survive greyscale, colour-blind
   // vision, and all themes. `token` is the per-theme CSS variable that carries
-  // the colour; `shape` is the dot geometry the renderer draws.
+  // the colour; `shape` is the dot geometry the renderer draws; `ascii` is the
+  // fallback for terminals that cannot draw the glyph. `error` is unhealthy but
+  // alive; `crashed` is dead after an unexpected exit. The canonical table is
+  // docs/ui-redesign/STATUS-VOCABULARY.md (a test keeps the two in step).
   const STATES = {
-    running:  { state: 'running',  token: '--status-running',  shape: 'disc',       glyph: '●', label: 'Running'  },
-    stopped:  { state: 'stopped',  token: '--status-stopped',  shape: 'ring',       glyph: '○', label: 'Stopped'  },
-    starting: { state: 'starting', token: '--status-starting', shape: 'disc-pulse', glyph: '◐', label: 'Starting' },
-    conflict: { state: 'conflict', token: '--status-conflict', shape: 'triangle',   glyph: '▲', label: 'Conflict' },
-    error:    { state: 'error',    token: '--status-error',    shape: 'circle-x',   glyph: '⊗', label: 'Error'    },
+    running:  { state: 'running',  token: '--status-running',  shape: 'disc',       glyph: '●', ascii: '*', label: 'Running'  },
+    stopped:  { state: 'stopped',  token: '--status-stopped',  shape: 'ring',       glyph: '○', ascii: 'o', label: 'Stopped'  },
+    starting: { state: 'starting', token: '--status-starting', shape: 'disc-pulse', glyph: '◐', ascii: '~', label: 'Starting' },
+    conflict: { state: 'conflict', token: '--status-conflict', shape: 'triangle',   glyph: '▲', ascii: '!', label: 'Conflict' },
+    error:    { state: 'error',    token: '--status-error',    shape: 'circle-x',   glyph: '⊗', ascii: 'x', label: 'Error'    },
+    crashed:  { state: 'crashed',  token: '--status-crashed',  shape: 'cross',      glyph: '✕', ascii: 'X', label: 'Crashed'  },
   };
 
   /**
    * Resolve a row's status descriptor.
    * Accepts either an explicit { state: 'running' } or a set of booleans
-   * { running, starting, conflict, error }. Precedence, highest first:
-   * error > conflict > starting > running > stopped.
+   * { running, starting, conflict, error, crashed }. Precedence, highest first:
+   * crashed > error > conflict > starting > running > stopped.
    */
   function statusOf(item) {
     const it = item || {};
     if (it.state && STATES[it.state]) return STATES[it.state];
+    if (it.crashed) return STATES.crashed;
     if (it.error) return STATES.error;
     if (it.conflict) return STATES.conflict;
     if (it.starting) return STATES.starting;
@@ -129,9 +134,70 @@
     return 'other';
   }
 
+  // ---- Provenance ---------------------------------------------------------
+  // Who started a running app. Stored per app in portpilot-runtime.json
+  // (configFile.recordStart) by whichever surface started it, so every
+  // surface shows the same answer. One vocabulary everywhere:
+  //   human    -> "you"          (any surface)
+  //   claude   -> "claude a3f2"  (short session id; full id in the title)
+  //   external -> "external"     (found running, not started by PortPilot)
+  const PROVENANCE_KINDS = ['human', 'claude', 'external'];
+  const SURFACES = ['desktop', 'web', 'vscode', 'claude-code', 'mcp'];
+  const CLAUDE_GLYPH = '✦';
+
+  /** Build a validated startedBy record. Throws on an unknown kind or surface. */
+  function makeStartedBy(fields) {
+    const f = fields || {};
+    if (!PROVENANCE_KINDS.includes(f.kind)) {
+      throw new Error('startedBy.kind must be one of: ' + PROVENANCE_KINDS.join(', '));
+    }
+    if (!SURFACES.includes(f.surface)) {
+      throw new Error('startedBy.surface must be one of: ' + SURFACES.join(', '));
+    }
+    const out = { kind: f.kind, surface: f.surface, at: f.at || new Date().toISOString() };
+    if (f.sessionId) out.sessionId = String(f.sessionId).slice(0, 200);
+    if (f.label) out.label = String(f.label).slice(0, 100);
+    return out;
+  }
+
+  /** First 4 alphanumerics of a session id ("a3f2"), or '' if none. */
+  function shortSession(id) {
+    return id ? String(id).replace(/[^A-Za-z0-9]/g, '').slice(0, 4).toLowerCase() : '';
+  }
+
+  /**
+   * How to show a startedBy record: { kind, word, glyph, title }. `word` is the
+   * text every surface shows; `glyph` is for tight spaces and is only set for
+   * Claude (never rely on it alone). No record means "external".
+   */
+  function provenanceOf(startedBy) {
+    const s = startedBy || null;
+    if (!s || s.kind === 'external' || !PROVENANCE_KINDS.includes(s.kind)) {
+      return { kind: 'external', word: 'external', glyph: '', title: 'Found running - not started by PortPilot' };
+    }
+    const when = s.at ? ` at ${s.at}` : '';
+    if (s.kind === 'human') {
+      return { kind: 'human', word: 'you', glyph: '', title: `Started by you from ${s.surface}${when}` };
+    }
+    const short = shortSession(s.sessionId);
+    const session = s.sessionId ? ` (session ${s.sessionId}${s.label ? `, ${s.label}` : ''})` : '';
+    return {
+      kind: 'claude',
+      word: short ? `claude ${short}` : 'claude',
+      glyph: CLAUDE_GLYPH,
+      title: `Started by Claude${session} via ${s.surface}${when}`,
+    };
+  }
+
   return {
     STATES,
     statusOf,
+    PROVENANCE_KINDS,
+    SURFACES,
+    CLAUDE_GLYPH,
+    makeStartedBy,
+    shortSession,
+    provenanceOf,
     GROUPS,
     GROUP_ORDER,
     classify,
