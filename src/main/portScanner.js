@@ -202,9 +202,10 @@ function getProcessNames(portInfos) {
 
 /**
  * Resolve PID -> { processName, commandLine } on Windows.
- * Primary: PowerShell Get-CimInstance (works on modern Windows where `wmic` is
- * deprecated/removed). Fallback: `wmic` for older systems without CIM/PowerShell.
- * PIDs are pre-validated as integers by the caller, so WQL injection isn't possible.
+ * Primary: PowerShell Get-CimInstance. Fallback: `tasklist`, which gives image
+ * names but no command line. (`wmic` is not used: it is removed on recent
+ * Windows 11 builds.) PIDs are pre-validated as integers by the caller, so WQL
+ * injection isn't possible.
  */
 function queryWindowsProcessInfo(pids) {
   return new Promise((resolve) => {
@@ -230,36 +231,49 @@ function queryWindowsProcessInfo(pids) {
                 });
               }
             }
-          } catch { /* malformed JSON -> fall through to wmic */ }
+          } catch { /* malformed JSON -> fall through to tasklist */ }
         }
 
         if (map.size > 0) {
           resolve(map);
         } else {
-          queryWindowsProcessInfoWmic(pids).then(resolve);
+          queryWindowsProcessInfoTasklist(pids).then(resolve);
         }
       }
     );
   });
 }
 
-/** Legacy wmic fallback (CSV) for systems without PowerShell/CIM. */
-function queryWindowsProcessInfoWmic(pids) {
+/**
+ * Parse `tasklist /fo csv /nh` output into Map<pid, { name, memoryKb }>.
+ * Columns: "Image Name","PID","Session Name","Session#","Mem Usage". Mem Usage
+ * is locale-formatted ("12,345 K", "12.345 K"), so only its digits are kept.
+ * @param {string} stdout
+ * @param {Iterable<number>} [wantedPids] keep only these PIDs (default: all)
+ */
+function parseTasklistCsv(stdout, wantedPids) {
+  const wanted = wantedPids ? new Set(wantedPids) : null;
+  const map = new Map();
+  for (const line of String(stdout || '').split(/\r?\n/)) {
+    const m = line.match(/^"([^"]*)","(\d+)"(?:,"[^"]*","[^"]*","([^"]*)")?/);
+    if (!m) continue;
+    const pid = parseInt(m[2], 10);
+    if (wanted && !wanted.has(pid)) continue;
+    const digits = (m[3] || '').replace(/\D/g, '');
+    map.set(pid, { name: m[1].trim(), memoryKb: digits ? parseInt(digits, 10) : null });
+  }
+  return map;
+}
+
+/** Fallback when PowerShell/CIM is unavailable: image names via `tasklist`. */
+function queryWindowsProcessInfoTasklist(pids) {
   return new Promise((resolve) => {
-    exec(`wmic process where "ProcessId=${pids.join(' or ProcessId=')}" get ProcessId,Name,CommandLine /format:csv`,
-      { encoding: 'utf8', maxBuffer: 8 * 1024 * 1024 },
+    exec('tasklist /fo csv /nh', { encoding: 'utf8', maxBuffer: 8 * 1024 * 1024, timeout: 10000, windowsHide: true },
       (error, stdout) => {
         const map = new Map();
-        if (!error && stdout) {
-          const lines = stdout.trim().split('\n').slice(1);
-          for (const line of lines) {
-            const parts = line.split(',');
-            if (parts.length >= 3) {
-              const cmdLine = parts.slice(1, -2).join(',').trim();
-              const name = parts[parts.length - 2]?.trim();
-              const pid = parseInt(parts[parts.length - 1]?.trim(), 10);
-              if (pid) map.set(pid, { processName: name, commandLine: cmdLine });
-            }
+        if (!error) {
+          for (const [pid, info] of parseTasklistCsv(stdout, pids)) {
+            map.set(pid, { processName: info.name || 'Unknown', commandLine: '' });
           }
         }
         resolve(map);
@@ -295,4 +309,4 @@ async function findAvailablePort(startPort, endPort = startPort + 100) {
   return null;
 }
 
-module.exports = { scanPorts, checkPort, findAvailablePort };
+module.exports = { scanPorts, checkPort, findAvailablePort, parseTasklistCsv };

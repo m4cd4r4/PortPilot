@@ -156,37 +156,40 @@ async function stopApp(appId) {
  */
 function killProcess(pid) {
   return new Promise((resolve) => {
+    // pid is interpolated into a shell command: accept only a positive integer.
+    const safePid = Number(pid);
+    if (!Number.isInteger(safePid) || safePid < 1 || safePid > 4194304) {
+      resolve({ success: false, error: 'Invalid PID' });
+      return;
+    }
     const isWindows = os.platform() === 'win32';
     const command = isWindows
-      ? `taskkill /F /PID ${pid} /T`
-      : `kill -9 ${pid}`;
+      ? `taskkill /F /PID ${safePid} /T`
+      : `kill -9 ${safePid}`;
 
     // Must specify shell explicitly - Git Bash/MSYS can interfere with Windows commands
-    const execOptions = { shell: isWindows ? 'cmd.exe' : '/bin/sh' };
+    const execOptions = { shell: isWindows ? 'cmd.exe' : '/bin/sh', windowsHide: true };
+
+    const killed = () => {
+      // Clean up from running processes map
+      for (const [id, info] of runningProcesses) {
+        if (info.pid === safePid) {
+          runningProcesses.delete(id);
+          break;
+        }
+      }
+      resolve({ success: true, message: `Killed process ${safePid}` });
+    };
 
     exec(command, execOptions, (error) => {
-      if (error) {
-        // Try alternative methods
-        if (isWindows) {
-          exec(`wmic process where ProcessId=${pid} delete`, execOptions, (err2) => {
-            resolve({
-              success: !err2,
-              error: err2 ? 'Failed to kill process' : null
-            });
-          });
-        } else {
-          resolve({ success: false, error: error.message });
-        }
-      } else {
-        // Clean up from running processes map
-        for (const [id, info] of runningProcesses) {
-          if (info.pid === pid) {
-            runningProcesses.delete(id);
-            break;
-          }
-        }
-        resolve({ success: true, message: `Killed process ${pid}` });
-      }
+      if (!error) return killed();
+      if (!isWindows) return resolve({ success: false, error: error.message });
+      // taskkill failed: retry with Stop-Process (`wmic` is removed on recent Windows 11).
+      const ps = `powershell -NoProfile -NonInteractive -Command "Stop-Process -Id ${safePid} -Force -ErrorAction Stop"`;
+      exec(ps, execOptions, (err2) => {
+        if (err2) resolve({ success: false, error: 'Failed to kill process' });
+        else killed();
+      });
     });
   });
 }
