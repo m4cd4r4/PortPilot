@@ -1055,7 +1055,12 @@ function appRowState(app) {
   const managed = managedRunning || state.runningApps.find(r => r.id === app.id);
   const detected = state.detectedApps[app.id];
   const conflict = state.unknownConflicts.find(c => c.appId === app.id);
-  const startedBy = state.runtime[app.id]?.startedBy || null;
+  const entry = state.runtime[app.id];
+  const livePid = managedRunning?.pid ?? detected?.pid;
+  const livePort = managedRunning?.port ?? detected?.port;
+  const entryMatches = !!entry && ((entry.pid != null && entry.pid === livePid) ||
+    (entry.port != null && entry.port === livePort));
+  const startedBy = entryMatches ? entry.startedBy || null : null;
   const startedAt = managedRunning?.startTime || startedBy?.at;
   let uptimeSec = startedAt ? (Date.now() - Date.parse(startedAt)) / 1000 : null;
   if (!(uptimeSec >= 0) && detected) uptimeSec = state.expandedPorts.get(detected.port)?.uptime ?? null;
@@ -1066,8 +1071,8 @@ function appRowState(app) {
     unhealthy: state.health[app.id] === 'unhealthy',
     conflict: !!conflict,
     blockedBy: holder ? [String(holder.processName || '').replace(/\.exe$/i, ''), holder.pid].filter(Boolean).join(' ') : '',
-    crashed: !!managed?.crashed,
-    exitCode: managed?.exitCode,
+    crashed: managed ? !!managed.crashed : !!entry?.crashed,
+    exitCode: managed ? managed.exitCode : entry?.crashed?.exitCode,
     uptimeSec,
     startedBy,
   });

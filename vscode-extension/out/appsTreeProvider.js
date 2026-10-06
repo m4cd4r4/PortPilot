@@ -138,8 +138,8 @@ class AppTreeItem extends vscode.TreeItem {
             parts.push(`\u2387 ${app.branch}`);
         if (port)
             parts.push(`:${port}`);
-        if (row.state === 'crashed')
-            parts.push(['Crashed', row.reason].filter(Boolean).join(' '));
+        if (row.state !== 'stopped')
+            parts.push([row.word, row.reason].filter(Boolean).join(' '));
         if (row.uptime)
             parts.push(row.uptime);
         if (row.provenance)

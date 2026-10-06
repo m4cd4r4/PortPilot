@@ -174,6 +174,12 @@ function killProcess(pid) {
     // Must specify shell explicitly - Git Bash/MSYS can interfere with Windows commands
     const execOptions = { shell: isWindows ? 'cmd.exe' : '/bin/sh', windowsHide: true };
 
+    // A kill PortPilot performs (stop, port kill, quit cleanup) is deliberate:
+    // mark the managed entry so its exit is not reported or stamped as a crash.
+    for (const info of runningProcesses.values()) {
+      if (info.pid === safePid) info.userStopped = true;
+    }
+
     const killed = () => {
       // Clean up from running processes map
       for (const [id, info] of runningProcesses) {

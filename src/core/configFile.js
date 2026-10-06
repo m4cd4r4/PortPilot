@@ -208,16 +208,15 @@ function recordStop(configPath, appId) {
 }
 
 // Stamp an unexpected exit so surfaces outside the desktop process (the VS
-// Code extension) can tell a crash from a clean stop. recordStart replaces
-// the entry, which clears it; recordStop deletes it.
+// Code extension) can tell a crash from a clean stop. The stamp replaces the
+// dead run's entry, so its startedBy never labels a later process on the same
+// port. recordStart replaces the entry, which clears it; recordStop deletes it.
 function recordCrash(configPath, appId, exitCode) {
   if (!appId) return false;
   try {
     updateJson(runtimePathFor(configPath), (runtime) => {
       if (!runtime.apps || typeof runtime.apps !== 'object') runtime.apps = {};
-      const entry = runtime.apps[appId] || {};
-      entry.crashed = { exitCode: exitCode ?? null, at: Date.now() };
-      runtime.apps[appId] = entry;
+      runtime.apps[appId] = { crashed: { exitCode: exitCode ?? null, at: Date.now() } };
     }, emptyRuntime);
     return true;
   } catch (err) {

@@ -110,13 +110,14 @@ t('getRunningApps exposes a boolean crashed field', () => {
   const cf = require('../src/core/configFile');
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pp-rowstate-'));
   const cfg = path.join(dir, 'portpilot-config.json');
-  t('recordCrash stamps exitCode and time on the runtime entry', () => {
+  t('recordCrash stamps exitCode and time, and drops the dead run provenance', () => {
     cf.recordStart(cfg, 'web', claude, { pid: 42, port: 3000 });
     assert.equal(cf.recordCrash(cfg, 'web', 1), true);
     const entry = cf.readRuntime(cfg).apps.web;
     assert.equal(entry.crashed.exitCode, 1);
     assert.equal(typeof entry.crashed.at, 'number');
-    assert.equal(entry.startedBy.kind, 'claude');
+    // The crashed run's provenance must not attach to whatever starts next.
+    assert.equal(entry.startedBy, undefined);
   });
   t('recordStart clears a previous crash', () => {
     cf.recordStart(cfg, 'web', human, { pid: 43, port: 3000 });
