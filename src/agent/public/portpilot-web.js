@@ -62,6 +62,7 @@
       saveApp: (appConfig) => call('config:saveApp', appConfig),
       deleteApp: (appId) => call('config:deleteApp', appId),
       toggleFavorite: (appId) => call('config:toggleFavorite', appId),
+      patchApp: (appId, patch) => call('config:patchApp', appId, patch),
       deleteAllApps: () => call('config:deleteAllApps'),
       updateAppsOrder: (appIds) => call('config:updateAppsOrder', appIds),
       getSettings: () => call('config:getSettings'),

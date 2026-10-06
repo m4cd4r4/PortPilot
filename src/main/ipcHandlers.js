@@ -647,6 +647,19 @@ function setupIpcHandlers(ipcMain, configStore) {
     }
   });
 
+  /** Change some fields of one app against the fresh config (never a cached copy) */
+  ipcMain.handle('config:patchApp', async (_, appId, patch) => {
+    try {
+      if (!patch || typeof patch !== 'object' || Array.isArray(patch)) return { success: false, error: 'Patch must be an object' };
+      const { id, createdAt, ...fields } = patch;
+      const app = configStore.patchApp(appId, fields);
+      if (!app) return { success: false, error: 'App not found' };
+      return { success: true, app };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+
   /** Delete all apps */
   ipcMain.handle('config:deleteAllApps', async () => {
     try {
