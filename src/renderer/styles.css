@@ -996,6 +996,113 @@ body {
   border-style: dashed;
 }
 
+/* ---- Conflict strip (UX A2) ---- */
+/* A conflicted row grows one line underneath: what holds the port, then
+   labelled actions, recommended first. Wording from src/core/conflict.js. */
+.app-card.has-conflict {
+  flex-wrap: wrap;
+  row-gap: 0;
+  border-color: color-mix(in srgb, var(--status-conflict) 45%, var(--card-border));
+}
+
+.conflict-strip {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  font-size: 0.7rem;
+  line-height: 1.35;
+  color: var(--text-secondary);
+}
+
+.conflict-strip-row {
+  flex-basis: 100%;
+  padding: 3px 0 5px 28px;
+  border-top: 1px dashed color-mix(in srgb, var(--status-conflict) 30%, transparent);
+  cursor: default;
+}
+
+.conflict-glyph {
+  color: var(--status-conflict);
+  font-size: 0.62rem;
+  vertical-align: 1px;
+}
+
+.conflict-sentence {
+  flex: 1 1 auto;
+  font-family: 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.conflict-actions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.conflict-strip-drawer {
+  flex: 1;
+  padding: 8px 10px;
+  border: 1px solid color-mix(in srgb, var(--status-conflict) 45%, var(--border-color));
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--status-conflict) 6%, transparent);
+}
+
+.conflict-strip-drawer .conflict-actions {
+  flex-basis: 100%;
+  flex-direction: column;
+  margin-left: 0;
+}
+
+/* Beats `.drawer-actions-primary .btn { flex: 1 }`, which made these
+   three-line blocks: one full-width action per line, recommended on top. */
+.drawer-actions-primary .conflict-strip-drawer .btn {
+  flex: none;
+  width: 100%;
+}
+
+/* Inline two-step confirm: an armed destructive button reads "Confirm kill?"
+   for 3 s. Red plus the label change, so it is not carried by colour alone. */
+.btn.is-armed {
+  background: var(--accent-red);
+  border-color: var(--accent-red);
+  color: #fff;
+  font-weight: 600;
+}
+
+.btn.is-armed:hover {
+  background: var(--accent-red);
+  color: #fff;
+  filter: brightness(1.1);
+}
+
+/* "Show process" lands on the holder's row (Ports list, or its app row). */
+.port-row.flash,
+.app-card.flash {
+  animation: pp-row-flash 1.6s ease-out;
+}
+
+@keyframes pp-row-flash {
+  0%, 30% {
+    background: color-mix(in srgb, var(--status-conflict) 22%, transparent);
+    border-color: var(--status-conflict);
+  }
+  100% {
+    background: transparent;
+    border-color: transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .port-row.flash,
+  .app-card.flash {
+    animation: none;
+    border-color: var(--status-conflict);
+  }
+}
+
 /* Status dot */
 .status-dot {
   width: 8px;

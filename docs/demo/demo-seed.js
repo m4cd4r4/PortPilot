@@ -28,6 +28,7 @@
     { id: 'a_gw', name: 'beacon-gateway', command: 'node server.js', cwd: 'C:/dev/tools/gateway', preferredPort: 4000, group: 'g_tools' },
     { id: 'a_docs', name: 'dockyard-docs', command: 'npm run dev', cwd: 'C:/dev/tools/docs', preferredPort: 4321, group: 'g_tools' },
     { id: 'a_metrics', name: 'anchor-metrics', command: 'python main.py', cwd: 'C:/dev/tools/metrics', preferredPort: 9090 },
+    { id: 'a_preview', name: 'buoy-preview', command: 'uvicorn preview:app', cwd: 'C:/dev/harbor/preview', preferredPort: 8000, group: 'g_harbor' },
   ].map((a) => ({
     fallbackRange: null, env: {}, autoStart: false, isFavorite: false,
     description: null, startupDelay: null, parentId: null, branch: null,
@@ -56,10 +57,15 @@
     matches[id] = { port: running[id].port, pid: running[id].pid, address: '127.0.0.1', processName: running[id].processName, commandLine: running[id].commandLine, conflict: false, matchType: 'preferredPort-cwd', confidence: 'high' };
   }
 
-  // dockyard-docs (4321) is squatted by a foreign process -> conflict.
+  // Two port conflicts, one of each kind the conflict strip describes:
+  //   dockyard-docs (4321) is squatted by a foreign process -> "not managed".
+  //   buoy-preview (8000) collides with tugboat-api, a registered app -> "Stop tugboat-api & start".
   const unknownConflicts = [
-    { appId: 'a_docs', appName: 'dockyard-docs', port: 4321, occupiedBy: { processName: 'node.exe', pid: 9812 } },
+    { appId: 'a_docs', appName: 'dockyard-docs', port: 4321, occupiedBy: { processName: 'node.exe', pid: 9812, commandLine: 'node http-server' } },
+    { appId: 'a_preview', appName: 'buoy-preview', port: 8000, occupiedBy: { processName: 'python.exe', pid: 4200, commandLine: 'uvicorn main:app' } },
   ];
+  // Uptime (seconds) per listening pid, so the strip can say "started 3h ago".
+  const uptimes = { 9812: 3 * 3600 + 540, 4200: 52 * 60 };
 
   const ports = [
     { port: 3000, pid: 4101, processName: 'node.exe', commandLine: 'node next dev', address: '127.0.0.1', appId: 'a_web' },
@@ -83,9 +89,16 @@
     ports: {
       scan: () => ok({ ports }),
       scanWithApps: () => ok({ ports, matches, unknownConflicts }),
-      check: () => ok({ inUse: false }),
-      findAvailable: () => ok({ port: 3004 }),
-      kill: noop, getDetails: () => ok({ details: {} }),
+      check: (port) => {
+        const p = ports.find((x) => x.port === port);
+        return ok(p ? { inUse: true, info: p } : { inUse: false });
+      },
+      findAvailable: (from, to) => {
+        const taken = new Set(ports.map((p) => p.port));
+        for (let n = from; n <= to; n++) if (!taken.has(n)) return ok({ port: n });
+        return ok({ port: null });
+      },
+      kill: noop, getDetails: (pid) => ok({ details: { uptime: uptimes[pid] || null } }),
     },
     process: {
       list: () => ok({ apps: runningApps }),

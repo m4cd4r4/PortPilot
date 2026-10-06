@@ -144,6 +144,7 @@ function createAgent({ configStore, port = DEFAULT_PORT, token = crypto.randomBy
       // global (it can't require under CSP). Without this route it 404s and
       // window.PortPilotStatus is undefined -> classify() throws on scan.
       if (req.url === '/core/status.js') return serveStatic(res, 'status.js', CORE_DIR);
+      if (req.url === '/core/conflict.js') return serveStatic(res, 'conflict.js', CORE_DIR);
     }
     send(res, 404, 'Not found');
   });
