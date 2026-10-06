@@ -1223,6 +1223,50 @@ body {
 .app-actions-visible .btn-danger:hover,
 .app-actions-visible .btn-warning:hover { color: var(--accent-red); }
 
+/* Narrow width (phone, or a narrowed desktop window): the hover-revealed action
+   groups still reserve ~140px while invisible, which squeezed the app name to
+   0px at 390. The secondary group is dropped (the drawer carries all of it), and
+   Start/Stop floats over the right edge on hover/focus instead of taking space.
+   Informational badges go too; a warning badge stays (Docker's starts Docker). */
+@media (max-width: 600px) {
+  .app-card {
+    position: relative;
+  }
+
+  .app-actions,
+  .app-ip-version,
+  .req-badge:not(.badge-warning) {
+    display: none;
+  }
+
+  .app-actions-visible {
+    position: absolute;
+    right: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: var(--card-bg);
+    box-shadow: -10px 0 8px var(--card-bg);
+    pointer-events: none;
+  }
+
+  .app-card:hover .app-actions-visible,
+  .app-card:focus-within .app-actions-visible,
+  .app-card.selected .app-actions-visible {
+    pointer-events: auto;
+  }
+
+  /* Match the hovered card's tint so the overlay does not read as a patch. */
+  .app-card:hover .app-actions-visible {
+    --overlay-bg: color-mix(in srgb, var(--accent-cyan) 7%, var(--card-bg));
+    background: var(--overlay-bg);
+    box-shadow: -12px 0 8px var(--overlay-bg);
+  }
+
+  .app-name-text {
+    min-width: 2.5em;
+  }
+}
+
 /* Expand indicator */
 .expand-indicator {
   font-size: 0.6rem;
