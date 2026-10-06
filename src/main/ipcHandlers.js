@@ -1,4 +1,4 @@
-const { scanPorts, checkPort, findAvailablePort } = require('./portScanner');
+const { scanPorts, checkPort, findAvailablePort, parseTasklistCsv } = require('./portScanner');
 const { startApp, stopApp, killProcess, killByPort, getRunningApps, getAppLogs } = require('./processManager');
 const path = require('path');
 const fs = require('fs');
@@ -141,8 +141,8 @@ function getProcessDetailsWindows(pid, port) {
   });
 
   return new Promise((resolve) => {
-    // Compute memory + uptime via PowerShell/CIM (wmic is deprecated on modern
-    // Windows). Uptime is computed in-process to avoid date-format parsing.
+    // Compute memory + uptime via PowerShell/CIM (`wmic` is removed on recent
+    // Windows 11). Uptime is computed in-process to avoid date-format parsing.
     const psCmd =
       `powershell -NoProfile -NonInteractive -Command ` +
       `"$p = Get-CimInstance Win32_Process -Filter 'ProcessId=${pid}'; ` +
@@ -158,14 +158,11 @@ function getProcessDetailsWindows(pid, port) {
           const d = JSON.parse(stdout);
           if (d.WorkingSetSize) memory = Math.round(d.WorkingSetSize / 1024 / 1024);
           if (Number.isFinite(d.UptimeSeconds)) uptime = d.UptimeSeconds;
-        } catch { /* fall through to wmic */ }
+        } catch { /* fall through to tasklist */ }
       }
 
-      if (memory === null && uptime === null) {
-        const wmic = await getProcessDetailsWindowsWmic(pid);
-        memory = wmic.memory;
-        uptime = wmic.uptime;
-      }
+      // No CIM: tasklist still gives memory. Uptime stays unknown.
+      if (memory === null && uptime === null) memory = await getProcessMemoryTasklist(pid);
 
       const connections = await getConnections();
       resolve({ memory, uptime, connections });
@@ -173,38 +170,13 @@ function getProcessDetailsWindows(pid, port) {
   });
 }
 
-/** Legacy wmic fallback for memory/uptime (older Windows without PowerShell/CIM). */
-function getProcessDetailsWindowsWmic(pid) {
+/** Fallback memory (MB) via `tasklist` when PowerShell/CIM is unavailable. */
+function getProcessMemoryTasklist(pid) {
   return new Promise((resolve) => {
-    exec(`wmic process where "ProcessId=${pid}" get WorkingSetSize,CreationDate /format:csv`,
-      { encoding: 'utf8' },
+    exec(`tasklist /fo csv /nh /fi "PID eq ${pid}"`, { encoding: 'utf8', timeout: 10000, windowsHide: true },
       (error, stdout) => {
-        let memory = null;
-        let uptime = null;
-        if (!error && stdout) {
-          const lines = stdout.trim().split('\n').slice(1);
-          for (const line of lines) {
-            const parts = line.split(',');
-            if (parts.length >= 3) {
-              const creationDate = parts[1]?.trim();
-              const workingSet = parseInt(parts[2]?.trim(), 10);
-              if (workingSet) memory = Math.round(workingSet / 1024 / 1024);
-              if (creationDate) {
-                // WMIC format: YYYYMMDDHHMMss.mmmmmm+zzz
-                const startTime = new Date(
-                  parseInt(creationDate.substring(0, 4), 10),
-                  parseInt(creationDate.substring(4, 6), 10) - 1,
-                  parseInt(creationDate.substring(6, 8), 10),
-                  parseInt(creationDate.substring(8, 10), 10),
-                  parseInt(creationDate.substring(10, 12), 10),
-                  parseInt(creationDate.substring(12, 14), 10)
-                );
-                uptime = Math.floor((Date.now() - startTime.getTime()) / 1000);
-              }
-            }
-          }
-        }
-        resolve({ memory, uptime });
+        const info = error ? null : parseTasklistCsv(stdout, [pid]).get(pid);
+        resolve(info && info.memoryKb ? Math.round(info.memoryKb / 1024) : null);
       }
     );
   });
