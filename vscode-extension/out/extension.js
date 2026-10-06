@@ -123,6 +123,7 @@ function activate(context) {
             shellArgs: [shellFlag, app.command]
         });
         terminal.show();
+        (0, config_1.recordHumanStart)(app);
         // Refresh after a delay to pick up the new port
         setTimeout(() => refreshAll(), 3000);
     }), vscode.commands.registerCommand('portpilot.stopApp', (item) => {
@@ -139,6 +140,7 @@ function activate(context) {
                 vscode.window.showErrorMessage(`Failed to stop ${item.app.name}: ${error.message}`);
             }
             else {
+                (0, config_1.recordAppStop)(item.app.id);
                 vscode.window.showInformationMessage(`Stopped ${item.app.name} (PID ${pid})`);
                 setTimeout(() => refreshAll(), 1000);
             }

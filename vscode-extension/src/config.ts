@@ -69,13 +69,39 @@ export function readConfig(): PortPilotConfig {
   return { apps: [], settings: {}, groups: [] };
 }
 
-// Lock + atomic-write helpers shared with the desktop app, agent and MCP server.
-// scripts/copy-runtime.js copies src/core/configFile.js into runtime/ at build.
+// Lock + atomic-write helpers and the status/provenance model, shared with the
+// desktop app, agent and MCP server. scripts/copy-runtime.js copies
+// src/core/{configFile,status}.js into runtime/ at build.
+export interface StartedBy {
+  kind: 'human' | 'claude' | 'external';
+  surface: 'desktop' | 'web' | 'vscode' | 'claude-code' | 'mcp';
+  sessionId?: string;
+  label?: string;
+  at: string;
+}
 interface ConfigFileApi {
   updateJson<T>(file: string, mutator: (config: PortPilotConfig) => T, fallback: () => PortPilotConfig): { config: PortPilotConfig; result: T };
+  recordStart(configPath: string, appId: string, startedBy: StartedBy, opts?: { pid?: number | null; port?: number | null }): boolean;
+  recordStop(configPath: string, appId: string): boolean;
+}
+interface StatusApi {
+  makeStartedBy(fields: Partial<StartedBy>): StartedBy;
 }
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const configFile: ConfigFileApi = require(path.join(__dirname, '..', 'runtime', 'core', 'configFile.js'));
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const status: StatusApi = require(path.join(__dirname, '..', 'runtime', 'core', 'status.js'));
+
+/** Record that the user started an app from VS Code (best-effort, never throws). */
+export function recordHumanStart(app: PortPilotApp): boolean {
+  return configFile.recordStart(getConfigPath(), app.id,
+    status.makeStartedBy({ kind: 'human', surface: 'vscode' }), { port: app.preferredPort });
+}
+
+/** Clear an app's provenance after it stops (best-effort, never throws). */
+export function recordAppStop(appId: string): boolean {
+  return configFile.recordStop(getConfigPath(), appId);
+}
 
 /**
  * Locked read-modify-write against the file on disk. Do any user prompting

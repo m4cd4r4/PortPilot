@@ -35,6 +35,8 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getConfigPath = getConfigPath;
 exports.readConfig = readConfig;
+exports.recordHumanStart = recordHumanStart;
+exports.recordAppStop = recordAppStop;
 exports.updateConfig = updateConfig;
 exports.generateId = generateId;
 const fs = __importStar(require("fs"));
@@ -73,6 +75,16 @@ function readConfig() {
 }
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const configFile = require(path.join(__dirname, '..', 'runtime', 'core', 'configFile.js'));
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const status = require(path.join(__dirname, '..', 'runtime', 'core', 'status.js'));
+/** Record that the user started an app from VS Code (best-effort, never throws). */
+function recordHumanStart(app) {
+    return configFile.recordStart(getConfigPath(), app.id, status.makeStartedBy({ kind: 'human', surface: 'vscode' }), { port: app.preferredPort });
+}
+/** Clear an app's provenance after it stops (best-effort, never throws). */
+function recordAppStop(appId) {
+    return configFile.recordStop(getConfigPath(), appId);
+}
 /**
  * Locked read-modify-write against the file on disk. Do any user prompting
  * BEFORE calling this: the mutator must be synchronous, and a config object

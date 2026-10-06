@@ -159,4 +159,55 @@ function updateJson(file, mutator, fallback) {
   });
 }
 
-module.exports = { readJson, writeJsonAtomic, withLock, updateJson };
+// ---- Runtime state ---------------------------------------------------------
+// Who started each running app lives in portpilot-runtime.json beside the
+// config, not in the config itself: it changes on every start and stop, and it
+// must not ride along in a config export or backup. Shape:
+//   { apps: { <appId>: { startedBy, pid, port } } }
+// An entry says who started the app last; whether it is still running is the
+// reader's call (match the live port/pid). Writes are best-effort: a failed
+// stamp must never fail the start or stop it describes.
+
+function runtimePathFor(configPath) {
+  return path.join(path.dirname(configPath), 'portpilot-runtime.json');
+}
+
+const emptyRuntime = () => ({ apps: {} });
+
+function readRuntime(configPath) {
+  const runtime = readJson(runtimePathFor(configPath), emptyRuntime);
+  if (!runtime.apps || typeof runtime.apps !== 'object') runtime.apps = {};
+  return runtime;
+}
+
+function recordStart(configPath, appId, startedBy, { pid = null, port = null } = {}) {
+  if (!appId || !startedBy) return false;
+  try {
+    updateJson(runtimePathFor(configPath), (runtime) => {
+      if (!runtime.apps || typeof runtime.apps !== 'object') runtime.apps = {};
+      runtime.apps[appId] = { startedBy, pid: pid || null, port: port || null };
+    }, emptyRuntime);
+    return true;
+  } catch (err) {
+    console.error('[configFile] Failed to record app start:', err.message);
+    return false;
+  }
+}
+
+function recordStop(configPath, appId) {
+  if (!appId) return false;
+  try {
+    updateJson(runtimePathFor(configPath), (runtime) => {
+      if (runtime.apps && runtime.apps[appId]) delete runtime.apps[appId];
+    }, emptyRuntime);
+    return true;
+  } catch (err) {
+    console.error('[configFile] Failed to record app stop:', err.message);
+    return false;
+  }
+}
+
+module.exports = {
+  readJson, writeJsonAtomic, withLock, updateJson,
+  runtimePathFor, readRuntime, recordStart, recordStop,
+};
