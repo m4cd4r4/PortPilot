@@ -19,7 +19,7 @@
     "agent": "node src/agent/server.js",
     "test": "node tests/run-comprehensive.js",
     "test:all": "node tests/run-comprehensive.js",
-    "test:unit": "node tests/run-unit.js && node tests/config-atomic.test.cjs && node tests/status-provenance.test.cjs && node tests/patch-app.test.cjs && node tests/tasklist-parse.test.cjs",
+    "test:unit": "node tests/run-unit.js && node tests/config-atomic.test.cjs && node tests/status-provenance.test.cjs && node tests/patch-app.test.cjs && node tests/tasklist-parse.test.cjs && node tests/conflict.test.cjs",
     "test:mcp": "node tests/mcp-worktree.test.mjs && node tests/mcp-http-guard.test.mjs && node tests/mcp-provenance.test.mjs",
     "_comment_legacy_tests": "v1.3/v1.7/groups specs target the pre-v2.0 tab UI and need rewriting before re-enabling",
     "screenshots": "node take-screenshots.js",

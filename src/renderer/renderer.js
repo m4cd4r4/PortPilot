@@ -255,7 +255,7 @@ function setupDelegation() {
     openPortInBrowser: el => openPortInBrowser(+el.dataset.port),
     openProcessFolder: el => openProcessFolder(el.dataset.path),
     copyPort: el => copyPort(+el.dataset.port),
-    killPort: el => killPort(+el.dataset.port),
+    killPort: el => confirmInline(el, () => killPort(+el.dataset.port)),
     adoptPort: el => adoptPort(+el.dataset.port),
     toggleSection: el => toggleSection(el.dataset.section),
     togglePortGroup: el => togglePortGroup(el.dataset.portgroup),
@@ -265,12 +265,17 @@ function setupDelegation() {
     stopGroup: el => stopGroup(el.dataset.group),
     confirmDeleteGroup: el => confirmDeleteGroup(el.dataset.group),
     startDocker: () => startDocker(),
-    killConflictingProcess: el => killConflictingProcess(el.dataset.id),
     startOnFreePort: el => startOnFreePort(el.dataset.id),
+    killAndStart: el => confirmInline(el, () => startApp(el.dataset.id, { confirmed: true })),
+    showProcess: el => showPortRow(+el.dataset.port),
     startApp: el => startApp(el.dataset.id),
     openInBrowser: el => openInBrowser(el.dataset.id),
     viewLogs: el => viewLogs(el.dataset.id),
-    stopApp: el => stopApp(el.dataset.id),
+    // An app PortPilot did not start can only be stopped by killing whatever
+    // holds its port, so that path confirms inline first.
+    stopApp: el => isUnmanagedRunning(el.dataset.id)
+      ? confirmInline(el, () => stopApp(el.dataset.id, { confirmed: true }))
+      : stopApp(el.dataset.id),
     toggleFavorite: el => toggleFavorite(el.dataset.id),
     openAppFolder: el => openAppFolder(el.dataset.id),
     addBranch: el => addBranch(el.dataset.id),
@@ -574,6 +579,41 @@ function renderPorts() {
     .filter(key => buckets[key].length > 0)
     .map(key => renderPortGroup(key, S.GROUPS[key], buckets[key]))
     .join('');
+  reapplyArmed(dom.portsList);
+}
+
+// "Show process" from a conflict strip: scroll to whatever holds the port and
+// flash it. A registered app's port is listed on its app row, not under
+// Ports, so that holder is found in the Apps list instead.
+function showPortRow(port) {
+  const holderApp = holderAppFor(port, null);
+  if (holderApp) {
+    const card = dom.appsList.querySelector(`.app-card[data-id="${CSS.escape(holderApp.id)}"]`);
+    if (card && card.offsetParent !== null) { flashInto(card); return; }
+    openAppDrawer(holderApp.id); // its row is inside a collapsed group
+    return;
+  }
+  showPortsRow(port);
+}
+
+function flashInto(el) {
+  el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  el.classList.remove('flash');
+  void el.offsetWidth; // restart the animation on a repeat click
+  el.classList.add('flash');
+}
+
+function showPortsRow(port) {
+  if (state.portsCollapsed) {
+    state.portsCollapsed = false;
+    document.getElementById('ports-section')?.classList.remove('collapsed');
+  }
+  const p = state.ports.find(x => x.port === port);
+  if (p) state.portGroupExpanded[window.PortPilotStatus.classify(p)] = true;
+  renderPorts();
+  const row = dom.portsList.querySelector(`.port-row[data-port="${port}"]`);
+  if (!row) { showToast(`:${port} is not in the Ports list - try Scan`, 'info'); return; }
+  flashInto(row);
 }
 
 function renderPortGroup(key, meta, rows) {
@@ -623,7 +663,7 @@ function renderPortRow(p, group) {
         <button class="btn btn-small btn-secondary" data-act="openPortInBrowser" data-port="${p.port}" title="Open in browser">${icon('browser', 12)}</button>
         ${exePath ? `<button class="btn btn-small btn-secondary" data-act="openProcessFolder" data-path="${escapeHtml(exePath)}" title="Open folder">${icon('folder', 12)}</button>` : ''}
         <button class="btn btn-small btn-secondary" data-act="copyPort" data-port="${p.port}" title="Copy localhost:${p.port}">${icon('copy', 12)}</button>
-        <button class="btn btn-small btn-danger" data-act="killPort" data-port="${p.port}" title="Kill process">${icon('kill', 12)}</button>
+        <button class="btn btn-small btn-danger" data-act="killPort" data-port="${p.port}" data-confirm-key="kill-port:${p.port}" title="Kill process">${icon('kill', 12)}</button>
       </span>
     </div>`;
 }
@@ -647,8 +687,8 @@ function guessAdoptName(p) {
   return base ? base.charAt(0).toUpperCase() + base.slice(1) : 'New app';
 }
 
+// Callers confirm first (the Ports row button arms inline via confirmInline).
 async function killPort(port) {
-  if (!confirm(`Kill process on port ${port}?`)) return;
   const result = await window.portpilot.ports.kill(port);
   if (result.success) {
     showToast(`Killed process on port ${port}`, 'success');
@@ -772,6 +812,10 @@ async function loadApps() {
       state.ports = scanResult.ports;
       state.detectedApps = scanResult.matches || {};
       state.unknownConflicts = scanResult.unknownConflicts || [];
+      for (const c of state.unknownConflicts) {
+        const hint = freePortHints.get(c.port);
+        if (hint) c.freePort = hint;
+      }
       if (state.unknownConflicts.length > 0) {
         showUnknownConflictWarnings(state.unknownConflicts);
       }
@@ -781,6 +825,7 @@ async function loadApps() {
     renderPorts();
     updateAppsCount();
     refreshHealth();
+    fillFreePorts();
 
     if (state.settings.autoResizeWindow) {
       try {
@@ -983,6 +1028,7 @@ function renderApps() {
   }
 
   dom.appsList.innerHTML = html;
+  reapplyArmed(dom.appsList);
   updateGroupSelects();
 }
 
@@ -1068,24 +1114,21 @@ function renderAppCard(app, branchCount = 0) {
   const isStale = state.staleApps.has(app.id);
 
   // Action buttons
+  // A conflicted row carries its actions in the labelled strip underneath.
   let actionsHtml = '';
   if (conflict) {
-    actionsHtml = `
-      <button class="btn btn-small btn-secondary" data-act="openPortInBrowser" data-port="${conflict.port}" title="Open port">${icon('browser', 12)}</button>
-      <button class="btn btn-small btn-warning" data-act="killConflictingProcess" data-id="${app.id}" title="Kill blocker & free the port">${icon('kill', 12)}</button>
-      <button class="btn btn-small btn-secondary" data-act="startOnFreePort" data-id="${app.id}" title="Start on next free port">+</button>
-      <button class="btn btn-small btn-success" data-act="startApp" data-id="${app.id}" title="Kill blocker & start">${icon('play', 12)}</button>`;
+    actionsHtml = '';
   } else if (isRunning || starting) {
     actionsHtml = `
       <button class="btn btn-small btn-secondary" data-act="openInBrowser" data-id="${app.id}" title="Open" ${starting ? 'disabled' : ''}>${icon('browser', 12)}</button>
       ${managedRunning ? `<button class="btn btn-small btn-secondary" data-act="viewLogs" data-id="${app.id}" title="View logs">${icon('logs', 12)}</button>` : ''}
-      <button class="btn btn-small btn-danger" data-act="stopApp" data-id="${app.id}" title="Stop" ${starting ? 'disabled' : ''}>${icon('stop', 12)}</button>`;
+      <button class="btn btn-small btn-danger" data-act="stopApp" data-id="${app.id}" data-confirm-key="stop-kill:${app.id}" title="Stop" ${starting ? 'disabled' : ''}>${icon('stop', 12)}</button>`;
   } else {
     actionsHtml = `<button class="btn btn-small btn-success" data-act="startApp" data-id="${app.id}" title="Start">${icon('play', 12)}</button>`;
   }
 
   return `
-    <div class="app-card ${isSelected ? 'selected' : ''} ${isActive ? 'drawer-open' : ''} ${isBranch ? 'is-branch' : ''} ${isStale ? 'is-stale' : ''}"
+    <div class="app-card ${isSelected ? 'selected' : ''} ${isActive ? 'drawer-open' : ''} ${isBranch ? 'is-branch' : ''} ${isStale ? 'is-stale' : ''} ${conflict ? 'has-conflict' : ''}"
          data-id="${app.id}"
          ${isBranch ? `style="--branch-color:${app.color}"` : ''}
          draggable="true"
@@ -1127,34 +1170,155 @@ function renderAppCard(app, branchCount = 0) {
         <button class="btn btn-small btn-secondary" data-act="editApp" data-id="${app.id}" title="Edit">${icon('edit', 12)}</button>
         <button class="btn btn-small btn-secondary" data-act="deleteApp" data-id="${app.id}" title="Delete">${icon('trash', 12)}</button>
       </div>
+      ${conflict ? renderConflictStrip(app, conflict) : ''}
     </div>
   `;
 }
 
-async function startApp(appId) {
+// ============ Conflict strip (UX A2) ============
+// One sentence on what holds the port, then labelled actions, recommended
+// first. The wording and order come from src/core/conflict.js so every
+// surface offers the same choices. Kill confirms inline (confirmInline).
+const CONFLICT_ACT = { useFreePort: 'startOnFreePort', killAndStart: 'killAndStart', showProcess: 'showProcess' };
+
+// Registered app (other than `exceptId`) currently detected on `port`, if any.
+function holderAppFor(port, exceptId) {
+  for (const [id, detected] of Object.entries(state.detectedApps)) {
+    if (id !== exceptId && detected && detected.port === port) {
+      const a = state.apps.find(x => x.id === id);
+      if (a) return a;
+    }
+  }
+  return null;
+}
+
+function describeAppConflict(app, conflict) {
+  const holder = conflict.occupiedBy || {};
+  const details = state.expandedPorts.get(conflict.port);
+  return window.PortPilotConflict.describeConflict({
+    port: conflict.port,
+    holder: { processName: holder.processName, pid: holder.pid, uptime: details?.uptime },
+    holderApp: holderAppFor(conflict.port, app.id),
+    holderStartedBy: null, // row #8 wires startedBy from the runtime state
+    app,
+    freePort: conflict.freePort,
+  });
+}
+
+function renderConflictStrip(app, conflict, variant = 'row') {
+  const d = describeAppConflict(app, conflict);
+  const size = variant === 'row' ? ' btn-small' : '';
+  const buttons = d.actions.map(a => {
+    const cls = a.recommended ? 'btn-primary' : a.destructive ? 'btn-warning' : 'btn-secondary';
+    const confirm = a.destructive
+      ? ` data-confirm-key="kill-start:${app.id}" data-confirm-label="${escapeHtml(a.confirmLabel)}"`
+      : '';
+    return `<button class="btn${size} ${cls}" data-act="${CONFLICT_ACT[a.id]}" data-id="${app.id}" data-port="${conflict.port}"${confirm} title="${escapeHtml(a.title)}">${escapeHtml(a.label)}</button>`;
+  }).join('');
+  return `
+    <div class="conflict-strip conflict-strip-${variant}" role="group" aria-label="Port conflict for ${escapeHtml(app.name)}">
+      <span class="conflict-sentence"${d.title ? ` title="${escapeHtml(d.title)}"` : ''}><span class="conflict-glyph" aria-hidden="true">▲</span> ${escapeHtml(d.sentence)}</span>
+      <span class="conflict-actions">${buttons}</span>
+    </div>`;
+}
+
+// ---- Inline confirm (replaces native confirm()) ----
+// The first click arms a destructive button: it reads "Confirm kill?" for
+// CONFIRM_MS. A second click inside that window runs the action. Armed state
+// is keyed (data-confirm-key) rather than held on the element, so it survives
+// the list re-rendering under an auto-scan.
+const armedConfirms = new Map(); // key -> expiry (ms epoch)
+
+function confirmInline(el, run) {
+  const key = el.dataset.confirmKey;
+  if (!key) return run();
+  const until = armedConfirms.get(key);
+  if (until && Date.now() < until) {
+    armedConfirms.delete(key);
+    document.querySelectorAll('[data-confirm-key]').forEach(b => { if (b.dataset.confirmKey === key) disarmButton(b); });
+    return run();
+  }
+  const ms = window.PortPilotConflict.CONFIRM_MS;
+  armedConfirms.set(key, Date.now() + ms);
+  armButton(el);
+  setTimeout(() => {
+    if ((armedConfirms.get(key) || 0) > Date.now()) return; // re-armed since
+    armedConfirms.delete(key);
+    document.querySelectorAll('[data-confirm-key]').forEach(b => { if (b.dataset.confirmKey === key) disarmButton(b); });
+  }, ms + 20);
+}
+
+function armButton(el) {
+  if (el.classList.contains('is-armed')) return;
+  el.dataset.idleHtml = el.innerHTML;
+  el.classList.add('is-armed');
+  el.textContent = el.dataset.confirmLabel || 'Confirm kill?';
+}
+
+function disarmButton(el) {
+  if (!el.classList.contains('is-armed')) return;
+  el.innerHTML = el.dataset.idleHtml || '';
+  el.classList.remove('is-armed');
+  delete el.dataset.idleHtml;
+}
+
+function reapplyArmed(container) {
+  const now = Date.now();
+  container.querySelectorAll('[data-confirm-key]').forEach(el => {
+    if ((armedConfirms.get(el.dataset.confirmKey) || 0) > now) armButton(el);
+  });
+}
+
+// Running, but not started by PortPilot: stopping it means killing the port holder.
+function isUnmanagedRunning(appId) {
+  const managed = state.runningApps.find(r => r.id === appId && r.running);
+  return !managed && !!state.detectedApps[appId]?.port;
+}
+
+// Look up the next free port for each conflict once, so the strip can say
+// "Use :3001 instead". Cached per contested port; dropped once that free
+// port turns up in a scan.
+const freePortHints = new Map(); // contested port -> free port
+async function fillFreePorts() {
+  const taken = new Set(state.ports.map(p => p.port));
+  let changed = false;
+  for (const c of state.unknownConflicts) {
+    let hint = freePortHints.get(c.port);
+    if (!hint || taken.has(hint)) {
+      try {
+        const res = await window.portpilot.ports.findAvailable(c.port + 1, c.port + 51);
+        hint = res && res.port;
+      } catch { hint = null; }
+      if (hint) freePortHints.set(c.port, hint); else freePortHints.delete(c.port);
+    }
+    if (hint && c.freePort !== hint) { c.freePort = hint; changed = true; }
+    // Holder uptime for "started 3h ago" (otherwise only fetched on Scan).
+    if (c.occupiedBy?.pid && !state.expandedPorts.has(c.port)) {
+      try {
+        const r = await window.portpilot.ports.getDetails(c.occupiedBy.pid, c.port);
+        if (r && r.success) { state.expandedPorts.set(c.port, r.details); changed = true; }
+      } catch { /* details are optional */ }
+    }
+  }
+  if (changed) {
+    renderApps();
+    if (state.drawerAppId && state.unknownConflicts.some(c => c.appId === state.drawerAppId)) openAppDrawer(state.drawerAppId);
+  }
+}
+
+// `confirmed` is set only by the conflict strip's armed "Kill & start". Any
+// other start that finds the port taken shows the strip instead of killing.
+async function startApp(appId, { confirmed = false } = {}) {
   const app = state.apps.find(a => a.id === appId);
   if (!app) return;
 
   if (app.preferredPort) {
     const portCheck = await window.portpilot.ports.check(app.preferredPort);
     if (portCheck.inUse && portCheck.info) {
-      const blocker = portCheck.info;
-      const blockerName = blocker.processName || 'Unknown process';
-      const blockerPid = blocker.pid;
-
-      let blockerAppName = null;
-      for (const [id, detectedPort] of Object.entries(state.detectedApps)) {
-        if (detectedPort.port === app.preferredPort) {
-          const blockerApp = state.apps.find(a => a.id === id);
-          if (blockerApp) { blockerAppName = blockerApp.name; break; }
-        }
+      if (!confirmed) {
+        showConflictFor(app, portCheck.info);
+        return;
       }
-
-      const message = blockerAppName
-        ? `Port ${app.preferredPort} is in use by ${blockerAppName} (${blockerName}, PID ${blockerPid}).\n\nStop ${blockerAppName} and start ${app.name}?`
-        : `Port ${app.preferredPort} is in use by ${blockerName} (PID ${blockerPid}).\n\nKill this process and start ${app.name}?`;
-
-      if (!confirm(message)) return;
 
       showToast(`Stopping process on port ${app.preferredPort}...`, 'info');
       const killResult = await window.portpilot.ports.kill(app.preferredPort);
@@ -1180,7 +1344,9 @@ async function startApp(appId) {
   await loadApps();
 }
 
-async function stopApp(appId) {
+// The port-kill fallback for an app PortPilot did not start runs only when
+// `confirmed` (the Stop button armed inline first, see CLICK.stopApp).
+async function stopApp(appId, { confirmed = false } = {}) {
   const result = await window.portpilot.process.stop(appId);
   if (result.success) {
     showToast('App stopped', 'success');
@@ -1188,11 +1354,14 @@ async function stopApp(appId) {
     return;
   }
 
-  const app = state.apps.find(a => a.id === appId);
   const detected = state.detectedApps[appId];
 
   if (detected && detected.port) {
-    if (!confirm(`App not managed by PortPilot. Kill process on port ${detected.port}?`)) return;
+    if (!confirmed) {
+      showToast(`Not started by PortPilot - press Stop twice to kill the process on :${detected.port}`, 'info');
+      await loadApps();
+      return;
+    }
     const killResult = await window.portpilot.ports.kill(detected.port);
     if (killResult.success) {
       showToast(`Killed process on port ${detected.port}`, 'success');
@@ -1221,31 +1390,32 @@ function showUnknownConflictWarnings(conflicts) {
   }
 }
 
-async function killConflictingProcess(appId) {
-  const conflict = state.unknownConflicts.find(c => c.appId === appId);
-  if (!conflict) { showToast('No conflict found', 'error'); return; }
-
-  const processInfo = conflict.occupiedBy;
-  const processName = processInfo.processName || 'Unknown process';
-  if (!confirm(`Kill ${processName} (PID ${processInfo.pid}) on port ${conflict.port}?`)) return;
-
-  const result = await window.portpilot.ports.kill(conflict.port);
-  if (result.success) {
-    showToast(`Killed ${processName} on port ${conflict.port}`, 'success');
-    state.unknownConflicts = state.unknownConflicts.filter(c => c.appId !== appId);
-    await loadApps();
-  } else {
-    showToast(`Failed to kill process: ${result.error}`, 'error');
-  }
+// A start found the port taken since the last scan: record the conflict and
+// let the row's strip (and the drawer, if open) offer the choices.
+function showConflictFor(app, blocker) {
+  const conflict = {
+    appId: app.id,
+    appName: app.name,
+    port: app.preferredPort,
+    occupiedBy: { pid: blocker.pid, processName: blocker.processName, commandLine: blocker.commandLine },
+    freePort: freePortHints.get(app.preferredPort),
+  };
+  state.unknownConflicts = state.unknownConflicts.filter(c => c.appId !== app.id).concat(conflict);
+  renderApps();
+  if (state.drawerAppId === app.id) openAppDrawer(app.id);
+  showToast(`:${app.preferredPort} is in use - choose what to do on the ${app.name} row`, 'warning');
+  fillFreePorts();
 }
 
 // Start a conflicted app on the next free port instead of fighting for its
 // preferred one. Non-destructive: overrides PORT for this run only, does not
-// change the saved preferredPort.
+// change the saved preferredPort. Starts the search at the port the strip
+// named, so "Use :3001 instead" means :3001 while it is still free.
 async function startOnFreePort(appId) {
   const app = state.apps.find(a => a.id === appId);
   if (!app) return;
-  const from = (app.preferredPort || 3000) + 1;
+  const named = state.unknownConflicts.find(c => c.appId === appId)?.freePort;
+  const from = named || (app.preferredPort || 3000) + 1;
   const res = await window.portpilot.ports.findAvailable(from, from + 50);
   const freePort = res && res.port;
   if (!freePort) { showToast('No free port found nearby', 'error'); return; }
@@ -1533,10 +1703,9 @@ function openAppDrawer(appId) {
   // Primary action: Start XOR Stop (never both).
   let primary;
   if (conflict) {
-    primary = `<button class="btn btn-secondary" data-act="startOnFreePort" data-id="${app.id}">${icon('play', 12)} Start on free port</button>
-               <button class="btn btn-success" data-act="startApp" data-id="${app.id}">${icon('kill', 12)} Kill blocker & start</button>`;
+    primary = renderConflictStrip(app, conflict, 'drawer');
   } else if (isRunning || starting) {
-    primary = `<button class="btn btn-danger" data-act="stopApp" data-id="${app.id}" ${starting ? 'disabled' : ''}>${icon('stop', 12)} Stop</button>`;
+    primary = `<button class="btn btn-danger" data-act="stopApp" data-id="${app.id}" data-confirm-key="stop-kill:${app.id}" ${starting ? 'disabled' : ''}>${icon('stop', 12)} Stop</button>`;
   } else {
     primary = `<button class="btn btn-success" data-act="startApp" data-id="${app.id}">${icon('play', 12)} Start</button>`;
   }
@@ -1565,6 +1734,7 @@ function openAppDrawer(appId) {
     <div class="drawer-actions-primary">${primary}</div>
     <div class="drawer-fields">${fields}</div>
     <div class="drawer-actions">${secondary}</div>`;
+  reapplyArmed(document.getElementById('app-drawer-body'));
 
   document.getElementById('app-drawer-backdrop').classList.remove('hidden');
   document.getElementById('app-drawer').classList.remove('hidden');
@@ -2537,7 +2707,6 @@ window.copyPort = copyPort;
 window.copyCmdPath = copyCmdPath;
 window.startApp = startApp;
 window.stopApp = stopApp;
-window.killConflictingProcess = killConflictingProcess;
 window.openPortInBrowser = openPortInBrowser;
 window.openAppFolder = openAppFolder;
 window.editApp = editApp;
