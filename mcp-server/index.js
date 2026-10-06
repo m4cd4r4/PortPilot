@@ -18,6 +18,7 @@ import path from 'path';
 import { execSync, exec } from 'child_process';
 import os from 'os';
 import { pathToFileURL } from 'url';
+import { createRequire } from 'module';
 
 // =============================================================================
 // CONFIG
@@ -40,22 +41,27 @@ function getConfigPath() {
   return path.join(configDir, 'portpilot-config.json');
 }
 
-function readConfig() {
-  try {
-    const data = fs.readFileSync(getConfigPath(), 'utf-8');
-    return JSON.parse(data);
-  } catch {
-    return { apps: [], settings: {}, groups: [] };
+// Lock + atomic-write helpers shared with the desktop app, agent and VS Code
+// extension. Packaged builds ship a copy next to this file (electron-builder
+// extraResources); from a repo checkout it is loaded from src/core.
+const require = createRequire(import.meta.url);
+function loadConfigFile() {
+  for (const p of ['./configFile.cjs', '../src/core/configFile.js']) {
+    try { return require(p); } catch (err) { if (err.code !== 'MODULE_NOT_FOUND') throw err; }
   }
+  throw new Error('PortPilot MCP: configFile helper not found (expected ./configFile.cjs or ../src/core/configFile.js)');
+}
+const configFile = loadConfigFile();
+const emptyConfig = () => ({ apps: [], settings: {}, groups: [] });
+
+function readConfig() {
+  return configFile.readJson(getConfigPath(), emptyConfig);
 }
 
-function writeConfig(config) {
-  const configPath = getConfigPath();
-  const configDir = path.dirname(configPath);
-  if (!fs.existsSync(configDir)) {
-    fs.mkdirSync(configDir, { recursive: true });
-  }
-  fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+// Locked read-modify-write; returns the mutator's result. The file is only
+// rewritten if the mutator changed the config.
+function updateConfig(mutator) {
+  return configFile.updateJson(getConfigPath(), mutator, emptyConfig).result;
 }
 
 function generateId() {
@@ -662,29 +668,29 @@ function createServer() {
       description: z.string().optional().describe('Short description')
     },
     async ({ name, command, cwd, preferredPort, isFavorite, autoStart, group, description }) => {
-      const config = readConfig();
-      if (!config.apps) config.apps = [];
+      return updateConfig((config) => {
+        if (!config.apps) config.apps = [];
 
-      if (config.apps.some(a => a.name.toLowerCase() === name.toLowerCase())) {
-        return { content: [{ type: 'text', text: `App "${name}" already exists` }], isError: true };
-      }
+        if (config.apps.some(a => a.name.toLowerCase() === name.toLowerCase())) {
+          return { content: [{ type: 'text', text: `App "${name}" already exists` }], isError: true };
+        }
 
-      const now = new Date().toISOString();
-      const newApp = {
-        id: generateId(), name, command, cwd,
-        preferredPort: preferredPort || null,
-        fallbackRange: null, env: {},
-        autoStart: autoStart || false,
-        isFavorite: isFavorite || false,
-        group: group || null,
-        description: description || null,
-        color: '#4fc3f7',
-        createdAt: now, updatedAt: now
-      };
+        const now = new Date().toISOString();
+        const newApp = {
+          id: generateId(), name, command, cwd,
+          preferredPort: preferredPort || null,
+          fallbackRange: null, env: {},
+          autoStart: autoStart || false,
+          isFavorite: isFavorite || false,
+          group: group || null,
+          description: description || null,
+          color: '#4fc3f7',
+          createdAt: now, updatedAt: now
+        };
 
-      config.apps.push(newApp);
-      writeConfig(config);
-      return { content: [{ type: 'text', text: JSON.stringify({ success: true, message: `Added "${name}"`, app: newApp }, null, 2) }] };
+        config.apps.push(newApp);
+        return { content: [{ type: 'text', text: JSON.stringify({ success: true, message: `Added "${name}"`, app: newApp }, null, 2) }] };
+      });
     }
   );
 
@@ -705,14 +711,14 @@ function createServer() {
       if (!fs.existsSync(wtPath)) {
         return { content: [{ type: 'text', text: `Path does not exist: ${wtPath}` }], isError: true };
       }
-      const config = readConfig();
-      const git = resolveWorktreeGit(wtPath);
-      const result = registerWorktree(config, { path: wtPath, command, preferredPort, branch, parent, name }, git, new Date().toISOString());
-      if (!result.ok) {
-        return { content: [{ type: 'text', text: result.error }], isError: true };
-      }
-      writeConfig(config);
-      return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
+      const git = resolveWorktreeGit(wtPath); // shells out to git - keep it outside the lock
+      return updateConfig((config) => {
+        const result = registerWorktree(config, { path: wtPath, command, preferredPort, branch, parent, name }, git, new Date().toISOString());
+        if (!result.ok) {
+          return { content: [{ type: 'text', text: result.error }], isError: true };
+        }
+        return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
+      });
     }
   );
 
@@ -733,15 +739,15 @@ function createServer() {
       description: z.string().optional()
     },
     async ({ identifier, ...updates }) => {
-      const config = readConfig();
-      const idx = (config.apps || []).findIndex(a => a.id === identifier || a.name.toLowerCase() === identifier.toLowerCase());
-      if (idx === -1) return { content: [{ type: 'text', text: `App not found: ${identifier}` }], isError: true };
+      return updateConfig((config) => {
+        const idx = (config.apps || []).findIndex(a => a.id === identifier || a.name.toLowerCase() === identifier.toLowerCase());
+        if (idx === -1) return { content: [{ type: 'text', text: `App not found: ${identifier}` }], isError: true };
 
-      // Remove undefined values
-      const clean = Object.fromEntries(Object.entries(updates).filter(([, v]) => v !== undefined));
-      config.apps[idx] = { ...config.apps[idx], ...clean, updatedAt: new Date().toISOString() };
-      writeConfig(config);
-      return { content: [{ type: 'text', text: JSON.stringify({ success: true, app: config.apps[idx] }, null, 2) }] };
+        // Remove undefined values
+        const clean = Object.fromEntries(Object.entries(updates).filter(([, v]) => v !== undefined));
+        config.apps[idx] = { ...config.apps[idx], ...clean, updatedAt: new Date().toISOString() };
+        return { content: [{ type: 'text', text: JSON.stringify({ success: true, app: config.apps[idx] }, null, 2) }] };
+      });
     }
   );
 
@@ -752,12 +758,12 @@ function createServer() {
     'Remove an app from PortPilot',
     { identifier: z.string().describe('App ID or name to delete') },
     async ({ identifier }) => {
-      const config = readConfig();
-      const idx = (config.apps || []).findIndex(a => a.id === identifier || a.name.toLowerCase() === identifier.toLowerCase());
-      if (idx === -1) return { content: [{ type: 'text', text: `App not found: ${identifier}` }], isError: true };
-      const deleted = config.apps.splice(idx, 1)[0];
-      writeConfig(config);
-      return { content: [{ type: 'text', text: JSON.stringify({ success: true, deleted: deleted.name }, null, 2) }] };
+      return updateConfig((config) => {
+        const idx = (config.apps || []).findIndex(a => a.id === identifier || a.name.toLowerCase() === identifier.toLowerCase());
+        if (idx === -1) return { content: [{ type: 'text', text: `App not found: ${identifier}` }], isError: true };
+        const deleted = config.apps.splice(idx, 1)[0];
+        return { content: [{ type: 'text', text: JSON.stringify({ success: true, deleted: deleted.name }, null, 2) }] };
+      });
     }
   );
 
@@ -769,12 +775,12 @@ function createServer() {
     { confirm: z.boolean().describe('Must be true to confirm') },
     async ({ confirm }) => {
       if (!confirm) return { content: [{ type: 'text', text: 'Pass confirm: true to delete all apps' }], isError: true };
-      const config = readConfig();
-      const count = (config.apps || []).length;
-      const names = (config.apps || []).map(a => a.name);
-      config.apps = [];
-      writeConfig(config);
-      return { content: [{ type: 'text', text: JSON.stringify({ success: true, deleted: count, names }, null, 2) }] };
+      return updateConfig((config) => {
+        const count = (config.apps || []).length;
+        const names = (config.apps || []).map(a => a.name);
+        config.apps = [];
+        return { content: [{ type: 'text', text: JSON.stringify({ success: true, deleted: count, names }, null, 2) }] };
+      });
     }
   );
 
@@ -797,13 +803,13 @@ function createServer() {
     'Toggle favorite status of an app',
     { identifier: z.string().describe('App ID or name') },
     async ({ identifier }) => {
-      const config = readConfig();
-      const app = findApp(config.apps || [], identifier);
-      if (!app) return { content: [{ type: 'text', text: `App not found: ${identifier}` }], isError: true };
-      app.isFavorite = !app.isFavorite;
-      app.updatedAt = new Date().toISOString();
-      writeConfig(config);
-      return { content: [{ type: 'text', text: JSON.stringify({ success: true, name: app.name, isFavorite: app.isFavorite }, null, 2) }] };
+      return updateConfig((config) => {
+        const app = findApp(config.apps || [], identifier);
+        if (!app) return { content: [{ type: 'text', text: `App not found: ${identifier}` }], isError: true };
+        app.isFavorite = !app.isFavorite;
+        app.updatedAt = new Date().toISOString();
+        return { content: [{ type: 'text', text: JSON.stringify({ success: true, name: app.name, isFavorite: app.isFavorite }, null, 2) }] };
+      });
     }
   );
 
@@ -846,22 +852,22 @@ function createServer() {
       group: z.string().nullable().describe('Group ID or name, or null to ungroup')
     },
     async ({ identifier, group }) => {
-      const config = readConfig();
-      const app = findApp(config.apps || [], identifier);
-      if (!app) return { content: [{ type: 'text', text: `App not found: ${identifier}` }], isError: true };
+      return updateConfig((config) => {
+        const app = findApp(config.apps || [], identifier);
+        if (!app) return { content: [{ type: 'text', text: `App not found: ${identifier}` }], isError: true };
 
-      if (group) {
-        // Resolve group by name if not an ID
-        const resolved = (config.groups || []).find(g => g.id === group || g.name.toLowerCase() === group.toLowerCase());
-        if (!resolved) return { content: [{ type: 'text', text: `Group not found: ${group}` }], isError: true };
-        app.group = resolved.id;
-      } else {
-        app.group = null;
-      }
+        if (group) {
+          // Resolve group by name if not an ID
+          const resolved = (config.groups || []).find(g => g.id === group || g.name.toLowerCase() === group.toLowerCase());
+          if (!resolved) return { content: [{ type: 'text', text: `Group not found: ${group}` }], isError: true };
+          app.group = resolved.id;
+        } else {
+          app.group = null;
+        }
 
-      app.updatedAt = new Date().toISOString();
-      writeConfig(config);
-      return { content: [{ type: 'text', text: JSON.stringify({ success: true, name: app.name, group: app.group }, null, 2) }] };
+        app.updatedAt = new Date().toISOString();
+        return { content: [{ type: 'text', text: JSON.stringify({ success: true, name: app.name, group: app.group }, null, 2) }] };
+      });
     }
   );
 
@@ -980,9 +986,10 @@ function runRegisterWorktreeCli(args) {
   const f = parseFlags(args);
   if (!f.path) { console.error('register-worktree: --path is required'); process.exit(64); }
   if (!fs.existsSync(f.path)) { console.error(`register-worktree: path does not exist: ${f.path}`); process.exit(66); }
-  const config = readConfig();
   const git = resolveWorktreeGit(f.path);
-  const result = registerWorktree(config, {
+  // Exit only after updateConfig returns - process.exit inside the mutator
+  // would skip the lock release.
+  const result = updateConfig((config) => registerWorktree(config, {
     path: f.path,
     branch: f.branch,
     parent: f.parent,
@@ -991,9 +998,8 @@ function runRegisterWorktreeCli(args) {
     preferredPort: f.port ? parseInt(f.port, 10) : undefined,
     color: f.color,
     colorSource: f.color ? 'peacock' : undefined,
-  }, git, new Date().toISOString());
+  }, git, new Date().toISOString()));
   if (!result.ok) { console.error(result.error); process.exit(1); }
-  writeConfig(config);
   console.log(JSON.stringify(result, null, 2));
   process.exit(0);
 }

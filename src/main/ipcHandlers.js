@@ -501,12 +501,9 @@ function setupIpcHandlers(ipcMain, configStore) {
   /** Enable/disable port reservation for an app */
   ipcMain.handle('reserve:enable', async (_, appId) => {
     try {
-      const app = configStore.getApp(appId);
+      const app = configStore.patchApp(appId, a => (a.preferredPort ? { reservePort: true } : null));
       if (!app) return { success: false, error: 'App not found' };
       if (!app.preferredPort) return { success: false, error: 'App has no preferred port to reserve' };
-      app.reservePort = true;
-      app.updatedAt = new Date().toISOString();
-      configStore.saveApp(app);
       const running = getRunningApps().some(a => a.id === appId && a.running);
       const r = running ? { ok: true } : await reserver.reserve(app);
       if (!r.ok) return { success: false, error: `Port ${app.preferredPort} is already in use (${r.reason})` };
@@ -518,11 +515,8 @@ function setupIpcHandlers(ipcMain, configStore) {
 
   ipcMain.handle('reserve:disable', async (_, appId) => {
     try {
-      const app = configStore.getApp(appId);
+      const app = configStore.patchApp(appId, { reservePort: false });
       if (!app) return { success: false, error: 'App not found' };
-      app.reservePort = false;
-      app.updatedAt = new Date().toISOString();
-      configStore.saveApp(app);
       await reserver.release(appId);
       return { success: true };
     } catch (error) {
@@ -666,14 +660,9 @@ function setupIpcHandlers(ipcMain, configStore) {
   /** Toggle favorite status */
   ipcMain.handle('config:toggleFavorite', async (_, appId) => {
     try {
-      const app = configStore.getApp(appId);
+      const app = configStore.patchApp(appId, a => ({ isFavorite: !a.isFavorite }));
       if (!app) return { success: false, error: 'App not found' };
-
-      app.isFavorite = !app.isFavorite;
-      app.updatedAt = new Date().toISOString();
-
-      const updated = configStore.saveApp(app);
-      return { success: true, app: updated };
+      return { success: true, app };
     } catch (error) {
       return { success: false, error: error.message };
     }
@@ -682,9 +671,7 @@ function setupIpcHandlers(ipcMain, configStore) {
   /** Delete all apps */
   ipcMain.handle('config:deleteAllApps', async () => {
     try {
-      const count = configStore.config.apps.length;
-      configStore.config.apps = [];
-      configStore.save();
+      const count = configStore.clearApps();
       return { success: true, count };
     } catch (error) {
       return { success: false, error: error.message };
@@ -812,9 +799,6 @@ function setupIpcHandlers(ipcMain, configStore) {
   ipcMain.handle('discovery:addScanPath', async (_, dirPath) => {
     try {
       const fs = require('fs');
-      const settings = configStore.getSettings();
-      const scanPaths = settings.discovery?.scanPaths || [];
-
       // Validate path exists
       if (!fs.existsSync(dirPath)) {
         return { success: false, error: 'Directory does not exist' };
@@ -823,17 +807,15 @@ function setupIpcHandlers(ipcMain, configStore) {
       // Normalize path
       const normalizedPath = path.normalize(dirPath);
 
-      // Avoid duplicates
-      if (scanPaths.some(p => path.normalize(p).toLowerCase() === normalizedPath.toLowerCase())) {
-        return { success: false, error: 'Path already exists' };
-      }
-
-      scanPaths.push(normalizedPath);
-      configStore.updateSettings({
-        discovery: { ...settings.discovery, scanPaths }
+      return configStore.updateDiscovery((discovery) => {
+        const scanPaths = discovery.scanPaths || [];
+        // Avoid duplicates
+        if (scanPaths.some(p => path.normalize(p).toLowerCase() === normalizedPath.toLowerCase())) {
+          return { success: false, error: 'Path already exists' };
+        }
+        discovery.scanPaths = [...scanPaths, normalizedPath];
+        return { success: true, scanPaths: discovery.scanPaths };
       });
-
-      return { success: true, scanPaths };
     } catch (error) {
       return { success: false, error: error.message };
     }
@@ -842,14 +824,12 @@ function setupIpcHandlers(ipcMain, configStore) {
   /** Remove a scan path */
   ipcMain.handle('discovery:removeScanPath', async (_, dirPath) => {
     try {
-      const settings = configStore.getSettings();
       const normalizedPath = path.normalize(dirPath);
-      const scanPaths = (settings.discovery?.scanPaths || []).filter(p =>
-        path.normalize(p).toLowerCase() !== normalizedPath.toLowerCase()
-      );
-
-      configStore.updateSettings({
-        discovery: { ...settings.discovery, scanPaths }
+      const scanPaths = configStore.updateDiscovery((discovery) => {
+        discovery.scanPaths = (discovery.scanPaths || []).filter(p =>
+          path.normalize(p).toLowerCase() !== normalizedPath.toLowerCase()
+        );
+        return discovery.scanPaths;
       });
 
       return { success: true, scanPaths };
@@ -871,10 +851,7 @@ function setupIpcHandlers(ipcMain, configStore) {
   /** Update discovery settings */
   ipcMain.handle('discovery:updateSettings', async (_, newSettings) => {
     try {
-      const settings = configStore.getSettings();
-      configStore.updateSettings({
-        discovery: { ...settings.discovery, ...newSettings }
-      });
+      configStore.updateDiscovery((discovery) => { Object.assign(discovery, newSettings); });
       return { success: true };
     } catch (error) {
       return { success: false, error: error.message };

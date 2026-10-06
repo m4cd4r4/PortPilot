@@ -22,6 +22,7 @@ const FILES = [
   'agent/public/portpilot-web.js',
   'core/dispatch.js',
   'core/configPath.js',
+  'core/configFile.js',
   'core/status.js',
   'main/configStore.js',
   'main/portScanner.js',

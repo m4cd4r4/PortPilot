@@ -69,16 +69,12 @@ function createDispatcher(configStore) {
       return { success: deleted, error: deleted ? null : 'App not found' };
     },
     'config:toggleFavorite': async (appId) => {
-      const app = configStore.getApp(appId);
+      const app = configStore.patchApp(appId, a => ({ isFavorite: !a.isFavorite }));
       if (!app) return { success: false, error: 'App not found' };
-      app.isFavorite = !app.isFavorite;
-      app.updatedAt = new Date().toISOString();
-      return { success: true, app: configStore.saveApp(app) };
+      return { success: true, app };
     },
     'config:deleteAllApps': async () => {
-      const count = configStore.config.apps.length;
-      configStore.config.apps = [];
-      configStore.save();
+      const count = configStore.clearApps();
       return { success: true, count };
     },
     'config:updateAppsOrder': async (appIds) => { configStore.updateAppsOrder(appIds); return { success: true }; },
@@ -108,23 +104,17 @@ function createDispatcher(configStore) {
 
     // ---- Port reservation ----
     'reserve:enable': async (appId) => {
-      const app = configStore.getApp(appId);
+      const app = configStore.patchApp(appId, a => (a.preferredPort ? { reservePort: true } : null));
       if (!app) return { success: false, error: 'App not found' };
       if (!app.preferredPort) return { success: false, error: 'App has no preferred port to reserve' };
-      app.reservePort = true;
-      app.updatedAt = new Date().toISOString();
-      configStore.saveApp(app);
       const running = getRunningApps().some(a => a.id === appId && a.running);
       const r = running ? { ok: true } : await reserver.reserve(app);
       if (!r.ok) return { success: false, error: `Port ${app.preferredPort} is already in use (${r.reason})` };
       return { success: true, reserved: !running };
     },
     'reserve:disable': async (appId) => {
-      const app = configStore.getApp(appId);
+      const app = configStore.patchApp(appId, { reservePort: false });
       if (!app) return { success: false, error: 'App not found' };
-      app.reservePort = false;
-      app.updatedAt = new Date().toISOString();
-      configStore.saveApp(app);
       await reserver.release(appId);
       return { success: true };
     },
@@ -151,29 +141,29 @@ function createDispatcher(configStore) {
       return { success: true, projects: newProjects, total: discovered.length };
     },
     'discovery:addScanPath': async (dirPath) => {
-      const settings = configStore.getSettings();
-      const scanPaths = settings.discovery?.scanPaths || [];
       if (!fs.existsSync(dirPath)) return { success: false, error: 'Directory does not exist' };
       const normalizedPath = path.normalize(dirPath);
-      if (scanPaths.some(p => path.normalize(p).toLowerCase() === normalizedPath.toLowerCase())) {
-        return { success: false, error: 'Path already exists' };
-      }
-      scanPaths.push(normalizedPath);
-      configStore.updateSettings({ discovery: { ...settings.discovery, scanPaths } });
-      return { success: true, scanPaths };
+      return configStore.updateDiscovery((discovery) => {
+        const scanPaths = discovery.scanPaths || [];
+        if (scanPaths.some(p => path.normalize(p).toLowerCase() === normalizedPath.toLowerCase())) {
+          return { success: false, error: 'Path already exists' };
+        }
+        discovery.scanPaths = [...scanPaths, normalizedPath];
+        return { success: true, scanPaths: discovery.scanPaths };
+      });
     },
     'discovery:removeScanPath': async (dirPath) => {
-      const settings = configStore.getSettings();
       const normalizedPath = path.normalize(dirPath);
-      const scanPaths = (settings.discovery?.scanPaths || []).filter(p =>
-        path.normalize(p).toLowerCase() !== normalizedPath.toLowerCase());
-      configStore.updateSettings({ discovery: { ...settings.discovery, scanPaths } });
+      const scanPaths = configStore.updateDiscovery((discovery) => {
+        discovery.scanPaths = (discovery.scanPaths || []).filter(p =>
+          path.normalize(p).toLowerCase() !== normalizedPath.toLowerCase());
+        return discovery.scanPaths;
+      });
       return { success: true, scanPaths };
     },
     'discovery:getSettings': async () => ({ success: true, settings: configStore.getSettings().discovery || {} }),
     'discovery:updateSettings': async (newSettings) => {
-      const settings = configStore.getSettings();
-      configStore.updateSettings({ discovery: { ...settings.discovery, ...newSettings } });
+      configStore.updateDiscovery((discovery) => { Object.assign(discovery, newSettings); });
       return { success: true };
     },
     'discovery:detectProject': async (dirPath) => {

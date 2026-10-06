@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import { exec } from 'child_process';
 import * as os from 'os';
-import { getConfigPath, readConfig, writeConfig, generateId, PortPilotApp } from './config';
+import { getConfigPath, readConfig, updateConfig, generateId, PortPilotApp } from './config';
 import { AppsTreeProvider, AppTreeItem, GroupTreeItem } from './appsTreeProvider';
 import { PortsTreeProvider, PortTreeItem } from './portsTreeProvider';
 import { killPort } from './portScanner';
@@ -231,9 +231,7 @@ export function activate(context: vscode.ExtensionContext) {
         updatedAt: now
       };
 
-      const config = readConfig();
-      config.apps.push(app);
-      writeConfig(config);
+      updateConfig(config => { config.apps.push(app); });
       refreshAll();
       vscode.window.showInformationMessage(`Added "${name}" to PortPilot`);
     }),
@@ -252,9 +250,10 @@ export function activate(context: vscode.ExtensionContext) {
       );
       if (!field) return;
 
-      const config = readConfig();
-      const target = config.apps.find(a => a.id === app.id);
+      // Prompt first, then apply under the lock - see updateConfig.
+      const target = readConfig().apps.find(a => a.id === app.id);
       if (!target) return;
+      const patch: Partial<PortPilotApp> = {};
 
       if (field.value === 'preferredPort') {
         const val = await vscode.window.showInputBox({
@@ -267,11 +266,11 @@ export function activate(context: vscode.ExtensionContext) {
           }
         });
         if (val === undefined) return;
-        target.preferredPort = val ? parseInt(val, 10) : null;
+        patch.preferredPort = val ? parseInt(val, 10) : null;
       } else if (field.value === 'cwd') {
         const selected = await vscode.window.showOpenDialog({ canSelectFolders: true, canSelectFiles: false });
         if (!selected?.[0]) return;
-        target.cwd = selected[0].fsPath;
+        patch.cwd = selected[0].fsPath;
       } else {
         const key = field.value as keyof PortPilotApp;
         const val = await vscode.window.showInputBox({
@@ -279,15 +278,18 @@ export function activate(context: vscode.ExtensionContext) {
           value: String(target[key] ?? '')
         });
         if (val === undefined) return;
-        if (key === 'name') target.name = val;
-        else if (key === 'command') target.command = val;
-        else if (key === 'description') target.description = val;
+        if (key === 'name') patch.name = val;
+        else if (key === 'command') patch.command = val;
+        else if (key === 'description') patch.description = val;
       }
 
-      target.updatedAt = new Date().toISOString();
-      writeConfig(config);
+      const updated = updateConfig(config => {
+        const current = config.apps.find(a => a.id === app.id);
+        if (current) Object.assign(current, patch, { updatedAt: new Date().toISOString() });
+        return current;
+      });
       refreshAll();
-      vscode.window.showInformationMessage(`Updated "${target.name}"`);
+      if (updated) vscode.window.showInformationMessage(`Updated "${updated.name}"`);
     }),
 
     vscode.commands.registerCommand('portpilot.deleteApp', async (item: AppTreeItem) => {
@@ -297,21 +299,18 @@ export function activate(context: vscode.ExtensionContext) {
       );
       if (confirm !== 'Delete') return;
 
-      const config = readConfig();
-      config.apps = config.apps.filter(a => a.id !== item.app.id);
-      writeConfig(config);
+      updateConfig(config => { config.apps = config.apps.filter(a => a.id !== item.app.id); });
       refreshAll();
       vscode.window.showInformationMessage(`Deleted "${item.app.name}"`);
     }),
 
     vscode.commands.registerCommand('portpilot.toggleFavorite', (item: AppTreeItem) => {
-      const config = readConfig();
-      const target = config.apps.find(a => a.id === item.app.id);
-      if (!target) return;
-
-      target.isFavorite = !target.isFavorite;
-      target.updatedAt = new Date().toISOString();
-      writeConfig(config);
+      updateConfig(config => {
+        const target = config.apps.find(a => a.id === item.app.id);
+        if (!target) return;
+        target.isFavorite = !target.isFavorite;
+        target.updatedAt = new Date().toISOString();
+      });
       refreshAll();
     }),
 
@@ -327,20 +326,20 @@ export function activate(context: vscode.ExtensionContext) {
       });
       if (val === undefined) return;
 
-      const config = readConfig();
-      const target = config.apps.find(a => a.id === item.app.id);
+      const target = updateConfig(config => {
+        const current = config.apps.find(a => a.id === item.app.id);
+        if (!current) return undefined;
+        current.preferredPort = val ? parseInt(val, 10) : null;
+        current.updatedAt = new Date().toISOString();
+        return current;
+      });
       if (!target) return;
-
-      target.preferredPort = val ? parseInt(val, 10) : null;
-      target.updatedAt = new Date().toISOString();
-      writeConfig(config);
       refreshAll();
       vscode.window.showInformationMessage(`${target.name} port set to ${target.preferredPort ?? 'none'}`);
     }),
 
     vscode.commands.registerCommand('portpilot.deleteAllApps', async () => {
-      const config = readConfig();
-      const count = config.apps.length;
+      const count = readConfig().apps.length;
       if (count === 0) {
         vscode.window.showInformationMessage('No apps to delete.');
         return;
@@ -352,10 +351,13 @@ export function activate(context: vscode.ExtensionContext) {
       );
       if (confirm !== 'Delete All') return;
 
-      config.apps = [];
-      writeConfig(config);
+      const deleted = updateConfig(config => {
+        const n = config.apps.length;
+        config.apps = [];
+        return n;
+      });
       refreshAll();
-      vscode.window.showInformationMessage(`Deleted ${count} apps`);
+      vscode.window.showInformationMessage(`Deleted ${deleted} apps`);
     }),
 
     vscode.commands.registerCommand('portpilot.startWebPortal', () => {
