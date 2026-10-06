@@ -10,7 +10,7 @@ One dashboard for every local dev server across all your projects - including se
 
 *Local-first. No accounts, no telemetry, no cloud. It runs entirely on your machine.*
 
-[![Version](https://img.shields.io/badge/version-3.3.1-blue.svg)](https://github.com/m4cd4r4/PortPilot/releases/tag/v3.3.1)
+[![Version](https://img.shields.io/badge/version-3.3.2-blue.svg)](https://github.com/m4cd4r4/PortPilot/releases/tag/v3.3.2)
 [![Tests](https://img.shields.io/badge/tests-Playwright%20E2E-blue.svg)](tests/)
 [![Licence](https://img.shields.io/badge/licence-MIT-green.svg)](LICENSE)
 [![MCP](https://img.shields.io/badge/MCP-enabled-purple.svg)](mcp-server/README.md)
@@ -410,15 +410,15 @@ Explore all PortPilot features including app management, the Active Ports scanne
 
 ### Download (Recommended)
 
-**Latest Release: v3.3.1**
+**Latest Release: v3.3.2**
 
 **Windows:**
-- [PortPilot-3.3.1-x64.exe](https://github.com/m4cd4r4/PortPilot/releases/download/v3.3.1/PortPilot-3.3.1-x64.exe) - NSIS Installer (~75 MB)
-- [PortPilot-3.3.1-portable.exe](https://github.com/m4cd4r4/PortPilot/releases/download/v3.3.1/PortPilot-3.3.1-portable.exe) - Portable (~75 MB)
+- [PortPilot-3.3.2-x64.exe](https://github.com/m4cd4r4/PortPilot/releases/download/v3.3.2/PortPilot-3.3.2-x64.exe) - NSIS Installer (~75 MB)
+- [PortPilot-3.3.2-portable.exe](https://github.com/m4cd4r4/PortPilot/releases/download/v3.3.2/PortPilot-3.3.2-portable.exe) - Portable (~75 MB)
 
 **Linux:**
-- [PortPilot-3.3.1-x86_64.AppImage](https://github.com/m4cd4r4/PortPilot/releases/download/v3.3.1/PortPilot-3.3.1-x86_64.AppImage) - AppImage (~98 MB)
-- [PortPilot-3.3.1-amd64.deb](https://github.com/m4cd4r4/PortPilot/releases/download/v3.3.1/PortPilot-3.3.1-amd64.deb) - Debian/Ubuntu (~69 MB)
+- [PortPilot-3.3.2-x86_64.AppImage](https://github.com/m4cd4r4/PortPilot/releases/download/v3.3.2/PortPilot-3.3.2-x86_64.AppImage) - AppImage (~98 MB)
+- [PortPilot-3.3.2-amd64.deb](https://github.com/m4cd4r4/PortPilot/releases/download/v3.3.2/PortPilot-3.3.2-amd64.deb) - Debian/Ubuntu (~69 MB)
 
 **macOS:**
 - Build from source (see below) - macOS is supported but not officially tested
@@ -715,7 +715,11 @@ started processes separately).
 
 ## Version History
 
-### v3.3.1 (2026-10-05) - Current Release
+### v3.3.2 (2026-10-06) - Current Release
+- Fix: desktop builds now bundle the MCP server's dependencies, so the MCP server the app runs on 127.0.0.1:8788 starts from an installed build
+- Electron 27 -> 44
+
+### v3.3.1 (2026-10-05)
 - Security: the MCP server's HTTP mode (127.0.0.1:8788, run by the desktop app) now refuses DNS-rebound and cross-origin requests
 
 ### v3.3.0 (2026-07-01)

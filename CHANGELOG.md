@@ -5,6 +5,15 @@ All notable changes to PortPilot will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.3.2] - 2026-10-06
+
+### Fixed
+- **The desktop app's MCP server starts from an installed build.** Release builds bundled `mcp-server/index.js` without its `node_modules` (electron-builder only warned), so the MCP server the app runs on `127.0.0.1:8788` could not load its SDK. Builds now install those dependencies, and a packaged-build smoke test blocks any release where the bundled server fails to start. This also means the 3.3.1 Host/Origin fix now reaches installed users.
+
+### Changed
+- **Electron 27 -> 44.** Electron 27 is out of support. No behaviour changes are intended.
+- CI now runs the unit and MCP tests and an unpacked package build on Windows and Linux for every pull request.
+
 ## [3.3.1] - 2026-10-05
 
 ### Security
