@@ -1434,14 +1434,24 @@ async function confirmDeleteGroup(groupId) {
   }
 }
 
+/**
+ * Change fields of one app via config.patchApp, which applies them to the
+ * fresh config on disk, then take the returned app into state. Saving the
+ * cached state.apps entry instead would undo changes made by another
+ * surface (MCP, VS Code, web) since the last load.
+ */
+async function patchAppInState(appId, patch) {
+  const result = await window.portpilot.config.patchApp(appId, patch);
+  const i = state.apps.findIndex(a => a.id === appId);
+  if (i === -1 || !result?.success) return result;
+  state.apps[i] = result.app || { ...state.apps[i], ...patch };
+  return result;
+}
+
 async function moveSelectedToGroup(groupId) {
   if (state.selectedApps.size === 0) return;
   for (const appId of state.selectedApps) {
-    const app = state.apps.find(a => a.id === appId);
-    if (app) {
-      app.group = groupId || null;
-      await window.portpilot.config.saveApp(app);
-    }
+    await patchAppInState(appId, { group: groupId || null });
   }
   clearSelection();
   renderApps();
@@ -1743,8 +1753,7 @@ async function handleDrop(event) {
   }
 
   if (!draggedApp.isFavorite && draggedApp.group !== targetApp.group) {
-    draggedApp.group = targetApp.group;
-    await window.portpilot.config.saveApp(draggedApp);
+    await patchAppInState(draggedAppId, { group: targetApp.group || null });
   }
 
   const draggedIndex = state.apps.findIndex(a => a.id === draggedAppId);

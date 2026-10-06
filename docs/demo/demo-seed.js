@@ -96,7 +96,7 @@
       getGroups: () => ok({ groups }),
       getSettings: () => ok({ settings }),
       updateSettings: () => ok({ settings }),
-      saveApp: noop, deleteApp: noop, toggleFavorite: noop, deleteAllApps: noop,
+      saveApp: noop, deleteApp: noop, toggleFavorite: noop, patchApp: noop, deleteAllApps: noop,
       updateAppsOrder: noop, export: () => ok({ data: '{}' }), import: noop,
       saveGroup: noop, deleteGroup: noop,
     },

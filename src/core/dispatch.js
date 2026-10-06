@@ -86,6 +86,13 @@ function createDispatcher(configStore, { surface = 'web' } = {}) {
       if (!app) return { success: false, error: 'App not found' };
       return { success: true, app };
     },
+    'config:patchApp': async (appId, patch) => {
+      if (!patch || typeof patch !== 'object' || Array.isArray(patch)) return { success: false, error: 'Patch must be an object' };
+      const { id, createdAt, ...fields } = patch;
+      const app = configStore.patchApp(appId, fields);
+      if (!app) return { success: false, error: 'App not found' };
+      return { success: true, app };
+    },
     'config:deleteAllApps': async () => {
       const count = configStore.clearApps();
       return { success: true, count };
