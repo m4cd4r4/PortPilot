@@ -10,7 +10,7 @@
  *     over the target. Readers see the old file or the new one, never half.
  *   - withLock: an exclusive lock file (<config>.lock, created with 'wx') held
  *     across the whole read-modify-write. A lock older than STALE_MS is from a
- *     crashed holder and is taken over.
+ *     crashed holder and is taken over (see breakStaleLock).
  *   - updateJson: withLock + fresh read + mutate + atomic write.
  *
  * Synchronous on purpose: every caller's existing API is synchronous.
@@ -71,8 +71,40 @@ function writeJsonAtomic(file, data) {
   }
 }
 
+function readLockToken(lockPath) {
+  try { return fs.readFileSync(lockPath, 'utf8'); } catch { return null; }
+}
+
+/**
+ * Take over a lock whose holder looks crashed. Two contenders can both see the
+ * same lock as stale; a plain unlink would let the slower one delete the lock
+ * the faster one has just created. So move the lock aside first, then check
+ * the moved file is still old and still carries the token we read (every
+ * holder writes a unique one). If not, it is a live lock - put it back.
+ */
+function breakStaleLock(lockPath, staleToken) {
+  const aside = `${lockPath}.stale-${process.pid}-${Math.random().toString(36).slice(2, 10)}`;
+  try {
+    fs.renameSync(lockPath, aside);
+  } catch {
+    return; // gone or taken over by someone else - just retry the open
+  }
+  let live = true;
+  try {
+    live = readLockToken(aside) !== staleToken || Date.now() - fs.statSync(aside).mtimeMs <= STALE_MS;
+  } catch { /* unreadable - treat as live */ }
+  if (live) {
+    // Residual: if a third process created a lock in the instant since the
+    // rename, the link fails and that holder overlaps this one. Needs a stale
+    // lock and three contenders within microseconds.
+    try { fs.linkSync(aside, lockPath); } catch { /* lockPath re-created meanwhile */ }
+  }
+  try { fs.unlinkSync(aside); } catch { /* best effort */ }
+}
+
 function withLock(file, fn) {
   const lockPath = `${file}.lock`;
+  const token = `${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
   fs.mkdirSync(path.dirname(file), { recursive: true });
   const deadline = Date.now() + LOCK_TIMEOUT_MS;
   let fd;
@@ -85,23 +117,29 @@ function withLock(file, fn) {
       // unlink of the lock is still pending. Both mean "held - retry".
       if (!['EEXIST', 'EPERM', 'EACCES'].includes(err.code)) throw err;
       if (err.code === 'EEXIST') {
+        let stale = false;
         try {
-          if (Date.now() - fs.statSync(lockPath).mtimeMs > STALE_MS) {
-            fs.unlinkSync(lockPath);
-            continue;
-          }
+          stale = Date.now() - fs.statSync(lockPath).mtimeMs > STALE_MS;
         } catch { /* released between our open and stat - retry */ }
+        if (stale) {
+          const staleToken = readLockToken(lockPath);
+          if (staleToken !== null) breakStaleLock(lockPath, staleToken);
+          continue;
+        }
       }
       if (Date.now() > deadline) throw new Error(`Timed out waiting for config lock ${lockPath} (${err.code})`);
       sleepSync(5 + Math.floor(Math.random() * 20));
     }
   }
   try {
-    fs.writeSync(fd, String(process.pid));
+    fs.writeSync(fd, token);
     fs.closeSync(fd);
     return fn();
   } finally {
-    try { fs.unlinkSync(lockPath); } catch { /* already gone */ }
+    // Only release our own lock: if we overran STALE_MS it may now be someone else's.
+    if (readLockToken(lockPath) === token) {
+      try { fs.unlinkSync(lockPath); } catch { /* already gone */ }
+    }
   }
 }
 

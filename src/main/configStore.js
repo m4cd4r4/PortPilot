@@ -24,7 +24,12 @@ class ConfigStore {
 
     // Ensure config file exists before watching
     if (!fs.existsSync(this.configPath)) {
-      this.update(() => {}); // Create initial config file (locked, so a concurrent first write is not clobbered)
+      try {
+        this.update(() => {}); // Create initial config file (locked, so a concurrent first write is not clobbered)
+      } catch (error) {
+        // Not fatal: the first real write creates it, and the directory watch below still works.
+        console.error('[ConfigStore] Failed to create initial config file:', error.message);
+      }
     }
 
     // Watch the directory, not the file: writers replace the file by rename, and
@@ -202,6 +207,24 @@ class ConfigStore {
     return app;
   }
 
+  /**
+   * Change some fields of one app, against the fresh file on disk. Use this
+   * instead of getApp() + edit + saveApp(): the cached app can be older than
+   * the file, and saving it back would undo another process's change.
+   * `patch` is an object of fields, or a function (freshApp) => fields; a
+   * function returning null leaves the app untouched. Returns the fresh app,
+   * or null if no app has that ID.
+   */
+  patchApp(id, patch) {
+    return this.update((config) => {
+      const app = (config.apps || []).find(a => a.id === id);
+      if (!app) return null;
+      const fields = typeof patch === 'function' ? patch({ ...app }) : patch;
+      if (fields) Object.assign(app, fields, { updatedAt: new Date().toISOString() });
+      return app;
+    });
+  }
+
   /** Delete an app by ID */
   deleteApp(id) {
     return this.update((config) => {
@@ -248,6 +271,20 @@ class ConfigStore {
     return this.update((config) => {
       config.settings = { ...config.settings, ...newSettings };
       return config.settings;
+    });
+  }
+
+  /**
+   * Edit the discovery settings against the fresh file on disk. The mutator
+   * edits the discovery object in place; its return value is returned.
+   */
+  updateDiscovery(mutator) {
+    return this.update((config) => {
+      if (!config.settings) config.settings = {};
+      const discovery = { ...(config.settings.discovery || {}) };
+      const result = mutator(discovery);
+      config.settings.discovery = discovery;
+      return result;
     });
   }
 
@@ -308,11 +345,15 @@ class ConfigStore {
     return JSON.stringify(this.config, null, 2);
   }
 
-  /** Import config from backup */
+  /**
+   * Import config from backup. Returns false for input that is not a valid
+   * config; throws if the file cannot be written (in-memory config unchanged).
+   */
   import(jsonString) {
+    let imported;
     try {
-      const imported = JSON.parse(jsonString);
-      if (!imported.apps || !Array.isArray(imported.apps)) return false;
+      imported = JSON.parse(jsonString);
+      if (!imported || !imported.apps || !Array.isArray(imported.apps)) return false;
 
       // Sanitize each app: only keep known safe fields, enforce types
       imported.apps = imported.apps.map(app => ({
@@ -346,13 +387,19 @@ class ConfigStore {
         })).filter(g => g.name);
       }
 
-      // A restore replaces the whole file on purpose - no merge with disk.
-      this.config = imported;
-      return this.save();
     } catch (error) {
       console.error('Failed to import config:', error);
       return false;
     }
+
+    // A restore replaces the whole file on purpose - no merge with disk.
+    try {
+      withLock(this.configPath, () => writeJsonAtomic(this.configPath, imported));
+    } catch (error) {
+      throw new Error(`Failed to save imported config: ${error.message}`);
+    }
+    this.config = imported;
+    return true;
   }
 }
 

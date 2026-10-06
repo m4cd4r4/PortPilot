@@ -80,6 +80,28 @@ function writer(file, tag, count) {
     assert.deepStrictEqual(readJson(file, null).apps, ['x']);
   });
 
+  await t('stale lock + two concurrent writers: 2 x 50 updates, none lost', async () => {
+    // Both writers see the same stale lock; only one may take it over, and the
+    // other must not then delete the new holder's lock.
+    const file = tmpConfig();
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(`${file}.lock`, 'crashed-holder');
+    const old = new Date(Date.now() - 60000);
+    fs.utimesSync(`${file}.lock`, old, old);
+    await Promise.all([writer(file, 'a', 50), writer(file, 'b', 50)]);
+    const ids = readJson(file, null).apps.map(a => a.id);
+    assert.strictEqual(new Set(ids).size, 100, `expected 100 unique apps, got ${new Set(ids).size}`);
+    const leftovers = fs.readdirSync(path.dirname(file)).filter(f => f !== 'portpilot-config.json');
+    assert.deepStrictEqual(leftovers, []);
+  });
+
+  await t('release does not delete a lock that is no longer ours', async () => {
+    const file = tmpConfig();
+    withLock(file, () => { fs.writeFileSync(`${file}.lock`, 'someone-else'); });
+    assert.strictEqual(fs.readFileSync(`${file}.lock`, 'utf8'), 'someone-else');
+    fs.unlinkSync(`${file}.lock`);
+  });
+
   await t('live lock held by another process is waited on, not broken', async () => {
     const file = tmpConfig();
     fs.mkdirSync(path.dirname(file), { recursive: true });
@@ -122,6 +144,51 @@ function writer(file, tag, count) {
       store.saveApp({ name: 'from-app', command: 'npm run dev' }); // before the watcher reloads
       const names = readJson(file, null).apps.map(a => a.name).sort();
       assert.deepStrictEqual(names, ['from-app', 'mcp']);
+    } finally {
+      store.close();
+    }
+  });
+
+  await t('patchApp keeps a field another process changed since load', async () => {
+    const file = tmpConfig();
+    const store = new ConfigStore(null, file);
+    try {
+      const app = store.saveApp({ name: 'web', command: 'npm run dev', description: 'old' });
+      updateJson(file, c => { c.apps[0].description = 'new'; }, () => ({ apps: [] }));
+      const patched = store.patchApp(app.id, a => ({ isFavorite: !a.isFavorite })); // cache still says 'old'
+      assert.strictEqual(patched.isFavorite, true);
+      const onDisk = readJson(file, null).apps[0];
+      assert.strictEqual(onDisk.description, 'new');
+      assert.strictEqual(onDisk.isFavorite, true);
+      assert.strictEqual(store.patchApp('missing', { isFavorite: true }), null);
+    } finally {
+      store.close();
+    }
+  });
+
+  await t('updateDiscovery keeps a scan path another process added since load', async () => {
+    const file = tmpConfig();
+    const store = new ConfigStore(null, file);
+    try {
+      updateJson(file, c => { c.settings.discovery.scanPaths.push('/from-mcp'); }, null);
+      store.updateDiscovery(d => { d.scanPaths = [...(d.scanPaths || []), '/from-app']; });
+      assert.deepStrictEqual(readJson(file, null).settings.discovery.scanPaths, ['/from-mcp', '/from-app']);
+    } finally {
+      store.close();
+    }
+  });
+
+  await t('import: bad input returns false; a failed write throws and keeps the old config', async () => {
+    const file = tmpConfig();
+    const store = new ConfigStore(null, file);
+    try {
+      assert.strictEqual(store.import('not json'), false);
+      assert.strictEqual(store.import('{"apps": 3}'), false);
+      store.saveApp({ name: 'keep', command: 'x' });
+      fs.unlinkSync(file);
+      fs.mkdirSync(file); // the rename onto the config path now fails
+      assert.throws(() => store.import('{"apps": [{"name": "new", "command": "y"}]}'), /Failed to save imported config/);
+      assert.deepStrictEqual(store.getApps().map(a => a.name), ['keep']);
     } finally {
       store.close();
     }
