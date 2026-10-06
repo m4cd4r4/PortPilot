@@ -30,6 +30,9 @@ Inputs: the 2026-10-05 audit (summary under "Baseline" below) and [`docs/ux-rese
 | 12 | drawer-timeline | A5 drawer re-hierarchy; A10 activity timeline (who did what, when) | later | 3 | M |
 | 13 | directory-submission | Submit the plugin to the Anthropic plugin directory (as clear-resume was); README install path | later | 3 | S |
 | 14 | repo-hygiene | Drop committed `.vsix`; generate `vscode-extension/runtime/` at build; fix stale MCP tool counts in README | later | 1 | S |
+| - | groups-patch-app | Off-plan fix: move-to-group / drag-to-group patch the fresh config via `config:patchApp` instead of saving a stale copy; `tests/patch-app.test.cjs` | merged (PR #40) | - | S |
+| - | release-drafts | Off-plan: `release.yml` creates DRAFT releases with `fail_on_unmatched_files` (action-gh-release v2). Untested end to end until the next tag push | merged (PR #41) | - | S |
+| - | mobile-app-names | Off-plan fix: app names no longer render 0px wide at phone width (`styles.css`, `max-width: 600px` query) | merged (PR #42) | - | S |
 
 Status vocabulary: `later` / `materialised` / `merged (PR #N)` / `superseded`.
 
