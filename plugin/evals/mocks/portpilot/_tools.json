@@ -1,0 +1,476 @@
+{
+  "tools": [
+    {
+      "name": "get_status",
+      "description": "Get a quick summary: how many apps registered, how many running, how many ports active",
+      "inputSchema": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {}
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      }
+    },
+    {
+      "name": "list_apps",
+      "description": "List all apps registered in PortPilot, with their running status",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "favorites_only": {
+            "type": "boolean",
+            "description": "Only show favorite apps"
+          },
+          "group": {
+            "type": "string",
+            "description": "Filter by group name"
+          }
+        },
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      }
+    },
+    {
+      "name": "get_app",
+      "description": "Get full details of a specific app by ID or name, including running status",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "identifier": {
+            "type": "string",
+            "description": "App ID or name"
+          }
+        },
+        "required": [
+          "identifier"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      }
+    },
+    {
+      "name": "scan_ports",
+      "description": "Scan for all active listening ports on the system",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "min_port": {
+            "type": "number",
+            "description": "Minimum port (default 1024)"
+          },
+          "max_port": {
+            "type": "number",
+            "description": "Maximum port (default 65535)"
+          }
+        },
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      }
+    },
+    {
+      "name": "check_port",
+      "description": "Check if a specific port is in use and by what process",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "port": {
+            "type": "number",
+            "description": "Port number to check"
+          }
+        },
+        "required": [
+          "port"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      }
+    },
+    {
+      "name": "start_app",
+      "description": "Start an app by ID or name",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "identifier": {
+            "type": "string",
+            "description": "App ID or name"
+          },
+          "sessionId": {
+            "type": "string",
+            "maxLength": 200,
+            "description": "Your Claude Code session id, so PortPilot can show which session started the app"
+          }
+        },
+        "required": [
+          "identifier"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      }
+    },
+    {
+      "name": "stop_app",
+      "description": "Stop an app by ID or name",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "identifier": {
+            "type": "string",
+            "description": "App ID or name"
+          }
+        },
+        "required": [
+          "identifier"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      }
+    },
+    {
+      "name": "bulk_start",
+      "description": "Start multiple apps at once by group name, or all favorites",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "group": {
+            "type": "string",
+            "description": "Start all apps in this group"
+          },
+          "favorites": {
+            "type": "boolean",
+            "description": "Start all favorite apps"
+          },
+          "sessionId": {
+            "type": "string",
+            "maxLength": 200,
+            "description": "Your Claude Code session id, so PortPilot can show which session started the apps"
+          }
+        },
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      }
+    },
+    {
+      "name": "bulk_stop",
+      "description": "Stop multiple apps at once by group name, or all favorites, or all running",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "group": {
+            "type": "string",
+            "description": "Stop all apps in this group"
+          },
+          "favorites": {
+            "type": "boolean",
+            "description": "Stop all favorite apps"
+          },
+          "all": {
+            "type": "boolean",
+            "description": "Stop ALL running apps"
+          }
+        },
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      }
+    },
+    {
+      "name": "add_app",
+      "description": "Register a new app in PortPilot",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "App display name"
+          },
+          "command": {
+            "type": "string",
+            "description": "Shell command to start (e.g. \"npm run dev\")"
+          },
+          "cwd": {
+            "type": "string",
+            "description": "Working directory path"
+          },
+          "preferredPort": {
+            "type": "number",
+            "description": "Preferred port number"
+          },
+          "isFavorite": {
+            "type": "boolean",
+            "description": "Mark as favorite"
+          },
+          "autoStart": {
+            "type": "boolean",
+            "description": "Auto-start on launch"
+          },
+          "group": {
+            "type": "string",
+            "description": "Group name to assign to"
+          },
+          "description": {
+            "type": "string",
+            "description": "Short description"
+          }
+        },
+        "required": [
+          "name",
+          "command",
+          "cwd"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      }
+    },
+    {
+      "name": "add_worktree",
+      "description": "Register a git worktree or branch of a project so it appears nested under the main project in PortPilot and can run on its own port alongside it. Auto-detects the branch and the parent repo from git. Use this instead of add_app when registering a branch/worktree of an already-registered project - e.g. when working in a worktree that runs on a different port than the configured one.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Absolute path to the worktree / branch working directory"
+          },
+          "command": {
+            "type": "string",
+            "description": "Start command; defaults to the parent app command or \"npm run dev\""
+          },
+          "preferredPort": {
+            "type": "number",
+            "description": "Preferred port for this branch - use a DIFFERENT port than the parent so both can run"
+          },
+          "branch": {
+            "type": "string",
+            "description": "Branch label shown on the row; auto-detected from git if omitted"
+          },
+          "parent": {
+            "type": "string",
+            "description": "Parent app id or name to nest under; auto-resolved from the repo's main worktree if omitted"
+          },
+          "name": {
+            "type": "string",
+            "description": "Display name; defaults to the parent name or the folder name"
+          }
+        },
+        "required": [
+          "path"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      }
+    },
+    {
+      "name": "update_app",
+      "description": "Update an existing app configuration",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "identifier": {
+            "type": "string",
+            "description": "App ID or name to update"
+          },
+          "name": {
+            "type": "string"
+          },
+          "command": {
+            "type": "string"
+          },
+          "cwd": {
+            "type": "string"
+          },
+          "preferredPort": {
+            "type": "number"
+          },
+          "isFavorite": {
+            "type": "boolean"
+          },
+          "autoStart": {
+            "type": "boolean"
+          },
+          "group": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "identifier"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      }
+    },
+    {
+      "name": "delete_app",
+      "description": "Remove an app from PortPilot",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "identifier": {
+            "type": "string",
+            "description": "App ID or name to delete"
+          }
+        },
+        "required": [
+          "identifier"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      }
+    },
+    {
+      "name": "delete_all_apps",
+      "description": "Delete ALL apps from PortPilot. Requires confirm: true.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "confirm": {
+            "type": "boolean",
+            "description": "Must be true to confirm"
+          }
+        },
+        "required": [
+          "confirm"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      }
+    },
+    {
+      "name": "kill_port",
+      "description": "Kill the process running on a specific port",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "port": {
+            "type": "number",
+            "description": "Port number"
+          }
+        },
+        "required": [
+          "port"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      }
+    },
+    {
+      "name": "toggle_favorite",
+      "description": "Toggle favorite status of an app",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "identifier": {
+            "type": "string",
+            "description": "App ID or name"
+          }
+        },
+        "required": [
+          "identifier"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      }
+    },
+    {
+      "name": "list_groups",
+      "description": "List all app groups and how many apps are in each",
+      "inputSchema": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {}
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      }
+    },
+    {
+      "name": "move_to_group",
+      "description": "Move an app to a group (or remove from group by passing null)",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "identifier": {
+            "type": "string",
+            "description": "App ID or name"
+          },
+          "group": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Group ID or name, or null to ungroup"
+          }
+        },
+        "required": [
+          "identifier",
+          "group"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      }
+    },
+    {
+      "name": "list_running",
+      "description": "List only currently running apps with their port and process info",
+      "inputSchema": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {}
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      }
+    }
+  ]
+}

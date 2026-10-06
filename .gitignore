@@ -42,3 +42,7 @@ CHANGELOG-v*.md
 
 # Claude local settings (contains personal permissions)
 .claude/
+
+# claude plugin eval output
+plugin/evals/results/
+plugin/evals/mocks/.replay/
