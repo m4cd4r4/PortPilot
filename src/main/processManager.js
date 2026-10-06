@@ -14,6 +14,12 @@ function emitCrash(info) {
   for (const cb of crashListeners) { try { cb(info); } catch { /* ignore */ } }
 }
 
+// A crash: the process exited after it had started successfully (announced)
+// and the user did not ask to stop it (userStopped).
+function isCrashed(info) {
+  return !!info && info.running === false && !!info.announced && !info.userStopped;
+}
+
 /**
  * Start an application
  * @param {Object} appConfig - App configuration
@@ -86,9 +92,7 @@ async function startApp(appConfig) {
         if (processInfo) {
           processInfo.exitCode = code;
           processInfo.running = false;
-          // Announce only crashes: the app had started successfully (announced)
-          // and the user did not ask to stop it (userStopped).
-          if (processInfo.announced && !processInfo.userStopped) {
+          if (isCrashed(processInfo)) {
             emitCrash({ id, name, code });
           }
         }
@@ -170,6 +174,12 @@ function killProcess(pid) {
     // Must specify shell explicitly - Git Bash/MSYS can interfere with Windows commands
     const execOptions = { shell: isWindows ? 'cmd.exe' : '/bin/sh', windowsHide: true };
 
+    // A kill PortPilot performs (stop, port kill, quit cleanup) is deliberate:
+    // mark the managed entry so its exit is not reported or stamped as a crash.
+    for (const info of runningProcesses.values()) {
+      if (info.pid === safePid) info.userStopped = true;
+    }
+
     const killed = () => {
       // Clean up from running processes map
       for (const [id, info] of runningProcesses) {
@@ -227,6 +237,7 @@ function getRunningApps() {
       running: info.running && info.process && !info.process.killed,
       startTime: info.startTime,
       exitCode: info.exitCode,
+      crashed: isCrashed(info),
       outputTail: info.output?.slice(-500),
       errorTail: info.errorOutput?.slice(-500)
     });
@@ -279,5 +290,6 @@ module.exports = {
   getRunningApps,
   getAppLogs,
   cleanupAllProcesses,
-  onAppCrash
+  onAppCrash,
+  isCrashed
 };

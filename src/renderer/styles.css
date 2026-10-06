@@ -137,6 +137,7 @@ body {
   --status-starting: var(--accent-yellow);
   --status-conflict: var(--accent-yellow);
   --status-error:    var(--accent-red);
+  --status-crashed:  var(--accent-red);
 }
 
 /* ============ Reset & Base ============ */
@@ -1372,6 +1373,53 @@ body {
   .app-name-text {
     min-width: 2.5em;
   }
+}
+
+/* Row state cell (UX A1): shape + word, then uptime / reason / provenance.
+   Shape and word carry the state; --state-color only reinforces it (D5). */
+.state-cell {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  flex-shrink: 0;
+  min-width: 0;
+  max-width: 260px;
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+}
+.state-glyph {
+  color: var(--state-color);
+  font-size: 0.7rem;
+  width: 1em;
+  text-align: center;
+  flex-shrink: 0;
+}
+.state-word {
+  font-weight: 600;
+  color: var(--text-primary);
+  flex-shrink: 0;
+}
+.state-cell.state-stopped .state-word { color: var(--text-muted); font-weight: 500; }
+.state-cell.state-crashed .state-word,
+.state-cell.state-error .state-word { color: var(--state-color); }
+.state-meta {
+  color: var(--text-muted);
+  font-family: 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
+  font-size: 0.68rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Narrow: the cell keeps shape + word (and a crash's exit code) and gives
+   the width to the name; uptime and provenance stay in the drawer + title. */
+@media (max-width: 600px) {
+  .state-cell { flex-shrink: 1; }
+  .state-cell:not(.state-crashed) .state-meta { display: none; }
+  /* The name outranks the branch chip: the chip clips, the name stays whole. */
+  .app-name-area .app-name-text { flex-shrink: 0; max-width: 55%; }
+  .app-name-area .branch-chip { flex-shrink: 1; min-width: 0; overflow: hidden; }
 }
 
 /* Expand indicator */

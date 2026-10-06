@@ -222,9 +222,53 @@ var require_status = __commonJS({
           title: `Started by Claude${session} via ${s.surface}${when}`
         };
       }
+      const ROW_WORDS = { error: "Not responding", conflict: "Port blocked" };
+      function formatUptime(sec) {
+        const s = Number(sec);
+        if (sec == null || !Number.isFinite(s) || s < 0) return "";
+        if (s < 60) return `${Math.floor(s)}s`;
+        if (s < 3600) return `${Math.floor(s / 60)}m`;
+        if (s < 86400) return `${Math.floor(s / 3600)}h`;
+        return `${Math.floor(s / 86400)}d`;
+      }
+      function rowStateOf(rec) {
+        const r = rec || {};
+        let key = "stopped";
+        if (r.starting) key = "starting";
+        else if (r.running) key = r.unhealthy ? "error" : "running";
+        else if (r.conflict) key = "conflict";
+        else if (r.crashed) key = "crashed";
+        const s = STATES[key];
+        const alive = key === "running" || key === "error";
+        let reason = "";
+        if (key === "crashed" && r.exitCode != null) reason = `exit ${r.exitCode}`;
+        if (key === "conflict" && r.blockedBy) reason = String(r.blockedBy);
+        const uptime = alive ? formatUptime(r.uptimeSec) : "";
+        const prov = alive && r.startedBy ? provenanceOf2(r.startedBy) : null;
+        const provenance = prov && prov.kind !== "external" ? prov.word : "";
+        const word = ROW_WORDS[key] || s.label;
+        const head = `${s.glyph} ${word}${uptime ? " " + uptime : ""}`;
+        const text = [head, reason, provenance].filter(Boolean).join(" \xB7 ");
+        const title = [word + (reason ? ` (${reason})` : ""), uptime && `up ${uptime}`, prov && provenance && prov.title].filter(Boolean).join(" - ");
+        return {
+          state: key,
+          shape: s.shape,
+          glyph: s.glyph,
+          ascii: s.ascii,
+          token: s.token,
+          word,
+          reason,
+          uptime,
+          provenance,
+          text,
+          title
+        };
+      }
       return {
         STATES,
         statusOf: statusOf2,
+        formatUptime,
+        rowStateOf,
         PROVENANCE_KINDS,
         SURFACES,
         CLAUDE_GLYPH: CLAUDE_GLYPH2,

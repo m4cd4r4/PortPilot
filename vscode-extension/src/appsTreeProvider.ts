@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { readConfig, PortPilotApp, PortPilotGroup } from './config';
+import { readConfig, readRuntimeApps, rowStateOf, PortPilotApp, PortPilotGroup, RowState, RuntimeEntry } from './config';
 import { scanPorts, computeRunning, ActivePort } from './portScanner';
 
 export class GroupTreeItem extends vscode.TreeItem {
@@ -43,11 +43,41 @@ function chartColorForHex(hex?: string): vscode.ThemeColor | undefined {
   return new vscode.ThemeColor(id);
 }
 
+// Same vocabulary as the desktop row state cell (status.js rowStateOf); the
+// icon stands in for the glyph. Colour only reinforces the shape (D5).
+const STATE_ICONS: Record<RowState['state'], [string, string]> = {
+  running: ['pass-filled', 'testing.iconPassed'],
+  starting: ['loading~spin', 'charts.yellow'],
+  error: ['warning', 'testing.iconFailed'],
+  conflict: ['warning', 'charts.orange'],
+  crashed: ['error', 'errorForeground'],
+  stopped: ['circle-outline', 'disabledForeground'],
+};
+
+/** Row state for an app from the port scan plus its runtime entry. */
+export function appRowState(activePort: ActivePort | undefined, entry: RuntimeEntry | undefined): RowState {
+  // The runtime entry describes the last start; trust it for a live app only
+  // when it matches the live process (port or pid), per configFile's contract.
+  const matches = !!activePort && !!entry &&
+    ((entry.port != null && entry.port === activePort.port) || (entry.pid != null && entry.pid === activePort.pid));
+  const startedAt = matches && entry!.startedBy ? Date.parse(entry!.startedBy.at) : NaN;
+  return rowStateOf({
+    running: !!activePort,
+    crashed: !activePort && !!entry?.crashed,
+    exitCode: entry?.crashed?.exitCode ?? null,
+    uptimeSec: Number.isFinite(startedAt) ? (Date.now() - startedAt) / 1000 : null,
+    startedBy: matches ? entry!.startedBy : null,
+  });
+}
+
 export class AppTreeItem extends vscode.TreeItem {
+  public readonly rowState: RowState;
+
   constructor(
     public readonly app: PortPilotApp,
     public readonly activePort: ActivePort | undefined,
-    public readonly children: AppTreeItem[] = []
+    public readonly children: AppTreeItem[] = [],
+    runtimeEntry?: RuntimeEntry
   ) {
     super(
       app.name,
@@ -59,8 +89,11 @@ export class AppTreeItem extends vscode.TreeItem {
     const isRunning = !!activePort;
     const port = activePort?.port ?? app.preferredPort;
     const isBranch = !!app.parentId;
+    const row = this.rowState = appRowState(activePort, runtimeEntry);
 
+    // A crashed app is not running: keep app-stopped so the start menu applies.
     this.contextValue = isRunning ? 'app-running' : 'app-stopped';
+    const [icon, iconColor] = STATE_ICONS[row.state];
 
     // Branch rows get the git-branch icon, colour-coded by the branch colour, so
     // a child reads as a branch at a glance; top-level apps keep the status dot.
@@ -70,17 +103,14 @@ export class AppTreeItem extends vscode.TreeItem {
           chartColorForHex(app.color) ??
             new vscode.ThemeColor(isRunning ? 'testing.iconPassed' : 'disabledForeground')
         )
-      : new vscode.ThemeIcon(
-          isRunning ? 'circle-filled' : 'circle-outline',
-          isRunning
-            ? new vscode.ThemeColor('testing.iconPassed')
-            : new vscode.ThemeColor('disabledForeground')
-        );
+      : new vscode.ThemeIcon(icon, new vscode.ThemeColor(iconColor));
 
     const parts: string[] = [];
     if (isBranch && app.branch) parts.push(`\u2387 ${app.branch}`);
     if (port) parts.push(`:${port}`);
-    if (isRunning) parts.push('running');
+    if (row.state !== 'stopped') parts.push([row.word, row.reason].filter(Boolean).join(' '));
+    if (row.uptime) parts.push(row.uptime);
+    if (row.provenance) parts.push(row.provenance);
     if (children.length) parts.push(`\u2387${children.length}`); // branch count on a parent
     if (app.isFavorite) parts.push('\u2605');
     this.description = parts.join(' \u00b7 ');
@@ -90,7 +120,7 @@ export class AppTreeItem extends vscode.TreeItem {
       ...(isBranch && app.branch ? [`Branch: ${app.branch}`] : []),
       ...(children.length ? [`Branches: ${children.length}`] : []),
       `Port: ${port ?? 'not set'}`,
-      `Status: ${isRunning ? 'Running (PID ' + activePort!.pid + ')' : 'Stopped'}`,
+      `Status: ${row.text}${isRunning ? ' (PID ' + activePort!.pid + ')' : ''}`,
       `Command: ${app.command}`,
       `Directory: ${app.cwd}`
     ];
@@ -122,6 +152,12 @@ export class AppsTreeProvider implements vscode.TreeDataProvider<TreeNode> {
     return this.runningByAppId;
   }
 
+  /** Apps whose last exit was a crash and that are not running again. */
+  getCrashedApps(): PortPilotApp[] {
+    const runtime = readRuntimeApps();
+    return readConfig().apps.filter(a => !this.runningByAppId.has(a.id) && !!runtime[a.id]?.crashed);
+  }
+
   getTreeItem(element: TreeNode): vscode.TreeItem {
     return element;
   }
@@ -137,6 +173,7 @@ export class AppsTreeProvider implements vscode.TreeDataProvider<TreeNode> {
 
     const config = readConfig();
     if (!config.apps.length) return [];
+    const runtime = readRuntimeApps();
 
     const groups = config.groups || [];
     const sortFn = (a: PortPilotApp, b: PortPilotApp) => {
@@ -163,7 +200,7 @@ export class AppsTreeProvider implements vscode.TreeDataProvider<TreeNode> {
       const kids = (childrenByParent.get(app.id) ?? [])
         .sort(sortFn)
         .map(makeAppItem);
-      return new AppTreeItem(app, matched, kids);
+      return new AppTreeItem(app, matched, kids, runtime[app.id]);
     };
 
     // If no groups, return flat list of top-level apps (each carrying its branches)
