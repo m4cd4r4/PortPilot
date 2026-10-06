@@ -4,7 +4,8 @@
  * filesystem paths. Loading this before renderer.js installs a mock
  * window.portpilot backed by this data, so the real renderer renders a
  * curated showcase (nested worktrees, health states, a reserved port, a
- * live port conflict, groups) without a backend.
+ * live port conflict, a crashed app, a Claude-started app, groups) without
+ * a backend.
  *
  * Reproduce a screenshot:
  *   serve src/renderer/index.html with this file executed first
@@ -47,10 +48,24 @@
 
   const health = { a_web: 'healthy', a_web_checkout: 'healthy', a_web_search: 'unhealthy', a_api: 'healthy', a_gw: 'healthy' };
 
+  // Start times relative to page load, so the row state cell shows real uptimes.
+  const ago = (sec) => new Date(Date.now() - sec * 1000).toISOString();
+  const startedAgo = { a_web: 2 * 3600 + 14 * 60, a_web_checkout: 18 * 60, a_web_search: 41 * 60, a_api: 52 * 60, a_gw: 3 * 86400 + 600 };
+
   const runningApps = Object.keys(running).map((id) => {
     const app = apps.find((a) => a.id === id);
-    return { id, pid: running[id].pid, name: app.name, command: app.command, cwd: app.cwd, running: true, startTime: now, exitCode: null };
+    return { id, pid: running[id].pid, name: app.name, command: app.command, cwd: app.cwd, running: true, startTime: ago(startedAgo[id]), exitCode: null, crashed: false };
   });
+  // anchor-metrics started fine, then died on its own: a crash, not a stop.
+  runningApps.push({ id: 'a_metrics', pid: 4420, name: 'anchor-metrics', command: 'python main.py', cwd: 'C:/dev/tools/metrics', running: false, startTime: ago(25 * 60), exitCode: 1, crashed: true });
+
+  // Who started what (portpilot-runtime.json): Claude started the checkout
+  // branch over MCP; the rest were started by hand.
+  const runtime = {
+    a_web: { startedBy: { kind: 'human', surface: 'desktop', at: ago(startedAgo.a_web) }, pid: 4101, port: 3000 },
+    a_web_checkout: { startedBy: { kind: 'claude', surface: 'mcp', sessionId: 'a3f2c91e-demo', label: 'checkout drift fix', at: ago(startedAgo.a_web_checkout) }, pid: 4132, port: 3002 },
+    a_api: { startedBy: { kind: 'human', surface: 'vscode', at: ago(startedAgo.a_api) }, pid: 4200, port: 8000 },
+  };
 
   const matches = {};
   for (const id of Object.keys(running)) {
@@ -101,7 +116,7 @@
       kill: noop, getDetails: (pid) => ok({ details: { uptime: uptimes[pid] || null } }),
     },
     process: {
-      list: () => ok({ apps: runningApps }),
+      list: () => ok({ apps: runningApps, runtime }),
       start: noop, stop: noop, kill: noop, logs: () => ok({ stdout: '', stderr: '' }),
     },
     config: {

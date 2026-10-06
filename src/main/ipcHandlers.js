@@ -7,7 +7,7 @@ const os = require('os');
 const { probe } = require('./healthCheck');
 const { shareInfo } = require('./shareInfo');
 const reserver = require('./portReserver');
-const { recordStart, recordStop } = require('../core/configFile');
+const { recordStart, recordStop, readRuntime } = require('../core/configFile');
 const { makeStartedBy } = require('../core/status');
 
 // Read the Peacock window colour from a worktree's .vscode/settings.json so a
@@ -507,7 +507,8 @@ function setupIpcHandlers(ipcMain, configStore) {
   ipcMain.handle('process:list', async () => {
     try {
       const apps = getRunningApps();
-      return { success: true, apps };
+      // runtime: who started each app (startedBy), for the row state cell.
+      return { success: true, apps, runtime: readRuntime(configStore.configPath).apps };
     } catch (error) {
       return { success: false, error: error.message };
     }

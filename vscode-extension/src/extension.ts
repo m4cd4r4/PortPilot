@@ -19,9 +19,9 @@ export function activate(context: vscode.ExtensionContext) {
 
   // Status bar item
   const statusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 50);
-  statusBar.command = 'portpilot.refresh';
+  statusBar.command = 'portpilot.apps.focus';
   statusBar.text = '$(plug) PP: ...';
-  statusBar.tooltip = 'PortPilot - Click to refresh';
+  statusBar.tooltip = 'PortPilot - Click to show apps';
   statusBar.show();
   context.subscriptions.push(statusBar);
 
@@ -31,15 +31,28 @@ export function activate(context: vscode.ExtensionContext) {
     // Use the same two-phase matcher as the apps tree so the count reflects apps
     // running on a dynamic port, not just those on their exact preferredPort.
     const runningCount = appsProvider.getRunningByAppId().size;
-    statusBar.text = `$(plug) PP: ${runningCount} running`;
-    statusBar.tooltip = `PortPilot - ${config.apps.length} apps, ${runningCount} running, ${ports.length} ports`;
+    const crashed = appsProvider.getCrashedApps();
+    // Same words as the app rows: "Running", "Crashed". A crash wins the slot.
+    statusBar.text = crashed.length === 1
+      ? `$(error) PP: ${crashed[0].name} crashed`
+      : crashed.length > 1
+        ? `$(error) PP: ${crashed.length} crashed`
+        : `$(pulse) PP: ${runningCount} running`;
+    statusBar.backgroundColor = crashed.length
+      ? new vscode.ThemeColor('statusBarItem.errorBackground')
+      : undefined;
+    statusBar.tooltip = [
+      `PortPilot - ${config.apps.length} apps, ${runningCount} running, ${crashed.length} crashed, ${ports.length} ports`,
+      ...crashed.map(a => `Crashed: ${a.name}`),
+      'Click to show apps',
+    ].join('\n');
   }
 
-  // File watcher on portpilot-config.json - stays in sync with Electron app
+  // File watcher on portpilot-config.json and -runtime.json (crash stamps) - stays in sync with Electron app
   const configPath = getConfigPath();
   const configDir = vscode.Uri.file(configPath.replace(/[/\\][^/\\]+$/, ''));
   const watcher = vscode.workspace.createFileSystemWatcher(
-    new vscode.RelativePattern(configDir, 'portpilot-config.json')
+    new vscode.RelativePattern(configDir, '{portpilot-config.json,portpilot-runtime.json}')
   );
   watcher.onDidChange(() => refreshAll());
   watcher.onDidCreate(() => refreshAll());

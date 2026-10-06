@@ -20,7 +20,7 @@ const { matchPortsToApps, getProcessDetails, detectWorktrees, detectStaleWorktre
 const { probe } = require('../main/healthCheck');
 const { shareInfo } = require('../main/shareInfo');
 const reserver = require('../main/portReserver');
-const { recordStart, recordStop } = require('./configFile');
+const { recordStart, recordStop, readRuntime } = require('./configFile');
 const { makeStartedBy } = require('./status');
 
 /**
@@ -71,7 +71,8 @@ function createDispatcher(configStore, { surface = 'web' } = {}) {
       if (app && app.reservePort) await reserver.reserve(app);
       return result;
     },
-    'process:list': async () => ({ success: true, apps: getRunningApps() }),
+    // runtime: who started each app (startedBy), for the row state cell.
+    'process:list': async () => ({ success: true, apps: getRunningApps(), runtime: readRuntime(configStore.configPath).apps }),
     'process:logs': async (appId) => ({ success: true, ...getAppLogs(appId) }),
 
     // ---- Config ----

@@ -157,7 +157,9 @@ if (!gotTheLock) {
     // Notify (OS notification + in-app toast) when a running app crashes.
     const { onAppCrash, getRunningApps } = require('./processManager');
     const reserver = require('./portReserver');
+    const { recordCrash } = require('../core/configFile');
     onAppCrash(({ id, name, code }) => {
+      recordCrash(configStore.configPath, id, code);
       if (configStore.getSettings().notifyOnCrash !== false) {
         const body = `${name} exited unexpectedly${code != null ? ` (code ${code})` : ''}.`;
         try {

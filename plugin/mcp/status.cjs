@@ -189,9 +189,64 @@
     };
   }
 
+  // ---- Row state cell -----------------------------------------------------
+  // What an app row says about its state, in one cell every surface shares:
+  // shape + word, then a reason (crashed: exit code; conflict: the holder),
+  // then uptime and provenance while it is alive. Shape and word carry the
+  // meaning; colour (`token`) only reinforces it. Words differ from STATES
+  // labels where the row has something more specific to say.
+  const ROW_WORDS = { error: 'Not responding', conflict: 'Port blocked' };
+
+  /** Compact uptime: 45s, 12m, 2h, 3d. Empty for a missing or negative value. */
+  function formatUptime(sec) {
+    const s = Number(sec);
+    if (sec == null || !Number.isFinite(s) || s < 0) return '';
+    if (s < 60) return `${Math.floor(s)}s`;
+    if (s < 3600) return `${Math.floor(s / 60)}m`;
+    if (s < 86400) return `${Math.floor(s / 3600)}h`;
+    return `${Math.floor(s / 86400)}d`;
+  }
+
+  /**
+   * Map an app record to its row state cell.
+   * @param {object} rec { running, starting, unhealthy, conflict, crashed,
+   *   exitCode, blockedBy, uptimeSec, startedBy }
+   * Precedence: starting > running (unhealthy -> error) > conflict > crashed > stopped.
+   * A crash flag left behind by a dead process never outranks a live state.
+   */
+  function rowStateOf(rec) {
+    const r = rec || {};
+    let key = 'stopped';
+    if (r.starting) key = 'starting';
+    else if (r.running) key = r.unhealthy ? 'error' : 'running';
+    else if (r.conflict) key = 'conflict';
+    else if (r.crashed) key = 'crashed';
+    const s = STATES[key];
+    const alive = key === 'running' || key === 'error';
+
+    let reason = '';
+    if (key === 'crashed' && r.exitCode != null) reason = `exit ${r.exitCode}`;
+    if (key === 'conflict' && r.blockedBy) reason = String(r.blockedBy);
+
+    const uptime = alive ? formatUptime(r.uptimeSec) : '';
+    const prov = alive && r.startedBy ? provenanceOf(r.startedBy) : null;
+    const provenance = prov && prov.kind !== 'external' ? prov.word : '';
+
+    const word = ROW_WORDS[key] || s.label;
+    const head = `${s.glyph} ${word}${uptime ? ' ' + uptime : ''}`;
+    const text = [head, reason, provenance].filter(Boolean).join(' · ');
+    const title = [word + (reason ? ` (${reason})` : ''), uptime && `up ${uptime}`, prov && provenance && prov.title]
+      .filter(Boolean).join(' - ');
+
+    return { state: key, shape: s.shape, glyph: s.glyph, ascii: s.ascii, token: s.token,
+      word, reason, uptime, provenance, text, title };
+  }
+
   return {
     STATES,
     statusOf,
+    formatUptime,
+    rowStateOf,
     PROVENANCE_KINDS,
     SURFACES,
     CLAUDE_GLYPH,

@@ -83,9 +83,29 @@ interface ConfigFileApi {
   updateJson<T>(file: string, mutator: (config: PortPilotConfig) => T, fallback: () => PortPilotConfig): { config: PortPilotConfig; result: T };
   recordStart(configPath: string, appId: string, startedBy: StartedBy, opts?: { pid?: number | null; port?: number | null }): boolean;
   recordStop(configPath: string, appId: string): boolean;
+  readRuntime(configPath: string): { apps: Record<string, RuntimeEntry> };
+}
+export interface RuntimeEntry {
+  startedBy?: StartedBy;
+  pid?: number | null;
+  port?: number | null;
+  crashed?: { exitCode: number | null; at: number };
+}
+export interface RowState {
+  state: 'running' | 'starting' | 'error' | 'conflict' | 'crashed' | 'stopped';
+  word: string;
+  reason: string;
+  uptime: string;
+  provenance: string;
+  text: string;
+  title: string;
 }
 interface StatusApi {
   makeStartedBy(fields: Partial<StartedBy>): StartedBy;
+  rowStateOf(rec: {
+    running?: boolean; crashed?: boolean; exitCode?: number | null;
+    uptimeSec?: number | null; startedBy?: StartedBy | null;
+  }): RowState;
 }
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const configFile: ConfigFileApi = require(path.join(__dirname, '..', 'runtime', 'core', 'configFile.js'));
@@ -102,6 +122,13 @@ export function recordHumanStart(app: PortPilotApp): boolean {
 export function recordAppStop(appId: string): boolean {
   return configFile.recordStop(getConfigPath(), appId);
 }
+
+/** Per-app runtime entries (provenance, crash stamp). Empty on any read failure. */
+export function readRuntimeApps(): Record<string, RuntimeEntry> {
+  try { return configFile.readRuntime(getConfigPath()).apps; } catch { return {}; }
+}
+
+export const rowStateOf = (rec: Parameters<StatusApi['rowStateOf']>[0]): RowState => status.rowStateOf(rec);
 
 /**
  * Locked read-modify-write against the file on disk. Do any user prompting

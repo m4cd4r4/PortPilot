@@ -207,7 +207,26 @@ function recordStop(configPath, appId) {
   }
 }
 
+// Stamp an unexpected exit so surfaces outside the desktop process (the VS
+// Code extension) can tell a crash from a clean stop. recordStart replaces
+// the entry, which clears it; recordStop deletes it.
+function recordCrash(configPath, appId, exitCode) {
+  if (!appId) return false;
+  try {
+    updateJson(runtimePathFor(configPath), (runtime) => {
+      if (!runtime.apps || typeof runtime.apps !== 'object') runtime.apps = {};
+      const entry = runtime.apps[appId] || {};
+      entry.crashed = { exitCode: exitCode ?? null, at: Date.now() };
+      runtime.apps[appId] = entry;
+    }, emptyRuntime);
+    return true;
+  } catch (err) {
+    console.error('[configFile] Failed to record app crash:', err.message);
+    return false;
+  }
+}
+
 module.exports = {
   readJson, writeJsonAtomic, withLock, updateJson,
-  runtimePathFor, readRuntime, recordStart, recordStop,
+  runtimePathFor, readRuntime, recordStart, recordStop, recordCrash,
 };

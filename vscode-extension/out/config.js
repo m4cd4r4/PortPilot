@@ -33,10 +33,12 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.rowStateOf = void 0;
 exports.getConfigPath = getConfigPath;
 exports.readConfig = readConfig;
 exports.recordHumanStart = recordHumanStart;
 exports.recordAppStop = recordAppStop;
+exports.readRuntimeApps = readRuntimeApps;
 exports.updateConfig = updateConfig;
 exports.generateId = generateId;
 const fs = __importStar(require("fs"));
@@ -85,6 +87,17 @@ function recordHumanStart(app) {
 function recordAppStop(appId) {
     return configFile.recordStop(getConfigPath(), appId);
 }
+/** Per-app runtime entries (provenance, crash stamp). Empty on any read failure. */
+function readRuntimeApps() {
+    try {
+        return configFile.readRuntime(getConfigPath()).apps;
+    }
+    catch {
+        return {};
+    }
+}
+const rowStateOf = (rec) => status.rowStateOf(rec);
+exports.rowStateOf = rowStateOf;
 /**
  * Locked read-modify-write against the file on disk. Do any user prompting
  * BEFORE calling this: the mutator must be synchronous, and a config object

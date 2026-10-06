@@ -41,6 +41,7 @@ const state = {
   apps: [],
   groups: [],
   runningApps: [],
+  runtime: {}, // appId -> { startedBy, pid, port } from portpilot-runtime.json
   detectedApps: {},
   unknownConflicts: [],
   startingApps: {},
@@ -807,7 +808,10 @@ async function loadApps() {
     if (configResult.success) state.apps = configResult.apps;
     if (staleResult && staleResult.success) state.staleApps = new Set(staleResult.ids);
     if (groupsResult.success) state.groups = groupsResult.groups;
-    if (runningResult.success) state.runningApps = runningResult.apps;
+    if (runningResult.success) {
+      state.runningApps = runningResult.apps;
+      state.runtime = runningResult.runtime || {};
+    }
     if (scanResult.success) {
       state.ports = scanResult.ports;
       state.detectedApps = scanResult.matches || {};
@@ -1042,6 +1046,33 @@ function renderAppTree(app, childrenByParent) {
   </div>`;
 }
 
+// The row state cell (UX A1): shape + word + reason + uptime + provenance,
+// from the shared helper so the VS Code extension says the same thing.
+// Uptime: PortPilot's own start time, else when the runtime record says it
+// was started, else the port holder's process uptime (fetched on Scan).
+function appRowState(app) {
+  const managedRunning = state.runningApps.find(r => r.id === app.id && r.running);
+  const managed = managedRunning || state.runningApps.find(r => r.id === app.id);
+  const detected = state.detectedApps[app.id];
+  const conflict = state.unknownConflicts.find(c => c.appId === app.id);
+  const startedBy = state.runtime[app.id]?.startedBy || null;
+  const startedAt = managedRunning?.startTime || startedBy?.at;
+  let uptimeSec = startedAt ? (Date.now() - Date.parse(startedAt)) / 1000 : null;
+  if (!(uptimeSec >= 0) && detected) uptimeSec = state.expandedPorts.get(detected.port)?.uptime ?? null;
+  const holder = conflict?.occupiedBy;
+  return window.PortPilotStatus.rowStateOf({
+    starting: !!state.startingApps[app.id],
+    running: !!(managedRunning || detected),
+    unhealthy: state.health[app.id] === 'unhealthy',
+    conflict: !!conflict,
+    blockedBy: holder ? [String(holder.processName || '').replace(/\.exe$/i, ''), holder.pid].filter(Boolean).join(' ') : '',
+    crashed: !!managed?.crashed,
+    exitCode: managed?.exitCode,
+    uptimeSec,
+    startedBy,
+  });
+}
+
 function renderAppCard(app, branchCount = 0) {
   const isBranch = !!app.parentId;
   const managedRunning = state.runningApps.find(r => r.id === app.id && r.running);
@@ -1050,17 +1081,9 @@ function renderAppCard(app, branchCount = 0) {
   const reqs = detectRequirements(app);
   const starting = state.startingApps[app.id];
   const conflict = state.unknownConflicts.find(c => c.appId === app.id);
-
-  // Status
-  const health = state.health[app.id];
-  let statusClass = 'stopped';
-  let statusTitle = '';
-  if (starting) statusClass = 'starting';
-  else if (detected || managedRunning) {
-    if (health === 'unhealthy') { statusClass = 'error'; statusTitle = 'Running but not responding (health check failed)'; }
-    else { statusClass = 'running'; statusTitle = health === 'healthy' ? 'Running and responding' : 'Running'; }
-  }
-  else if (conflict) statusClass = 'conflict';
+  const rowState = appRowState(app);
+  const stateMeta = [rowState.uptime, rowState.reason, rowState.provenance].filter(Boolean).join(' · ');
+  const stateCellHtml = `<span class="state-cell state-${rowState.state}" style="--state-color: var(${rowState.token})" title="${escapeHtml(rowState.title)}"><span class="state-glyph" aria-hidden="true">${rowState.glyph}</span><span class="state-word">${escapeHtml(rowState.word)}</span>${stateMeta ? `<span class="state-meta">${escapeHtml(stateMeta)}</span>` : ''}</span>`;
 
   // Port display
   let portHtml = '';
@@ -1086,11 +1109,6 @@ function renderAppCard(app, branchCount = 0) {
     if (details) {
       const parts = [];
       if (details.memory) parts.push(details.memory + ' MB');
-      if (details.uptime) {
-        const h = Math.floor(details.uptime / 3600);
-        const m = Math.floor((details.uptime % 3600) / 60);
-        parts.push(h > 0 ? `${h}h ${m}m` : `${m}m`);
-      }
       if (detected.pid) parts.push(`PID ${detected.pid}`);
       if (parts.length) statsHtml = `<span class="app-stats">${parts.join(' / ')}</span>`;
     }
@@ -1144,7 +1162,6 @@ function renderAppCard(app, branchCount = 0) {
              data-id="${app.id}"
              aria-label="Select ${escapeHtml(app.name)}"
              title="Select">
-      <span class="status-dot ${statusClass}"${statusTitle ? ` title="${escapeHtml(statusTitle)}"` : ''}></span>
       <div class="app-name-area">
         <button class="btn-star ${app.isFavorite ? 'starred' : ''}"
                 data-act="toggleFavorite" data-id="${app.id}"
@@ -1160,6 +1177,7 @@ function renderAppCard(app, branchCount = 0) {
         ${statsHtml}
         ${badges.length > 0 ? `<div class="req-badges">${badges.join('')}</div>` : ''}
       </div>
+      ${stateCellHtml}
       <span class="expand-indicator">${icon('chevron', 10)}</span>
       <div class="app-actions-visible">
         ${actionsHtml}
@@ -1199,7 +1217,7 @@ function describeAppConflict(app, conflict) {
     port: conflict.port,
     holder: { processName: holder.processName, pid: holder.pid, uptime: details?.uptime },
     holderApp: holderAppFor(conflict.port, app.id),
-    holderStartedBy: null, // row #8 wires startedBy from the runtime state
+    holderStartedBy: state.runtime[holderAppFor(conflict.port, app.id)?.id]?.startedBy || null,
     app,
     freePort: conflict.freePort,
   });
@@ -1672,13 +1690,11 @@ function openAppDrawer(appId) {
   const details = detected ? state.expandedPorts.get(detected.port) : null;
 
   const health = state.health[app.id];
-  let statusClass = 'stopped', statusWord = 'Stopped';
-  if (starting) { statusClass = 'starting'; statusWord = 'Starting'; }
-  else if (isRunning) {
-    if (health === 'unhealthy') { statusClass = 'error'; statusWord = 'Not responding'; }
-    else { statusClass = 'running'; statusWord = 'Running'; }
-  }
-  else if (conflict) { statusClass = 'conflict'; statusWord = 'Port blocked'; }
+  const rowState = appRowState(app);
+  // The drawer dot only styles the five live classes; a crash draws as error.
+  const statusClass = rowState.state === 'crashed' ? 'error' : rowState.state;
+  const statusWord = rowState.word + (rowState.reason ? ` · ${rowState.reason}` : '');
+  const provenance = rowState.provenance;
   const healthLabel = { healthy: 'Responding (2xx/3xx)', unhealthy: 'Not responding (error status)', down: 'No response' }[health];
 
   document.getElementById('app-drawer-status').className = `status-dot ${statusClass}`;
@@ -1691,6 +1707,7 @@ function openAppDrawer(appId) {
   const fields = [
     field('Status', statusWord + (managedRunning && detected?.pid ? ` · PID ${detected.pid}` : '')),
     isRunning ? field('Health', healthLabel || 'Checking...') : '',
+    field('Started by', provenance),
     field('Branch', app.branch),
     port ? field('Port', `:${port}${app.fallbackRange ? `  (fallback ${app.fallbackRange[0]}-${app.fallbackRange[1]})` : ''}`, true) : '',
     field('Memory', details?.memory ? details.memory + ' MB' : ''),
