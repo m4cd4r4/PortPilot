@@ -21,11 +21,11 @@ Inputs: the 2026-10-05 audit (summary under "Baseline" below) and [`docs/ux-rese
 | 3 | ci-baseline | GitHub Actions: `test:unit` + `test:mcp` on push/PR (Windows + Linux); Electron suite under xvfb if cheap (deferred: replaced by an unpacked package + bundled-MCP smoke on both OSes) | merged (PR #34; also fixes release builds shipping without mcp-server deps) | 1 | done |
 | 4 | config-atomic-write | Write config via tmp + rename with a lock file, shared by app, agent, MCP; a test with two concurrent writers | merged (PR #36) | 1 | S |
 | 5 | status-provenance | D1 + D3: `startedBy {kind, surface, sessionId?, at}` in `src/core/status.js`, MCP `start_app` stamps `claude`; canonical status vocabulary table. No UI | merged (PR #37) | 1 | M |
-| 6 | plugin-scaffold | `plugin/` + root `marketplace.json` (clear-resume layout): bundled stdio MCP (single-file build, no `npm install`), a `portpilot` skill ("start servers through PortPilot, never bare Bash"), `claude plugin eval` cases | later | 2 | M |
-| 7 | mod-status-guard | Mod in the plugin: C1 status line (`⚓ 3 up · :3000 web`, worst state first); C3 dev-server guard on `tool.call` Bash (busy port -> deny with "reuse :3000"; free -> route through `start_app`); `claude plugin test` coverage | later | 2 | M |
-| 8 | ux-row-state | A1 state word + reason on every row; B1 status-aware VS Code tree items; B3 status bar item | later | 2 | S-M |
-| 9 | ux-conflict-strip | A2 labelled conflict strip replacing `confirm()` (renderer.js:651, 1157, 1195, 1230); shares the decision tree with #7's guard | later | 2 | S |
-| 10 | crash-alerts | A4 + C4 crash toasts with Restart / Logs / Fix it; MCP channel push of crash + stderr tail into the session that started the app | later | 3 | M |
+| 6 | plugin-scaffold | `plugin/` + root `marketplace.json` (clear-resume layout; neither exists yet): bundled stdio MCP (single-file build, no `npm install`; reuse the bundling the #34 packaged-MCP smoke already proves), a `portpilot` skill ("start servers through PortPilot, never bare Bash"), `claude plugin eval` cases | later | 2 | M |
+| 7 | mod-status-guard | Mod in the plugin: C1 status line (`⚓ 3 up · :3000 web`, worst state first, `✦` on Claude-started apps); C3 dev-server guard on `tool.call` Bash (busy port -> deny with "reuse :3000"; free -> route through `start_app`); `claude plugin test` coverage. Reads the runtime sidecar `recordStart` writes (`src/core/configFile.js` L183: `startedBy`, `pid`, `port` per app) and confirms liveness by port, so it works while the app is closed. Imports the conflict decision tree from `src/core/conflict.js` (#9) | later | 2 | M |
+| 8 | ux-row-state | A1 state cell on every row (shape + word + reason + uptime + provenance, e.g. `● Running 2h · claude`); B1 status-aware VS Code tree items; B3 status bar item. First surface to render `startedBy` (nothing reads it today). Renders only the states something produces: running / stopped / starting / conflict / error. `crashed` has no producer yet (nothing in `src/main` or `mcp-server` emits it) and stays with #10 | later | 2 | S-M |
+| 9 | ux-conflict-strip | Extract the conflict decision tree from the renderer (`showUnknownConflictWarnings` renderer.js:1209, `killConflictingProcess` :1224) into `src/core/conflict.js` with a unit test, then A2 labelled conflict strip replacing the four port-kill `confirm()` calls (renderer.js:651, 1157, 1195, 1230). The two delete confirms (:1424 group, :1825 bulk) are out of scope. Lands before #7 so the guard imports the module instead of re-deriving it | later | 2 | S-M |
+| 10 | crash-alerts | Crash detection first (unexpected exit -> `crashed` in the runtime sidecar; no producer exists today), then A4 + C4 crash toasts with Restart / Logs / Fix it; MCP channel push of crash + stderr tail into the session that started the app | later | 3 | M |
 | 11 | command-palette-pane | D2 one command registry; A3 Ctrl+K palette; C2 `/ports` mod pane | later | 3 | M-L |
 | 12 | drawer-timeline | A5 drawer re-hierarchy; A10 activity timeline (who did what, when) | later | 3 | M |
 | 13 | directory-submission | Submit the plugin to the Anthropic plugin directory (as clear-resume was); README install path | later | 3 | S |
@@ -39,7 +39,14 @@ Status vocabulary: `later` / `materialised` / `merged (PR #N)` / `superseded`.
 ## Wave structure
 
 - **Wave 1 (foundation, parallel-safe):** #1, #2, #3, #4, #5, #14. #5 is the only one later waves depend on, because the status line, guard, row state and timeline all render `startedBy`. #4 lands before #6 because the plugin adds more config writers. #2 and #14 both touch `package.json`/build config: run them one after the other, not in parallel.
-- **Wave 2 (first visible wins):** #6 then #7 (the mod lives in the plugin); #8 and #9 in parallel with them. #7 and #9 share one conflict decision tree: whichever lands first owns it in `src/core/`.
+- **Wave 1 complete (2026-10-06).** All six rows merged (PRs #32-#34, #36, #37, #44).
+- **Wave 2 (first visible wins), re-planned 2026-10-06 at the Wave 1 gate:** two parallel tracks.
+  - Track A (Claude Code): #6, then #7.
+  - Track B (app UI): #9, then #8.
+  - #9 owns `src/core/conflict.js`, and #7 imports it. This settles the old "whichever lands first" rule: Track B has no plugin dependency, so #9 lands first.
+  - Run #8 after #9 because both edit the app row in `renderer.js`.
+  - What the gate review changed: `crashed` moved out of Wave 2 (no producer exists yet; #10 builds one). #8 now carries the first `startedBy` rendering. #7 reads the runtime sidecar so it works while the app is closed.
+  - UI verification needs `docs/demo/demo-seed.js` extended with a Claude-started app and a port conflict before #8/#9 screenshots.
 - **Wave 3 (guess until Wave 2 lands):** #10-#13. Re-plan at the gate. Open questions: whether mod UI renders in the VS Code extension (the API lists `vscode` as a surface, untested here), and whether MCP channels are stable enough for #10.
 
 Per the wave-gate rule, Wave N+1 scope is a guess until Wave N lands; re-plan at each gate.
