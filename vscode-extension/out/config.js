@@ -35,7 +35,7 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getConfigPath = getConfigPath;
 exports.readConfig = readConfig;
-exports.writeConfig = writeConfig;
+exports.updateConfig = updateConfig;
 exports.generateId = generateId;
 const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
@@ -71,13 +71,19 @@ function readConfig() {
     }
     return { apps: [], settings: {}, groups: [] };
 }
-function writeConfig(config) {
-    const configPath = getConfigPath();
-    const configDir = path.dirname(configPath);
-    if (!fs.existsSync(configDir)) {
-        fs.mkdirSync(configDir, { recursive: true });
-    }
-    fs.writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf-8');
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const configFile = require(path.join(__dirname, '..', 'runtime', 'core', 'configFile.js'));
+/**
+ * Locked read-modify-write against the file on disk. Do any user prompting
+ * BEFORE calling this: the mutator must be synchronous, and a config object
+ * held across a prompt would overwrite whatever other processes wrote meanwhile.
+ */
+function updateConfig(mutator) {
+    return configFile.updateJson(getConfigPath(), (config) => {
+        if (!config.apps)
+            config.apps = [];
+        return mutator(config);
+    }, () => ({ apps: [], settings: {}, groups: [] })).result;
 }
 function generateId() {
     return `app-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;

@@ -5,6 +5,11 @@ All notable changes to PortPilot will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+- **Config changes from different tools no longer overwrite each other.** The desktop app, web agent, MCP server and VS Code extension all write `portpilot-config.json`. Each used to read it, change it in memory and write the whole file back, so two writers at once dropped one change. The VS Code extension held its copy open across edit prompts, which made this likely. Every write now takes a lock file, re-reads the file and replaces it atomically (temp file + rename), so a crash mid-write can no longer leave a truncated config. An unparseable config is copied to `.corrupt-<time>` before anything overwrites it.
+
 ## [3.3.2] - 2026-10-06
 
 ### Fixed

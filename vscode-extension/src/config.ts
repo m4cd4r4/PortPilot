@@ -69,13 +69,24 @@ export function readConfig(): PortPilotConfig {
   return { apps: [], settings: {}, groups: [] };
 }
 
-export function writeConfig(config: PortPilotConfig): void {
-  const configPath = getConfigPath();
-  const configDir = path.dirname(configPath);
-  if (!fs.existsSync(configDir)) {
-    fs.mkdirSync(configDir, { recursive: true });
-  }
-  fs.writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf-8');
+// Lock + atomic-write helpers shared with the desktop app, agent and MCP server.
+// scripts/copy-runtime.js copies src/core/configFile.js into runtime/ at build.
+interface ConfigFileApi {
+  updateJson<T>(file: string, mutator: (config: PortPilotConfig) => T, fallback: () => PortPilotConfig): { config: PortPilotConfig; result: T };
+}
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const configFile: ConfigFileApi = require(path.join(__dirname, '..', 'runtime', 'core', 'configFile.js'));
+
+/**
+ * Locked read-modify-write against the file on disk. Do any user prompting
+ * BEFORE calling this: the mutator must be synchronous, and a config object
+ * held across a prompt would overwrite whatever other processes wrote meanwhile.
+ */
+export function updateConfig<T>(mutator: (config: PortPilotConfig) => T): T {
+  return configFile.updateJson(getConfigPath(), (config) => {
+    if (!config.apps) config.apps = [];
+    return mutator(config);
+  }, () => ({ apps: [], settings: {}, groups: [] })).result;
 }
 
 export function generateId(): string {

@@ -76,9 +76,7 @@ function createDispatcher(configStore) {
       return { success: true, app: configStore.saveApp(app) };
     },
     'config:deleteAllApps': async () => {
-      const count = configStore.config.apps.length;
-      configStore.config.apps = [];
-      configStore.save();
+      const count = configStore.clearApps();
       return { success: true, count };
     },
     'config:updateAppsOrder': async (appIds) => { configStore.updateAppsOrder(appIds); return { success: true }; },

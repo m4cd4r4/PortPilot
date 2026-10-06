@@ -682,9 +682,7 @@ function setupIpcHandlers(ipcMain, configStore) {
   /** Delete all apps */
   ipcMain.handle('config:deleteAllApps', async () => {
     try {
-      const count = configStore.config.apps.length;
-      configStore.config.apps = [];
-      configStore.save();
+      const count = configStore.clearApps();
       return { success: true, count };
     } catch (error) {
       return { success: false, error: error.message };

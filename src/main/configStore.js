@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { getConfigPath } = require('../core/configPath');
+const { readJson, writeJsonAtomic, withLock, updateJson } = require('../core/configFile');
 
 /**
  * ConfigStore - Manages persistent app configurations
@@ -23,12 +24,16 @@ class ConfigStore {
 
     // Ensure config file exists before watching
     if (!fs.existsSync(this.configPath)) {
-      this.save(); // Create initial config file
+      this.update(() => {}); // Create initial config file (locked, so a concurrent first write is not clobbered)
     }
 
+    // Watch the directory, not the file: writers replace the file by rename, and
+    // on Linux a file watch follows the old inode and goes silent after the
+    // first replace. Filter to our filename (null = platform didn't say).
+    const base = path.basename(this.configPath);
     try {
-      fs.watch(this.configPath, (eventType) => {
-        if (eventType === 'change') {
+      this.watcher = fs.watch(path.dirname(this.configPath), (eventType, filename) => {
+        if (!filename || filename.toString() === base) {
           // Debounce to avoid multiple rapid reloads
           clearTimeout(debounceTimer);
           debounceTimer = setTimeout(() => {
@@ -57,18 +62,30 @@ class ConfigStore {
     }
   }
 
+  /** Stop watching the config file */
+  close() {
+    if (this.watcher) this.watcher.close();
+    this.watcher = null;
+  }
+
   /** Load config from disk */
   load() {
-    try {
-      if (fs.existsSync(this.configPath)) {
-        const data = fs.readFileSync(this.configPath, 'utf8');
-        return JSON.parse(data);
-      }
-    } catch (error) {
-      console.error('Failed to load config:', error);
-    }
+    return readJson(this.configPath, () => this.defaultConfig());
+  }
 
-    // Default config
+  /**
+   * Locked read-modify-write against the file on disk, so a change another
+   * process (MCP, agent, extension) made since our last load is not
+   * overwritten. The mutator edits the fresh config in place; its return value
+   * is returned.
+   */
+  update(mutator) {
+    const { config, result } = updateJson(this.configPath, mutator, () => this.defaultConfig());
+    this.config = config;
+    return result;
+  }
+
+  defaultConfig() {
     return {
       apps: [],
       groups: [],
@@ -104,11 +121,7 @@ class ConfigStore {
   /** Save config to disk */
   save() {
     try {
-      const dir = path.dirname(this.configPath);
-      if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
-      }
-      fs.writeFileSync(this.configPath, JSON.stringify(this.config, null, 2));
+      withLock(this.configPath, () => writeJsonAtomic(this.configPath, this.config));
       return true;
     } catch (error) {
       console.error('Failed to save config:', error);
@@ -141,9 +154,20 @@ class ConfigStore {
       appConfig.id = `app_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     }
 
-    const existingIndex = this.config.apps.findIndex(a => a.id === appConfig.id);
-    const existing = existingIndex >= 0 ? this.config.apps[existingIndex] : {};
+    return this.update((config) => {
+      if (!config.apps) config.apps = [];
+      const existingIndex = config.apps.findIndex(a => a.id === appConfig.id);
+      const app = this.buildApp(appConfig, existingIndex >= 0 ? config.apps[existingIndex] : {});
+      if (existingIndex >= 0) {
+        config.apps[existingIndex] = app;
+      } else {
+        config.apps.push(app);
+      }
+      return app;
+    });
+  }
 
+  buildApp(appConfig, existing) {
     // Merge onto the existing record so fields the caller didn't supply
     // (e.g. `description` from an MCP-added app, `startupDelay`) are preserved.
     // Previously this rebuilt a fixed-shape object, silently dropping any field
@@ -175,26 +199,25 @@ class ConfigStore {
       updatedAt: new Date().toISOString()
     };
 
-    if (existingIndex >= 0) {
-      this.config.apps[existingIndex] = app;
-    } else {
-      this.config.apps.push(app);
-    }
-
-    this.save();
     return app;
   }
 
   /** Delete an app by ID */
   deleteApp(id) {
-    const initialLength = this.config.apps.length;
-    this.config.apps = this.config.apps.filter(app => app.id !== id);
+    return this.update((config) => {
+      const initialLength = (config.apps || []).length;
+      config.apps = (config.apps || []).filter(app => app.id !== id);
+      return config.apps.length < initialLength;
+    });
+  }
 
-    if (this.config.apps.length < initialLength) {
-      this.save();
-      return true;
-    }
-    return false;
+  /** Remove every app; returns how many were removed */
+  clearApps() {
+    return this.update((config) => {
+      const count = (config.apps || []).length;
+      config.apps = [];
+      return count;
+    });
   }
 
   /**
@@ -202,13 +225,17 @@ class ConfigStore {
    * @param {Array<string>} appIds - Ordered array of app IDs
    */
   updateAppsOrder(appIds) {
-    const orderedApps = [];
-    appIds.forEach(id => {
-      const app = this.config.apps.find(a => a.id === id);
-      if (app) orderedApps.push(app);
+    this.update((config) => {
+      const apps = config.apps || [];
+      const orderedApps = [];
+      appIds.forEach(id => {
+        const app = apps.find(a => a.id === id);
+        if (app) orderedApps.push(app);
+      });
+      // Keep apps another process added that the caller's list doesn't know about
+      apps.forEach(app => { if (!appIds.includes(app.id)) orderedApps.push(app); });
+      config.apps = orderedApps;
     });
-    this.config.apps = orderedApps;
-    this.save();
   }
 
   /** Get settings */
@@ -218,9 +245,10 @@ class ConfigStore {
 
   /** Update settings */
   updateSettings(newSettings) {
-    this.config.settings = { ...this.config.settings, ...newSettings };
-    this.save();
-    return this.config.settings;
+    return this.update((config) => {
+      config.settings = { ...config.settings, ...newSettings };
+      return config.settings;
+    });
   }
 
   /** Get all groups */
@@ -236,9 +264,6 @@ class ConfigStore {
       groupConfig.id = `group_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     }
 
-    if (!this.config.groups) this.config.groups = [];
-
-    const existingIndex = this.config.groups.findIndex(g => g.id === groupConfig.id);
     const group = {
       id: groupConfig.id,
       name: groupConfig.name,
@@ -246,24 +271,27 @@ class ConfigStore {
       color: typeof groupConfig.color === 'string' ? groupConfig.color.slice(0, 20) : null
     };
 
-    if (existingIndex >= 0) {
-      this.config.groups[existingIndex] = group;
-    } else {
-      this.config.groups.push(group);
-    }
-
-    this.save();
-    return group;
+    return this.update((config) => {
+      if (!config.groups) config.groups = [];
+      const existingIndex = config.groups.findIndex(g => g.id === groupConfig.id);
+      if (existingIndex >= 0) {
+        config.groups[existingIndex] = group;
+      } else {
+        config.groups.push(group);
+      }
+      return group;
+    });
   }
 
   /** Delete a group and ungroup its apps */
   deleteGroup(groupId) {
-    this.config.apps = this.config.apps.map(app => {
-      if (app.group === groupId) return { ...app, group: null };
-      return app;
+    this.update((config) => {
+      config.apps = (config.apps || []).map(app => {
+        if (app.group === groupId) return { ...app, group: null };
+        return app;
+      });
+      config.groups = (config.groups || []).filter(g => g.id !== groupId);
     });
-    this.config.groups = (this.config.groups || []).filter(g => g.id !== groupId);
-    this.save();
   }
 
   /** Generate a random color for app identification */
@@ -318,9 +346,9 @@ class ConfigStore {
         })).filter(g => g.name);
       }
 
+      // A restore replaces the whole file on purpose - no merge with disk.
       this.config = imported;
-      this.save();
-      return true;
+      return this.save();
     } catch (error) {
       console.error('Failed to import config:', error);
       return false;
