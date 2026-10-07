@@ -413,12 +413,12 @@ Explore all PortPilot features including app management, the Active Ports scanne
 **Latest Release: v3.4.0**
 
 **Windows:**
-- [PortPilot-3.4.0-x64.exe](https://github.com/m4cd4r4/PortPilot/releases/download/v3.4.0/PortPilot-3.4.0-x64.exe) - NSIS Installer (~75 MB)
-- [PortPilot-3.4.0-portable.exe](https://github.com/m4cd4r4/PortPilot/releases/download/v3.4.0/PortPilot-3.4.0-portable.exe) - Portable (~75 MB)
+- [PortPilot-3.4.0-x64.exe](https://github.com/m4cd4r4/PortPilot/releases/download/v3.4.0/PortPilot-3.4.0-x64.exe) - NSIS Installer (~113 MB)
+- [PortPilot-3.4.0-portable.exe](https://github.com/m4cd4r4/PortPilot/releases/download/v3.4.0/PortPilot-3.4.0-portable.exe) - Portable (~113 MB)
 
 **Linux:**
-- [PortPilot-3.4.0-x86_64.AppImage](https://github.com/m4cd4r4/PortPilot/releases/download/v3.4.0/PortPilot-3.4.0-x86_64.AppImage) - AppImage (~98 MB)
-- [PortPilot-3.4.0-amd64.deb](https://github.com/m4cd4r4/PortPilot/releases/download/v3.4.0/PortPilot-3.4.0-amd64.deb) - Debian/Ubuntu (~69 MB)
+- [PortPilot-3.4.0-x86_64.AppImage](https://github.com/m4cd4r4/PortPilot/releases/download/v3.4.0/PortPilot-3.4.0-x86_64.AppImage) - AppImage (~123 MB)
+- [PortPilot-3.4.0-amd64.deb](https://github.com/m4cd4r4/PortPilot/releases/download/v3.4.0/PortPilot-3.4.0-amd64.deb) - Debian/Ubuntu (~86 MB)
 
 **macOS:**
 - Build from source (see below) - macOS is supported but not officially tested
