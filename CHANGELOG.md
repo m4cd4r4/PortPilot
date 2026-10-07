@@ -7,7 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.4.0] - 2026-10-07
+
+### Added
+- **Claude Code plugin.** `plugin/` ships a bundled PortPilot MCP server (no `npm install`), a `portpilot` skill, and a mod with a status line (`⚓ 3 up · :3000 web`, worst state first) and a dev-server guard: a Bash command that would start a dev server on a busy port is denied with "reuse :3000", and a clean start is routed through PortPilot. When the guard cannot tell what a command does, it lets it run.
+- **Crash alerts.** A crashed app raises a sticky toast with Restart, Logs and Ask Claude. Ask Claude appears only when the Claude Code session that started the app is live, and hands it the crash with the stderr tail. In that session the plugin shows a crash band with Restart, Logs and Fix it. Repeat crashes group into one toast.
+- **Row state on every app.** Each row says what state the app is in, why, for how long and who started it (`● Running 2h · claude`). Crashed apps read `✕ Crashed · exit 1` instead of looking stopped. The VS Code tree and status bar use the same states.
+- **Who started each app.** Starts are stamped with `startedBy`: you or a Claude Code session, and from which surface. Every surface reads the same record.
+
+### Changed
+- **Port conflicts are a labelled strip on the row**, with Use free port, Kill & start and Show process, in place of the old `confirm()` dialogs. Kill asks for a second click.
+
 ### Fixed
+- **Port-conflict toasts no longer repeat.** Auto-scan toasted every standing conflict every few seconds, stacking toasts over the Dev Servers buttons. A conflict is now announced once; the row strip carries it after that.
+- **Crashed means crashed everywhere.** Stopping an app by port, or quitting PortPilot, no longer marks it as crashed.
+- **Moving an app between groups** no longer overwrites changes made elsewhere since the app list loaded.
+- **App names no longer vanish at phone width.**
+- **Windows:** removed `wmic` fallbacks; `wmic` is gone from recent Windows 11.
+- **MCP server:** all 9 npm audit advisories patched.
 - **Config changes from different tools no longer overwrite each other.** The desktop app, web agent, MCP server and VS Code extension all write `portpilot-config.json`. Each used to read it, change it in memory and write the whole file back, so two writers at once dropped one change. The VS Code extension held its copy open across edit prompts, which made this likely. Every write now takes a lock file, re-reads the file and replaces it atomically (temp file + rename), so a crash mid-write can no longer leave a truncated config. An unparseable config is copied to `.corrupt-<time>` before anything overwrites it.
 
 ## [3.3.2] - 2026-10-06

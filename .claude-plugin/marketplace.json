@@ -3,7 +3,7 @@
   "owner": { "name": "Macdara Ó Murchú" },
   "metadata": {
     "description": "Start and stop dev servers through PortPilot, so Claude reuses a running server instead of starting a second one on a taken port.",
-    "version": "3.3.2"
+    "version": "3.4.0"
   },
   "plugins": [
     {
