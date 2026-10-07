@@ -232,7 +232,7 @@ async function main() {
     // Opt-in: also stop the dev servers this agent started (mirrors the desktop
     // app's stopAppsOnQuit). Off by default, so dev servers survive a portal stop.
     if (process.env.PORTPILOT_STOP_APPS_ON_EXIT === '1') {
-      try { await require('../main/processManager').cleanupAllProcesses(); } catch { /* ignore */ }
+      try { await require('../main/processManager').cleanupAllProcesses(configStore.configPath); } catch { /* ignore */ }
     }
     try { await agent.stop(); } catch { /* ignore */ }
     process.exit(0);

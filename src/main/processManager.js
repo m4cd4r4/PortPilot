@@ -1,6 +1,7 @@
 const { spawn, exec } = require('child_process');
 const os = require('os');
 const path = require('path');
+const { recordStop } = require('../core/configFile');
 
 // Track running child processes
 const runningProcesses = new Map();
@@ -103,6 +104,7 @@ async function startApp(appConfig) {
         process: childProcess,
         pid: childProcess.pid,
         name,
+        port: appConfig.preferredPort || null,
         command,
         cwd,
         startTime: new Date(),
@@ -217,7 +219,19 @@ async function killByPort(port) {
     return { success: false, error: `No process found on port ${port}` };
   }
 
-  return killProcess(portInfo.pid);
+  // The tracked pid is the shell's, not the server's, so killProcess's pid
+  // match misses it. Match the managed app by the port it was started on too.
+  const marked = [];
+  for (const info of runningProcesses.values()) {
+    if (!info.userStopped && (info.pid === portInfo.pid || (info.port && Number(info.port) === Number(port)))) {
+      info.userStopped = true;
+      marked.push(info);
+    }
+  }
+  const result = await killProcess(portInfo.pid);
+  // A failed kill leaves the app running: a later real crash must still count.
+  if (!result.success) for (const info of marked) info.userStopped = false;
+  return result;
 }
 
 /**
@@ -266,10 +280,13 @@ function getAppLogs(appId) {
 
 /**
  * Clean up all running processes (called on app quit)
+ * @param {string} [configPath] - config file path; when given, each tracked
+ *   app's runtime-sidecar entry is dropped so quitting leaves no ghosts
  * @returns {Promise<void>}
  */
-async function cleanupAllProcesses() {
+async function cleanupAllProcesses(configPath) {
   const pids = [];
+  const ids = [...runningProcesses.keys()];
 
   for (const [id, info] of runningProcesses) {
     if (info.process && !info.process.killed && info.pid) {
@@ -280,6 +297,7 @@ async function cleanupAllProcesses() {
   // Kill all tracked processes
   await Promise.all(pids.map(pid => killProcess(pid)));
   runningProcesses.clear();
+  if (configPath) for (const id of ids) recordStop(configPath, id);
 }
 
 module.exports = {
