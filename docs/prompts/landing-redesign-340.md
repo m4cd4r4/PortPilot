@@ -75,6 +75,21 @@ The logo is inconsistent. The page header uses a ⚓ emoji. The desktop app and 
 - Site copy: British English, no em-dashes, en-dashes or ellipsis characters, no "not just X" constructions.
 - Do not branch or commit in the primary checkout `I:/Scratch/PortPilot-2026`.
 
+## Added scope: README redesign (Macdara, 2026-10-07)
+
+Do this after the logo is chosen and the screenshots exist, so both surfaces share one logo, one pitch and one set of images. Same branch; same PR, or a second PR if the first gets large.
+
+Measured: `README.md` is 796 lines. It opens with six "What's New" sections (v1.7.0 to v3.3.0, L64-174) and has none for 3.4. Version History (L716-783) repeats `CHANGELOG.md`. Auto Detection runs 187 lines (L216-402). Screenshots has one image (L403). The hook flagged a "not just" (L62) and an em-dash (L600).
+
+What "good" looks like:
+- Top of the README: logo, one-line pitch matching the new hero, one hero image (demo seed), badges, install links.
+- A short "Use it with Claude Code" quickstart near the top (plugin install, what the status line and guard do).
+- Features grouped in the same order as the landing page, with the component crops.
+- Release history moves to `CHANGELOG.md`: delete the What's New and Version History blocks from the README and link to the changelog and Releases page.
+- Long reference material (Auto Detection detail, example config, MCP tool list) goes into collapsible `<details>` blocks or `docs/` pages, linked from the README.
+- Renders well on github.com in both light and dark themes: check by viewing the pushed branch's README on GitHub (screenshot at 1440 and 390), not a local markdown preview.
+- Target well under half the current length.
+
 ## Out-of-scope follow-ups (capture, don't build)
 
 Append to `C:/Users/Hard-Worker/Obsidian/Second-Brain/wiki/backlog/portpilot.md`. Example: aligning the plugin status-line glyph with the new logo.
