@@ -158,13 +158,16 @@ if (!gotTheLock) {
     const { onAppCrash, getRunningApps } = require('./processManager');
     const reserver = require('./portReserver');
     const { recordCrash, readRuntime } = require('../core/configFile');
-    onAppCrash(async ({ id, name, code }) => {
+    onAppCrash(async ({ id, name, code, errorTail }) => {
       // MCP stop_app (and the VS Code extension) kill from another process and
       // delete the sidecar entry once the kill returns: give them a moment, and
       // treat an entry that vanished as a stop, not a crash.
       await new Promise((r) => setTimeout(r, 1500));
       if (!readRuntime(configStore.configPath).apps[id]) return;
-      recordCrash(configStore.configPath, id, code);
+      recordCrash(configStore.configPath, id, code, {
+        errorTail,
+        port: configStore.getApp(id)?.preferredPort,
+      });
       if (configStore.getSettings().notifyOnCrash !== false) {
         const body = `${name} exited unexpectedly${code != null ? ` (code ${code})` : ''}.`;
         try {

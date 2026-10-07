@@ -406,12 +406,44 @@ function getRunningStatus(apps, activePorts) {
 }
 
 /**
+ * Truncate (creating its folder) the log a detached start writes to. Returns
+ * the path, or null when the file cannot be opened - e.g. a leftover process
+ * from an earlier run still holds it on Windows, where a shell redirect to a
+ * held file aborts the command. The app then starts without a log.
+ */
+function prepareLog(logPath) {
+  if (!logPath) return null;
+  try {
+    fs.mkdirSync(path.dirname(logPath), { recursive: true });
+    fs.writeFileSync(logPath, '');
+    return logPath;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The shell line that starts `command` detached, its stdout and stderr going to
+ * `logPath` (or discarded when null). On Windows the redirect binds to the
+ * last command of a `&&` chain, which is the long-running server in a
+ * `cd x && npm run dev`; POSIX runs the whole line under sh -c.
+ */
+function detachedCommand(platform, command, logPath) {
+  if (platform === 'win32') {
+    const out = logPath ? `"${logPath}"` : 'NUL';
+    return `start /B cmd /c "${command} > ${out} 2>&1"`;
+  }
+  const q = (v) => `'${String(v).replace(/'/g, `'\\''`)}'`;
+  return `nohup sh -c ${q(command)} > ${logPath ? q(logPath) : '/dev/null'} 2>&1 &`;
+}
+
+/**
  * Start an app and report an HONEST result. When the app has a preferredPort we
  * poll for it to come up (so a command that fails immediately reports failure
  * instead of a misleading success). Without a port we can only confirm the
  * shell spawned, and say so.
  */
-function startApp(app) {
+function startApp(app, logPath = null) {
   return new Promise((resolve) => {
     let settled = false;
     const done = (res) => { if (!settled) { settled = true; resolve(res); } };
@@ -420,9 +452,7 @@ function startApp(app) {
       if (app.preferredPort) env.PORT = String(app.preferredPort);
 
       const options = { cwd: app.cwd, env, detached: true, stdio: 'ignore', shell: true, windowsHide: true };
-      const child = os.platform() === 'win32'
-        ? exec(`start /B cmd /c "${app.command}"`, options)
-        : exec(`nohup ${app.command} >/dev/null 2>&1 &`, options);
+      const child = exec(detachedCommand(os.platform(), app.command, prepareLog(logPath)), options);
 
       child.on('error', (err) => done({ success: false, error: err.message }));
       if (typeof child.unref === 'function') child.unref();
@@ -606,7 +636,7 @@ function createServer() {
       const config = readConfig();
       const app = findApp(config.apps || [], identifier);
       if (!app) return { content: [{ type: 'text', text: `App not found: ${identifier}` }], isError: true };
-      const result = await startApp(app);
+      const result = await startApp(app, configFile.logPathFor(getConfigPath(), app.id));
       if (result.success) stampStart(getConfigPath(), app, sessionId);
       return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }], isError: !result.success };
     }
@@ -647,7 +677,7 @@ function createServer() {
       else return { content: [{ type: 'text', text: 'Specify group or favorites: true' }], isError: true };
 
       const results = await Promise.all(apps.map(async a => {
-        const result = await startApp(a);
+        const result = await startApp(a, configFile.logPathFor(getConfigPath(), a.id));
         if (result.success) stampStart(getConfigPath(), a, sessionId);
         return { name: a.name, ...result };
       }));
@@ -1059,4 +1089,4 @@ async function main() {
 const isMain = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
 if (isMain) main().catch(console.error);
 
-export { normPath, pickColor, resolveWorktreeGit, registerWorktree, stampStart };
+export { normPath, pickColor, resolveWorktreeGit, registerWorktree, stampStart, detachedCommand, prepareLog };
