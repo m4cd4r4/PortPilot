@@ -56,6 +56,12 @@ Status vocabulary: `later` / `materialised` / `merged (PR #N)` / `superseded`.
   - What the gate review found: #46 and #47 are sound. #48's guard can start the wrong app, drop the rest of a command, or wrongly deny on a busy preferredPort. #49 records a crash when the user kills an app by port, and the status line keeps its own crash rule that disagrees with every other surface. Those became #15 and #16, and they go first.
   - What the open questions settled: mod UI renders on `terminal` and `desktop` only (mods reference, v2.1.289), so C2 for VS Code is its own row (#17). MCP channels are a research preview with a plugin allowlist, so the crash push left #10 for #18, Wave 4.
   - Order. Track A (Claude Code): #15, then #13, then #11. Track B (app UI): #16, then #10, then #12. #17 after #11 settles the pane's content. #16 and #15 can run in parallel: #16 touches `processManager.js`, `status.js` and the one crash-rule line in `guard-core.mjs`, so #15 rebases onto #16 if both are open.
+  - **#16 follow-ups (not fixed in #51, fold into later rows or the Wave 3 gate):**
+    - `vscode-extension/src/appsTreeProvider.ts:66` has its own crash rule (stamp only, no starting window) and does not call `status.runtimeStateOf`. Same drift #16 removed from the status line.
+    - An MCP-started app that never binds reads crashed after 60s, because only the 60s window can flag it.
+    - The `process:kill` IPC (raw pid) still cannot match the shell pid; only kills by port are covered.
+    - The 1500ms settle in the `onAppCrash` handler in `src/main/main.js` is a heuristic.
+    - #15 rebases onto #16 in `plugin/hooks/guard-core.mjs`; #16 touched only the import line, `appStates` and `statusLine`.
 - **Wave 4 (guess until Wave 3 lands):** #18, if channels leave preview. Re-plan at the gate.
 
 Per the wave-gate rule, Wave N+1 scope is a guess until Wave N lands; re-plan at each gate.
