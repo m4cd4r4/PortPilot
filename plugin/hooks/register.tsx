@@ -41,14 +41,20 @@ import {
   parseListeners,
   parseStart,
   parseTasklistName,
+  planAutoRegister,
   routeResult,
   startDir,
   statusLine,
   targetPort,
+  worktreeParent,
+  type App,
+  type AutoRegisterPlan,
   type Config,
   type Listeners,
+  type PackageJson,
   type Platform,
   type Runtime,
+  type Start,
 } from './guard-core.mjs'
 
 const REFRESH_MS = 15_000
@@ -193,9 +199,78 @@ async function refreshCrashes($: EngineInterface, config: Config | null, runtime
   }
 }
 
-async function startTool($: EngineInterface) {
+async function portpilotTool($: EngineInterface, name: string) {
   const tools = await $.tool.list()
-  return tools.find((t) => t.mcp && /portpilot/i.test(t.name) && t.name.endsWith('__start_app'))
+  return tools.find((t) => t.mcp && /portpilot/i.test(t.name) && t.name.endsWith(`__${name}`))
+}
+
+async function startTool($: EngineInterface) {
+  return portpilotTool($, 'start_app')
+}
+
+/** `git rev-parse --git-dir --git-common-dir` in dir, or nulls outside a repo. */
+async function gitDirs($: EngineInterface, cwd: string) {
+  try {
+    const { exitCode, stdout } = await $.process.run(['git', '-C', cwd, 'rev-parse', '--path-format=absolute', '--git-dir', '--git-common-dir'], { timeoutMs: 5000 })
+    const [gitDir, commonDir] = stdout.trim().split(/\r?\n/)
+    if (exitCode === 0 && gitDir && commonDir) return { gitDir, commonDir }
+  } catch { /* not a repo, or no git */ }
+  return { gitDir: null, commonDir: null }
+}
+
+/** The new app's id from add_app / add_worktree's JSON reply, else its name. */
+function addedId(text: string | undefined, fallback: string): string {
+  try {
+    const id = JSON.parse(String(text || '')).app?.id
+    if (typeof id === 'string' && id) return id
+  } catch { /* not JSON */ }
+  return fallback
+}
+
+/**
+ * Registers an unregistered project's certain start, then routes it through
+ * start_app. Returns undefined (run the command as written) when any rule
+ * fails or the registration does; after a successful add, a start_app failure
+ * is reported as decide's route would report it.
+ */
+async function autoRegister(
+  $: EngineInterface,
+  c: { start: Start; dir: string; config: Config; listeners: Listeners; windows: boolean; home: string; sessionCwd: string },
+) {
+  const cwd = startDir(c.sessionCwd, c.start.cd, { windows: c.windows, home: c.home, keepCase: true })
+  const [pkg, addApp, addWt, start] = await Promise.all([
+    readJson<PackageJson>($, `${cwd}/package.json`),
+    portpilotTool($, 'add_app'),
+    portpilotTool($, 'add_worktree'),
+    startTool($),
+  ])
+  const plan: AutoRegisterPlan | null = planAutoRegister({
+    start: c.start, dir: c.dir, cwd, config: c.config, listeners: c.listeners, pkg, home: c.home,
+    tools: { add: !!addApp, start: !!start }, windows: c.windows,
+  })
+  if (!plan || !addApp || !start) return undefined
+
+  const parent = addWt ? worktreeParent({ dir: c.dir, ...(await gitDirs($, cwd)), config: c.config, windows: c.windows }) : null
+  const added = parent && addWt
+    ? await $.tool.call({ tool: addWt.name as McpToolName, path: plan.cwd, command: plan.command, preferredPort: plan.port, parent: parent.id })
+    : await $.tool.call({
+        tool: addApp.name as McpToolName, name: plan.name, command: plan.command, cwd: plan.cwd, preferredPort: plan.port,
+        description: 'Auto-registered from Claude Code',
+      })
+  if (!added || added.deny !== undefined || added.isError) return undefined
+
+  const id = addedId(added.text, plan.name)
+  const app: App = { id, name: parent ? parent.name : plan.name, cwd: plan.cwd, preferredPort: plan.port }
+  // Past the add, never fall back to a shell start: a detached start may
+  // still be coming up, and a second one would collide with it.
+  let ran: { deny?: string; isError?: boolean; text?: string }
+  try {
+    ran = await $.tool.call({ tool: start.name as McpToolName, identifier: id, sessionId: await $.session.id() })
+  } catch (err) {
+    ran = { isError: true, text: String((err as Error)?.message || err) }
+  }
+  void refresh($)
+  return routeResult({ app, port: plan.port, cd: c.start.cd, registered: true }, ran)
 }
 
 async function restart($: EngineInterface, crash: ShownCrash) {
@@ -279,14 +354,25 @@ export const register: Register = (on) => {
 
     const windows = platform === 'win32'
     const home = (await $.env.get('HOME')) || (await $.env.get('USERPROFILE')) || ''
-    const where = startDir(await $.session.cwd(), start.cd, { windows, home })
+    const sessionCwd = await $.session.cwd()
+    const where = startDir(sessionCwd, start.cd, { windows, home })
     const port = targetPort({ start, dir: where, config, windows })
     if (port) await holderName($, platform, listeners, port)
 
     const decision = decide({ start, dir: where, config, runtime, listeners, windows })
 
     if (decision.action === 'deny') return { deny: decision.reason }
-    if (decision.action === 'pass') return next(e)
+    if (decision.action === 'pass') {
+      // An unregistered project's certain start: register it, then route it.
+      // Any failure before the add lands runs the command as written.
+      let routed
+      try {
+        routed = await autoRegister($, { start, dir: where, config, listeners, windows, home, sessionCwd })
+      } catch {
+        routed = undefined
+      }
+      return routed ?? next(e)
+    }
 
     // Route: start the registered app through PortPilot's own MCP tool.
     const tool = await startTool($)

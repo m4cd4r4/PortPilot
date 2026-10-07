@@ -1,5 +1,7 @@
 # Run history + auto-register: design
 
+**Approved by Macdara 2026-10-08: all five open-question recommendations accepted.**
+
 Brief: [`docs/prompts/run-history.md`](../prompts/run-history.md). Design only; no feature code in this commit. Three PRs: **A** (auto-register in the guard), **B1** (run records, snapshot, pruning, `find_run`), **B2** (desktop History view, thumbnails, Re-run).
 
 ## Corrections to the brief (source files win)

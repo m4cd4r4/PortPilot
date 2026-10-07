@@ -10,6 +10,7 @@
 import assert from 'node:assert';
 import {
   parseListeners, parseTasklistName, appStates, statusLine, parseStart, normPath, startDir, decide, routeResult,
+  planAutoRegister, worktreeParent,
 } from '../plugin/hooks/guard-core.mjs';
 
 let passed = 0;
@@ -282,6 +283,134 @@ t('decide: pass when an explicit free port differs from preferredPort', () => {
 t('decide: pass when no registered app matches and the port is free', () => {
   const r = guard('npm run dev', { cwd: 'I:/somewhere/else', listeners: listen(3000) });
   assert.deepStrictEqual(r, { action: 'pass' });
+});
+
+// ---- auto-register (docs/run-history/DESIGN.md, PR A) -----------------------
+// tdd-guard:allow  (table-driven port of the design's test table)
+
+const TOOLS = { add: true, start: true };
+const UNREG = 'I:/Scratch/shop/apps/web';
+
+/** The guard then the auto-register plan, composed as register.tsx composes them. */
+function autoPlan(command, { cwd = UNREG, listeners = listen(), cfg = config, pkg = null, tools = TOOLS, home = 'C:/Users/me' } = {}) {
+  const start = parseStart(command);
+  if (!start) return { decision: null, plan: null };
+  const dir = startDir(cwd, start.cd, { windows: true, home });
+  const decision = decide({ start, dir, config: cfg, runtime: {}, listeners, windows: true });
+  const plan = decision.action === 'pass'
+    ? planAutoRegister({ start, dir, cwd: startDir(cwd, start.cd, { windows: true, home, keepCase: true }), config: cfg, listeners, pkg, home, tools, windows: true })
+    : null;
+  return { decision, plan };
+}
+
+t('auto-register: an explicit --port in an unregistered dir plans add + route', () => {
+  const { plan } = autoPlan('npm run dev -- --port 3005', { pkg: { name: '@acme/shop-web' } });
+  assert.deepStrictEqual(plan, { name: 'shop-web', command: 'npm run dev -- --port 3005', cwd: UNREG, port: 3005 });
+});
+
+t('auto-register: parseStart keeps the raw step; the command is not the normalised script', () => {
+  const s = parseStart('cd web && npm run dev -- --port 3005 &');
+  assert.equal(s.raw, 'npm run dev -- --port 3005');
+  assert.equal(s.script, 'npm dev');
+});
+
+t('auto-register: a leading PORT=N is stripped from the command (start_app sets PORT)', () => {
+  const { plan } = autoPlan('PORT=3005 npm run dev');
+  assert.equal(plan.command, 'npm run dev');
+  assert.equal(plan.port, 3005);
+});
+
+t('auto-register: bare python -m http.server is 8000, cwd follows the cd in its own case', () => {
+  const { plan } = autoPlan('cd mock && python -m http.server', { cwd: 'I:/Scratch/Shop' });
+  assert.deepStrictEqual(plan, { name: 'mock', command: 'python -m http.server', cwd: 'I:/Scratch/Shop/mock', port: 8000 });
+  // Anything after it (a positional port past a flag) is not read: pass.
+  assert.equal(autoPlan('python -m http.server --bind 0.0.0.0 9000').plan, null);
+});
+
+t('auto-register: the port comes from the package.json script the command names', () => {
+  assert.equal(autoPlan('npm run dev', { pkg: { scripts: { dev: 'vite --port 5174' } } }).plan.port, 5174);
+  assert.equal(autoPlan('pnpm start', { pkg: { scripts: { start: 'next start -p 3100' } } }).plan.port, 3100);
+});
+
+t('auto-register: a framework default port is not certain: pass, no plan', () => {
+  for (const dev of ['next dev', 'vite', 'astro dev']) {
+    assert.equal(autoPlan('npm run dev', { pkg: { scripts: { dev } } }).plan, null, dev);
+  }
+  assert.equal(autoPlan('npm run dev').plan, null, 'no package.json');
+  // Two ports, or a port from a variable, in the script: unknown.
+  assert.equal(autoPlan('npm run dev', { pkg: { scripts: { dev: 'concurrently "vite --port 5174" "node api.js --port 4000"' } } }).plan, null);
+  assert.equal(autoPlan('npm run dev', { pkg: { scripts: { dev: 'vite --port $PORT' } } }).plan, null);
+});
+
+t('auto-register: uncertain commands pass with no plan', () => {
+  for (const cmd of ['npm install && npm run dev --port 3005', 'npm run dev --port $P', 'PORT=$P npm run dev',
+    'cd "$(mktemp -d)" && npm run dev -- --port 3005', 'npm run dev -- --port 3005 "unbalanced']) {
+    const { decision, plan } = autoPlan(cmd);
+    assert.ok(!decision || decision.action === 'pass', cmd);
+    assert.equal(plan, null, cmd);
+  }
+});
+
+t('auto-register: a start that is not bare (pipe, redirect, env, later step) passes', () => {
+  for (const cmd of ['npm run dev -- --port 3005 | tee dev.log', 'npm run dev -- --port 3005 > dev.log',
+    'FOO=1 npm run dev -- --port 3005', 'npm run dev -- --port 3005; echo done']) {
+    assert.deepStrictEqual(autoPlan(cmd), { decision: { action: 'pass' }, plan: null }, cmd);
+  }
+});
+
+t('auto-register: a listening port is never a registration; decide keeps its deny', () => {
+  const { decision, plan } = autoPlan('npm run dev -- --port 3005', { listeners: listen(3005) });
+  assert.equal(decision.action, 'deny');
+  assert.equal(plan, null);
+  // A port only the script knows, busy: decide passes (it cannot see it), the plan refuses.
+  assert.deepStrictEqual(autoPlan('npm run dev', { pkg: { scripts: { dev: 'vite --port 5174' } }, listeners: listen(5174) }),
+    { decision: { action: 'pass' }, plan: null });
+});
+
+t('auto-register: never in the home dir, a drive root or /', () => {
+  assert.equal(autoPlan('python -m http.server', { cwd: 'C:/Users/me' }).plan, null);
+  assert.equal(autoPlan('python -m http.server', { cwd: 'C:/Users/Me/' }).plan, null);
+  assert.equal(autoPlan('python -m http.server', { cwd: 'D:/' }).plan, null);
+  assert.equal(autoPlan('cd / && python -m http.server').plan, null);
+});
+
+t('auto-register: settings.autoRegister false opts out', () => {
+  const cfg = { ...config, settings: { autoRegister: false } };
+  assert.equal(autoPlan('npm run dev -- --port 3005', { cfg }).plan, null);
+  assert.ok(autoPlan('npm run dev -- --port 3005', { cfg: { ...config, settings: {} } }).plan);
+});
+
+t('auto-register: a registered dir keeps its existing route or pass', () => {
+  assert.deepStrictEqual(autoPlan('npm run dev -- --port 4100', { cwd: 'I:/Scratch/app/api' }), { decision: { action: 'pass' }, plan: null });
+  assert.equal(autoPlan('npm run dev', { cwd: 'I:/Scratch/app/api' }).decision.action, 'route');
+});
+
+t('auto-register: add_app or start_app not connected: pass', () => {
+  assert.equal(autoPlan('npm run dev -- --port 3005', { tools: { add: false, start: true } }).plan, null);
+  assert.equal(autoPlan('npm run dev -- --port 3005', { tools: { add: true, start: false } }).plan, null);
+});
+
+t('auto-register: a name clash appends the parent folder, then -2', () => {
+  const cfg = { apps: [...config.apps, { id: 'w2', name: 'Web', cwd: 'I:/elsewhere/web' }] };
+  assert.equal(autoPlan('npm run dev -- --port 3005', { cfg, pkg: { name: 'web' } }).plan.name, 'web (apps)');
+  const taken = { apps: [...cfg.apps, { id: 'w3', name: 'web (apps)', cwd: 'I:/x/apps/web' }] };
+  assert.equal(autoPlan('npm run dev -- --port 3005', { cfg: taken, pkg: { name: 'web' } }).plan.name, 'web (apps)-2');
+});
+
+t('auto-register: a linked worktree nests under the registered main checkout', () => {
+  const cfg = { apps: [{ id: 'shop', name: 'shop', cwd: 'I:/Scratch/shop' }] };
+  const dir = 'i:/scratch/shop-checkout';
+  assert.equal(worktreeParent({ dir, gitDir: 'I:/Scratch/shop/.git/worktrees/shop-checkout', commonDir: 'I:/Scratch/shop/.git', config: cfg, windows: true }).id, 'shop');
+  // The main checkout itself (git dir = common dir), outside a repo, or an unregistered repo: no parent.
+  assert.equal(worktreeParent({ dir: 'i:/scratch/shop/apps/web', gitDir: 'I:/Scratch/shop/.git', commonDir: 'I:/Scratch/shop/.git', config: cfg, windows: true }), null);
+  assert.equal(worktreeParent({ dir, gitDir: null, commonDir: null, config: cfg, windows: true }), null);
+  assert.equal(worktreeParent({ dir, gitDir: 'I:/Other/.git/worktrees/x', commonDir: 'I:/Other/.git', config: cfg, windows: true }), null);
+});
+
+t('auto-register: the route note says the app was registered', () => {
+  const ok = routeResult({ app: { id: 'n1', name: 'shop-web' }, port: 3005, cd: null, registered: true }, { text: '{"success":true}' });
+  assert.match(ok.result.stdout, /PortPilot started shop-web on :3005/);
+  assert.match(ok.result.stdout, /registered it as "shop-web" first/);
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

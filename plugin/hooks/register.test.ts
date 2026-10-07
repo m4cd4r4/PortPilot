@@ -31,6 +31,9 @@ type World = {
   cwd?: string
   withStartTool?: boolean
   startFails?: boolean
+  withAddTool?: boolean
+  addFails?: boolean
+  addCalls?: unknown[]
   config?: object | null
   bashRuns?: string[]
   startCalls?: unknown[]
@@ -67,6 +70,7 @@ function world(on: On, w: World = {}) {
   on('tool.list', async () => ({ value: w.withStartTool === false ? [] : [
     { name: 'Bash', description: 'shell', mcp: false },
     { name: 'mcp__portpilot__start_app', description: 'start an app', mcp: true },
+    ...(w.withAddTool ? [{ name: 'mcp__portpilot__add_app', description: 'add an app', mcp: true }] : []),
   ] }))
   on('ui.status', async (_$, e) => { w.statuses?.push(e.text); return { value: undefined } })
   on('ui.toast', async (_$, e) => { w.toasts?.push(e.text); return { value: undefined } })
@@ -75,6 +79,11 @@ function world(on: On, w: World = {}) {
   // The engine's own drawing, for when the band has nothing to show.
   on('ui.render', async () => ({ type: 'Box' }))
   on('tool.call', async (_$, e) => {
+    if (e.tool === 'mcp__portpilot__add_app') {
+      w.addCalls?.push(e)
+      if (w.addFails) return { isError: true, result: 'exists', text: 'App "shop" already exists' } as never
+      return { result: 'added', text: JSON.stringify({ success: true, app: { id: 'new1', name: 'shop' } }) } as never
+    }
     if (e.tool === 'mcp__portpilot__start_app') {
       w.startCalls?.push(e)
       if (w.startFails) return { isError: true, result: 'start failed', text: '{"success":false,"error":"Port 4000 did not open"}' } as never
@@ -163,6 +172,29 @@ test('session start sets the status line and refreshes it on the timer', async (
   expect(statuses).toEqual(['⚓ 1 up · :3000 web✦'])
   await clock.advance(15_000)
   expect(statuses.length).toBe(2)
+})
+
+// ---- auto-register (run-history PR A) ----------------------------------------
+
+test('an unregistered project with a certain port is registered, then routed', async ($, on) => {
+  const bashRuns: string[] = []
+  const addCalls: unknown[] = []
+  const startCalls: unknown[] = []
+  world(on, { cwd: 'C:/work/Shop', bashRuns, addCalls, startCalls, withAddTool: true })
+  const r = await $.tool.call(bash('PORT=3005 npm run dev'))
+  expect(bashRuns).toEqual([])
+  expect(addCalls).toEqual([expect.objectContaining({ name: 'Shop', command: 'npm run dev', cwd: 'C:/work/Shop', preferredPort: 3005 })])
+  expect(startCalls).toEqual([expect.objectContaining({ identifier: 'new1', sessionId: 'sess-1' })])
+  expect(r.result).toEqual(expect.objectContaining({ stdout: expect.stringContaining('registered it as "Shop" first') }))
+})
+
+test('add_app returning isError runs the command untouched', async ($, on) => {
+  const bashRuns: string[] = []
+  const startCalls: unknown[] = []
+  world(on, { cwd: 'C:/work/Shop', bashRuns, startCalls, withAddTool: true, addFails: true })
+  await $.tool.call(bash('npm run dev -- --port 3005'))
+  expect(startCalls).toEqual([])
+  expect(bashRuns).toEqual(['npm run dev -- --port 3005'])
 })
 
 // ---- crash band (C4) --------------------------------------------------------

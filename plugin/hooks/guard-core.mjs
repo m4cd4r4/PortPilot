@@ -249,10 +249,11 @@ export function devStart(text) {
 
 /**
  * Parse a Bash command for a dev-server start.
- * @returns {null | {cd: string|null, port: number|null, script: string, certain: boolean, bare: boolean}}
+ * @returns {null | {cd: string|null, port: number|null, script: string, raw: string, certain: boolean, bare: boolean}}
  *   cd       the directory a leading `cd X &&` chain moves to (as written), or null
  *   port     an explicit port (`--port`, `-p`, `PORT=`, `export PORT=`), or null
  *   script   the start, normalised for comparing with an app's command
+ *   raw      the start step as written (runnable, unlike script)
  *   certain  the directory and the port can be read from the command: no
  *            other step before the start, no subshell, no PORT read from a variable
  *   bare     certain, and nothing but a leading cd chain and a trailing `&`
@@ -273,7 +274,7 @@ export function parseStart(command) {
       if (!start.portKnown) certain = false;
       const last = i === steps.length - 1;
       if (start.env || step.redirect || !(last && (step.op === null || step.op === '&'))) bare = false;
-      return { cd, port, script: start.script, certain, bare: certain && bare };
+      return { cd, port, script: start.script, raw: step.text, certain, bare: certain && bare };
     }
     // A step before the start: it must run first and must not move the
     // directory in a way the command does not show.
@@ -302,11 +303,14 @@ export function parseStart(command) {
 
 // ---- Paths ------------------------------------------------------------------
 
-/** Comparable form of a path: forward slashes, no trailing slash, `.`/`..` folded. */
-export function normPath(p, { windows = false } = {}) {
+/**
+ * Comparable form of a path: forward slashes, no trailing slash, `.`/`..` folded.
+ * keepCase skips the windows lower-casing, for a path that is written back.
+ */
+export function normPath(p, { windows = false, keepCase = false } = {}) {
   let s = String(p || '').replace(/\\/g, '/');
   // Git Bash spells I:\x as /i/x.
-  if (windows) s = s.replace(/^\/([a-zA-Z])(?=\/|$)/, '$1:');
+  if (windows) s = s.replace(/^\/([a-zA-Z])(?=\/|$)/, (_, d) => `${d.toUpperCase()}:`);
   const abs = s.startsWith('/') ? '/' : '';
   const out = [];
   for (const part of s.split('/')) {
@@ -315,7 +319,7 @@ export function normPath(p, { windows = false } = {}) {
     out.push(part);
   }
   const joined = abs + out.join('/');
-  return windows ? joined.toLowerCase() : joined;
+  return windows && !keepCase ? joined.toLowerCase() : joined;
 }
 
 function isAbsolute(p) {
@@ -323,12 +327,12 @@ function isAbsolute(p) {
 }
 
 /** The directory a start runs in: the session cwd, moved by a leading cd. */
-export function startDir(sessionCwd, cd, { windows = false, home = '' } = {}) {
-  if (!cd) return normPath(sessionCwd, { windows });
+export function startDir(sessionCwd, cd, { windows = false, home = '', keepCase = false } = {}) {
+  if (!cd) return normPath(sessionCwd, { windows, keepCase });
   let target = cd;
   if (target.startsWith('~')) target = home + target.slice(1);
   if (!isAbsolute(target)) target = `${sessionCwd}/${target}`;
-  return normPath(target, { windows });
+  return normPath(target, { windows, keepCase });
 }
 
 // ---- Guard decision ---------------------------------------------------------
@@ -435,6 +439,102 @@ export function decide({ start, dir, config, runtime, listeners, windows = false
   return { action: 'pass' };
 }
 
+// ---- Auto-register ----------------------------------------------------------
+
+// A package script start with nothing after it: `npm run dev` reads scripts.dev.
+const SCRIPT_START = /^(?:npm|pnpm|yarn|bun) (dev|start|serve|preview)$/;
+const PORT_FLAG_ALL = /(?:^|\s)(?:--port[=\s]+|-p\s+)(\d{2,5})\b/g;
+const HTTP_SERVER_DEFAULT = 8000;
+
+/**
+ * The port a start in an unregistered directory will certainly bind, or null:
+ * its explicit port, else the one literal `--port N` / `-p N` in the
+ * package.json script it names, else 8000 for a bare `python -m http.server`.
+ * Framework defaults (Vite 5173, Next 3000) are not certain: config files and
+ * .env can move them.
+ */
+export function autoRegisterPort(start, pkg) {
+  if (start.port) return start.port;
+  const m = start.script.match(SCRIPT_START);
+  if (m) {
+    const script = pkg && pkg.scripts && typeof pkg.scripts[m[1]] === 'string' ? pkg.scripts[m[1]] : null;
+    if (!script || PORT_UNREAD.test(script)) return null;
+    // Two different ports (`concurrently` a server and an API): unknown.
+    const ports = new Set([...script.matchAll(PORT_FLAG_ALL)].map((x) => Number(x[1])));
+    return ports.size === 1 ? [...ports][0] : null;
+  }
+  if (/^python3? -m http\.server$/.test(start.script)) return HTTP_SERVER_DEFAULT;
+  return null;
+}
+
+function baseName(p) {
+  const parts = String(p || '').split('/').filter(Boolean);
+  return parts[parts.length - 1] || '';
+}
+
+/** A display name no registered app has (case-insensitive, as add_app checks). */
+export function uniqueAppName(wanted, cwd, apps) {
+  const taken = new Set(apps.map((a) => String(a.name || '').toLowerCase()));
+  if (!taken.has(wanted.toLowerCase())) return wanted;
+  const parent = baseName(cwd.split('/').slice(0, -1).join('/'));
+  const withParent = parent ? `${wanted} (${parent})` : wanted;
+  if (!taken.has(withParent.toLowerCase())) return withParent;
+  for (let n = 2; ; n++) if (!taken.has(`${withParent}-${n}`.toLowerCase())) return `${withParent}-${n}`;
+}
+
+/**
+ * Whether a start the guard passed should register its directory as a new
+ * app, then be routed through start_app. Called only after decide() passed,
+ * so every deny and pass path there is untouched. Every rule must hold, else
+ * null and the command runs as written.
+ *
+ * @param {object} c
+ * @param {object} c.start      from parseStart
+ * @param {string} c.dir        normalised directory (comparison form)
+ * @param {string} c.cwd        the same directory in the platform's own case
+ * @param {object} c.config     PortPilot config ({ apps, settings })
+ * @param {Map}    c.listeners  from parseListeners
+ * @param {object|null} c.pkg   the directory's package.json, parsed
+ * @param {string} c.home       the user's home directory
+ * @param {{add:boolean, start:boolean}} c.tools  add_app and start_app connected
+ * @returns {null | {name:string, command:string, cwd:string, port:number}}
+ */
+export function planAutoRegister({ start, dir, cwd, config, listeners, pkg, home = '', tools, windows = false }) {
+  const settings = (config && config.settings) || {};
+  if (settings.autoRegister === false) return null;
+  if (!start || !start.certain || !start.bare) return null;
+  const apps = registeredApps(config);
+  if (appInDir(apps, dir, windows)) return null;
+  if (dir === '/' || /^[a-z]:$/i.test(dir) || (home && dir === normPath(home, { windows }))) return null;
+  const port = autoRegisterPort(start, pkg);
+  if (!port || listeners.has(port)) return null;
+  if (!tools || !tools.add || !tools.start) return null;
+
+  // start_app sets PORT from preferredPort; a --port flag stays so the next
+  // bare start still matches the registered command.
+  const command = String(start.raw || '').replace(/^(?:PORT=\d{2,5}\s+)+/, '').trim();
+  if (!command) return null;
+  const pkgName = pkg && typeof pkg.name === 'string' ? pkg.name.replace(/^@[^/]+\//, '').trim() : '';
+  const name = uniqueAppName(pkgName || baseName(cwd) || 'app', cwd, apps);
+  return { name, command, cwd, port };
+}
+
+/**
+ * The registered app whose repo a linked worktree belongs to, or null.
+ * gitDir and commonDir are `git rev-parse --git-dir --git-common-dir` run in
+ * the start's directory; they differ only in a linked worktree, and the main
+ * checkout is the common dir's parent.
+ */
+export function worktreeParent({ dir, gitDir, commonDir, config, windows = false }) {
+  if (!gitDir || !commonDir) return null;
+  const abs = (p) => normPath(isAbsolute(p) ? p : `${dir}/${p}`, { windows });
+  const common = abs(commonDir);
+  if (abs(gitDir) === common || !/\/\.git$/.test(common)) return null;
+  const main = common.replace(/\/\.git$/, '');
+  if (main === dir) return null;
+  return appInDir(registeredApps(config), main, windows);
+}
+
 /**
  * What the routed Bash call reports, from start_app's tool-call result.
  * A refused call (`deny`) or a failed start (`isError`) is a deny, never
@@ -454,9 +554,10 @@ export function routeResult(route, ran) {
   }
   const onPort = route.port ? ` on :${route.port}` : '';
   const cdNote = route.cd ? ` start_app ran it in the app's own directory, so the shell's working directory was not changed.` : '';
+  const regNote = route.registered ? ` This directory was not registered, so PortPilot registered it as "${name}" first (turn this off with the "Register new projects when Claude starts them" setting).` : '';
   return {
     result: {
-      stdout: `PortPilot started ${name}${onPort} through its start_app tool instead of a bare shell start, so the server is tracked and the port is checked.${cdNote}\n${text}`,
+      stdout: `PortPilot started ${name}${onPort} through its start_app tool instead of a bare shell start, so the server is tracked and the port is checked.${regNote}${cdNote}\n${text}`,
       stderr: '',
       interrupted: false,
     },
