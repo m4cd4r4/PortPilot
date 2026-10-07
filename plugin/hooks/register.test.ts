@@ -14,8 +14,8 @@ const APP_CWD = 'C:/work/api'
 
 const CONFIG = {
   apps: [
-    { id: 'web', name: 'web', cwd: 'C:/work/web', preferredPort: 3000 },
-    { id: 'api', name: 'api', cwd: APP_CWD, preferredPort: 4000 },
+    { id: 'web', name: 'web', cwd: 'C:/work/web', command: 'npm run dev', preferredPort: 3000 },
+    { id: 'api', name: 'api', cwd: APP_CWD, command: 'npm run dev', preferredPort: 4000 },
   ],
 }
 const RUNTIME = {
@@ -30,6 +30,7 @@ const NETSTAT = [
 type World = {
   cwd?: string
   withStartTool?: boolean
+  startFails?: boolean
   config?: object | null
   bashRuns?: string[]
   startCalls?: unknown[]
@@ -63,6 +64,7 @@ function world(on: On, w: World = {}) {
   on('tool.call', async (_$, e) => {
     if (e.tool === 'mcp__portpilot__start_app') {
       w.startCalls?.push(e)
+      if (w.startFails) return { isError: true, result: 'start failed', text: '{"success":false,"error":"Port 4000 did not open"}' } as never
       return { result: 'started api on :4000', text: 'started api on :4000' } as never
     }
     w.bashRuns?.push((e as { command: string }).command)
@@ -98,6 +100,16 @@ test('a registered app on a free port is routed through start_app', async ($, on
   expect(bashRuns).toEqual([])
   expect(startCalls).toEqual([expect.objectContaining({ identifier: 'api', sessionId: 'sess-1' })])
   expect(r.result).toEqual(expect.objectContaining({ stdout: expect.stringContaining('PortPilot started api on :4000') }))
+})
+
+test('a failed start_app is a deny, not "started"', async ($, on) => {
+  const bashRuns: string[] = []
+  world(on, { cwd: APP_CWD, bashRuns, startFails: true })
+  const r = await $.tool.call(bash('npm run dev'))
+  expect(bashRuns).toEqual([])
+  expect(r.result).toBeUndefined()
+  expect(r.deny).toContain('starting it through start_app failed')
+  expect(r.deny).toContain('Port 4000 did not open')
 })
 
 test('an explicit port other than preferredPort passes through', async ($, on) => {

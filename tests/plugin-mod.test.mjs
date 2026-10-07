@@ -9,7 +9,7 @@
  */
 import assert from 'node:assert';
 import {
-  parseListeners, parseTasklistName, appStates, statusLine, parseStart, normPath, startDir, decide,
+  parseListeners, parseTasklistName, appStates, statusLine, parseStart, normPath, startDir, decide, routeResult,
 } from '../plugin/hooks/guard-core.mjs';
 
 let passed = 0;
@@ -69,10 +69,10 @@ t('parseTasklistName reads the image name from CSV', () => {
 const claudeStart = { kind: 'claude', surface: 'mcp', sessionId: 'abcd1234' };
 const config = {
   apps: [
-    { id: 'web', name: 'web', cwd: 'I:/Scratch/app/web', preferredPort: 3000 },
-    { id: 'api', name: 'api', cwd: 'I:/Scratch/app/api', preferredPort: 4000 },
-    { id: 'docs', name: 'docs', cwd: 'I:/Scratch/app/docs', preferredPort: 5000 },
-    { id: 'idle', name: 'idle', cwd: 'I:/Scratch/app/idle', preferredPort: 6000 },
+    { id: 'web', name: 'web', cwd: 'I:/Scratch/app/web', command: 'npm run dev', preferredPort: 3000 },
+    { id: 'api', name: 'api', cwd: 'I:/Scratch/app/api', command: 'npm run dev', preferredPort: 4000 },
+    { id: 'docs', name: 'docs', cwd: 'I:/Scratch/app/docs', command: 'npm run dev', preferredPort: 5000 },
+    { id: 'idle', name: 'idle', cwd: 'I:/Scratch/app/idle', command: 'npm run dev', preferredPort: 6000 },
   ],
 };
 const listen = (...ports) => new Map(ports.map((p) => [p, { port: p, pid: 1, processName: 'node.exe' }]));
@@ -101,20 +101,22 @@ t('appStates: sidecar port wins over preferredPort', () => {
 
 // ---- parseStart -------------------------------------------------------------
 
+const cdPort = (cmd) => { const s = parseStart(cmd); return s && { cd: s.cd, port: s.port }; };
+
 t('parseStart: cd chain then npm run dev', () => {
-  assert.deepStrictEqual(parseStart('cd web && npm run dev'), { cd: 'web', port: null });
-  assert.deepStrictEqual(parseStart('cd "I:/Scratch/my app" && pnpm dev'), { cd: 'I:/Scratch/my app', port: null });
+  assert.deepStrictEqual(cdPort('cd web && npm run dev'), { cd: 'web', port: null });
+  assert.deepStrictEqual(cdPort('cd "I:/Scratch/my app" && pnpm dev'), { cd: 'I:/Scratch/my app', port: null });
 });
 
 t('parseStart: PORT= env prefix', () => {
-  assert.deepStrictEqual(parseStart('PORT=3001 npm run dev'), { cd: null, port: 3001 });
+  assert.deepStrictEqual(cdPort('PORT=3001 npm run dev'), { cd: null, port: 3001 });
 });
 
 t('parseStart: --port and -p flags', () => {
-  assert.deepStrictEqual(parseStart('npx vite --port 5174'), { cd: null, port: 5174 });
-  assert.deepStrictEqual(parseStart('npm run dev -- --port=3002 &'), { cd: null, port: 3002 });
-  assert.deepStrictEqual(parseStart('npx next dev -p 3005'), { cd: null, port: 3005 });
-  assert.deepStrictEqual(parseStart('python -m http.server 8080'), { cd: null, port: 8080 });
+  assert.deepStrictEqual(cdPort('npx vite --port 5174'), { cd: null, port: 5174 });
+  assert.deepStrictEqual(cdPort('npm run dev -- --port=3002 &'), { cd: null, port: 3002 });
+  assert.deepStrictEqual(cdPort('npx next dev -p 3005'), { cd: null, port: 3005 });
+  assert.deepStrictEqual(cdPort('python -m http.server 8080'), { cd: null, port: 8080 });
 });
 
 t('parseStart: non-server commands return null', () => {
@@ -124,8 +126,96 @@ t('parseStart: non-server commands return null', () => {
   assert.equal(parseStart(''), null);
 });
 
-t('parseStart: a non-cd step before the start drops the cd', () => {
-  assert.deepStrictEqual(parseStart('cd web && npm install && npm run dev'), { cd: null, port: null });
+// The whole guard, composed the way register.ts composes it.
+function guard(command, { cwd = 'I:/Scratch/app/web', runtime = {}, listeners = listen(), cfg = config } = {}) {
+  const start = parseStart(command);
+  if (!start) return null;
+  const dir = startDir(cwd, start.cd, { windows: true });
+  return decide({ start, dir, config: cfg, runtime, listeners, windows: true });
+}
+
+t('case 1: a non-cd step before the start passes, busy port or free', () => {
+  // The cd moves to api; the guard must not judge web (the session cwd) instead.
+  assert.deepStrictEqual(guard('cd ../api && npm install && npm run dev'), { action: 'pass' });
+  assert.deepStrictEqual(guard('cd ../api && npm install && npm run dev', { listeners: listen(3000) }), { action: 'pass' });
+});
+
+t('case 2: a pipe, fallback, redirect or later step is never routed (start_app would drop it)', () => {
+  for (const cmd of ['npm run dev | tee dev.log', 'npm run dev || echo fail', 'npm run dev > dev.log 2>&1 &',
+    'npm run dev & sleep 5 && curl localhost:3000', 'npm run dev; echo done', 'NODE_ENV=test npm run dev']) {
+    assert.deepStrictEqual(guard(cmd), { action: 'pass' }, cmd);
+    // The port is still certain, so a busy one is still denied.
+    assert.equal(guard(cmd, { listeners: listen(3000) }).action, 'deny', cmd);
+  }
+  // A bare start, a leading cd chain and a trailing & still route.
+  assert.equal(guard('npm run dev &').action, 'route');
+  assert.equal(guard('cd ../api && npm run dev').app.id, 'api');
+});
+
+t('case 3: export PORT is read; a start whose bound port is unknown is not a collision', () => {
+  // export PORT=3005 binds 3005, not web's 3000.
+  assert.deepStrictEqual(guard('export PORT=3005 && npm run dev', { listeners: listen(3000) }), { action: 'pass' });
+  assert.equal(guard('export PORT=3005 && npm run dev', { listeners: listen(3005) }).action, 'deny');
+  // vite preview binds 4173, not the preferredPort of an app registered as `npm run dev`.
+  assert.deepStrictEqual(guard('npm run preview', { listeners: listen(3000) }), { action: 'pass' });
+  // PORT from a variable, and bash's `set PORT=` (which exports nothing): unknown.
+  assert.deepStrictEqual(guard('PORT=$P npm run dev', { listeners: listen(3000) }), { action: 'pass' });
+  assert.deepStrictEqual(guard('set PORT=3005 && npm run dev', { listeners: listen(3000) }), { action: 'pass' });
+  // An app registered with its own --port: a bare `npm run dev` binds the script's default, unknown.
+  const flagged = { apps: [{ id: 'sol', name: 'sol', cwd: 'I:/Scratch/app/web', command: 'npm run dev -- --port 3007', preferredPort: 3002 }] };
+  assert.deepStrictEqual(guard('npm run dev', { cfg: flagged, listeners: listen(3002, 3007) }), { action: 'pass' });
+  assert.equal(guard('npm run dev -- --port 3007', { cfg: flagged }).action, 'route');
+});
+
+t('case 4: two apps on one preferredPort: the holder is named by sidecar, and counted once', () => {
+  const shared = { apps: [
+    { id: 'web', name: 'web', cwd: 'I:/Scratch/app/web', command: 'npm run dev', preferredPort: 3000 },
+    { id: 'wt', name: 'web-wt', cwd: 'I:/Scratch/app/web-wt', command: 'npm run dev', preferredPort: 3000 },
+  ] };
+  const held = new Map([[3000, { port: 3000, pid: 4812, processName: 'node.exe' }]]);
+  // web is running (its sidecar records the start); starting web-wt must not say web-wt is running.
+  const runtime = { apps: { web: { startedBy: claudeStart, port: 3000 } } };
+  const r = guard('npm run dev', { cwd: 'I:/Scratch/app/web-wt', cfg: shared, runtime, listeners: held });
+  assert.equal(r.action, 'deny');
+  assert.match(r.reason, /:3000 is held by web \(/);
+  assert.doesNotMatch(r.reason, /web-wt is already running/);
+  // Both have sidecar entries: the listener's pid picks the holder.
+  const both = { apps: { web: { port: 3000, pid: 1 }, wt: { port: 3000, pid: 4812 } } };
+  assert.match(guard('npm run dev', { cfg: shared, runtime: both, listeners: held }).reason, /:3000 is held by web-wt/);
+  // Neither recorded: say it is ambiguous rather than guess.
+  assert.match(guard('npm run dev', { cfg: shared, listeners: held }).reason, /web, web-wt are all registered on :3000/);
+  // The status line counts the port once and names the holder.
+  assert.equal(statusLine(shared, runtime, held), '⚓ 1 up · :3000 web✦');
+});
+
+t('case 5: a start_app error is reported as a refusal, never as "started"', () => {
+  const route = { app: config.apps[1], port: 4000, cd: null };
+  // start_app sets isError when the start fails (mcp-server/index.js start_app).
+  const failed = routeResult(route, { isError: true, text: '{"success":false,"error":"Port 4000 did not open"}' });
+  assert.ok(failed.deny, 'an isError result must deny');
+  assert.match(failed.deny, /starting it through start_app failed/);
+  assert.match(failed.deny, /Port 4000 did not open/);
+  assert.equal(failed.result, undefined);
+  // A tool-call deny (permission refused) is still a refusal.
+  assert.match(routeResult(route, { deny: 'user said no' }).deny, /was refused \(user said no\)/);
+  // Success reads as started, with the tool's text.
+  const ok = routeResult(route, { text: '{"success":true}' });
+  assert.equal(ok.deny, undefined);
+  assert.match(ok.result.stdout, /^PortPilot started api on :4000 through its start_app tool/);
+  assert.match(ok.result.stdout, /\{"success":true\}$/);
+  assert.doesNotMatch(ok.result.stdout, /working directory/);
+  // A routed `cd sub && npm run dev` never ran its cd: say the shell did not move.
+  const moved = routeResult({ ...route, cd: '../api' }, { text: '{"success":true}' });
+  assert.match(moved.result.stdout, /shell's working directory was not changed/);
+});
+
+t('case 6: the guard judges the cwd it is handed, which follows a cd from an earlier Bash call', () => {
+  // Not a bug: $.session.cwd() reports the Bash tool's persisted cwd (headless
+  // probe, Claude Code 2.1.291: `cd plugin` then a start read .../plugin).
+  // After `cd ../api` in one call, a bare start in the next is judged as api.
+  assert.equal(guard('npm run dev', { cwd: 'I:/Scratch/app/api', listeners: listen(3000) }).app.id, 'api');
+  // A relative cd in the start's own command is resolved from that cwd.
+  assert.equal(guard('cd ../docs && npm run dev', { cwd: 'I:/Scratch/app/api' }).app.id, 'docs');
 });
 
 // ---- paths ------------------------------------------------------------------
@@ -140,13 +230,8 @@ t('normPath / startDir: Git Bash drive form, relative cd, case-folding on window
 
 // ---- decide -----------------------------------------------------------------
 
-const dirOf = (cwd) => normPath(cwd, { windows: true });
-
 t('decide: deny when the same app already runs on its port', () => {
-  const r = decide({
-    start: { cd: null, port: null }, dir: dirOf('I:/Scratch/app/web'), config,
-    runtime: { apps: { web: { startedBy: claudeStart, port: 3000 } } }, listeners: listen(3000), windows: true,
-  });
+  const r = guard('npm run dev', { runtime: { apps: { web: { startedBy: claudeStart, port: 3000 } } }, listeners: listen(3000) });
   assert.equal(r.action, 'deny');
   assert.match(r.reason, /web is already running on :3000/);
   assert.match(r.reason, /reuse http:\/\/localhost:3000/);
@@ -154,31 +239,31 @@ t('decide: deny when the same app already runs on its port', () => {
 
 t('decide: deny for an unmanaged holder, naming it', () => {
   const listeners = new Map([[3000, { port: 3000, pid: 4812, processName: 'node.exe' }]]);
-  const r = decide({ start: { cd: null, port: 3000 }, dir: '/tmp/other', config: { apps: [] }, runtime: {}, listeners });
+  const r = guard('npm run dev -- --port 3000', { cwd: 'I:/tmp/other', cfg: { apps: [] }, listeners });
   assert.equal(r.action, 'deny');
   assert.match(r.reason, /:3000 is held by node\.exe \(PID 4812.*not managed\)/);
   assert.match(r.reason, /ask the user before stopping it/);
 });
 
 t('decide: route a registered app on a free port', () => {
-  const r = decide({ start: { cd: null, port: null }, dir: dirOf('I:/Scratch/app/api'), config, runtime: {}, listeners: listen(3000), windows: true });
+  const r = guard('npm run dev', { cwd: 'I:/Scratch/app/api', listeners: listen(3000) });
   assert.equal(r.action, 'route');
   assert.equal(r.app.id, 'api');
   assert.equal(r.port, 4000);
 });
 
 t('decide: route when the explicit port equals preferredPort', () => {
-  const r = decide({ start: { cd: null, port: 4000 }, dir: dirOf('I:/Scratch/app/api'), config, runtime: {}, listeners: listen(), windows: true });
+  const r = guard('npm run dev -- --port 4000', { cwd: 'I:/Scratch/app/api' });
   assert.equal(r.action, 'route');
 });
 
 t('decide: pass when an explicit free port differs from preferredPort', () => {
-  const r = decide({ start: { cd: null, port: 4100 }, dir: dirOf('I:/Scratch/app/api'), config, runtime: {}, listeners: listen(4000), windows: true });
+  const r = guard('npm run dev -- --port 4100', { cwd: 'I:/Scratch/app/api', listeners: listen(4000) });
   assert.deepStrictEqual(r, { action: 'pass' });
 });
 
 t('decide: pass when no registered app matches and the port is free', () => {
-  const r = decide({ start: { cd: null, port: null }, dir: '/somewhere/else', config, runtime: {}, listeners: listen(3000) });
+  const r = guard('npm run dev', { cwd: 'I:/somewhere/else', listeners: listen(3000) });
   assert.deepStrictEqual(r, { action: 'pass' });
 });
 

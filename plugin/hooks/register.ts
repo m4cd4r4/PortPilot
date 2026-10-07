@@ -22,6 +22,7 @@ import {
   parseListeners,
   parseStart,
   parseTasklistName,
+  routeResult,
   startDir,
   statusLine,
   targetPort,
@@ -155,17 +156,6 @@ export const register: Register = (on) => {
 
     const ran = await $.tool.call({ tool: startTool.name, identifier: decision.app.id, sessionId: await $.session.id() })
     void refresh($)
-    if ('deny' in ran && ran.deny !== undefined) {
-      return { deny: `PortPilot: ${decision.app.name} is registered in PortPilot, and starting it through start_app was refused (${ran.deny}). Ask the user how they want it started.` }
-    }
-    const text = ran.text || ''
-    const onPort = decision.port ? ` on :${decision.port}` : ''
-    return {
-      result: {
-        stdout: `PortPilot started ${decision.app.name}${onPort} through its start_app tool instead of a bare shell start, so the server is tracked and the port is checked.\n${text}`,
-        stderr: '',
-        interrupted: false,
-      },
-    }
+    return routeResult(decision, ran)
   }).catch(($, e, next) => next(e)) // fail open: a guard bug must never block the user's Bash
 }
