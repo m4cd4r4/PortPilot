@@ -1,5 +1,5 @@
 /**
- * The hooks wiring in register.ts, run against the engine itself:
+ * The hooks wiring in register.tsx, run against the engine itself:
  *   claude plugin test plugin
  * CI has no claude CLI; the pure logic is covered there by
  * tests/plugin-mod.test.mjs. The world beneath the plugin (env, files, the

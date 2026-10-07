@@ -1,7 +1,7 @@
 /**
  * PortPilot mod: the pure half of the status line and the dev-server guard.
  *
- * No I/O here. register.ts gathers the inputs (config, runtime sidecar, the
+ * No I/O here. register.tsx gathers the inputs (config, runtime sidecar, the
  * listening-port scan) through `$` and hands them in, so this file runs the
  * same under the hooks engine, `claude plugin test` and plain Node (CI covers
  * it from tests/plugin-mod.test.mjs).

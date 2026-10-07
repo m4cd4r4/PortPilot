@@ -13,10 +13,21 @@
  * Anything else, and any failure to read the config or scan ports, passes
  * the call through untouched: a wrong deny costs more than a missed one.
  *
+ * Crash band (C4): when an app this session started crashes, a band above
+ * the prompt shows `✕ web crashed · :3000 · exit 1` and its last output line,
+ * with Restart, Logs, Fix it and Dismiss. Fix it submits a prompt carrying the
+ * crash and its output tail (fenced as untrusted) to this session. Every
+ * PortPilot start_app / start_group call gets this session's id, so the
+ * sidecar knows which session a crash belongs to.
+ *
  * Reads the PortPilot config and runtime sidecar directly, so it works with
- * the desktop app closed. The pure logic lives in guard-core.mjs.
+ * the desktop app closed. The pure logic lives in guard-core.mjs and
+ * crash-core.mjs.
  */
-import type { Register, EngineInterface } from 'claude-code'
+import { atom, read, update } from 'claude-code'
+import type { Register, EngineInterface, McpToolName } from 'claude-code'
+import type { ShownCrash } from '../types'
+import { crashHeadline, fixPrompt, lastLine, logFileName, sessionCrashes, tailLines, TAIL_CHARS } from './crash-core.mjs'
 import {
   decide,
   parseListeners,
@@ -33,6 +44,12 @@ import {
 } from './guard-core.mjs'
 
 const REFRESH_MS = 15_000
+const MAX_BANDS = 2
+
+const crashes = atom({ plugin: 'portpilot', key: 'crashes' } as const, [])
+const dismissed = atom({ plugin: 'portpilot', key: 'dismissed' } as const, [])
+const logsOpen = atom({ plugin: 'portpilot', key: 'logsOpen' } as const, null)
+const seen = atom({ plugin: 'portpilot', key: 'seen' } as const, [])
 
 type Snapshot = { config: Config | null; runtime: Runtime | null; listeners: Listeners | null }
 
@@ -114,7 +131,54 @@ async function refresh($: EngineInterface) {
     // A failed scan keeps the last line rather than claiming "0 up".
     if (config && !listeners) return
     $.ui.status(listeners ? statusLine(config, runtime, listeners) : undefined)
+    if (listeners) await refreshCrashes($, config, runtime, listeners)
   } catch { /* the line stays as it was */ }
+}
+
+/** The output tail: the desktop's stamp, else the app's log file (MCP starts). */
+async function tailFor($: EngineInterface, id: string, stamped: string | null): Promise<string> {
+  if (stamped) return stamped
+  if (!dir) return ''
+  try {
+    return (await $.fs.read(`${dir}/logs/${logFileName(id)}`)).slice(-TAIL_CHARS)
+  } catch {
+    return ''
+  }
+}
+
+async function refreshCrashes($: EngineInterface, config: Config | null, runtime: Runtime | null, listeners: Listeners) {
+  const found = sessionCrashes(config, runtime, listeners, await $.session.id(), await $.clock.now())
+  const shown: ShownCrash[] = []
+  for (const c of found) shown.push({ ...c, tail: await tailFor($, c.id, c.errorTail) })
+  await update($, crashes, () => shown)
+  const known = await read($, seen)
+  const fresh = shown.filter((c) => !known.includes(c.key))
+  if (fresh.length) {
+    await update($, seen, (list) => [...list, ...fresh.map((c) => c.key)].slice(-100))
+    for (const c of fresh) $.ui.toast(crashHeadline(c))
+  }
+}
+
+async function startTool($: EngineInterface) {
+  const tools = await $.tool.list()
+  return tools.find((t) => t.mcp && /portpilot/i.test(t.name) && t.name.endsWith('__start_app'))
+}
+
+async function restart($: EngineInterface, crash: ShownCrash) {
+  const tool = await startTool($)
+  if (!tool) {
+    $.ui.toast('PortPilot start_app is not connected')
+    return
+  }
+  const ran = await $.tool.call({ tool: tool.name as McpToolName, identifier: crash.id, sessionId: await $.session.id() })
+  $.ui.toast(ran.isError ? `Restart failed: ${lastLine(ran.text)}` : `Restarted ${crash.name}`)
+  await update($, dismissed, (list) => [...list, crash.key])
+  void refresh($)
+}
+
+async function fixIt($: EngineInterface, crash: ShownCrash) {
+  await update($, dismissed, (list) => [...list, crash.key])
+  await $.prompt.submit({ text: fixPrompt(crash, crash.tail) })
 }
 
 export const register: Register = (on) => {
@@ -123,6 +187,44 @@ export const register: Register = (on) => {
     void refresh($)
     $.clock.every(REFRESH_MS, () => { void refresh($) })
     return started
+  })
+
+  // Stamp this session on every PortPilot start, however Claude called it, so
+  // a later crash finds its way back here.
+  on('tool.call', async ($, e, next) => {
+    if (!/portpilot/i.test(e.tool) || !/__start_(app|group)$/.test(e.tool) || (e as { sessionId?: unknown }).sessionId) return next(e)
+    return next({ ...e, sessionId: await $.session.id() } as typeof e)
+  }).catch(($, e, next) => next(e))
+
+  on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
+    if (e.props.hasSurvey) return next(e)
+    const hidden = await read($, dismissed)
+    const list = (await read($, crashes)).filter((c) => !hidden.includes(c.key))
+    if (!list.length) return next(e)
+    const open = await read($, logsOpen)
+    const { Box, Text, Button } = $.ui.resolve(e)
+    return (
+      <Box flexDirection="column">
+        {list.slice(0, MAX_BANDS).map((c) => (
+          <Box key={c.key} flexDirection="column">
+            <Text color="red" bold>{crashHeadline(c)}</Text>
+            {c.tail ? <Text dimColor wrap="truncate-end">  {lastLine(c.tail)}</Text> : null}
+            {open === c.key
+              ? <Box flexDirection="column" paddingLeft={2}>
+                  {tailLines(c.tail).map((l, i) => <Text key={`l${i}`} dimColor wrap="truncate-end">{l}</Text>)}
+                </Box>
+              : null}
+            <Box gap={1}>
+              <Button key={`fix-${c.key}`} label="Fix it" variant="primary" onPress={() => { void fixIt($, c) }} />
+              <Button key={`restart-${c.key}`} label="Restart" onPress={() => { void restart($, c) }} />
+              <Button key={`logs-${c.key}`} label={open === c.key ? 'Hide logs' : 'Logs'} onPress={() => { void update($, logsOpen, (k) => (k === c.key ? null : c.key)) }} />
+              <Button key={`dismiss-${c.key}`} label="Dismiss" role="dismiss" onPress={() => { void update($, dismissed, (l) => [...l, c.key]) }} />
+            </Box>
+          </Box>
+        ))}
+        {list.length > MAX_BANDS ? <Text dimColor>+{list.length - MAX_BANDS} more crashed</Text> : null}
+      </Box>
+    )
   })
 
   on('tool.call', { tool: 'Bash' }, async ($, e, next) => {
@@ -150,11 +252,10 @@ export const register: Register = (on) => {
     if (decision.action === 'pass') return next(e)
 
     // Route: start the registered app through PortPilot's own MCP tool.
-    const tools = await $.tool.list()
-    const startTool = tools.find((t) => t.mcp && /portpilot/i.test(t.name) && t.name.endsWith('__start_app'))
-    if (!startTool) return next(e)
+    const tool = await startTool($)
+    if (!tool) return next(e)
 
-    const ran = await $.tool.call({ tool: startTool.name, identifier: decision.app.id, sessionId: await $.session.id() })
+    const ran = await $.tool.call({ tool: tool.name as McpToolName, identifier: decision.app.id, sessionId: await $.session.id() })
     void refresh($)
     return routeResult(decision, ran)
   }).catch(($, e, next) => next(e)) // fail open: a guard bug must never block the user's Bash

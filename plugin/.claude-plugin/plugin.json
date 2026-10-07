@@ -8,5 +8,6 @@
   "license": "MIT",
   "homepage": "https://github.com/m4cd4r4/PortPilot",
   "repository": "https://github.com/m4cd4r4/PortPilot",
-  "supportUrl": "https://github.com/m4cd4r4/PortPilot/issues"
+  "supportUrl": "https://github.com/m4cd4r4/PortPilot/issues",
+  "types": "./types/index.d.ts"
 }
