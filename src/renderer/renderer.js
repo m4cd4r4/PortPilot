@@ -213,6 +213,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (payload && payload.message) showToast(payload.message, payload.type || 'info');
     loadApps();   // reflect tray-initiated changes (e.g. "Stop All Apps")
   });
+  window.portpilot.on('crash-toast', (payload) => {
+    showCrashToast(payload);
+    loadApps();
+  });
   window.portpilot.on('config-changed', async (data) => {
     console.log('[Renderer] Config changed externally, refreshing apps list...');
     await loadApps();
@@ -2699,7 +2703,8 @@ function copyLogs() {
 
 // ============ Utilities ============
 function showToast(message, type = 'success') {
-  const existing = dom.toastContainer.querySelectorAll('.toast');
+  // Crash toasts are sticky and sit outside the cap of three.
+  const existing = dom.toastContainer.querySelectorAll('.toast:not(.crash-toast)');
   if (existing.length >= 3) existing[0].remove();
 
   const toast = document.createElement('div');
@@ -2712,6 +2717,73 @@ function showToast(message, type = 'success') {
     setTimeout(() => toast.isConnected && toast.remove(), 200);
   };
   setTimeout(remove, 3000);
+}
+
+/**
+ * A sticky crash toast, one per app (a repeat crash replaces it). Ask Claude
+ * shows only when main.js found a live Claude Code session to hand it to.
+ * The lines are the app's own output, so everything goes in as text.
+ */
+function showCrashToast(p) {
+  if (!p || !p.appId) return;
+  const key = String(p.appId);
+  dom.toastContainer.querySelectorAll('.crash-toast').forEach((t) => {
+    if (t.dataset.appId === key) t.remove();
+  });
+
+  const el = (tag, cls, text) => {
+    const n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    return n;
+  };
+  const toast = el('div', 'toast crash-toast');
+  toast.dataset.appId = key;
+  toast.setAttribute('role', 'alert');
+  const dismiss = () => toast.remove();
+
+  const head = el('div', 'crash-toast-head');
+  head.appendChild(el('span', 'crash-toast-title', p.title || `${p.name} crashed`));
+  if (p.meta) head.appendChild(el('span', 'crash-toast-meta', p.meta));
+  toast.appendChild(head);
+
+  if (Array.isArray(p.lines) && p.lines.length) {
+    // One row per line, cut with an ellipsis, so the last (the error) always shows.
+    const box = el('div', 'crash-toast-lines');
+    p.lines.forEach((line) => { const row = el('div', null, line); row.title = line; box.appendChild(row); });
+    toast.appendChild(box);
+  }
+
+  const actions = el('div', 'crash-toast-actions');
+  const button = (label, cls, onClick, title) => {
+    const b = el('button', `crash-toast-btn ${cls || ''}`.trim(), label);
+    b.type = 'button';
+    if (title) b.title = title;
+    b.addEventListener('click', onClick);
+    actions.appendChild(b);
+    return b;
+  };
+  button('Restart', '', () => { dismiss(); window.startApp(p.appId); });
+  button('Logs', '', () => viewLogs(p.appId));
+  if (p.session && p.session.id) {
+    const why = { owner: 'the session that started it', folder: 'a session in its folder', recent: 'the most recent session' }[p.session.reason] || 'a live session';
+    const ask = button(`Ask Claude (${p.session.short})`, 'primary', async () => {
+      ask.disabled = true;
+      const res = await window.portpilot.crash.askClaude(p.appId, p.session.id)
+        .catch((e) => ({ success: false, error: e.message }));
+      if (res && res.success) {
+        ask.textContent = `Sent to ${res.short}`;
+        setTimeout(dismiss, 2500);
+      } else {
+        ask.remove();
+        showToast((res && res.error) || 'Could not reach Claude', 'error');
+      }
+    }, `Hand this crash to ${why}`);
+  }
+  button('Dismiss', 'ghost', dismiss);
+  toast.appendChild(actions);
+
+  dom.toastContainer.appendChild(toast);
 }
 
 async function openExternal(url) {

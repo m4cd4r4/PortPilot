@@ -211,12 +211,26 @@ function recordStop(configPath, appId) {
 // Code extension) can tell a crash from a clean stop. The stamp replaces the
 // dead run's entry, so its startedBy never labels a later process on the same
 // port. recordStart replaces the entry, which clears it; recordStop deletes it.
-function recordCrash(configPath, appId, exitCode) {
+// The stamp keeps who started the dead run (crashed.startedBy, nested so no
+// reader mistakes it for a live owner), its port and the last of its output,
+// so a crash alert can name the session it belongs to and say why.
+const CRASH_TAIL_CHARS = 2000;
+
+function recordCrash(configPath, appId, exitCode, { errorTail = null, port = null } = {}) {
   if (!appId) return false;
   try {
     updateJson(runtimePathFor(configPath), (runtime) => {
       if (!runtime.apps || typeof runtime.apps !== 'object') runtime.apps = {};
-      runtime.apps[appId] = { crashed: { exitCode: exitCode ?? null, at: Date.now() } };
+      const prev = runtime.apps[appId] || {};
+      runtime.apps[appId] = {
+        crashed: {
+          exitCode: exitCode ?? null,
+          at: Date.now(),
+          startedBy: prev.startedBy || (prev.crashed && prev.crashed.startedBy) || null,
+          port: port || prev.port || null,
+          errorTail: errorTail ? String(errorTail).slice(-CRASH_TAIL_CHARS) : null,
+        },
+      };
     }, emptyRuntime);
     return true;
   } catch (err) {
@@ -225,7 +239,94 @@ function recordCrash(configPath, appId, exitCode) {
   }
 }
 
+// ---- App output logs -------------------------------------------------------
+// An app started detached (MCP, VS Code) has no live process handle to read
+// stderr from, so its output goes to logs/<appId>.log beside the config,
+// truncated on each start. The tail is what a crash alert shows.
+
+function logPathFor(configPath, appId) {
+  const safe = String(appId).replace(/[^A-Za-z0-9_-]/g, '_').slice(0, 120);
+  return path.join(path.dirname(configPath), 'logs', `${safe}.log`);
+}
+
+function readLogTail(configPath, appId, chars = CRASH_TAIL_CHARS) {
+  try {
+    const file = logPathFor(configPath, appId);
+    const { size } = fs.statSync(file);
+    const fd = fs.openSync(file, 'r');
+    try {
+      // Read the last chars*4 bytes so a multi-byte tail still yields `chars`.
+      const len = Math.min(size, chars * 4);
+      const buf = Buffer.alloc(len);
+      fs.readSync(fd, buf, 0, len, size - len);
+      return buf.toString('utf8').slice(-chars);
+    } finally { fs.closeSync(fd); }
+  } catch { return null; }
+}
+
+// ---- Claude Code sessions --------------------------------------------------
+// The PortPilot plugin's mod writes sessions/<sessionId>.json beside the config
+// every 15s ({ sessionId, cwd, at }), so the desktop app can tell which
+// sessions are live. A request to hand a crash to a session goes in
+// inbox/<sessionId>.json as { requests: [{ appId, at }] }: the mod cannot
+// delete files, so it keeps its own cursor (the last `at` it handled) and the
+// list is trimmed here. A request names the app only; the mod builds the
+// prompt from its own read of the runtime sidecar and the app's log.
+
+const SESSION_LIVE_MS = 45000;
+const INBOX_KEEP = 20;
+
+const safeName = (id) => String(id).replace(/[^A-Za-z0-9_-]/g, '_').slice(0, 120);
+
+function sessionsDirFor(configPath) {
+  return path.join(path.dirname(configPath), 'sessions');
+}
+
+function inboxPathFor(configPath, sessionId) {
+  return path.join(path.dirname(configPath), 'inbox', `${safeName(sessionId)}.json`);
+}
+
+/** Sessions whose heartbeat is under SESSION_LIVE_MS old, newest first. */
+function liveSessions(configPath, now = Date.now()) {
+  const dir = sessionsDirFor(configPath);
+  let names;
+  try { names = fs.readdirSync(dir); } catch { return []; }
+  const out = [];
+  for (const name of names) {
+    if (!name.endsWith('.json')) continue;
+    // The mod's writes are not atomic: a half-written beat is skipped quietly,
+    // not kept as .corrupt the way readJson keeps a config.
+    let beat = null;
+    try { beat = JSON.parse(fs.readFileSync(path.join(dir, name), 'utf8')); } catch { continue; }
+    if (!beat || typeof beat.sessionId !== 'string' || !Number.isFinite(beat.at)) continue;
+    if (now - beat.at >= SESSION_LIVE_MS || beat.at - now > SESSION_LIVE_MS) continue;
+    out.push({ sessionId: beat.sessionId, cwd: typeof beat.cwd === 'string' ? beat.cwd : null, at: beat.at });
+  }
+  return out.sort((a, b) => b.at - a.at);
+}
+
+/** Asks a live session to look at an app's crash. Returns the request, or null. */
+function sendToSession(configPath, sessionId, appId, now = Date.now()) {
+  if (!sessionId || !appId) return null;
+  const request = { appId: String(appId), at: now };
+  try {
+    updateJson(inboxPathFor(configPath, sessionId), (inbox) => {
+      const list = Array.isArray(inbox.requests) ? inbox.requests : [];
+      // Strictly increasing, so the mod's cursor never skips a request.
+      const last = list.length ? Number(list[list.length - 1].at) || 0 : 0;
+      if (request.at <= last) request.at = last + 1;
+      inbox.requests = [...list, request].slice(-INBOX_KEEP);
+    }, () => ({ requests: [] }));
+    return request;
+  } catch (err) {
+    console.error('[configFile] Failed to write session inbox:', err.message);
+    return null;
+  }
+}
+
 module.exports = {
   readJson, writeJsonAtomic, withLock, updateJson,
   runtimePathFor, readRuntime, recordStart, recordStop, recordCrash,
+  logPathFor, readLogTail, CRASH_TAIL_CHARS,
+  sessionsDirFor, inboxPathFor, liveSessions, sendToSession, SESSION_LIVE_MS,
 };

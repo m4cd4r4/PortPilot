@@ -4,7 +4,7 @@
  *
  * Covers: listener parsing per platform, the status line (worst state first,
  * the Claude mark), dev-server start detection, and the guard decision
- * (deny / route / pass). The hooks wiring in register.ts is covered locally by
+ * (deny / route / pass). The hooks wiring in register.tsx is covered locally by
  * `claude plugin test plugin`; CI has no claude CLI.
  */
 import assert from 'node:assert';
@@ -143,7 +143,7 @@ t('parseStart: non-server commands return null', () => {
   assert.equal(parseStart(''), null);
 });
 
-// The whole guard, composed the way register.ts composes it.
+// The whole guard, composed the way register.tsx composes it.
 function guard(command, { cwd = 'I:/Scratch/app/web', runtime = {}, listeners = listen(), cfg = config } = {}) {
   const start = parseStart(command);
   if (!start) return null;

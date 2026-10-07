@@ -7,8 +7,8 @@ const os = require('os');
 const { probe } = require('./healthCheck');
 const { shareInfo } = require('./shareInfo');
 const reserver = require('./portReserver');
-const { recordStart, recordStop, readRuntime } = require('../core/configFile');
-const { makeStartedBy } = require('../core/status');
+const { recordStart, recordStop, readRuntime, liveSessions, sendToSession } = require('../core/configFile');
+const { makeStartedBy, shortSession } = require('../core/status');
 
 // Read the Peacock window colour from a worktree's .vscode/settings.json so a
 // detected branch can be coloured to match its VS Code window. settings.json is
@@ -515,6 +515,23 @@ function setupIpcHandlers(ipcMain, configStore) {
   });
 
   /** Get logs for an app */
+  /** Hand a crash to a live Claude Code session (its PortPilot mod builds the prompt) */
+  ipcMain.handle('crash:askClaude', async (_, { appId, sessionId } = {}) => {
+    try {
+      if (!appId || !configStore.getApp(appId)) return { success: false, error: 'Unknown app' };
+      // The toast may have sat open past the session's last heartbeat.
+      if (!liveSessions(configStore.configPath).some((s) => s.sessionId === sessionId)) {
+        return { success: false, error: 'That Claude session is no longer running' };
+      }
+      if (!sendToSession(configStore.configPath, sessionId, appId)) {
+        return { success: false, error: 'Could not reach the Claude session' };
+      }
+      return { success: true, short: shortSession(sessionId) };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+
   ipcMain.handle('process:logs', async (_, appId) => {
     try {
       const logs = getAppLogs(appId);

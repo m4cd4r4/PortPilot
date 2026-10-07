@@ -1,4 +1,4 @@
-// Types for guard-core.mjs, so register.ts type-checks against it.
+// Types for guard-core.mjs, so register.tsx type-checks against it.
 
 export type Listener = { port: number; pid: number | null; processName: string };
 export type Listeners = Map<number, Listener>;

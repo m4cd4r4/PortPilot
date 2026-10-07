@@ -94,7 +94,10 @@ async function startApp(appConfig) {
           processInfo.exitCode = code;
           processInfo.running = false;
           if (isCrashed(processInfo)) {
-            emitCrash({ id, name, code });
+            // Tail taken at exit: stderr, else stdout (many dev servers print
+            // their fatal error there).
+            const errorTail = (processInfo.errorOutput || processInfo.output || '').slice(-2000) || null;
+            emitCrash({ id, name, code, errorTail });
           }
         }
       });

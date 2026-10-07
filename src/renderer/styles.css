@@ -2160,6 +2160,89 @@ body {
   color: var(--bg-primary);
 }
 
+/* Crash toast: sticky, carries the output tail and the hand-off buttons */
+.toast.crash-toast {
+  width: 360px;
+  max-width: calc(100vw - 32px);
+  padding: 10px 12px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border: var(--border-width) solid var(--border-color);
+  border-left: 3px solid var(--accent-red);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+  order: 1;   /* stays in the corner while transient toasts come and go above it */
+}
+
+.crash-toast-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.crash-toast-title {
+  font-weight: 600;
+  color: var(--accent-red);
+}
+
+.crash-toast-meta {
+  color: var(--text-secondary);
+  font-family: 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
+  font-size: 0.72rem;
+}
+
+.crash-toast-lines {
+  margin: 6px 0 0;
+  padding: 6px 8px;
+  background: var(--bg-primary);
+  border-radius: var(--radius);
+  color: var(--text-secondary);
+  font-family: 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
+  font-size: 0.7rem;
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+.crash-toast-lines > div {
+  white-space: pre;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.crash-toast-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.crash-toast-btn {
+  padding: 3px 9px;
+  border-radius: var(--radius);
+  border: var(--border-width) solid var(--border-color);
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 0.74rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.crash-toast-btn:hover:not(:disabled) { border-color: var(--text-secondary); }
+.crash-toast-btn:disabled { opacity: 0.7; cursor: default; }
+
+.crash-toast-btn.primary {
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+  color: var(--bg-primary);
+}
+
+.crash-toast-btn.ghost {
+  background: transparent;
+  margin-left: auto;
+  color: var(--text-secondary);
+}
+
 /* ============ Empty State ============ */
 .empty-state {
   padding: 24px;

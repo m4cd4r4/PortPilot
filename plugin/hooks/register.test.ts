@@ -1,12 +1,12 @@
 /**
- * The hooks wiring in register.ts, run against the engine itself:
+ * The hooks wiring in register.tsx, run against the engine itself:
  *   claude plugin test plugin
  * CI has no claude CLI; the pure logic is covered there by
  * tests/plugin-mod.test.mjs. The world beneath the plugin (env, files, the
  * port scan, the session, PortPilot's start_app tool) is faked by the test's
  * own hooks.
  */
-import { test, expect, mock } from 'claude-code/testing'
+import { test, expect, mock, type TestBody } from 'claude-code/testing'
 import type { On } from 'claude-code'
 
 const DIR = 'C:/fake/AppData/portpilot'
@@ -35,6 +35,12 @@ type World = {
   bashRuns?: string[]
   startCalls?: unknown[]
   statuses?: (string | undefined)[]
+  runtime?: object
+  prompts?: string[]
+  toasts?: string[]
+  log?: string
+  inbox?: object
+  writes?: { path: string, text: string }[]
 }
 
 /** Fakes the world beneath the plugin. */
@@ -44,7 +50,9 @@ function world(on: On, w: World = {}) {
   on('fs.read', async (_$, e) => {
     const path = e.path.split(String.fromCharCode(92)).join('/') // the engine hands Windows paths with backslashes
     if (path === `${DIR}/portpilot-config.json` && config) return { value: JSON.stringify(config) }
-    if (path === `${DIR}/portpilot-runtime.json`) return { value: JSON.stringify(RUNTIME) }
+    if (path === `${DIR}/portpilot-runtime.json`) return { value: JSON.stringify(w.runtime ?? RUNTIME) }
+    if (path === `${DIR}/logs/api.log` && w.log != null) return { value: w.log }
+    if (path === `${DIR}/inbox/sess-1.json` && w.inbox) return { value: JSON.stringify(w.inbox) }
     return { deny: `ENOENT ${e.path}` }
   })
   on('process.run', async (_$, e) => {
@@ -61,6 +69,11 @@ function world(on: On, w: World = {}) {
     { name: 'mcp__portpilot__start_app', description: 'start an app', mcp: true },
   ] }))
   on('ui.status', async (_$, e) => { w.statuses?.push(e.text); return { value: undefined } })
+  on('ui.toast', async (_$, e) => { w.toasts?.push(e.text); return { value: undefined } })
+  on('prompt.submit', async (_$, e) => { w.prompts?.push(e.text); return { text: e.text } })
+  on('fs.write', async (_$, e) => { w.writes?.push({ path: e.path.split(String.fromCharCode(92)).join('/'), text: e.text }); return { value: undefined } })
+  // The engine's own drawing, for when the band has nothing to show.
+  on('ui.render', async () => ({ type: 'Box' }))
   on('tool.call', async (_$, e) => {
     if (e.tool === 'mcp__portpilot__start_app') {
       w.startCalls?.push(e)
@@ -150,4 +163,118 @@ test('session start sets the status line and refreshes it on the timer', async (
   expect(statuses).toEqual(['⚓ 1 up · :3000 web✦'])
   await clock.advance(15_000)
   expect(statuses.length).toBe(2)
+})
+
+// ---- crash band (C4) --------------------------------------------------------
+
+const NOW = Date.parse('2026-10-07T07:00:00Z')
+const CRASHED_AT = NOW - 5_000
+const CRASH_KEY = `api@${CRASHED_AT}`
+const crashRuntime = (sessionId: string) => ({
+  apps: {
+    ...RUNTIME.apps,
+    api: { crashed: { at: CRASHED_AT, exitCode: 1, port: 4000, errorTail: null, startedBy: { kind: 'claude', surface: 'mcp', sessionId, at: new Date(NOW - 600_000).toISOString() } } },
+  },
+})
+const BAND = { component: 'AbovePrompt', props: { hasSurvey: false, isWorking: false, maxRows: 20, bodyColumns: 100, scroll: { offset: 0, bodyRows: 20 }, view: {} } } as const
+
+/** Starts the session so the first refresh finds the crash. */
+async function started($: Parameters<TestBody>[0], on: On, w: World) {
+  const clock = mock.clock(on, { now: NOW })
+  world(on, w)
+  on('session.start', async (_$, e) => ({ cwd: e.cwd }))
+  await $.session.start({ cwd: 'C:/work', surface: 'terminal', isInteractive: true })
+  await clock.settle()
+  return clock
+}
+
+for (const surface of ['terminal', 'desktop'] as const) {
+  test(`${surface}: Fix it sends the crash and its fenced log tail to this session`, async ($, on) => {
+    const prompts: string[] = []
+    const toasts: string[] = []
+    await started($, on, { runtime: crashRuntime('sess-1'), prompts, toasts, log: 'ready\nError: EADDRINUSE ```x```\n' })
+    expect(toasts).toEqual(['✕ api crashed · :4000 · exit 1'])
+    const ui = await $.ui.mount({ plugin: 'portpilot', surface, ...BAND })
+    expect(await ui.find({ type: 'Text', text: /api crashed · :4000 · exit 1/ })).toBeDefined()
+    expect(await ui.find({ type: 'Text', text: /EADDRINUSE/ })).toBeDefined()
+    await ui.press({ key: `fix-${CRASH_KEY}` })
+    expect(prompts.length).toBe(1)
+    expect(prompts[0]).toContain('"api" (app id `api`) that you started crashed (port :4000, exit code 1)')
+    expect(prompts[0]).toContain('````text\nready\nError: EADDRINUSE ```x```\n````')
+    expect(prompts[0]).toContain('untrusted program output')
+    expect(await ui.find({ type: 'Text', text: /api crashed/ })).toBeUndefined()
+    await ui.unmount()
+  })
+
+  test(`${surface}: Logs opens the tail; Dismiss hides the band`, async ($, on) => {
+    await started($, on, { runtime: crashRuntime('sess-1'), log: 'one\ntwo\nthree\n' })
+    const ui = await $.ui.mount({ plugin: 'portpilot', surface, ...BAND })
+    expect(await ui.find({ type: 'Text', text: /^one$/ })).toBeUndefined()
+    await ui.press({ key: `logs-${CRASH_KEY}` })
+    expect(await ui.find({ type: 'Text', text: /^one$/ })).toBeDefined()
+    await ui.press({ key: `dismiss-${CRASH_KEY}` })
+    expect(await ui.find({ type: 'Text', text: /api crashed/ })).toBeUndefined()
+    await ui.unmount()
+  })
+
+  test(`${surface}: a crash another session started shows no band and no toast`, async ($, on) => {
+    const toasts: string[] = []
+    await started($, on, { runtime: crashRuntime('sess-other'), toasts })
+    expect(toasts).toEqual([])
+    const ui = await $.ui.mount({ plugin: 'portpilot', surface, ...BAND })
+    expect(await ui.find({ type: 'Text', text: /crashed/ })).toBeUndefined()
+    await ui.unmount()
+  })
+}
+
+test('Restart calls start_app for the crashed app with this session id', async ($, on) => {
+  const startCalls: unknown[] = []
+  const toasts: string[] = []
+  await started($, on, { runtime: crashRuntime('sess-1'), startCalls, toasts })
+  const ui = await $.ui.mount({ plugin: 'portpilot', surface: 'terminal', ...BAND })
+  await ui.press({ key: `restart-${CRASH_KEY}` })
+  expect(startCalls).toEqual([expect.objectContaining({ identifier: 'api', sessionId: 'sess-1' })])
+  expect(toasts).toContain('Restarted api')
+  await ui.unmount()
+})
+
+test('every start_app call is stamped with this session, over any id Claude passed', async ($, on) => {
+  const startCalls: unknown[] = []
+  world(on, { startCalls })
+  await $.tool.call({ tool: 'mcp__portpilot__start_app', tool_use_id: 't2', identifier: 'api' } as never)
+  await $.tool.call({ tool: 'mcp__portpilot__start_app', tool_use_id: 't3', identifier: 'web', sessionId: 'session_guessed' } as never)
+  expect(startCalls).toEqual([
+    expect.objectContaining({ identifier: 'api', sessionId: 'sess-1' }),
+    expect.objectContaining({ identifier: 'web', sessionId: 'sess-1' }),
+  ])
+})
+
+// ---- heartbeat and inbox (slice 3) ------------------------------------------
+
+test('the session writes a heartbeat the desktop app can read', async ($, on) => {
+  const writes: { path: string, text: string }[] = []
+  await started($, on, { writes })
+  const beat = writes.find((x) => x.path === `${DIR}/sessions/sess-1.json`)
+  expect(beat && JSON.parse(beat.text)).toEqual({ sessionId: 'sess-1', cwd: 'C:/work', at: NOW })
+})
+
+test('an inbox request hands that crash to this session once, whoever started the app', async ($, on) => {
+  const prompts: string[] = []
+  const toasts: string[] = []
+  const inbox = { requests: [{ appId: 'web', at: NOW - 1 }, { appId: 'api', at: NOW + 1 }] }
+  const clock = await started($, on, { runtime: crashRuntime('sess-other'), inbox, prompts, toasts, log: 'Error: boom\n' })
+  expect(prompts.length).toBe(1)
+  expect(prompts[0]).toContain('"api" (app id `api`)')
+  expect(prompts[0]).toContain('```text\nError: boom\n```')
+  expect(toasts).toContain('PortPilot: handing the api crash to Claude')
+  await clock.advance(15_000)
+  expect(prompts.length).toBe(1)
+})
+
+test('an inbox request for an app that is running again sends nothing', async ($, on) => {
+  const prompts: string[] = []
+  const toasts: string[] = []
+  await started($, on, { inbox: { requests: [{ appId: 'web', at: NOW + 1 }] }, prompts, toasts })
+  expect(prompts).toEqual([])
+  expect(toasts).toContain('PortPilot: web is not crashed now, nothing sent')
 })

@@ -128,6 +128,32 @@ t('getRunningApps exposes a boolean crashed field', () => {
     assert.equal(cf.readRuntime(cfg).apps.api.crashed.exitCode, null);
   });
   t('recordCrash without an appId is a no-op', () => assert.equal(cf.recordCrash(cfg, '', 1), false));
+  t('recordCrash keeps who started the dead run, its port and output tail', () => {
+    cf.recordStart(cfg, 'web', claude, { pid: 44, port: 3000 });
+    cf.recordCrash(cfg, 'web', 1, { errorTail: 'x'.repeat(5000) + 'EADDRINUSE' });
+    const { crashed } = cf.readRuntime(cfg).apps.web;
+    assert.deepEqual(crashed.startedBy, claude);
+    assert.equal(crashed.port, 3000);
+    assert.equal(crashed.errorTail.length, cf.CRASH_TAIL_CHARS);
+    assert.ok(crashed.errorTail.endsWith('EADDRINUSE'));
+  });
+  t('a second crash stamp keeps the first run owner; an explicit port wins', () => {
+    cf.recordCrash(cfg, 'web', 2, { port: 3001 });
+    const { crashed } = cf.readRuntime(cfg).apps.web;
+    assert.deepEqual(crashed.startedBy, claude);
+    assert.equal(crashed.port, 3001);
+    assert.equal(crashed.errorTail, null);
+  });
+  t('readLogTail returns the end of logs/<appId>.log, or null when absent', () => {
+    const log = cf.logPathFor(cfg, 'a/b:c');
+    assert.equal(path.basename(log), 'a_b_c.log');
+    assert.equal(cf.readLogTail(cfg, 'a/b:c'), null);
+    fs.mkdirSync(path.dirname(log), { recursive: true });
+    fs.writeFileSync(log, 'start\n' + 'é'.repeat(3000) + '\nfatal');
+    const tail = cf.readLogTail(cfg, 'a/b:c', 100);
+    assert.equal(tail.length, 100);
+    assert.ok(tail.endsWith('\nfatal'));
+  });
   fs.rmSync(dir, { recursive: true, force: true });
 }
 
