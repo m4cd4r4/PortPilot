@@ -154,7 +154,6 @@ t('getRunningApps exposes a boolean crashed field', () => {
   const fs = require('fs');
   const os = require('os');
   const path = require('path');
-  const { execSync } = require('child_process');
   const cf = require('../src/core/configFile');
   const { checkPort } = require('../src/main/portScanner');
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -182,7 +181,7 @@ t('getRunningApps exposes a boolean crashed field', () => {
 
     await boot('real-crash', 45872);
     const holder = (await checkPort(45872)).pid;
-    execSync(`taskkill /F /PID ${holder}`, { stdio: 'ignore' });
+    process.kill(holder, 'SIGKILL'); // forceful on win32 and posix, unlike taskkill
     await sleep(2000);
     t('a real crash (server killed outside PortPilot) still emits', () => assert.ok(crashes.includes('real-crash')));
     t('a real crash still reads crashed', () => assert.equal(state('real-crash')?.crashed, true));
