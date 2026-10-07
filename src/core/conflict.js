@@ -107,5 +107,39 @@
     return { kind, port, holderName, sentence, title, actions };
   }
 
-  return { CONFIRM_MS, fmtAge, describeConflict };
+  /** One conflict's identity across scans: same app, port and holder pid. */
+  function conflictKey(c) {
+    const pid = c && c.occupiedBy ? c.occupiedBy.pid : null;
+    return `${c && c.appId}:${c && c.port}:${pid == null ? '' : pid}`;
+  }
+
+  /**
+   * The toast a scan should raise for its conflicts. The row strip carries a
+   * standing conflict, so only conflicts absent from the previous scan are
+   * announced, and several at once share one toast.
+   *
+   * @param {Set<string>} seen   keys announced by earlier scans
+   * @param {object[]} conflicts this scan's conflicts ({ appId, appName, port, occupiedBy })
+   * @returns {{ keys: Set<string>, message: string|null }}
+   *   keys    pass back as `seen` next scan (a resolved conflict drops out, so
+   *           its return is announced again)
+   *   message null when there is nothing new to say
+   */
+  function conflictToast(seen, conflicts) {
+    const list = Array.isArray(conflicts) ? conflicts : [];
+    const keys = new Set(list.map(conflictKey));
+    const fresh = list.filter(c => !(seen && seen.has(conflictKey(c))));
+    let message = null;
+    if (fresh.length === 1) {
+      const c = fresh[0];
+      const h = c.occupiedBy || {};
+      message = `Port ${c.port} blocked for ${c.appName} by ${h.processName || 'Unknown'}` +
+        (h.pid != null ? ` (PID ${h.pid})` : '');
+    } else if (fresh.length > 1) {
+      message = `${fresh.length} port conflicts - see the marked rows`;
+    }
+    return { keys, message };
+  }
+
+  return { CONFIRM_MS, fmtAge, describeConflict, conflictKey, conflictToast };
 });

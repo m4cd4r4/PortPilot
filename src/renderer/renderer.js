@@ -824,9 +824,7 @@ async function loadApps() {
         const hint = freePortHints.get(c.port);
         if (hint) c.freePort = hint;
       }
-      if (state.unknownConflicts.length > 0) {
-        showUnknownConflictWarnings(state.unknownConflicts);
-      }
+      showUnknownConflictWarnings(state.unknownConflicts);
     }
 
     renderApps();
@@ -1402,19 +1400,14 @@ async function stopApp(appId, { confirmed = false } = {}) {
 }
 
 // ============ Port Conflict Resolution ============
+// Conflict keys already announced. Auto-scan reruns loadApps every few
+// seconds; a standing conflict lives on its row strip, not in a fresh toast.
+let _announcedConflicts = new Set();
+
 function showUnknownConflictWarnings(conflicts) {
-  const toShow = conflicts.slice(0, 3);
-  toShow.forEach(conflict => {
-    const processName = conflict.occupiedBy.processName || 'Unknown';
-    const pid = conflict.occupiedBy.pid;
-    showToast(
-      `Port ${conflict.port} blocked for ${conflict.appName} by ${processName} (PID ${pid})`,
-      'warning'
-    );
-  });
-  if (conflicts.length > 3) {
-    showToast(`${conflicts.length - 3} more port conflicts detected`, 'warning');
-  }
+  const { keys, message } = window.PortPilotConflict.conflictToast(_announcedConflicts, conflicts);
+  _announcedConflicts = keys;
+  if (message) showToast(message, 'warning');
 }
 
 // A start found the port taken since the last scan: record the conflict and
@@ -1428,6 +1421,7 @@ function showConflictFor(app, blocker) {
     freePort: freePortHints.get(app.preferredPort),
   };
   state.unknownConflicts = state.unknownConflicts.filter(c => c.appId !== app.id).concat(conflict);
+  _announcedConflicts.add(window.PortPilotConflict.conflictKey(conflict)); // toasted below
   renderApps();
   if (state.drawerAppId === app.id) openAppDrawer(app.id);
   showToast(`:${app.preferredPort} is in use - choose what to do on the ${app.name} row`, 'warning');
