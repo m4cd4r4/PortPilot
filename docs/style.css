@@ -329,6 +329,7 @@ body.lightbox-open { overflow: hidden; }
   .cta-row .btn { flex: 1 1 100%; }
   .term { margin: -20px 6px 0; font-size: 0.72rem; }
   .footer-row { flex-direction: column; align-items: flex-start; }
+  .text-link, .footer-links a { display: inline-flex; align-items: center; min-height: 44px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
