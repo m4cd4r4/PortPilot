@@ -58,7 +58,7 @@ async function buildTo(base) {
     stdin: {
       contents: [
         "export { describeConflict, fmtAge, CONFIRM_MS } from './conflict.js';",
-        "export { provenanceOf, statusOf, CLAUDE_GLYPH } from './status.js';",
+        "export { provenanceOf, statusOf, runtimeStateOf, CLAUDE_GLYPH } from './status.js';",
       ].join('\n'),
       resolveDir: path.join(root, 'src', 'core'),
       sourcefile: 'plugin-core-entry.js',

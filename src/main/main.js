@@ -84,7 +84,7 @@ function buildTrayMenu(runningApps = []) {
       click: async () => {
         try {
           const { cleanupAllProcesses } = require('./processManager');
-          await cleanupAllProcesses();
+          await cleanupAllProcesses(configStore.configPath);
           mainWindow?.webContents.send('toast', { type: 'success', message: 'Stopped all running apps' });
         } catch (err) {
           console.error('Error stopping all apps:', err);
@@ -157,8 +157,13 @@ if (!gotTheLock) {
     // Notify (OS notification + in-app toast) when a running app crashes.
     const { onAppCrash, getRunningApps } = require('./processManager');
     const reserver = require('./portReserver');
-    const { recordCrash } = require('../core/configFile');
-    onAppCrash(({ id, name, code }) => {
+    const { recordCrash, readRuntime } = require('../core/configFile');
+    onAppCrash(async ({ id, name, code }) => {
+      // MCP stop_app (and the VS Code extension) kill from another process and
+      // delete the sidecar entry once the kill returns: give them a moment, and
+      // treat an entry that vanished as a stop, not a crash.
+      await new Promise((r) => setTimeout(r, 1500));
+      if (!readRuntime(configStore.configPath).apps[id]) return;
       recordCrash(configStore.configPath, id, code);
       if (configStore.getSettings().notifyOnCrash !== false) {
         const body = `${name} exited unexpectedly${code != null ? ` (code ${code})` : ''}.`;
@@ -308,7 +313,7 @@ app.on('before-quit', async (event) => {
     if (settings.stopAppsOnQuit !== false) {
       try {
         const { cleanupAllProcesses } = require('./processManager');
-        await cleanupAllProcesses();
+        await cleanupAllProcesses(configStore.configPath);
         console.log('Stopped all PortPilot-managed apps');
       } catch (err) {
         console.error('Error cleaning up processes:', err);

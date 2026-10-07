@@ -264,9 +264,22 @@ var require_status = __commonJS({
           title
         };
       }
+      const STARTING_GRACE_MS = 60 * 1e3;
+      function runtimeStateOf2(rt, opts) {
+        const o = opts || {};
+        if (o.listening) return "running";
+        if (!rt) return null;
+        if (rt.crashed) return "crashed";
+        const at = rt.startedBy && Date.parse(rt.startedBy.at);
+        const now = o.now == null ? Date.now() : o.now;
+        if (Number.isFinite(at) && now - at < STARTING_GRACE_MS) return "starting";
+        return "crashed";
+      }
       return {
         STATES,
         statusOf: statusOf2,
+        runtimeStateOf: runtimeStateOf2,
+        STARTING_GRACE_MS,
         formatUptime,
         rowStateOf,
         PROVENANCE_KINDS,
@@ -372,6 +385,7 @@ var export_CONFIRM_MS = import_conflict.CONFIRM_MS;
 var export_describeConflict = import_conflict.describeConflict;
 var export_fmtAge = import_conflict.fmtAge;
 var export_provenanceOf = import_status.provenanceOf;
+var export_runtimeStateOf = import_status.runtimeStateOf;
 var export_statusOf = import_status.statusOf;
 export {
   export_CLAUDE_GLYPH as CLAUDE_GLYPH,
@@ -379,5 +393,6 @@ export {
   export_describeConflict as describeConflict,
   export_fmtAge as fmtAge,
   export_provenanceOf as provenanceOf,
+  export_runtimeStateOf as runtimeStateOf,
   export_statusOf as statusOf
 };

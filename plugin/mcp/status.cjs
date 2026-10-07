@@ -242,9 +242,37 @@
       word, reason, uptime, provenance, text, title };
   }
 
+  // ---- Runtime-sidecar state ----------------------------------------------
+  // The one crash rule for any surface that reads portpilot-runtime.json
+  // without a live process handle (status line, VS Code). The sidecar entry
+  // outlives the process until a PortPilot stop deletes it, so "entry but port
+  // not listening" alone cannot tell a crash from a server still compiling.
+  const STARTING_GRACE_MS = 60 * 1000;
+
+  /**
+   * @param {object|null} rt         the app's sidecar entry (null: PortPilot never started it)
+   * @param {object} [opts]          { listening: boolean, now?: number (ms) }
+   * @returns {'running'|'starting'|'crashed'|null}  null = nothing to report
+   * Order: listening > explicit crashed stamp > still inside the start grace
+   * window > crashed (a start was recorded, nothing is listening, and it is
+   * past the grace window, e.g. an app started by MCP, which cannot stamp).
+   */
+  function runtimeStateOf(rt, opts) {
+    const o = opts || {};
+    if (o.listening) return 'running';
+    if (!rt) return null;
+    if (rt.crashed) return 'crashed';
+    const at = rt.startedBy && Date.parse(rt.startedBy.at);
+    const now = o.now == null ? Date.now() : o.now;
+    if (Number.isFinite(at) && now - at < STARTING_GRACE_MS) return 'starting';
+    return 'crashed';
+  }
+
   return {
     STATES,
     statusOf,
+    runtimeStateOf,
+    STARTING_GRACE_MS,
     formatUptime,
     rowStateOf,
     PROVENANCE_KINDS,

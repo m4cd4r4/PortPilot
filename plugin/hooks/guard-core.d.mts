@@ -20,8 +20,8 @@ export type RouteResult =
 
 export function parseListeners(platform: Platform, stdout: string): Listeners;
 export function parseTasklistName(stdout: string): string | null;
-export function appStates(config: Config | null, runtime: Runtime | null, listeners: Listeners): Array<{ id: string; name: string; port: number; state: 'running' | 'crashed'; claude: boolean }>;
-export function statusLine(config: Config | null, runtime: Runtime | null, listeners: Listeners): string | undefined;
+export function appStates(config: Config | null, runtime: Runtime | null, listeners: Listeners, now?: number): Array<{ id: string; name: string; port: number; state: 'running' | 'starting' | 'crashed'; claude: boolean }>;
+export function statusLine(config: Config | null, runtime: Runtime | null, listeners: Listeners, now?: number): string | undefined;
 export function devStart(text: string): DevStart | null;
 export function parseStart(command: string): Start | null;
 export function normPath(p: string, opts?: { windows?: boolean }): string;

@@ -131,5 +131,71 @@ t('getRunningApps exposes a boolean crashed field', () => {
   fs.rmSync(dir, { recursive: true, force: true });
 }
 
-console.log(`\n${passed} passed, ${failed} failed`);
-process.exit(failed ? 1 : 0);
+// ---- status.runtimeStateOf (the one crash rule for sidecar readers) ----
+// tdd-guard:allow  (fix and tests written together against already-diagnosed bugs; red run checked below)
+{
+  const now = Date.parse('2026-10-07T04:00:30Z');
+  const fresh = { startedBy: { kind: 'human', surface: 'desktop', at: '2026-10-07T04:00:00Z' }, port: 3000 };
+  const old = { startedBy: { kind: 'human', surface: 'desktop', at: '2026-10-07T03:00:00Z' }, port: 3000 };
+  t('runtimeStateOf: listening port is running', () =>
+    assert.equal(status.runtimeStateOf(old, { listening: true, now }), 'running'));
+  t('runtimeStateOf: no entry and not listening is nothing to report', () =>
+    assert.equal(status.runtimeStateOf(null, { listening: false, now }), null));
+  t('runtimeStateOf: just started and not listening yet is starting, not crashed', () =>
+    assert.equal(status.runtimeStateOf(fresh, { listening: false, now }), 'starting'));
+  t('runtimeStateOf: explicit crashed stamp wins over the start grace', () =>
+    assert.equal(status.runtimeStateOf({ crashed: { exitCode: 1, at: now } }, { listening: false, now }), 'crashed'));
+  t('runtimeStateOf: start recorded, long gone, never listening is crashed', () =>
+    assert.equal(status.runtimeStateOf(old, { listening: false, now }), 'crashed'));
+}
+
+// ---- processManager: deliberate kills are not crashes (real child processes) ----
+(async () => {
+  const fs = require('fs');
+  const os = require('os');
+  const path = require('path');
+  const cf = require('../src/core/configFile');
+  const { checkPort } = require('../src/main/portScanner');
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pp-crash-truth-'));
+  const cfg = path.join(dir, 'portpilot-config.json');
+  const crashes = [];
+  pm.onAppCrash((c) => crashes.push(c.id));
+
+  const cmd = (port) => `node -e "require('http').createServer().listen(${port})"`;
+  const boot = async (id, port) => {
+    const r = await pm.startApp({ id, name: id, command: cmd(port), preferredPort: port });
+    assert.equal(r.success, true);
+    cf.recordStart(cfg, id, human, { pid: r.pid, port });
+    for (let i = 0; i < 30 && !(await checkPort(port)); i++) await sleep(200);
+    assert.ok(await checkPort(port), 'server did not bind');
+  };
+  const state = (id) => pm.getRunningApps().find((a) => a.id === id);
+
+  try {
+    await boot('kill-by-port', 45871);
+    await pm.killByPort(45871);
+    await sleep(1500);
+    t('killByPort on a managed app: no crash emitted', () => assert.ok(!crashes.includes('kill-by-port')));
+    t('killByPort on a managed app: not reported crashed', () => assert.ok(!state('kill-by-port')?.crashed));
+
+    await boot('real-crash', 45872);
+    const holder = (await checkPort(45872)).pid;
+    process.kill(holder, 'SIGKILL'); // forceful on win32 and posix, unlike taskkill
+    await sleep(2000);
+    t('a real crash (server killed outside PortPilot) still emits', () => assert.ok(crashes.includes('real-crash')));
+    t('a real crash still reads crashed', () => assert.equal(state('real-crash')?.crashed, true));
+
+    await boot('quit-clean', 45873);
+    assert.ok(cf.readRuntime(cfg).apps['quit-clean']);
+    await pm.cleanupAllProcesses(cfg);
+    t('app quit records a stop for every tracked app', () => assert.equal(cf.readRuntime(cfg).apps['quit-clean'], undefined));
+    t('app quit is not a crash', () => assert.ok(!crashes.includes('quit-clean')));
+  } catch (e) {
+    console.log('❌ process fixtures -', e.message); failed++;
+  }
+  await pm.cleanupAllProcesses();
+  fs.rmSync(dir, { recursive: true, force: true });
+  console.log(`\n${passed} passed, ${failed} failed`);
+  process.exit(failed ? 1 : 0);
+})();

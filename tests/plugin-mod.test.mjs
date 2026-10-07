@@ -89,6 +89,23 @@ t('statusLine: rows past three collapse to +N', () => {
   assert.equal(line, '⚓ 2 crashed · 2 up · ✕ api · ✕ idle · :3000 web · +1');
 });
 
+// tdd-guard:allow  (fix and tests written together; the red run is checked against the old rule)
+t('statusLine: a just-started app that is not listening yet reads starting, not crashed', () => {
+  const now = Date.parse('2026-10-07T04:00:20Z');
+  const runtime = { apps: { web: { startedBy: { kind: 'human', surface: 'desktop', at: '2026-10-07T04:00:00Z' }, port: 3000 } } };
+  assert.equal(statusLine(config, runtime, listen(), now), '⚓ 1 starting · 0 up · ◐ web');
+});
+
+t('statusLine: the explicit crashed stamp is a crash even inside the start window', () => {
+  const now = Date.parse('2026-10-07T04:00:20Z');
+  const runtime = { apps: { web: { crashed: { exitCode: 1, at: now - 1000 }, port: 3000 } } };
+  assert.equal(statusLine(config, runtime, listen(), now), '⚓ 1 crashed · 0 up · ✕ web');
+});
+
+t('statusLine: no sidecar entry (after a stop or an app quit) leaves the app out', () => {
+  assert.equal(statusLine(config, { apps: {} }, listen()), '⚓ 0 up');
+});
+
 t('statusLine: undefined when no apps are registered', () => {
   assert.equal(statusLine({ apps: [] }, {}, listen(3000)), undefined);
   assert.equal(statusLine(null, {}, listen()), undefined);

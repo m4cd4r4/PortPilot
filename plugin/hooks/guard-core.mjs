@@ -11,7 +11,7 @@
  * command-line lookup, at the cost of trusting that the process on an app's
  * port is that app.
  */
-import { describeConflict, provenanceOf } from './lib/core.mjs';
+import { describeConflict, provenanceOf, runtimeStateOf } from './lib/core.mjs';
 
 const MAX_LISTED = 3;
 const MAX_NAME = 16;
@@ -78,18 +78,23 @@ function shortName(name) {
  * sidecar keeps the entry until a PortPilot stop) and the port is gone.
  * Apps that are neither are left out.
  */
-export function appStates(config, runtime, listeners) {
+export function appStates(config, runtime, listeners, now) {
   const rtApps = (runtime && runtime.apps) || {};
   const rows = [];
   for (const app of (config && config.apps) || []) {
     if (!app || !app.id) continue;
     const rt = rtApps[app.id] || null;
     const port = appPort(app, rt);
+    if (!port) continue;
     const claude = !!rt && provenanceOf(rt.startedBy).kind === 'claude';
-    const held = !!port && listeners.has(port);
-    if (held && holdersOf(port, listeners.get(port), config, runtime).some((h) => h.id === app.id)) rows.push({ id: app.id, name: app.name, port, state: 'running', claude });
-    else if (held) continue; // another app holds its port: not up, and not known to have crashed
-    else if (rt && port) rows.push({ id: app.id, name: app.name, port, state: 'crashed', claude });
+    if (listeners.has(port)) {
+      // Another app holds its port: not up, and not known to have crashed.
+      if (!holdersOf(port, listeners.get(port), config, runtime).some((h) => h.id === app.id)) continue;
+      rows.push({ id: app.id, name: app.name, port, state: 'running', claude });
+      continue;
+    }
+    const state = runtimeStateOf(rt, { listening: false, now });
+    if (state) rows.push({ id: app.id, name: app.name, port, state, claude });
   }
   // Apps that share a port and cannot be told apart are one server: one row.
   const merged = [];
@@ -98,7 +103,7 @@ export function appStates(config, runtime, listeners) {
     if (same) { same.name = `${same.name}/${r.name}`; same.claude ||= r.claude; } else merged.push(r);
   }
   // Worst state first, then by port.
-  const rank = { crashed: 0, running: 1 };
+  const rank = { crashed: 0, starting: 1, running: 2 };
   return merged.sort((a, b) => rank[a.state] - rank[b.state] || a.port - b.port);
 }
 
@@ -106,17 +111,20 @@ export function appStates(config, runtime, listeners) {
  * The status line text, e.g. `⚓ 1 crashed · 2 up · ✕ api · :3000 web✦`,
  * or undefined when PortPilot has no apps registered (nothing to say).
  */
-export function statusLine(config, runtime, listeners) {
+export function statusLine(config, runtime, listeners, now) {
   if (!config || !Array.isArray(config.apps) || config.apps.length === 0) return undefined;
-  const rows = appStates(config, runtime, listeners);
+  const rows = appStates(config, runtime, listeners, now);
   const crashed = rows.filter((r) => r.state === 'crashed').length;
-  const up = rows.length - crashed;
+  const starting = rows.filter((r) => r.state === 'starting').length;
+  const up = rows.length - crashed - starting;
   const parts = [];
   if (crashed) parts.push(`${crashed} crashed`);
+  if (starting) parts.push(`${starting} starting`);
   parts.push(`${up} up`);
   for (const r of rows.slice(0, MAX_LISTED)) {
     const mark = r.claude ? '✦' : '';
-    parts.push(r.state === 'crashed' ? `✕ ${shortName(r.name)}${mark}` : `:${r.port} ${shortName(r.name)}${mark}`);
+    const name = `${shortName(r.name)}${mark}`;
+    parts.push(r.state === 'crashed' ? `✕ ${name}` : r.state === 'starting' ? `◐ ${name}` : `:${r.port} ${name}`);
   }
   if (rows.length > MAX_LISTED) parts.push(`+${rows.length - MAX_LISTED}`);
   return `⚓ ${parts.join(' · ')}`;
