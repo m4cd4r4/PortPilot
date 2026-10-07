@@ -1,4 +1,15 @@
-/* PortPilot landing page - TokyoNight (3.4 redesign) */
+/* PortPilot landing page - TokyoNight (3.4 redesign)
+
+   Deliberate values (polish pass, 2026-10-07):
+   - .section-head is 600px (about 74ch at 1.05rem) to keep intros under 75ch.
+   - .hero-visual padding-bottom 188px and .term at 500px wide, left -56px: the
+     terminal sits under the app shot so the conflict strips, crashed row and
+     crash toast stay visible. Change these three together.
+   - Cards are bordered and flat by design; only links, buttons and .dl react
+     to hover. Do not add a hover lift to a card that is not a link.
+   - Accent colours follow the TokyoNight syntax roles (blue = action, purple =
+     MCP, cyan = security labels, green = commands); they are not drift.
+*/
 
 :root {
   --bg-primary: #1a1b26;
@@ -25,7 +36,7 @@
 
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
-html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+html { scroll-behavior: smooth; scroll-padding-top: 76px; -webkit-text-size-adjust: 100%; }
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Ubuntu, sans-serif;
@@ -37,7 +48,8 @@ body {
 }
 
 img { max-width: 100%; height: auto; display: block; }
-a { color: var(--accent-primary); }
+a { color: var(--accent-primary); text-decoration-color: rgba(122, 162, 247, 0.4); text-underline-offset: 3px; transition: color var(--transition), text-decoration-color var(--transition); }
+a:hover { color: #a9c1ff; text-decoration-color: currentColor; }
 code, kbd, pre { font-family: var(--mono); }
 p code, li code {
   font-size: 0.88em;
@@ -104,9 +116,9 @@ p code, li code {
 .btn-primary:hover { background: #8fb3ff; transform: translateY(-1px); }
 .btn-secondary { border: 1px solid var(--border-color); color: var(--text-primary); background: var(--bg-secondary); }
 .btn-secondary:hover { border-color: var(--border-hover); }
-.text-link { display: inline-block; font-weight: 600; text-decoration: none; }
+.text-link { display: inline-block; font-weight: 600; text-decoration: underline; text-decoration-color: transparent; }
 .text-link::after { content: ' \2192'; }
-.text-link:hover { text-decoration: underline; }
+.text-link:hover { text-decoration-color: currentColor; }
 
 /* ---------- Hero ---------- */
 .hero {
@@ -131,15 +143,17 @@ p code, li code {
 .cta-row { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
 .note { font-size: 0.88rem; color: var(--text-muted); }
 
-.hero-visual { position: relative; padding-bottom: 96px; }
+.hero-visual { position: relative; padding-bottom: 188px; }
 .hero-shot {
   border-radius: var(--radius); border: 1px solid var(--border-color);
-  box-shadow: var(--shadow-lg); cursor: zoom-in;
+  box-shadow: var(--shadow-lg);
 }
+.zoomable { cursor: zoom-in; transition: border-color var(--transition), filter var(--transition); }
+.zoomable:hover { border-color: var(--border-hover); filter: brightness(1.08); }
 
 /* Claude Code terminal mock */
 .term {
-  position: absolute; left: -40px; bottom: 0; width: min(520px, 88%);
+  position: absolute; left: -56px; bottom: 0; width: min(500px, 84%);
   background: var(--bg-deep); border: 1px solid #2f3549; border-radius: 10px;
   box-shadow: var(--shadow-lg); font-family: var(--mono); font-size: 0.78rem; line-height: 1.55;
   overflow: hidden;
@@ -166,9 +180,9 @@ p code, li code {
 .section { padding: 72px 0; }
 .section-alt { background: #1d1e2b; border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); }
 .section-tight { padding: 56px 0; }
-.section-head { max-width: 680px; margin-bottom: 36px; }
+.section-head { max-width: 600px; margin-bottom: 36px; }
 h2 { font-size: clamp(1.6rem, 2.6vw, 2.1rem); line-height: 1.2; letter-spacing: -0.01em; margin-bottom: 10px; }
-.section-head p { color: var(--text-secondary); font-size: 1.05rem; }
+.section-head p { color: var(--text-secondary); font-size: 1.05rem; text-wrap: pretty; }
 h3 { font-size: 1.08rem; line-height: 1.3; margin-bottom: 8px; }
 
 .card-grid { display: grid; gap: 16px; }
@@ -201,7 +215,7 @@ h3 { font-size: 1.08rem; line-height: 1.3; margin-bottom: 8px; }
 .feature-copy p { color: var(--text-secondary); font-size: 0.95rem; }
 .crop {
   width: 100%; border-radius: var(--radius-sm); border: 1px solid var(--border-color);
-  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35); cursor: zoom-in;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
 }
 .crop-narrow { max-width: 420px; }
 .crop-scroll { outline: 0; }
@@ -248,7 +262,7 @@ h3 { font-size: 1.08rem; line-height: 1.3; margin-bottom: 8px; }
 .dl-more { color: var(--text-secondary); font-size: 0.92rem; margin-bottom: 18px; }
 
 .shortcuts { border: 1px solid var(--border-color); border-radius: var(--radius-sm); }
-.shortcuts summary { cursor: pointer; padding: 12px 16px; font-weight: 600; color: var(--text-secondary); }
+.shortcuts summary { cursor: pointer; padding: 12px 16px; font-weight: 600; color: var(--text-secondary); transition: color var(--transition); }
 .shortcuts summary:hover { color: var(--text-primary); }
 .shortcuts dl { display: flex; flex-wrap: wrap; gap: 10px 28px; padding: 4px 16px 16px; }
 .shortcuts dl div { display: flex; align-items: center; gap: 10px; }
@@ -264,7 +278,7 @@ kbd {
 .footer-brand { display: flex; align-items: center; gap: 10px; color: var(--text-muted); font-size: 0.9rem; }
 .footer-brand img { width: 24px; height: 24px; }
 .footer-links { display: flex; gap: 20px; }
-.footer-links a { color: var(--text-secondary); font-size: 0.9rem; text-decoration: none; }
+.footer-links a { color: var(--text-secondary); font-size: 0.9rem; text-decoration: none; transition: color var(--transition); }
 .footer-links a:hover { color: var(--text-primary); }
 
 /* Reveal (only when JS is running) */
