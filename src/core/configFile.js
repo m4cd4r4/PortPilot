@@ -211,12 +211,26 @@ function recordStop(configPath, appId) {
 // Code extension) can tell a crash from a clean stop. The stamp replaces the
 // dead run's entry, so its startedBy never labels a later process on the same
 // port. recordStart replaces the entry, which clears it; recordStop deletes it.
-function recordCrash(configPath, appId, exitCode) {
+// The stamp keeps who started the dead run (crashed.startedBy, nested so no
+// reader mistakes it for a live owner), its port and the last of its output,
+// so a crash alert can name the session it belongs to and say why.
+const CRASH_TAIL_CHARS = 2000;
+
+function recordCrash(configPath, appId, exitCode, { errorTail = null, port = null } = {}) {
   if (!appId) return false;
   try {
     updateJson(runtimePathFor(configPath), (runtime) => {
       if (!runtime.apps || typeof runtime.apps !== 'object') runtime.apps = {};
-      runtime.apps[appId] = { crashed: { exitCode: exitCode ?? null, at: Date.now() } };
+      const prev = runtime.apps[appId] || {};
+      runtime.apps[appId] = {
+        crashed: {
+          exitCode: exitCode ?? null,
+          at: Date.now(),
+          startedBy: prev.startedBy || (prev.crashed && prev.crashed.startedBy) || null,
+          port: port || prev.port || null,
+          errorTail: errorTail ? String(errorTail).slice(-CRASH_TAIL_CHARS) : null,
+        },
+      };
     }, emptyRuntime);
     return true;
   } catch (err) {
@@ -225,7 +239,33 @@ function recordCrash(configPath, appId, exitCode) {
   }
 }
 
+// ---- App output logs -------------------------------------------------------
+// An app started detached (MCP, VS Code) has no live process handle to read
+// stderr from, so its output goes to logs/<appId>.log beside the config,
+// truncated on each start. The tail is what a crash alert shows.
+
+function logPathFor(configPath, appId) {
+  const safe = String(appId).replace(/[^A-Za-z0-9_-]/g, '_').slice(0, 120);
+  return path.join(path.dirname(configPath), 'logs', `${safe}.log`);
+}
+
+function readLogTail(configPath, appId, chars = CRASH_TAIL_CHARS) {
+  try {
+    const file = logPathFor(configPath, appId);
+    const { size } = fs.statSync(file);
+    const fd = fs.openSync(file, 'r');
+    try {
+      // Read the last chars*4 bytes so a multi-byte tail still yields `chars`.
+      const len = Math.min(size, chars * 4);
+      const buf = Buffer.alloc(len);
+      fs.readSync(fd, buf, 0, len, size - len);
+      return buf.toString('utf8').slice(-chars);
+    } finally { fs.closeSync(fd); }
+  } catch { return null; }
+}
+
 module.exports = {
   readJson, writeJsonAtomic, withLock, updateJson,
   runtimePathFor, readRuntime, recordStart, recordStop, recordCrash,
+  logPathFor, readLogTail, CRASH_TAIL_CHARS,
 };
