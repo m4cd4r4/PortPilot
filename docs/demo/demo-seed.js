@@ -136,7 +136,22 @@
     docker: { status: () => Promise.resolve({ running: false }), start: noop },
     window: { autoResize: noop },
     tray: { update: noop },
-    on: () => {},
+    crash: { askClaude: () => ok({ short: 'b71c' }) },
+    // The crash toast main.js would send when anchor-metrics dies, with a live
+    // Claude session to hand it to (the shape crashAlert.buildCrashAlert makes).
+    on: (channel, cb) => {
+      if (channel !== 'crash-toast') return;
+      setTimeout(() => cb({
+        appId: 'a_metrics', name: 'anchor-metrics', title: 'anchor-metrics crashed 2x in 5m',
+        meta: ':9090 · exit 1', count: 2, at: Date.now(),
+        lines: [
+          '  File "C:/dev/tools/metrics/main.py", line 42, in <module>',
+          '    store = TideStore(os.environ["TIDE_DB_URL"])',
+          "KeyError: 'TIDE_DB_URL'",
+        ],
+        session: { id: 'b71c9e04-demo', short: 'b71c', reason: 'owner' },
+      }), 400);
+    },
     openExternal: noop,
     browseDirectory: () => ok({ canceled: true }),
   };

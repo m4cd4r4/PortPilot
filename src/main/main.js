@@ -157,17 +157,18 @@ if (!gotTheLock) {
     // Notify (OS notification + in-app toast) when a running app crashes.
     const { onAppCrash, getRunningApps } = require('./processManager');
     const reserver = require('./portReserver');
-    const { recordCrash, readRuntime } = require('../core/configFile');
+    const { recordCrash, readRuntime, liveSessions } = require('../core/configFile');
+    const { pickSession, createCrashHistory, buildCrashAlert } = require('../core/crashAlert');
+    const crashHistory = createCrashHistory();
     onAppCrash(async ({ id, name, code, errorTail }) => {
       // MCP stop_app (and the VS Code extension) kill from another process and
       // delete the sidecar entry once the kill returns: give them a moment, and
       // treat an entry that vanished as a stop, not a crash.
       await new Promise((r) => setTimeout(r, 1500));
       if (!readRuntime(configStore.configPath).apps[id]) return;
-      recordCrash(configStore.configPath, id, code, {
-        errorTail,
-        port: configStore.getApp(id)?.preferredPort,
-      });
+      const cfg = configStore.getApp(id);
+      recordCrash(configStore.configPath, id, code, { errorTail, port: cfg?.preferredPort });
+      const count = crashHistory.note(id);
       if (configStore.getSettings().notifyOnCrash !== false) {
         const body = `${name} exited unexpectedly${code != null ? ` (code ${code})` : ''}.`;
         try {
@@ -175,7 +176,16 @@ if (!gotTheLock) {
             new Notification({ title: 'PortPilot - app stopped', body }).show();
           }
         } catch (err) { console.error('Crash notification failed:', err); }
-        mainWindow?.webContents.send('toast', { type: 'error', message: body });
+        // The in-app toast offers Ask Claude when a session is live: the one
+        // that started the dead run, else one in the app's folder, else the newest.
+        let session = null;
+        try {
+          const ownerSessionId = readRuntime(configStore.configPath).apps[id]?.crashed?.startedBy?.sessionId || null;
+          session = pickSession(liveSessions(configStore.configPath), { ownerSessionId, cwd: cfg?.cwd });
+        } catch (err) { console.error('Crash session lookup failed:', err); }
+        mainWindow?.webContents.send('crash-toast', buildCrashAlert({
+          id, name, code, port: cfg?.preferredPort, errorTail, count, session,
+        }));
       }
       // Re-acquire the port reservation the crashed app left behind.
       const app = configStore.getApp(id);

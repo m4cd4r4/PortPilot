@@ -58,6 +58,11 @@ contextBridge.exposeInMainWorld('portpilot', {
     shareInfo: (port) => ipcRenderer.invoke('net:shareInfo', port)
   },
 
+  // Crash alerts: hand a crash to a live Claude Code session
+  crash: {
+    askClaude: (appId, sessionId) => ipcRenderer.invoke('crash:askClaude', { appId, sessionId })
+  },
+
   // Port reservation
   reserve: {
     enable: (appId) => ipcRenderer.invoke('reserve:enable', appId),
@@ -76,7 +81,7 @@ contextBridge.exposeInMainWorld('portpilot', {
 
   // Event listeners
   on: (channel, callback) => {
-    const validChannels = ['trigger-scan', 'config-changed', 'toast'];
+    const validChannels = ['trigger-scan', 'config-changed', 'toast', 'crash-toast'];
     if (validChannels.includes(channel)) {
       ipcRenderer.on(channel, (_, ...args) => callback(...args));
     }
