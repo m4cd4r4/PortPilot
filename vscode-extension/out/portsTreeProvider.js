@@ -44,7 +44,7 @@ const portScanner_1 = require("./portScanner");
 const PortPilotStatus = require('../runtime/core/status.js');
 class PortTreeItem extends vscode.TreeItem {
     activePort;
-    constructor(activePort, matchedAppName, group = 'other') {
+    constructor(activePort, matchedAppName, group = 'other', byClaude = false) {
         super(`:${activePort.port}`, vscode.TreeItemCollapsibleState.None);
         this.activePort = activePort;
         // System ports use a distinct contextValue so the kill / open-in-browser
@@ -53,13 +53,16 @@ class PortTreeItem extends vscode.TreeItem {
         this.contextValue = group === 'system' ? 'active-port-system' : 'active-port';
         const color = group === 'dev' ? 'charts.green' : group === 'system' ? 'disabledForeground' : 'charts.blue';
         this.iconPath = new vscode.ThemeIcon('circle-filled', new vscode.ThemeColor(color));
+        // An app name reads better than "node.exe"; the process stays in the tooltip.
+        // ✦ marks a server Claude Code started, same glyph as the desktop row.
         const desc = matchedAppName ?? activePort.processName;
-        this.description = `${desc} (PID ${activePort.pid})`;
+        this.description = `${byClaude ? '✦ ' : ''}${desc} (PID ${activePort.pid})`;
         this.tooltip = [
             `Port: ${activePort.port}`,
             `Process: ${activePort.processName}`,
             `PID: ${activePort.pid}`,
-            matchedAppName ? `App: ${matchedAppName}` : ''
+            matchedAppName ? `App: ${matchedAppName}` : '',
+            byClaude ? 'Started by Claude Code' : ''
         ].filter(Boolean).join('\n');
     }
 }
@@ -82,6 +85,13 @@ class PortsTreeProvider {
     _onDidChangeTreeData = new vscode.EventEmitter();
     onDidChangeTreeData = this._onDidChangeTreeData.event;
     cachedPorts = [];
+    // port -> appId from the apps provider's two-phase matcher, so an app on a
+    // dynamic port is still named. Set by refreshAll in extension.ts.
+    appIdByPort = new Map();
+    setAppIdByPort(map) {
+        this.appIdByPort = map;
+        this._onDidChangeTreeData.fire(undefined);
+    }
     async refresh() {
         this.cachedPorts = await (0, portScanner_1.scanPorts)();
         this._onDidChangeTreeData.fire(undefined);
@@ -99,12 +109,17 @@ class PortsTreeProvider {
         // Root: classify the cached ports into Dev / Other / System groups, mirroring
         // the desktop app. Scanning is async and driven by refresh().
         const config = (0, config_1.readConfig)();
-        const appByPort = new Map(config.apps.filter(a => a.preferredPort).map(a => [a.preferredPort, a.name]));
+        const runtime = (0, config_1.readRuntimeApps)();
+        const appById = new Map(config.apps.map(a => [a.id, a]));
+        // Live matches first; a preferredPort match only names a port no live match claimed.
+        const preferredByPort = new Map(config.apps.filter(a => a.preferredPort).map(a => [a.preferredPort, a.id]));
         const buckets = { dev: [], other: [], system: [] };
         for (const p of this.cachedPorts) {
-            const registered = appByPort.has(p.port);
-            const group = PortPilotStatus.classify({ port: p.port, processName: p.processName, pid: p.pid }, { registered });
-            buckets[group].push(new PortTreeItem(p, appByPort.get(p.port), group));
+            const appId = this.appIdByPort.get(p.port) ?? preferredByPort.get(p.port);
+            const app = appId ? appById.get(appId) : undefined;
+            const group = PortPilotStatus.classify({ port: p.port, processName: p.processName, pid: p.pid }, { registered: !!app });
+            const byClaude = !!appId && runtime[appId]?.startedBy?.kind === 'claude';
+            buckets[group].push(new PortTreeItem(p, app?.name, group, byClaude));
         }
         const groups = [];
         for (const key of PortPilotStatus.GROUP_ORDER) {

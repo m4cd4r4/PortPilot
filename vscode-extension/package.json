@@ -1,13 +1,16 @@
 {
   "name": "portpilot",
   "displayName": "PortPilot",
-  "description": "Manage localhost dev servers and ports from the VS Code sidebar",
+  "description": "See every dev server and port from the sidebar, with crash alerts and the servers Claude Code started marked.",
   "version": "3.4.0",
   "publisher": "macdara",
   "engines": {
     "vscode": "^1.85.0"
   },
-  "categories": ["Other"],
+  "categories": [
+    "Other",
+    "AI"
+  ],
   "activationEvents": [],
   "main": "./out/extension.js",
   "license": "MIT",
@@ -134,6 +137,18 @@
         "title": "Open Web Portal in Browser",
         "icon": "$(globe)",
         "category": "PortPilot"
+      },
+      {
+        "command": "portpilot.foldStopped",
+        "title": "Fold Stopped Apps",
+        "icon": "$(fold)",
+        "category": "PortPilot"
+      },
+      {
+        "command": "portpilot.unfoldStopped",
+        "title": "Show Stopped Apps Inline",
+        "icon": "$(unfold)",
+        "category": "PortPilot"
       }
     ],
     "configuration": {
@@ -148,6 +163,11 @@
           "type": "boolean",
           "default": false,
           "description": "When the web portal stops, also stop the dev servers it started. Off by default, so dev servers keep running across portal restarts."
+        },
+        "portpilot.foldStoppedApps": {
+          "type": "boolean",
+          "default": true,
+          "description": "Sort running and crashed apps first and fold stopped apps into a collapsed \"Stopped (N)\" node at the end of each list."
         }
       }
     },
@@ -157,6 +177,16 @@
           "command": "portpilot.addApp",
           "when": "view == portpilot.apps",
           "group": "navigation"
+        },
+        {
+          "command": "portpilot.foldStopped",
+          "when": "view == portpilot.apps && !portpilot.foldStopped",
+          "group": "navigation@1"
+        },
+        {
+          "command": "portpilot.unfoldStopped",
+          "when": "view == portpilot.apps && portpilot.foldStopped",
+          "group": "navigation@1"
         },
         {
           "command": "portpilot.refresh",
@@ -225,6 +255,16 @@
           "when": "view == portpilot.activePorts && viewItem == active-port",
           "group": "inline"
         }
+      ],
+      "commandPalette": [
+        {
+          "command": "portpilot.foldStopped",
+          "when": "!portpilot.foldStopped"
+        },
+        {
+          "command": "portpilot.unfoldStopped",
+          "when": "portpilot.foldStopped"
+        }
       ]
     }
   },
@@ -239,5 +279,24 @@
     "@types/node": "^20.0.0",
     "@types/vscode": "^1.85.0",
     "typescript": "^5.3.0"
+  },
+  "keywords": [
+    "claude",
+    "claude code",
+    "mcp",
+    "ports",
+    "dev server",
+    "localhost",
+    "worktree",
+    "port manager",
+    "process"
+  ],
+  "galleryBanner": {
+    "color": "#1a1b26",
+    "theme": "dark"
+  },
+  "homepage": "https://m4cd4r4.github.io/PortPilot/",
+  "bugs": {
+    "url": "https://github.com/m4cd4r4/PortPilot/issues"
   }
 }

@@ -1,16 +1,30 @@
 import * as vscode from 'vscode';
 import { readConfig, readRuntimeApps, rowStateOf, PortPilotApp, PortPilotGroup, RowState, RuntimeEntry } from './config';
 import { scanPorts, computeRunning, ActivePort } from './portScanner';
+import { arrange, SortKey } from './treeModel';
 
 export class GroupTreeItem extends vscode.TreeItem {
   constructor(
     public readonly group: PortPilotGroup,
-    public readonly apps: AppTreeItem[]
+    public readonly apps: TreeNode[],
+    appCount: number
   ) {
     super(group.name, vscode.TreeItemCollapsibleState.Expanded);
     this.contextValue = 'group';
     this.iconPath = new vscode.ThemeIcon('folder', new vscode.ThemeColor('charts.yellow'));
-    this.description = `${apps.length} apps`;
+    this.description = `${appCount} apps`;
+  }
+}
+
+/** Collapsed tail node holding the idle apps of one sibling list. */
+export class StoppedTreeItem extends vscode.TreeItem {
+  constructor(public readonly apps: AppTreeItem[], scope: string) {
+    super(`Stopped (${apps.length})`, vscode.TreeItemCollapsibleState.Collapsed);
+    // A stable id keeps the user's expand/collapse choice across refreshes,
+    // even though the count in the label changes.
+    this.id = `portpilot-stopped:${scope}`;
+    this.contextValue = 'stopped-fold';
+    this.iconPath = new vscode.ThemeIcon('circle-outline', new vscode.ThemeColor('disabledForeground'));
   }
 }
 
@@ -129,13 +143,21 @@ export class AppTreeItem extends vscode.TreeItem {
   }
 }
 
-type TreeNode = GroupTreeItem | AppTreeItem;
+type TreeNode = GroupTreeItem | AppTreeItem | StoppedTreeItem;
 
 export class AppsTreeProvider implements vscode.TreeDataProvider<TreeNode> {
   private _onDidChangeTreeData = new vscode.EventEmitter<TreeNode | undefined>();
   readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
 
   private runningByAppId: Map<string, ActivePort> = new Map();
+
+  /** Tuck idle apps under a collapsed "Stopped (N)" node (portpilot.foldStoppedApps). */
+  foldStopped = true;
+
+  setFoldStopped(fold: boolean): void {
+    this.foldStopped = fold;
+    this._onDidChangeTreeData.fire(undefined);
+  }
 
   async refresh(): Promise<void> {
     const activePorts = await scanPorts();
@@ -163,7 +185,7 @@ export class AppsTreeProvider implements vscode.TreeDataProvider<TreeNode> {
   }
 
   getChildren(element?: TreeNode): TreeNode[] {
-    if (element instanceof GroupTreeItem) {
+    if (element instanceof GroupTreeItem || element instanceof StoppedTreeItem) {
       return element.apps;
     }
     // A parent app's children are its branch worktrees.
@@ -176,10 +198,12 @@ export class AppsTreeProvider implements vscode.TreeDataProvider<TreeNode> {
     const runtime = readRuntimeApps();
 
     const groups = config.groups || [];
-    const sortFn = (a: PortPilotApp, b: PortPilotApp) => {
-      if (a.isFavorite !== b.isFavorite) return a.isFavorite ? -1 : 1;
-      return a.name.localeCompare(b.name);
-    };
+    const keyOf = (i: AppTreeItem): SortKey => ({
+      state: i.rowState.state,
+      name: i.app.name,
+      favorite: i.app.isFavorite,
+      childStates: i.children.map(c => c.rowState.state),
+    });
 
     // Branch children (parentId pointing at a real app) nest under their parent,
     // not at the top level. Build the map once.
@@ -193,19 +217,25 @@ export class AppsTreeProvider implements vscode.TreeDataProvider<TreeNode> {
         childrenByParent.set(a.parentId!, arr);
       }
     }
-    const topLevel = config.apps.filter(a => !isChild(a)).sort(sortFn);
+    const topLevel = config.apps.filter(a => !isChild(a));
 
     const makeAppItem = (app: PortPilotApp): AppTreeItem => {
       const matched = this.runningByAppId.get(app.id);
-      const kids = (childrenByParent.get(app.id) ?? [])
-        .sort(sortFn)
-        .map(makeAppItem);
+      // Branches are sorted running-first but never folded: they sit under an
+      // already-expanded parent the user chose to look at.
+      const kids = arrange((childrenByParent.get(app.id) ?? []).map(makeAppItem), keyOf, false).visible;
       return new AppTreeItem(app, matched, kids, runtime[app.id]);
+    };
+
+    // Running first, then the idle ones folded into a tail node when enabled.
+    const ordered = (items: AppTreeItem[], scope: string): TreeNode[] => {
+      const { visible, stopped } = arrange(items, keyOf, this.foldStopped);
+      return stopped.length ? [...visible, new StoppedTreeItem(stopped, scope)] : visible;
     };
 
     // If no groups, return flat list of top-level apps (each carrying its branches)
     if (groups.length === 0) {
-      return topLevel.map(makeAppItem);
+      return ordered(topLevel.map(makeAppItem), 'root');
     }
 
     // Build grouped tree
@@ -221,7 +251,7 @@ export class AppsTreeProvider implements vscode.TreeDataProvider<TreeNode> {
         });
 
       if (groupApps.length > 0) {
-        result.push(new GroupTreeItem(group, groupApps));
+        result.push(new GroupTreeItem(group, ordered(groupApps, `group:${group.id}`), groupApps.length));
       }
     }
 
@@ -230,7 +260,7 @@ export class AppsTreeProvider implements vscode.TreeDataProvider<TreeNode> {
       .filter(a => !groupedAppIds.has(a.id))
       .map(makeAppItem);
 
-    result.push(...ungrouped);
+    result.push(...ordered(ungrouped, 'root'));
     return result;
   }
 }
