@@ -1,0 +1,11 @@
+import { statusLine } from '../../plugin/hooks/guard-core.mjs';
+import fs from 'fs'; import vm from 'vm';
+const ctx = { window: {}, Date, Promise, Object, Set, console, setTimeout };
+vm.runInNewContext(fs.readFileSync('docs/demo/demo-seed.js', 'utf8'), ctx);
+const pp = ctx.window.portpilot;
+const { apps } = await pp.config.getApps();
+const { ports } = await pp.ports.scan();
+const { runtime } = await pp.process.list();
+runtime.a_metrics = { startedBy: { kind: 'human', surface: 'desktop' }, crashed: { at: new Date().toISOString(), exitCode: 1, startedBy: { kind: 'human' }, port: 9090 }, port: 9090 };
+const listeners = new Map(ports.map((p) => [p.port, [{ pid: p.pid, processName: p.processName }]]));
+console.log(statusLine({ apps }, { apps: runtime }, listeners, Date.now()));
