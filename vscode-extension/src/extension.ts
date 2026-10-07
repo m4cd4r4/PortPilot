@@ -2,10 +2,14 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import { exec } from 'child_process';
 import * as os from 'os';
-import { getConfigPath, readConfig, updateConfig, generateId, PortPilotApp, recordHumanStart, recordAppStop } from './config';
+import {
+  getConfigPath, readConfig, readRuntimeApps, updateConfig, generateId, logPathFor,
+  PortPilotApp, recordHumanStart, recordAppStop
+} from './config';
 import { AppsTreeProvider, AppTreeItem, GroupTreeItem } from './appsTreeProvider';
 import { PortsTreeProvider, PortTreeItem } from './portsTreeProvider';
 import { killPort } from './portScanner';
+import { appIdByPort, newCrashes, CrashStamp } from './treeModel';
 import { WebPortal } from './webPortal';
 
 let webPortal: WebPortal | undefined;
@@ -14,8 +18,30 @@ export function activate(context: vscode.ExtensionContext) {
   const appsProvider = new AppsTreeProvider();
   const portsProvider = new PortsTreeProvider();
 
-  vscode.window.registerTreeDataProvider('portpilot.apps', appsProvider);
+  // createTreeView (not registerTreeDataProvider) so the Apps view can carry a
+  // crash-count badge on the activity bar icon.
+  const appsView = vscode.window.createTreeView('portpilot.apps', { treeDataProvider: appsProvider });
+  context.subscriptions.push(appsView);
   vscode.window.registerTreeDataProvider('portpilot.activePorts', portsProvider);
+
+  // "Stopped (N)" folding: setting-backed, with a view-title toggle whose icon
+  // follows the portpilot.foldStopped context key.
+  const readFold = () => vscode.workspace.getConfiguration('portpilot').get<boolean>('foldStoppedApps', true);
+  const applyFold = (fold: boolean) => {
+    appsProvider.setFoldStopped(fold);
+    void vscode.commands.executeCommand('setContext', 'portpilot.foldStopped', fold);
+  };
+  applyFold(readFold());
+  context.subscriptions.push(
+    vscode.workspace.onDidChangeConfiguration(e => {
+      if (e.affectsConfiguration('portpilot.foldStoppedApps')) applyFold(readFold());
+    })
+  );
+  const setFold = (fold: boolean) =>
+    vscode.workspace.getConfiguration('portpilot').update('foldStoppedApps', fold, vscode.ConfigurationTarget.Global);
+
+  const crashOutput = vscode.window.createOutputChannel('PortPilot Crashes');
+  context.subscriptions.push(crashOutput);
 
   // Status bar item
   const statusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 50);
@@ -62,7 +88,76 @@ export function activate(context: vscode.ExtensionContext) {
     // Single async scan shared with both providers (no UI-thread blocking).
     await portsProvider.refresh();
     await appsProvider.setActivePorts(portsProvider.getCachedPorts());
+    portsProvider.setAppIdByPort(appIdByPort(appsProvider.getRunningByAppId()));
     updateStatusBar();
+    updateBadge();
+    alertNewCrashes();
+  }
+
+  function updateBadge() {
+    const n = appsProvider.getCrashedApps().length;
+    appsView.badge = n ? { value: n, tooltip: `${n} app${n === 1 ? '' : 's'} crashed` } : undefined;
+  }
+
+  // High-water mark of crash stamps already seen. The first refresh only sets
+  // it: a crash from before this window opened shows in the badge, not a toast.
+  let crashSeenAt: number | undefined;
+
+  function alertNewCrashes() {
+    const runtime = readRuntimeApps();
+    const running = new Set(appsProvider.getRunningByAppId().keys());
+    if (crashSeenAt === undefined) {
+      crashSeenAt = newCrashes(runtime, running, 0).latest;
+      return;
+    }
+    const { crashes, latest } = newCrashes(runtime, running, crashSeenAt);
+    crashSeenAt = latest;
+    const apps = new Map(readConfig().apps.map(a => [a.id, a]));
+    for (const { appId, stamp } of crashes) {
+      const app = apps.get(appId);
+      if (app) void showCrash(app, stamp);
+    }
+  }
+
+  async function showCrash(app: PortPilotApp, stamp: CrashStamp) {
+    const why = stamp.exitCode != null ? ` (exit ${stamp.exitCode})` : '';
+    const who = stamp.startedBy?.kind === 'claude' ? ' Claude Code started it.' : '';
+    const choice = await vscode.window.showErrorMessage(`${app.name} crashed${why}.${who}`, 'Restart', 'Logs');
+    if (choice === 'Restart') {
+      startApp(app);
+    } else if (choice === 'Logs') {
+      const file = logPathFor(app.id);
+      if (fs.existsSync(file)) {
+        await vscode.window.showTextDocument(vscode.Uri.file(file), { preview: true });
+      } else {
+        crashOutput.appendLine(`--- ${app.name} crashed${why} at ${new Date(stamp.at).toLocaleString()} ---`);
+        crashOutput.appendLine(stamp.errorTail || '(no output was captured for this run)');
+        crashOutput.show(true);
+      }
+    }
+  }
+
+  function startApp(app: PortPilotApp) {
+    const shell = os.platform() === 'win32' ? 'cmd.exe' : '/bin/sh';
+    const shellFlag = os.platform() === 'win32' ? '/c' : '-c';
+
+    const env = { ...process.env, ...app.env };
+    if (app.preferredPort) {
+      env.PORT = String(app.preferredPort);
+    }
+
+    const terminal = vscode.window.createTerminal({
+      name: `PortPilot: ${app.name}`,
+      cwd: app.cwd,
+      env,
+      shellPath: shell,
+      shellArgs: [shellFlag, app.command]
+    });
+    terminal.show();
+    recordHumanStart(app);
+
+    // Refresh after a delay to pick up the new port
+    setTimeout(() => refreshAll(), 3000);
   }
 
   // Auto-refresh every 10 seconds
@@ -100,28 +195,11 @@ export function activate(context: vscode.ExtensionContext) {
     }),
 
     vscode.commands.registerCommand('portpilot.startApp', (item: AppTreeItem) => {
-      const app = item.app;
-      const shell = os.platform() === 'win32' ? 'cmd.exe' : '/bin/sh';
-      const shellFlag = os.platform() === 'win32' ? '/c' : '-c';
-
-      const env = { ...process.env, ...app.env };
-      if (app.preferredPort) {
-        env.PORT = String(app.preferredPort);
-      }
-
-      const terminal = vscode.window.createTerminal({
-        name: `PortPilot: ${app.name}`,
-        cwd: app.cwd,
-        env,
-        shellPath: shell,
-        shellArgs: [shellFlag, app.command]
-      });
-      terminal.show();
-      recordHumanStart(app);
-
-      // Refresh after a delay to pick up the new port
-      setTimeout(() => refreshAll(), 3000);
+      startApp(item.app);
     }),
+
+    vscode.commands.registerCommand('portpilot.foldStopped', () => setFold(true)),
+    vscode.commands.registerCommand('portpilot.unfoldStopped', () => setFold(false)),
 
     vscode.commands.registerCommand('portpilot.stopApp', (item: AppTreeItem) => {
       if (!item.activePort) {

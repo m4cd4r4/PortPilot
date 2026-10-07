@@ -39,6 +39,7 @@ exports.readConfig = readConfig;
 exports.recordHumanStart = recordHumanStart;
 exports.recordAppStop = recordAppStop;
 exports.readRuntimeApps = readRuntimeApps;
+exports.logPathFor = logPathFor;
 exports.updateConfig = updateConfig;
 exports.generateId = generateId;
 const fs = __importStar(require("fs"));
@@ -95,6 +96,10 @@ function readRuntimeApps() {
     catch {
         return {};
     }
+}
+/** Where a detached app's output is written (logs/<appId>.log beside the config). */
+function logPathFor(appId) {
+    return configFile.logPathFor(getConfigPath(), appId);
 }
 const rowStateOf = (rec) => status.rowStateOf(rec);
 exports.rowStateOf = rowStateOf;

@@ -84,12 +84,19 @@ interface ConfigFileApi {
   recordStart(configPath: string, appId: string, startedBy: StartedBy, opts?: { pid?: number | null; port?: number | null }): boolean;
   recordStop(configPath: string, appId: string): boolean;
   readRuntime(configPath: string): { apps: Record<string, RuntimeEntry> };
+  logPathFor(configPath: string, appId: string): string;
 }
 export interface RuntimeEntry {
   startedBy?: StartedBy;
   pid?: number | null;
   port?: number | null;
-  crashed?: { exitCode: number | null; at: number };
+  crashed?: {
+    exitCode: number | null;
+    at: number;
+    startedBy?: StartedBy | null;
+    port?: number | null;
+    errorTail?: string | null;
+  };
 }
 export interface RowState {
   state: 'running' | 'starting' | 'error' | 'conflict' | 'crashed' | 'stopped';
@@ -126,6 +133,11 @@ export function recordAppStop(appId: string): boolean {
 /** Per-app runtime entries (provenance, crash stamp). Empty on any read failure. */
 export function readRuntimeApps(): Record<string, RuntimeEntry> {
   try { return configFile.readRuntime(getConfigPath()).apps; } catch { return {}; }
+}
+
+/** Where a detached app's output is written (logs/<appId>.log beside the config). */
+export function logPathFor(appId: string): string {
+  return configFile.logPathFor(getConfigPath(), appId);
 }
 
 export const rowStateOf = (rec: Parameters<StatusApi['rowStateOf']>[0]): RowState => status.rowStateOf(rec);
