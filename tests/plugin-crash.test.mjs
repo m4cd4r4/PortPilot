@@ -12,10 +12,13 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import {
   sessionCrashes, crashHeadline, lastLine, tailLines, fixPrompt, logFileName, TAIL_CHARS,
+  appCrash, sessionFileName, heartbeat, pendingRequests,
 } from '../plugin/hooks/crash-core.mjs';
+import fs from 'node:fs';
+import os from 'node:os';
 
 const require = createRequire(import.meta.url);
-const { logPathFor } = require('../src/core/configFile.js');
+const { logPathFor, inboxPathFor, sessionsDirFor, liveSessions, sendToSession, SESSION_LIVE_MS } = require('../src/core/configFile.js');
 
 let passed = 0;
 let failed = 0;
@@ -135,6 +138,64 @@ t('logFileName matches configFile.logPathFor basename', () => {
   for (const id of ['web', 'my app/../x', 'ünï:cødé', 'a'.repeat(200)]) {
     assert.equal(logFileName(id), path.basename(logPathFor('/cfg/portpilot.json', id)), id);
   }
+});
+
+// ---- appCrash ---------------------------------------------------------------
+
+t('appCrash finds a crash whoever started it, and null for a running or unknown app', () => {
+  const runtime = { apps: { web: stamped('sess-other') } };
+  assert.equal(appCrash(config, runtime, new Set(), 'web', NOW).id, 'web');
+  assert.equal(appCrash(config, runtime, new Set([3000]), 'web', NOW), null);
+  assert.equal(appCrash(config, runtime, new Set(), 'nope', NOW), null);
+  assert.equal(appCrash(config, runtime, new Set(), 'api', NOW), null);
+});
+
+// ---- heartbeat and inbox: both sides of the file contract -------------------
+
+t('sessionFileName matches configFile.inboxPathFor basename', () => {
+  for (const id of ['3f2a-b71c', 'a/b:c']) {
+    assert.equal(sessionFileName(id), path.basename(inboxPathFor('/cfg/portpilot.json', id)), id);
+  }
+});
+
+t('pendingRequests: after the cursor, latest per app, cursor past bad entries', () => {
+  const inbox = JSON.stringify({ requests: [
+    { appId: 'web', at: 100 }, { appId: 'web', at: 200 }, { appId: 'api', at: 150 }, { appId: 'old', at: 50 }, { at: 300 },
+  ] });
+  const r = pendingRequests(inbox, 60);
+  assert.deepStrictEqual(r.requests, [{ appId: 'api', at: 150 }, { appId: 'web', at: 200 }]);
+  assert.equal(r.cursor, 300);
+  assert.deepStrictEqual(pendingRequests(inbox, 300).requests, []);
+  assert.deepStrictEqual(pendingRequests('not json', 0), { requests: [], cursor: 0 });
+});
+
+t('a heartbeat the mod writes is a live session to the app; a stale or torn one is not', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pp-sessions-'));
+  try {
+    const cfg = path.join(root, 'portpilot-config.json');
+    const dir = sessionsDirFor(cfg);
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, sessionFileName('live-1')), heartbeat('live-1', 'C:/work', NOW - 1000));
+    fs.writeFileSync(path.join(dir, sessionFileName('stale')), heartbeat('stale', null, NOW - SESSION_LIVE_MS - 1));
+    fs.writeFileSync(path.join(dir, 'torn.json'), '{"sessionId":"to');
+    assert.deepStrictEqual(liveSessions(cfg, NOW), [{ sessionId: 'live-1', cwd: 'C:/work', at: NOW - 1000 }]);
+    assert.deepStrictEqual(fs.readdirSync(dir).filter((n) => n.includes('corrupt')), []);
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+t('sendToSession appends a strictly later request the mod reads back', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pp-inbox-'));
+  try {
+    const cfg = path.join(root, 'portpilot-config.json');
+    const a = sendToSession(cfg, 'sess-1', 'web', 1000);
+    const b = sendToSession(cfg, 'sess-1', 'api', 1000);
+    assert.deepStrictEqual([a.at, b.at], [1000, 1001]);
+    const text = fs.readFileSync(inboxPathFor(cfg, 'sess-1'), 'utf8');
+    assert.deepStrictEqual(pendingRequests(text, 0).requests.map((r) => r.appId), ['web', 'api']);
+    for (let i = 0; i < 30; i++) sendToSession(cfg, 'sess-1', `app${i}`, 2000 + i);
+    assert.equal(JSON.parse(fs.readFileSync(inboxPathFor(cfg, 'sess-1'), 'utf8')).requests.length, 20);
+    assert.equal(sendToSession(cfg, '', 'web'), null);
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

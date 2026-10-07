@@ -22,6 +22,7 @@ declare module 'claude-code' {
       dismissed: string[]
       logsOpen: string | null
       seen: string[]
+      inboxCursor: number
     }
   }
 }

@@ -20,3 +20,8 @@ export function crashHeadline(crash: Crash): string
 export function lastLine(tail: string | null | undefined): string
 export function tailLines(tail: string | null | undefined, n?: number): string[]
 export function fixPrompt(crash: Crash, tail: string | null | undefined): string
+export function appCrash(config: Config | null, runtime: Runtime | null, listeners: Listeners, appId: string, now?: number): Crash | null
+export const HEARTBEAT_MS: number
+export function sessionFileName(sessionId: string): string
+export function heartbeat(sessionId: string, cwd: string | null | undefined, now: number): string
+export function pendingRequests(inboxText: string | null | undefined, cursor: number): { requests: { appId: string, at: number }[], cursor: number }

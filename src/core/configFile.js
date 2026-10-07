@@ -264,8 +264,69 @@ function readLogTail(configPath, appId, chars = CRASH_TAIL_CHARS) {
   } catch { return null; }
 }
 
+// ---- Claude Code sessions --------------------------------------------------
+// The PortPilot plugin's mod writes sessions/<sessionId>.json beside the config
+// every 15s ({ sessionId, cwd, at }), so the desktop app can tell which
+// sessions are live. A request to hand a crash to a session goes in
+// inbox/<sessionId>.json as { requests: [{ appId, at }] }: the mod cannot
+// delete files, so it keeps its own cursor (the last `at` it handled) and the
+// list is trimmed here. A request names the app only; the mod builds the
+// prompt from its own read of the runtime sidecar and the app's log.
+
+const SESSION_LIVE_MS = 45000;
+const INBOX_KEEP = 20;
+
+const safeName = (id) => String(id).replace(/[^A-Za-z0-9_-]/g, '_').slice(0, 120);
+
+function sessionsDirFor(configPath) {
+  return path.join(path.dirname(configPath), 'sessions');
+}
+
+function inboxPathFor(configPath, sessionId) {
+  return path.join(path.dirname(configPath), 'inbox', `${safeName(sessionId)}.json`);
+}
+
+/** Sessions whose heartbeat is under SESSION_LIVE_MS old, newest first. */
+function liveSessions(configPath, now = Date.now()) {
+  const dir = sessionsDirFor(configPath);
+  let names;
+  try { names = fs.readdirSync(dir); } catch { return []; }
+  const out = [];
+  for (const name of names) {
+    if (!name.endsWith('.json')) continue;
+    // The mod's writes are not atomic: a half-written beat is skipped quietly,
+    // not kept as .corrupt the way readJson keeps a config.
+    let beat = null;
+    try { beat = JSON.parse(fs.readFileSync(path.join(dir, name), 'utf8')); } catch { continue; }
+    if (!beat || typeof beat.sessionId !== 'string' || !Number.isFinite(beat.at)) continue;
+    if (now - beat.at >= SESSION_LIVE_MS || beat.at - now > SESSION_LIVE_MS) continue;
+    out.push({ sessionId: beat.sessionId, cwd: typeof beat.cwd === 'string' ? beat.cwd : null, at: beat.at });
+  }
+  return out.sort((a, b) => b.at - a.at);
+}
+
+/** Asks a live session to look at an app's crash. Returns the request, or null. */
+function sendToSession(configPath, sessionId, appId, now = Date.now()) {
+  if (!sessionId || !appId) return null;
+  const request = { appId: String(appId), at: now };
+  try {
+    updateJson(inboxPathFor(configPath, sessionId), (inbox) => {
+      const list = Array.isArray(inbox.requests) ? inbox.requests : [];
+      // Strictly increasing, so the mod's cursor never skips a request.
+      const last = list.length ? Number(list[list.length - 1].at) || 0 : 0;
+      if (request.at <= last) request.at = last + 1;
+      inbox.requests = [...list, request].slice(-INBOX_KEEP);
+    }, () => ({ requests: [] }));
+    return request;
+  } catch (err) {
+    console.error('[configFile] Failed to write session inbox:', err.message);
+    return null;
+  }
+}
+
 module.exports = {
   readJson, writeJsonAtomic, withLock, updateJson,
   runtimePathFor, readRuntime, recordStart, recordStop, recordCrash,
   logPathFor, readLogTail, CRASH_TAIL_CHARS,
+  sessionsDirFor, inboxPathFor, liveSessions, sendToSession, SESSION_LIVE_MS,
 };

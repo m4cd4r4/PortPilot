@@ -33,26 +33,74 @@ export function sessionCrashes(config, runtime, listeners, sessionId, now) {
   const out = [];
   for (const app of (config && config.apps) || []) {
     if (!app || !app.id) continue;
-    const rt = rtApps[app.id];
-    const owner = ownerOf(rt);
+    const owner = ownerOf(rtApps[app.id]);
     if (!owner || owner.kind !== 'claude' || owner.sessionId !== sessionId) continue;
-    const port = Number((rt.crashed && rt.crashed.port) || rt.port || app.preferredPort) || null;
-    if (runtimeStateOf(rt, { listening: !!port && listeners.has(port), now }) !== 'crashed') continue;
-    const c = rt.crashed || {};
-    const at = c.at || Date.parse(owner.at) || null;
-    out.push({
-      key: `${app.id}@${at}`,
-      id: app.id,
-      name: app.name || app.id,
-      port,
-      exitCode: c.exitCode ?? null,
-      at,
-      errorTail: c.errorTail || null,
-      command: app.command || null,
-      cwd: app.cwd || null,
-    });
+    const crash = crashOf(app, rtApps[app.id], listeners, now);
+    if (crash) out.push(crash);
   }
   return out;
+}
+
+/** The app's crash whoever started it, or null when it is not crashed now. */
+export function appCrash(config, runtime, listeners, appId, now) {
+  const app = ((config && config.apps) || []).find((a) => a && a.id === appId);
+  if (!app) return null;
+  return crashOf(app, ((runtime && runtime.apps) || {})[appId], listeners, now);
+}
+
+function crashOf(app, rt, listeners, now) {
+  if (!rt) return null;
+  const port = Number((rt.crashed && rt.crashed.port) || rt.port || app.preferredPort) || null;
+  if (runtimeStateOf(rt, { listening: !!port && listeners.has(port), now }) !== 'crashed') return null;
+  const owner = ownerOf(rt);
+  const c = rt.crashed || {};
+  const at = c.at || (owner && Date.parse(owner.at)) || null;
+  return {
+    key: `${app.id}@${at}`,
+    id: app.id,
+    name: app.name || app.id,
+    port,
+    exitCode: c.exitCode ?? null,
+    at,
+    errorTail: c.errorTail || null,
+    command: app.command || null,
+    cwd: app.cwd || null,
+  };
+}
+
+// ---- Heartbeat and inbox (see src/core/configFile.js liveSessions) ----------
+
+export const HEARTBEAT_MS = 15000;
+
+/** sessions/<file> and inbox/<file> for a session id, as configFile names them. */
+export function sessionFileName(sessionId) {
+  return `${logFileName(sessionId).slice(0, -'.log'.length)}.json`;
+}
+
+/** The heartbeat the mod writes; configFile.liveSessions reads it. */
+export function heartbeat(sessionId, cwd, now) {
+  return JSON.stringify({ sessionId, cwd: cwd || null, at: now });
+}
+
+/**
+ * Requests after `cursor`, oldest first, one per app (its latest). `cursor`
+ * is the last `at` handled; the returned `cursor` moves past every request
+ * seen, valid or not, so a bad entry is never read twice.
+ */
+export function pendingRequests(inboxText, cursor) {
+  let requests = [];
+  try { requests = JSON.parse(inboxText).requests; } catch { /* no inbox */ }
+  if (!Array.isArray(requests)) requests = [];
+  let next = cursor;
+  const byApp = new Map();
+  for (const r of requests) {
+    const at = Number(r && r.at);
+    if (!Number.isFinite(at) || at <= cursor) continue;
+    next = Math.max(next, at);
+    if (typeof r.appId !== 'string' || !r.appId) continue;
+    byApp.set(r.appId, { appId: r.appId, at });
+  }
+  return { requests: [...byApp.values()].sort((a, b) => a.at - b.at), cursor: next };
 }
 
 /** `✕ web crashed · :3000 · exit 1` */

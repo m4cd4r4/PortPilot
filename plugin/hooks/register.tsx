@@ -20,6 +20,11 @@
  * PortPilot start_app / start_group call gets this session's id, so the
  * sidecar knows which session a crash belongs to.
  *
+ * Heartbeat and inbox: every 15 s the mod writes sessions/<id>.json beside
+ * the config, so the desktop app can see this session is live, and reads
+ * inbox/<id>.json, where the app asks it to look at a crash (Ask Claude). A
+ * request names the app only; the prompt is built here, as Fix it builds it.
+ *
  * Reads the PortPilot config and runtime sidecar directly, so it works with
  * the desktop app closed. The pure logic lives in guard-core.mjs and
  * crash-core.mjs.
@@ -27,7 +32,10 @@
 import { atom, read, update } from 'claude-code'
 import type { Register, EngineInterface, McpToolName } from 'claude-code'
 import type { ShownCrash } from '../types'
-import { crashHeadline, fixPrompt, lastLine, logFileName, sessionCrashes, tailLines, TAIL_CHARS } from './crash-core.mjs'
+import {
+  appCrash, crashHeadline, fixPrompt, heartbeat, lastLine, logFileName, pendingRequests, sessionCrashes, sessionFileName, tailLines, TAIL_CHARS,
+  type Crash,
+} from './crash-core.mjs'
 import {
   decide,
   parseListeners,
@@ -50,6 +58,8 @@ const crashes = atom({ plugin: 'portpilot', key: 'crashes' } as const, [])
 const dismissed = atom({ plugin: 'portpilot', key: 'dismissed' } as const, [])
 const logsOpen = atom({ plugin: 'portpilot', key: 'logsOpen' } as const, null)
 const seen = atom({ plugin: 'portpilot', key: 'seen' } as const, [])
+// The last inbox request handled; set to the session's start so older ones never replay.
+const inboxCursor = atom({ plugin: 'portpilot', key: 'inboxCursor' } as const, 0)
 
 type Snapshot = { config: Config | null; runtime: Runtime | null; listeners: Listeners | null }
 
@@ -132,7 +142,31 @@ async function refresh($: EngineInterface) {
     if (config && !listeners) return
     $.ui.status(listeners ? statusLine(config, runtime, listeners) : undefined)
     if (listeners) await refreshCrashes($, config, runtime, listeners)
+    if (config && listeners) await beatAndReadInbox($, config, runtime, listeners)
   } catch { /* the line stays as it was */ }
+}
+
+/** Writes this session's heartbeat, then hands any requested crash to it. */
+async function beatAndReadInbox($: EngineInterface, config: Config, runtime: Runtime | null, listeners: Listeners) {
+  if (!dir) return
+  const id = await $.session.id()
+  const now = await $.clock.now()
+  const file = sessionFileName(id)
+  try { await $.fs.write(`${dir}/sessions/${file}`, heartbeat(id, await $.session.cwd(), now)) } catch { /* the app sees this session as gone */ }
+  let text = ''
+  try { text = await $.fs.read(`${dir}/inbox/${file}`) } catch { return }
+  const { requests, cursor } = pendingRequests(text, await read($, inboxCursor))
+  if (cursor === (await read($, inboxCursor))) return
+  await update($, inboxCursor, () => cursor)
+  for (const r of requests) {
+    const crash = appCrash(config, runtime, listeners, r.appId, now)
+    if (!crash) {
+      $.ui.toast(`PortPilot: ${r.appId} is not crashed now, nothing sent`)
+      continue
+    }
+    $.ui.toast(`PortPilot: handing the ${crash.name} crash to Claude`)
+    await fixIt($, { ...crash, tail: await tailFor($, crash.id, crash.errorTail) })
+  }
 }
 
 /** The output tail: the desktop's stamp, else the app's log file (MCP starts). */
@@ -176,7 +210,7 @@ async function restart($: EngineInterface, crash: ShownCrash) {
   void refresh($)
 }
 
-async function fixIt($: EngineInterface, crash: ShownCrash) {
+async function fixIt($: EngineInterface, crash: Crash & { tail: string }) {
   await update($, dismissed, (list) => [...list, crash.key])
   await $.prompt.submit({ text: fixPrompt(crash, crash.tail) })
 }
@@ -184,6 +218,8 @@ async function fixIt($: EngineInterface, crash: ShownCrash) {
 export const register: Register = (on) => {
   on('session.start', async ($, e, next) => {
     const started = await next(e)
+    const now = await $.clock.now()
+    await update($, inboxCursor, (c) => c || now)
     void refresh($)
     $.clock.every(REFRESH_MS, () => { void refresh($) })
     return started
