@@ -226,9 +226,10 @@ export const register: Register = (on) => {
   })
 
   // Stamp this session on every PortPilot start, however Claude called it, so
-  // a later crash finds its way back here.
+  // a later crash finds its way back here. Overwrite any sessionId Claude
+  // passed: the model cannot see its session id and guesses one.
   on('tool.call', async ($, e, next) => {
-    if (!/portpilot/i.test(e.tool) || !/__start_(app|group)$/.test(e.tool) || (e as { sessionId?: unknown }).sessionId) return next(e)
+    if (!/portpilot/i.test(e.tool) || !/__start_(app|group)$/.test(e.tool)) return next(e)
     return next({ ...e, sessionId: await $.session.id() } as typeof e)
   }).catch(($, e, next) => next(e))
 

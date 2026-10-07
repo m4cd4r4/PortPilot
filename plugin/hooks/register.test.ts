@@ -238,14 +238,14 @@ test('Restart calls start_app for the crashed app with this session id', async (
   await ui.unmount()
 })
 
-test('a start_app call without a sessionId is stamped with this session', async ($, on) => {
+test('every start_app call is stamped with this session, over any id Claude passed', async ($, on) => {
   const startCalls: unknown[] = []
   world(on, { startCalls })
   await $.tool.call({ tool: 'mcp__portpilot__start_app', tool_use_id: 't2', identifier: 'api' } as never)
-  await $.tool.call({ tool: 'mcp__portpilot__start_app', tool_use_id: 't3', identifier: 'web', sessionId: 'given' } as never)
+  await $.tool.call({ tool: 'mcp__portpilot__start_app', tool_use_id: 't3', identifier: 'web', sessionId: 'session_guessed' } as never)
   expect(startCalls).toEqual([
     expect.objectContaining({ identifier: 'api', sessionId: 'sess-1' }),
-    expect.objectContaining({ identifier: 'web', sessionId: 'given' }),
+    expect.objectContaining({ identifier: 'web', sessionId: 'sess-1' }),
   ])
 })
 

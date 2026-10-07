@@ -630,7 +630,7 @@ function createServer() {
     'Start an app by ID or name',
     {
       identifier: z.string().describe('App ID or name'),
-      sessionId: z.string().max(200).optional().describe('Your Claude Code session id, so PortPilot can show which session started the app')
+      sessionId: z.string().max(200).optional().describe('Leave unset. The PortPilot plugin fills in the real session id; a guessed one hides crash alerts from this session')
     },
     async ({ identifier, sessionId }) => {
       const config = readConfig();
@@ -666,7 +666,7 @@ function createServer() {
     {
       group: z.string().optional().describe('Start all apps in this group'),
       favorites: z.boolean().optional().describe('Start all favorite apps'),
-      sessionId: z.string().max(200).optional().describe('Your Claude Code session id, so PortPilot can show which session started the apps')
+      sessionId: z.string().max(200).optional().describe('Leave unset. The PortPilot plugin fills in the real session id; a guessed one hides crash alerts from this session')
     },
     async ({ group, favorites, sessionId }) => {
       const config = readConfig();
