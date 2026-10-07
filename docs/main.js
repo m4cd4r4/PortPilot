@@ -3,6 +3,8 @@
 (function () {
   'use strict';
 
+  document.documentElement.classList.add('js');
+
   // --- Mobile Navigation ---
   const navToggle = document.querySelector('.nav-toggle');
   const navMenu = document.getElementById('nav-menu');
@@ -27,7 +29,9 @@
   // --- Smooth Scroll ---
   document.querySelectorAll("a[href^='#']").forEach(function (anchor) {
     anchor.addEventListener('click', function (e) {
-      var target = document.querySelector(this.getAttribute('href'));
+      var href = this.getAttribute('href');
+      if (href === '#') return;
+      var target = document.querySelector(href);
       if (target) {
         e.preventDefault();
         target.scrollIntoView({ behavior: 'smooth' });
@@ -50,101 +54,26 @@
     });
 
     navLinks.forEach(function (link) {
-      link.classList.remove('active');
-      if (link.getAttribute('href') === '#' + current) {
-        link.classList.add('active');
-      }
+      link.classList.toggle('active', link.getAttribute('href') === '#' + current);
     });
   }
 
   window.addEventListener('scroll', updateActiveNavLink, { passive: true });
   updateActiveNavLink();
 
-  // --- Screenshot Carousel ---
-  var currentSlide = 0;
-  var slides = document.querySelectorAll('.carousel-slide');
-  var dots = document.querySelectorAll('.carousel-dots .dot');
-  var autoplayTimer = null;
-
-  function showSlide(index) {
-    if (index >= slides.length) currentSlide = 0;
-    else if (index < 0) currentSlide = slides.length - 1;
-    else currentSlide = index;
-
-    slides.forEach(function (slide, i) {
-      slide.classList.toggle('active', i === currentSlide);
-    });
-
-    dots.forEach(function (dot, i) {
-      dot.classList.toggle('active', i === currentSlide);
-      dot.setAttribute('aria-selected', String(i === currentSlide));
-    });
-  }
-
-  function nextSlide() {
-    showSlide(currentSlide + 1);
-  }
-
-  function prevSlide() {
-    showSlide(currentSlide - 1);
-  }
-
-  function startAutoplay() {
-    stopAutoplay();
-    autoplayTimer = setInterval(nextSlide, 5000);
-  }
-
-  function stopAutoplay() {
-    if (autoplayTimer) {
-      clearInterval(autoplayTimer);
-      autoplayTimer = null;
-    }
-  }
-
-  // Carousel button handlers
-  var prevBtn = document.querySelector('.carousel-prev');
-  var nextBtn = document.querySelector('.carousel-next');
-
-  if (prevBtn) {
-    prevBtn.addEventListener('click', function () {
-      prevSlide();
-      startAutoplay();
-    });
-  }
-
-  if (nextBtn) {
-    nextBtn.addEventListener('click', function () {
-      nextSlide();
-      startAutoplay();
-    });
-  }
-
-  // Dot navigation
-  dots.forEach(function (dot, i) {
-    dot.addEventListener('click', function () {
-      showSlide(i);
-      startAutoplay();
-    });
-  });
-
-  // Keyboard navigation for carousel
-  document.addEventListener('keydown', function (e) {
-    if (e.key === 'ArrowLeft') { prevSlide(); startAutoplay(); }
-    if (e.key === 'ArrowRight') { nextSlide(); startAutoplay(); }
-  });
-
-  // --- Screenshot Lightbox (click a carousel shot to enlarge) ---
+  // --- Screenshot Lightbox (click any zoomable shot to enlarge) ---
   var lightbox = document.getElementById('lightbox');
   var lightboxImg = document.getElementById('lightbox-img');
   var lightboxClose = lightbox ? lightbox.querySelector('.lightbox-close') : null;
+  var lastFocus = null;
 
-  function openLightbox(src, alt) {
+  function openLightbox(img) {
     if (!lightbox) return;
-    lightboxImg.src = src;
-    lightboxImg.alt = alt || '';
+    lastFocus = img;
+    lightboxImg.src = img.src;
+    lightboxImg.alt = img.alt || '';
     lightbox.hidden = false;
     document.body.classList.add('lightbox-open');
-    stopAutoplay();
     if (lightboxClose) lightboxClose.focus();
   }
 
@@ -153,19 +82,21 @@
     lightbox.hidden = true;
     lightboxImg.src = '';
     document.body.classList.remove('lightbox-open');
-    startAutoplay();
+    if (lastFocus) lastFocus.focus();
   }
 
-  document.querySelectorAll('.carousel-slide img.zoomable').forEach(function (img) {
-    img.addEventListener('click', function () { openLightbox(img.src, img.alt); });
+  document.querySelectorAll('img.zoomable').forEach(function (img) {
+    img.setAttribute('role', 'button');
+    img.setAttribute('title', 'Click to enlarge');
+    img.addEventListener('click', function () { openLightbox(img); });
     img.addEventListener('keydown', function (e) {
-      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openLightbox(img.src, img.alt); }
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openLightbox(img); }
     });
   });
 
   if (lightbox) {
     lightbox.addEventListener('click', function (e) {
-      if (e.target === lightbox || e.target === lightboxClose) closeLightbox();
+      if (e.target === lightbox || e.target === lightboxClose || e.target === lightboxImg) closeLightbox();
     });
     document.addEventListener('keydown', function (e) {
       if (e.key === 'Escape') closeLightbox();
@@ -181,21 +112,8 @@
     });
   }
 
-  // Initialize
-  showSlide(0);
-  startAutoplay();
-
-  // Pause autoplay when carousel is hovered or focused
-  var carousel = document.querySelector('.screenshot-carousel');
-  if (carousel) {
-    carousel.addEventListener('mouseenter', stopAutoplay);
-    carousel.addEventListener('mouseleave', startAutoplay);
-    carousel.addEventListener('focusin', stopAutoplay);
-    carousel.addEventListener('focusout', startAutoplay);
-  }
-
   // --- Scroll-triggered Animations ---
-  var animateElements = document.querySelectorAll('.feature-card, .knowledge-card, .badge-item, .step, .shortcut, .download-card, .command-item, .mcp-tool');
+  var animateElements = document.querySelectorAll('.reveal');
 
   if ('IntersectionObserver' in window) {
     var observer = new IntersectionObserver(function (entries) {
@@ -211,7 +129,6 @@
       observer.observe(el);
     });
   } else {
-    // Fallback: show all immediately
     animateElements.forEach(function (el) {
       el.classList.add('animate-in');
     });
