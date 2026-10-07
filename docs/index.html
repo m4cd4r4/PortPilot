@@ -3,15 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PortPilot - Localhost Port Manager for Developers</title>
-  <meta name="description" content="Free desktop app to manage local development ports. Scan ports, kill stuck processes, register apps, and control your dev environment. Open source for Windows and Linux.">
-  <meta name="keywords" content="port manager, localhost, developer tools, electron, windows, linux, port scanner, kill port, dev tools, process manager">
+  <title>PortPilot - You and Claude Code, one view of your dev servers</title>
+  <meta name="description" content="PortPilot runs your local dev servers and shows Claude Code the same apps, ports and crashes you see. Free, open-source desktop app for Windows and Linux, with a Claude Code plugin and an MCP server.">
+  <meta name="keywords" content="claude code plugin, mcp server, dev server manager, port manager, localhost, kill port, developer tools, windows, linux">
   <meta name="author" content="Macdara">
   <meta name="theme-color" content="#1a1b26">
 
   <!-- Open Graph -->
-  <meta property="og:title" content="PortPilot - Free Desktop Port Manager for Developers">
-  <meta property="og:description" content="Scan active ports, kill stuck processes, register your dev apps, and auto-detect running services. Free, open-source Electron app for Windows and Linux.">
+  <meta property="og:title" content="PortPilot - You and Claude Code, one view of what's running">
+  <meta property="og:description" content="Your dev servers, ports and crashes in one desktop app, shared with Claude Code through a plugin. Free and open source for Windows and Linux.">
   <meta property="og:image" content="https://m4cd4r4.github.io/PortPilot/og-image.png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
@@ -21,21 +21,19 @@
 
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="PortPilot - Free Desktop Port Manager for Developers">
-  <meta name="twitter:description" content="Scan active ports, kill stuck processes, register your dev apps, and auto-detect running services. Free, open-source Electron app for Windows and Linux.">
+  <meta name="twitter:title" content="PortPilot - You and Claude Code, one view of what's running">
+  <meta name="twitter:description" content="Your dev servers, ports and crashes in one desktop app, shared with Claude Code through a plugin. Free and open source for Windows and Linux.">
   <meta name="twitter:image" content="https://m4cd4r4.github.io/PortPilot/og-image.png">
 
   <link rel="canonical" href="https://m4cd4r4.github.io/PortPilot/">
-  <link rel="icon" type="image/svg+xml" href="../public/icon.svg">
-  <link rel="icon" type="image/png" href="../public/icon.png">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
 
   <!-- CSP for static GitHub Pages site -->
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' https://m4cd4r4.github.io; connect-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none';">
 
-  <!-- Preload critical assets -->
-  <link rel="preload" href="style.css" as="style">
-  <link rel="preload" href="screenshots/slot1.png" as="image">
-
+  <link rel="preload" href="screenshots/hero-app.png" as="image">
   <link rel="stylesheet" href="style.css">
 
   <!-- JSON-LD Structured Data -->
@@ -44,7 +42,7 @@
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     "name": "PortPilot",
-    "description": "Free desktop app to manage local development ports. Scan ports, kill stuck processes, register apps, and control your dev environment.",
+    "description": "Desktop app that runs your local dev servers and shares their state with Claude Code through a plugin and an MCP server.",
     "applicationCategory": "DeveloperApplication",
     "operatingSystem": "Windows 10, Windows 11, Linux",
     "offers": {
@@ -60,529 +58,279 @@
     },
     "url": "https://m4cd4r4.github.io/PortPilot/",
     "downloadUrl": "https://github.com/m4cd4r4/PortPilot/releases/latest",
-    "screenshot": "https://m4cd4r4.github.io/PortPilot/screenshots/slot1.png",
+    "screenshot": "https://m4cd4r4.github.io/PortPilot/screenshots/hero-app.png",
     "license": "https://opensource.org/licenses/MIT",
     "isAccessibleForFree": true,
     "featureList": [
+      "Claude Code plugin with a status line, a dev-server guard and crash alerts",
+      "Row state on every app: what state, why, for how long and who started it",
+      "Port conflict strip with Use free port, Kill & start and Show process",
+      "Crash toasts with Restart, Logs and Ask Claude",
+      "MCP server with 19 tools for any MCP assistant",
       "Branch and worktree awareness with nested, colour-coded rows",
-      "Run multiple branches of one project at once on separate ports",
-      "Port scanning with process details",
-      "One-click port killing",
-      "App registry with start/stop control",
-      "Detail drawer with live stats and safe actions",
-      "Project auto-discovery",
-      "Docker integration",
+      "Port scanning with process details and one-click kill",
+      "Project auto-detection and Docker integration",
+      "VS Code extension and web portal",
       "6 themes plus Auto (OS light/dark)",
-      "System tray support",
-      "MCP AI agent integration",
-      "Keyboard shortcuts",
       "Cross-platform (Windows + Linux)"
     ]
   }
   </script>
 </head>
 <body>
-  <!-- Skip to content for accessibility -->
   <a href="#main-content" class="skip-link">Skip to main content</a>
 
-  <!-- Header Navigation -->
-  <nav class="header-nav" role="navigation" aria-label="Main navigation">
+  <nav class="header-nav" aria-label="Main navigation">
     <div class="nav-container">
       <a href="#" class="nav-brand" aria-label="PortPilot - scroll to top">
-        <span class="brand-icon" aria-hidden="true">&#9875;</span> PortPilot
+        <img src="logo-128.png" alt="" width="28" height="28"> PortPilot
       </a>
-
-      <!-- Mobile menu toggle -->
       <button class="nav-toggle" aria-label="Toggle navigation menu" aria-expanded="false" aria-controls="nav-menu">
         <span class="nav-toggle-bar"></span>
         <span class="nav-toggle-bar"></span>
         <span class="nav-toggle-bar"></span>
       </button>
-
-      <div class="nav-links" id="nav-menu" role="menubar">
-        <a href="#features" class="nav-link" role="menuitem">Features</a>
-        <a href="#smart-detection" class="nav-link" role="menuitem">Detection</a>
-        <a href="#getting-started" class="nav-link" role="menuitem">Getting Started</a>
-        <a href="#shortcuts" class="nav-link" role="menuitem">Shortcuts</a>
-        <a href="#vscode" class="nav-link" role="menuitem">VS Code</a>
-        <a href="#mcp" class="nav-link" role="menuitem">AI Agent</a>
-        <a href="#security" class="nav-link" role="menuitem">Security</a>
-        <a href="#download" class="nav-link nav-link-download" role="menuitem">Download</a>
+      <div class="nav-links" id="nav-menu">
+        <a href="#claude" class="nav-link">Claude Code</a>
+        <a href="#new" class="nav-link">New in 3.4</a>
+        <a href="#mcp" class="nav-link">MCP</a>
+        <a href="#features" class="nav-link">Features</a>
+        <a href="#security" class="nav-link">Security</a>
+        <a href="#download" class="nav-link nav-link-download">Download</a>
       </div>
     </div>
   </nav>
 
   <main id="main-content">
-    <!-- Hero Section -->
+    <!-- Hero -->
     <header class="hero">
-      <div class="container">
-        <div class="hero-content">
-          <div class="hero-text">
-            <div class="hero-badge">Open Source &middot; Free &middot; MIT Licence</div>
-            <h1><span class="brand-icon" aria-hidden="true">&#9875;</span> PortPilot</h1>
-            <p class="tagline">Localhost Port Manager for Developers</p>
-            <p class="description">Scan active ports, kill stuck processes, register your dev apps, and take control of your local development environment.</p>
-            <div class="cta-buttons">
-              <a href="#download" class="btn btn-primary">
-                <span class="btn-icon" aria-hidden="true">&#11015;</span> Download v3.4.0
-              </a>
-              <a href="https://github.com/m4cd4r4/PortPilot" class="btn btn-secondary" rel="noopener">
-                <span class="btn-icon" aria-hidden="true">&#11088;</span> View on GitHub
-              </a>
-            </div>
-            <p class="version-note">Windows 10/11 &amp; Linux &middot; v3.4.0 &middot; MIT Licence</p>
+      <div class="container hero-grid">
+        <div class="hero-text">
+          <p class="eyebrow"><img src="logo-128.png" alt="" width="20" height="20"> PortPilot 3.4 &middot; free &middot; MIT</p>
+          <h1>You and Claude Code, one view of what's running</h1>
+          <p class="lede">PortPilot runs your local dev servers. With the Claude Code plugin, Claude sees the same apps, ports and crashes you do, and reuses a running server instead of starting a second copy.</p>
+          <div class="cta-row">
+            <a href="#download" class="btn btn-primary">Download v3.4.0</a>
+            <a href="#claude" class="btn btn-secondary">Add the Claude Code plugin</a>
           </div>
-          <div class="hero-mockup">
-            <div class="screenshot-carousel" role="region" aria-label="Screenshot carousel" aria-roledescription="carousel">
-              <div class="carousel-container">
-                <div class="carousel-slide active" role="tabpanel" aria-label="Slide 1 of 2">
-                  <img src="screenshots/slot1.png" alt="PortPilot showing branches nested under their project, colour-coded, with active ports grouped into Dev, Other and System" width="800" height="500" loading="eager" class="zoomable" tabindex="0" title="Click to enlarge">
-                </div>
-                <div class="carousel-slide" role="tabpanel" aria-label="Slide 2 of 2">
-                  <img src="screenshots/slot2.png" alt="PortPilot detail drawer showing a running app's branch, port, memory, uptime, command and actions" width="800" height="500" loading="lazy" class="zoomable" tabindex="0" title="Click to enlarge">
-                </div>
-              </div>
-              <button type="button" class="carousel-btn carousel-prev" aria-label="Previous screenshot">&#10094;</button>
-              <button type="button" class="carousel-btn carousel-next" aria-label="Next screenshot">&#10095;</button>
-              <div class="carousel-dots" role="tablist" aria-label="Screenshot slides">
-                <button class="dot active" role="tab" aria-label="Show slide 1" aria-selected="true"></button>
-                <button class="dot" role="tab" aria-label="Show slide 2" aria-selected="false"></button>
-              </div>
-            </div>
-          </div>
+          <p class="note">Windows 10/11 and Linux. Any MCP assistant can drive it too.</p>
         </div>
+
+        <figure class="hero-visual">
+          <img src="screenshots/hero-app.png" class="hero-shot zoomable" tabindex="0" width="1280" height="820" alt="PortPilot desktop app with demo projects: harbor-web running on three branches, a port conflict strip on buoy-preview, and a crash toast for anchor-metrics with an Ask Claude button">
+          <div class="term" role="img" aria-label="Claude Code with the PortPilot plugin: the guard turns away a second copy of harbor-web, a crash band offers Fix it for anchor-metrics, and the status line shows 1 crashed and 6 up">
+            <div class="term-bar"><span></span><span></span><span></span><b>claude &middot; harbor-web</b></div>
+            <div class="term-body">
+              <p><span class="t-dim">&gt;</span> npm run dev</p>
+              <p class="t-deny">PortPilot: harbor-web is already running on :3000 - reuse http://localhost:3000 instead of starting a second copy.</p>
+              <div class="t-band">
+                <p><span class="t-red">&#10005; anchor-metrics crashed</span> <span class="t-dim">&middot; :9090 &middot; exit 1</span></p>
+                <p class="t-dim">KeyError: 'TIDE_DB_URL'</p>
+                <p class="t-btns"><span class="t-btn t-btn-main">Fix it</span><span class="t-btn">Restart</span><span class="t-btn">Logs</span><span class="t-btn">Dismiss</span></p>
+              </div>
+            </div>
+            <div class="term-status">&#9875; <span class="t-red">1 crashed</span> &middot; 6 up &middot; <span class="t-red">&#10005; anchor-metrics</span> &middot; :3000 harbor-web &middot; :3002 harbor-web<span class="t-cyan">&#10022;</span> &middot; +4</div>
+          </div>
+        </figure>
       </div>
     </header>
 
-    <!-- Features Section -->
-    <section class="features" id="features" aria-labelledby="features-heading">
+    <!-- Claude Code plugin -->
+    <section class="section" id="claude" aria-labelledby="claude-heading">
       <div class="container">
-        <h2 id="features-heading">Features</h2>
-        <div class="features-grid">
-          <div class="feature-card">
-            <span class="feature-icon" aria-hidden="true">&#127807;</span>
-            <div class="feature-text">
-              <h3>Branch &amp; Worktree Awareness</h3>
-              <p>Run several git branches or worktrees of one project at once, each on its own port. Branches nest under the parent, colour-coded to match their VS Code (Peacock) window.</p>
-            </div>
-          </div>
-          <div class="feature-card">
-            <span class="feature-icon" aria-hidden="true">&#128256;</span>
-            <div class="feature-text">
-              <h3>Add Worktrees</h3>
-              <p>Point PortPilot at a project and it detects the repo's git worktrees and bulk-adds them nested under it. Stale entries (folder gone) are flagged for one-click removal.</p>
-            </div>
-          </div>
-          <div class="feature-card">
-            <span class="feature-icon" aria-hidden="true">&#128203;</span>
-            <div class="feature-text">
-              <h3>Detail Drawer</h3>
-              <p>Click any row for a slide-over with the full command, working directory, PID, uptime and branch, plus Start/Stop, Open, Copy and Remove actions.</p>
-            </div>
-          </div>
-          <div class="feature-card">
-            <span class="feature-icon" aria-hidden="true">&#128269;</span>
-            <div class="feature-text">
-              <h3>App Search &amp; Sort</h3>
-              <p>Global search filters both apps and ports simultaneously. Sort by name, running status, or port.</p>
-            </div>
-          </div>
-          <div class="feature-card">
-            <span class="feature-icon" aria-hidden="true">&#9889;</span>
-            <div class="feature-text">
-              <h3>Single-Pane Layout</h3>
-              <p>Unified view with apps and ports in one scrollable page. No more tabs.</p>
-            </div>
-          </div>
-          <div class="feature-card">
-            <span class="feature-icon" aria-hidden="true">&#127912;</span>
-            <div class="feature-text">
-              <h3>Group Colours</h3>
-              <p>Assign a colour to each group for visual organisation. Colour accents appear on group headers.</p>
-            </div>
-          </div>
-          <div class="feature-card">
-            <span class="feature-icon" aria-hidden="true">&#128269;</span>
-            <div class="feature-text">
-              <h3>Browse &amp; Auto-detect</h3>
-              <p>One-click project setup. Scans directories for Node.js, Python, Go, .NET, Rust, Ruby, and Docker projects.</p>
-            </div>
-          </div>
-          <div class="feature-card">
-            <span class="feature-icon" aria-hidden="true">&#9888;&#65039;</span>
-            <div class="feature-text">
-              <h3>Port Conflict Warnings</h3>
-              <p>Visual warnings when unknown processes block your app ports. Preview and kill with one click.</p>
-            </div>
-          </div>
-          <div class="feature-card">
-            <span class="feature-icon" aria-hidden="true">&#11088;</span>
-            <div class="feature-text">
-              <h3>Favorites System</h3>
-              <p>Star frequently-used apps for quick access with collapsible sections.</p>
-            </div>
-          </div>
-          <div class="feature-card">
-            <span class="feature-icon" aria-hidden="true">&#128039;</span>
-            <div class="feature-text">
-              <h3>Cross-Platform</h3>
-              <p>Works on Windows 10/11 and Linux (AppImage + .deb). No admin rights needed to install.</p>
-            </div>
-          </div>
-          <div class="feature-card">
-            <span class="feature-icon" aria-hidden="true">&#9906;</span>
-            <div class="feature-text">
-              <h3>Port Scanner</h3>
-              <p>Scan all TCP ports with process name, PID, command line, memory, uptime, and connection count.</p>
-            </div>
-          </div>
-          <div class="feature-card">
-            <span class="feature-icon" aria-hidden="true">&#10005;</span>
-            <div class="feature-text">
-              <h3>One-Click Kill</h3>
-              <p>Free up stuck ports instantly without Task Manager or terminal commands.</p>
-            </div>
-          </div>
-          <div class="feature-card">
-            <span class="feature-icon" aria-hidden="true">&#9654;</span>
-            <div class="feature-text">
-              <h3>Process Control</h3>
-              <p>Start/stop apps with automatic port detection, fallback ranges, and countdown feedback.</p>
-            </div>
-          </div>
-          <div class="feature-card">
-            <span class="feature-icon" aria-hidden="true">&#128051;</span>
-            <div class="feature-text">
-              <h3>Docker Integration</h3>
-              <p>Detect Docker apps, see live status badges, launch Docker Desktop with one click.</p>
-            </div>
-          </div>
-          <div class="feature-card">
-            <span class="feature-icon" aria-hidden="true">&#127912;</span>
-            <div class="feature-text">
-              <h3>6 Themes + Auto</h3>
-              <p>A crisp Light mode, TokyoNight, Nord, Dracula, Glass - plus Auto, which follows your OS light/dark setting.</p>
-            </div>
-          </div>
-          <div class="feature-card">
-            <span class="feature-icon" aria-hidden="true">&#128268;</span>
-            <div class="feature-text">
-              <h3>VS Code Extension</h3>
-              <p>Manage apps, ports, and favorites directly from the VS Code sidebar with status bar integration.</p>
-            </div>
-          </div>
-          <div class="feature-card">
-            <span class="feature-icon" aria-hidden="true">&#129302;</span>
-            <div class="feature-text">
-              <h3>MCP v2.0</h3>
-              <p>19 AI agent tools including worktree registration, bulk operations, group management, and real-time status checks.</p>
-            </div>
-          </div>
-          <div class="feature-card">
-            <span class="feature-icon" aria-hidden="true">&#128421;&#65039;</span>
-            <div class="feature-text">
-              <h3>Rich Tray Menu</h3>
-              <p>Running apps listed in the tray with individual Stop buttons. Live app count in tooltip.</p>
-            </div>
-          </div>
-          <div class="feature-card">
-            <span class="feature-icon" aria-hidden="true">&#128274;</span>
-            <div class="feature-text">
-              <h3>Single Instance</h3>
-              <p>Only one PortPilot runs at a time. Second launch focuses the existing window.</p>
-            </div>
-          </div>
-          <div class="feature-card">
-            <span class="feature-icon" aria-hidden="true">&#127760;</span>
-            <div class="feature-text">
-              <h3>IPv4/IPv6 Aware</h3>
-              <p>Shows bind type (localhost vs all interfaces) and IP protocol version for each port.</p>
-            </div>
-          </div>
+        <div class="section-head">
+          <h2 id="claude-heading">The Claude Code plugin</h2>
+          <p>One install gives Claude the PortPilot tools, a status line, a guard on dev-server starts and a crash band.</p>
+        </div>
+        <div class="card-grid three">
+          <article class="card reveal">
+            <h3>Status line</h3>
+            <p>Every session shows what is up, worst state first. A <span class="t-cyan">&#10022;</span> marks apps Claude started.</p>
+            <code class="snip">&#9875; 1 crashed &middot; 6 up &middot; :3000 harbor-web</code>
+          </article>
+          <article class="card reveal">
+            <h3>Dev-server guard</h3>
+            <p>A start on a busy port is turned away with the URL to reuse. A clean start goes through PortPilot. If the guard can't tell what a command does, it lets it run.</p>
+            <code class="snip">reuse http://localhost:3000</code>
+          </article>
+          <article class="card reveal">
+            <h3>Crash band with Fix it</h3>
+            <p>When an app Claude started crashes, the session gets a band with Restart, Logs and Fix it. Fix it hands Claude the crash and the stderr tail.</p>
+            <code class="snip"><span class="t-red">&#10005; anchor-metrics</span> &middot; exit 1</code>
+          </article>
+        </div>
+        <div class="install">
+          <p class="install-label">Install in Claude Code</p>
+          <pre><code>/plugin marketplace add m4cd4r4/PortPilot
+/plugin install portpilot@portpilot</code></pre>
+          <p class="install-note">The MCP server is bundled: no <code>npm install</code>.</p>
         </div>
       </div>
     </section>
 
-    <!-- Smart Detection Section -->
-    <section class="badges-section" id="smart-detection" aria-labelledby="detection-heading">
+    <!-- New in 3.4 desktop -->
+    <section class="section section-alt" id="new" aria-labelledby="new-heading">
       <div class="container">
-        <h2 id="detection-heading">Smart App Detection</h2>
-        <p class="section-subtitle">PortPilot automatically detects app requirements and shows visual badges</p>
-        <div class="badges-grid">
-          <div class="badge-item"><span class="badge-icon" aria-hidden="true">&#128051;</span> <strong>Docker</strong></div>
-          <div class="badge-item"><span class="badge-icon" aria-hidden="true">&#128230;</span> <strong>Node.js</strong></div>
-          <div class="badge-item"><span class="badge-icon" aria-hidden="true">&#128013;</span> <strong>Python</strong></div>
-          <div class="badge-item"><span class="badge-icon" aria-hidden="true">&#128310;</span> <strong>Go</strong></div>
-          <div class="badge-item"><span class="badge-icon" aria-hidden="true">&#9881;</span> <strong>.NET</strong></div>
-          <div class="badge-item"><span class="badge-icon" aria-hidden="true">&#129408;</span> <strong>Rust</strong></div>
-          <div class="badge-item"><span class="badge-icon" aria-hidden="true">&#128142;</span> <strong>Ruby</strong></div>
-          <div class="badge-item"><span class="badge-icon" aria-hidden="true">&#128451;&#65039;</span> <strong>Database</strong></div>
-          <div class="badge-item"><span class="badge-icon" aria-hidden="true">&#9889;</span> <strong>Auto-start</strong></div>
-          <div class="badge-item"><span class="badge-icon" aria-hidden="true">&#127760;</span> <strong>Remote</strong></div>
+        <div class="section-head">
+          <h2 id="new-heading">New in the desktop app</h2>
+          <p>Each row now tells you what is happening and who did it.</p>
+        </div>
+        <div class="feature-row reveal">
+          <div class="feature-copy">
+            <h3>Row state, and who started it</h3>
+            <p>Every app shows its state, how long it has been in it and who started it: you, or a Claude Code session. A crashed app reads <code>&#10005; Crashed &middot; exit 1</code>. The VS Code tree uses the same states.</p>
+          </div>
+          <div class="crop-scroll" tabindex="-1"><img src="screenshots/crop-row-state.png" class="crop zoomable" tabindex="0" width="779" height="114" loading="lazy" alt="Four app rows: harbor-web running 2h started by you, a branch running 18m started by claude a3f2, another branch not responding for 41m, and tugboat-api running 52m"></div>
+        </div>
+        <div class="feature-row reveal">
+          <div class="feature-copy">
+            <h3>Conflict strip</h3>
+            <p>When something else holds an app's port, the row says what holds it and offers Use free port, Kill &amp; start or Show process. Kill asks for a second click.</p>
+          </div>
+          <div class="crop-scroll" tabindex="-1"><img src="screenshots/crop-conflict.png" class="crop zoomable" tabindex="0" width="779" height="75" loading="lazy" alt="buoy-preview row marked Port blocked: port 8000 is held by tugboat-api, with buttons Use 8001 instead, Stop tugboat-api and start, and Show process"></div>
+        </div>
+        <div class="feature-row reveal">
+          <div class="feature-copy">
+            <h3>Crash toast with Ask Claude</h3>
+            <p>A crash raises a sticky toast with the stderr tail. Ask Claude appears when the session that started the app is still open, and sends it the crash. Repeat crashes group into one toast.</p>
+          </div>
+          <img src="screenshots/crop-crash-toast.png" class="crop crop-narrow zoomable" tabindex="0" width="360" height="137" loading="lazy" alt="Toast: anchor-metrics crashed 2 times in 5 minutes, exit 1, with a KeyError traceback and buttons Restart, Logs, Ask Claude and Dismiss">
         </div>
       </div>
     </section>
 
-    <!-- Getting Started Section -->
-    <section class="getting-started" id="getting-started" aria-labelledby="started-heading">
+    <!-- MCP -->
+    <section class="section" id="mcp" aria-labelledby="mcp-heading">
+      <div class="container mcp-grid">
+        <div>
+          <h2 id="mcp-heading">Any MCP assistant</h2>
+          <p class="mcp-lede">The PortPilot MCP server gives your assistant 19 tools: list, start, stop, scan, kill, group and more.</p>
+          <ul class="chips" aria-label="Works with">
+            <li>Claude Code</li><li>Claude Desktop</li><li>Cursor</li><li>Windsurf</li><li>Cline</li>
+          </ul>
+          <a href="https://github.com/m4cd4r4/PortPilot/tree/master/mcp-server" class="text-link" rel="noopener">MCP setup guide</a>
+        </div>
+        <ul class="asks" aria-label="Example requests">
+          <li class="reveal">"What's running on :3000?"</li>
+          <li class="reveal">"Start tugboat-api"</li>
+          <li class="reveal">"Kill whatever is on port 8000"</li>
+          <li class="reveal">"Start all my favourites"</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- Everything else -->
+    <section class="section section-alt" id="features" aria-labelledby="features-heading">
       <div class="container">
-        <h2 id="started-heading">Getting Started</h2>
-        <div class="steps">
-          <div class="step">
-            <div class="step-number" aria-hidden="true">1</div>
-            <div class="step-content">
-              <h3>Download</h3>
-              <p>Get the installer from GitHub Releases.</p>
-              <a href="#download" class="btn btn-small">Download v3.4.0</a>
-            </div>
-          </div>
-          <div class="step">
-            <div class="step-number" aria-hidden="true">2</div>
-            <div class="step-content">
-              <h3>Install</h3>
-              <p>Run the installer. No admin rights needed.</p>
-            </div>
-          </div>
-          <div class="step">
-            <div class="step-number" aria-hidden="true">3</div>
-            <div class="step-content">
-              <h3>Scan Ports</h3>
-              <p>Click Scan Ports to discover active ports.</p>
-            </div>
-          </div>
-          <div class="step">
-            <div class="step-number" aria-hidden="true">4</div>
-            <div class="step-content">
-              <h3>Register Apps</h3>
-              <p>Add your dev projects with start commands and preferred ports.</p>
-            </div>
-          </div>
+        <div class="section-head">
+          <h2 id="features-heading">Everything else it does</h2>
+        </div>
+        <div class="card-grid four">
+          <article class="card group reveal">
+            <h3>Run &amp; organise</h3>
+            <ul>
+              <li>Start and stop apps with port detection and fallback ranges</li>
+              <li>Groups with colours, favourites, search and sort</li>
+              <li>Branches and worktrees nest under their project, colour-matched to VS Code (Peacock)</li>
+              <li>Detail drawer: command, folder, PID, uptime</li>
+            </ul>
+          </article>
+          <article class="card group reveal">
+            <h3>Ports</h3>
+            <ul>
+              <li>Scan every TCP port with process, PID, memory and uptime</li>
+              <li>Kill a stuck port in one click</li>
+              <li>Grouped into Dev, Other and System</li>
+              <li>Bind type and IPv4/IPv6 on each port</li>
+            </ul>
+          </article>
+          <article class="card group reveal">
+            <h3>Auto-detect</h3>
+            <ul>
+              <li>Point it at a folder to find Node.js, Python, Go, .NET, Rust, Ruby and Docker projects</li>
+              <li>Add a repo's worktrees in one go; stale ones are flagged</li>
+              <li>Docker status badges, and Docker Desktop in one click</li>
+            </ul>
+          </article>
+          <article class="card group reveal">
+            <h3>Everywhere</h3>
+            <ul>
+              <li><a href="https://marketplace.visualstudio.com/items?itemName=macdara.portpilot" rel="noopener">VS Code extension</a>: sidebar tree and status bar</li>
+              <li>Web portal in your browser, loopback-only</li>
+              <li>Tray menu with a Stop per running app</li>
+              <li>6 themes plus Auto</li>
+              <li>Windows 10/11 and Linux</li>
+            </ul>
+          </article>
         </div>
       </div>
     </section>
 
-    <!-- Shortcuts Section -->
-    <section class="shortcuts-section" id="shortcuts" aria-labelledby="shortcuts-heading">
+    <!-- Security -->
+    <section class="section section-tight" id="security" aria-labelledby="security-heading">
       <div class="container">
-        <h2 id="shortcuts-heading">Keyboard Shortcuts</h2>
-        <div class="shortcuts-grid">
-          <div class="shortcut"><kbd>Ctrl</kbd>+<kbd>R</kbd> <span>Refresh</span></div>
-          <div class="shortcut"><kbd>Ctrl</kbd>+<kbd>N</kbd> <span>Add App</span></div>
-          <div class="shortcut"><kbd>Ctrl</kbd>+<kbd>F</kbd> <span>Search Apps &amp; Ports</span></div>
-          <div class="shortcut"><kbd>Ctrl</kbd>+<kbd>G</kbd> <span>New Group</span></div>
-          <div class="shortcut"><kbd>Escape</kbd> <span>Close Modal</span></div>
+        <div class="security-grid">
+        <div>
+          <h2 id="security-heading">Security</h2>
+          <p class="security-lede">The desktop app opens no network port. The opt-in web portal stays on your machine, behind six layers.</p>
+          <a href="https://github.com/m4cd4r4/PortPilot/blob/master/SECURITY.md" class="text-link" rel="noopener">Threat model and limits in SECURITY.md</a>
+        </div>
+        <ul class="layers">
+          <li><b>Loopback only</b> binds 127.0.0.1, unreachable from the LAN</li>
+          <li><b>Per-session token</b> a fresh 256-bit token on every request</li>
+          <li><b>Anti DNS-rebinding</b> Host-header allowlist</li>
+          <li><b>Locked CORS</b> the portal's own origin, never a wildcard</li>
+          <li><b>CSRF-resistant</b> a custom header forces a preflight</li>
+          <li><b>Strict CSP</b> no remote or inline scripts</li>
+        </ul>
         </div>
       </div>
     </section>
 
-    <!-- VS Code Extension Section -->
-    <section class="vscode-section" id="vscode" aria-labelledby="vscode-heading">
+    <!-- Download -->
+    <section class="section section-alt" id="download" aria-labelledby="download-heading">
       <div class="container">
-        <h2 id="vscode-heading">VS Code Extension</h2>
-        <p class="section-subtitle">Manage your dev servers without leaving the editor</p>
-        <div class="vscode-features">
-          <div class="feature-card">
-            <span class="feature-icon">&#128268;</span>
-            <div class="feature-text">
-              <h3>Sidebar Tree View</h3>
-              <p>All your apps and active ports in the VS Code sidebar with group support.</p>
-            </div>
-          </div>
-          <div class="feature-card">
-            <span class="feature-icon">&#9881;</span>
-            <div class="feature-text">
-              <h3>Full CRUD</h3>
-              <p>Add, edit, delete apps, change ports, and toggle favorites - all from VS Code.</p>
-            </div>
-          </div>
-          <div class="feature-card">
-            <span class="feature-icon">&#128200;</span>
-            <div class="feature-text">
-              <h3>Status Bar</h3>
-              <p>Live "PP: N running" counter in the VS Code status bar. Click to refresh.</p>
-            </div>
-          </div>
-          <div class="feature-card">
-            <span class="feature-icon">&#127760;</span>
-            <div class="feature-text">
-              <h3>Web Portal <span class="version-badge">v3.1</span></h3>
-              <p>Run the portal in your browser straight from VS Code, no desktop app. Opt-in, loopback-only, token-gated.</p>
-            </div>
-          </div>
+        <div class="section-head">
+          <h2 id="download-heading">Download PortPilot 3.4.0</h2>
+          <p>Free and open source. No account and no admin rights. Install it, click Scan, then add your projects.</p>
         </div>
-        <div class="vscode-install">
-          <a href="https://marketplace.visualstudio.com/items?itemName=macdara.portpilot" class="btn btn-primary" rel="noopener">Install from VS Code Marketplace</a>
-          <p class="vscode-install-note">Or search <strong>PortPilot</strong> in the Extensions view (Ctrl+Shift+X)</p>
-        </div>
-      </div>
-    </section>
-
-    <!-- MCP / AI Agent Section -->
-    <section class="mcp-section" id="mcp" aria-labelledby="mcp-heading">
-      <div class="container">
-        <h2 id="mcp-heading">AI Agent Integration</h2>
-        <p class="section-subtitle">Control PortPilot with natural language via MCP (Model Context Protocol)</p>
-        <div class="mcp-content">
-          <div class="mcp-commands">
-            <h3>Example Commands</h3>
-            <div class="command-list">
-              <div class="command-item"><span class="command-quote">"List all my PortPilot apps"</span></div>
-              <div class="command-item"><span class="command-quote">"Start the azure-exam app"</span></div>
-              <div class="command-item"><span class="command-quote">"Start all my favorite apps"</span></div>
-              <div class="command-item"><span class="command-quote">"Kill port 3000"</span></div>
-              <div class="command-item"><span class="command-quote">"What's running on port 8080?"</span></div>
-              <div class="command-item"><span class="command-quote">"What's the status of my dev environment?"</span></div>
-            </div>
-          </div>
-          <div class="mcp-info">
-            <h3>Compatible With</h3>
-            <div class="mcp-tools">
-              <span class="mcp-tool">Claude Code</span>
-              <span class="mcp-tool">Claude Desktop</span>
-              <span class="mcp-tool">Cursor</span>
-              <span class="mcp-tool">Windsurf</span>
-              <span class="mcp-tool">Cline</span>
-            </div>
-            <a href="https://github.com/m4cd4r4/PortPilot/tree/master/mcp-server" class="btn btn-small" rel="noopener">Setup Guide</a>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Security Section -->
-    <section class="security-section" id="security" aria-labelledby="security-heading">
-      <div class="container">
-        <h2 id="security-heading">Security</h2>
-        <p class="section-subtitle">How the web portal is protected, in plain terms, and the honest limits</p>
-
-        <div class="security-intro">
-          <p>PortPilot's optional web portal can run the dev commands you configure, so it treats its API as a high-value target and defends it with several independent layers. The residual risk, a leaked token or malware already running as you, is the same trust boundary as any program you launch: anything running under your user account can already read your files and run commands. <strong>PortPilot adds defences on top of that boundary; it does not widen it.</strong> The desktop app opens no network port at all; only the opt-in web portal does, and it binds to your machine alone.</p>
-        </div>
-
-        <h3 class="platform-heading">Defence layers</h3>
-        <div class="security-layers">
-          <div class="command-item"><strong>Loopback only</strong> binds 127.0.0.1, so it is unreachable from the network or LAN.</div>
-          <div class="command-item"><strong>Per-session token</strong> a fresh 256-bit token gates every request; a web page can neither read nor guess it.</div>
-          <div class="command-item"><strong>Anti DNS-rebinding</strong> a Host-header allowlist rejects spoofed hosts before any handler runs.</div>
-          <div class="command-item"><strong>Locked CORS</strong> reflects only the portal's own origin, never a wildcard.</div>
-          <div class="command-item"><strong>CSRF-resistant</strong> a custom header forces a CORS preflight that foreign sites fail.</div>
-          <div class="command-item"><strong>Strict CSP</strong> script-src 'self' blocks remote and inline scripts, closing the XSS-to-exec path.</div>
-        </div>
-
-        <h3 class="platform-heading">Frequently asked</h3>
-        <div class="security-faq">
-          <details>
-            <summary>Can a website on the internet reach the portal?</summary>
-            <p>No. It binds to 127.0.0.1 only, so nothing off your machine can connect. And even a malicious site open in your own browser is stopped by the Host-header allowlist (which defeats DNS-rebinding tricks) plus a per-session token it cannot read.</p>
-          </details>
-          <details>
-            <summary>What stops another tab or site in my browser from driving it?</summary>
-            <p>The portal serves its UI with a per-session token embedded in that page. The browser's same-origin policy means a different site cannot read the token, and CORS is locked to the portal's own origin, so cross-origin calls are rejected before they reach the API.</p>
-          </details>
-          <details>
-            <summary>What does the token protect, and where is it stored?</summary>
-            <p>The token is the single gate to the API, which can run your configured commands. It is a fresh 256-bit random value generated per session, written to <code>agent.json</code> in your per-user config directory and removed on a clean exit.</p>
-          </details>
-          <details>
-            <summary>I'm on a shared or work machine. Who else can read the token?</summary>
-            <p>Other user accounts cannot: <code>agent.json</code> lives in your per-user config directory, whose OS permissions deny other users (on Linux and macOS it is additionally written <code>chmod 600</code>; on Windows the per-user <code>%APPDATA%</code> ACL does this job). But any process running as <em>you</em> can read it, exactly like your own files. If you do not trust other software running under your account, leave the portal off.</p>
-          </details>
-          <details>
-            <summary>Is it safe to leave running?</summary>
-            <p>The listener is loopback-only and token-gated, and the web portal is opt-in (off by default). Leaving it on while you work is reasonable; if you prefer a smaller exposure window, stop it when you are done.</p>
-          </details>
-          <details>
-            <summary>Why is there no HTTPS?</summary>
-            <p>Loopback (127.0.0.1) is already treated as a secure context by browsers, and traffic never leaves your machine, so TLS adds nothing here. A self-signed certificate could be added if you want one.</p>
-          </details>
-          <details>
-            <summary>So it can run code on my machine, by design?</summary>
-            <p>Yes. PortPilot exists to start and stop your dev servers, which means running commands as you, the same power as opening a terminal. The layers above ensure that only you, holding the token, on your own machine, can trigger it. This is inherent to the tool, not a flaw, and it is the same exposure the desktop app has always had.</p>
-          </details>
-        </div>
-
-        <p class="security-more">Full technical threat model, verified behaviour, and known limitations:
-          <a href="https://github.com/m4cd4r4/PortPilot/blob/master/SECURITY.md" class="btn btn-small" rel="noopener">Read SECURITY.md</a>
-        </p>
-      </div>
-    </section>
-
-    <!-- Download Section -->
-    <section class="download-section" id="download" aria-labelledby="download-heading">
-      <div class="container">
-        <h2 id="download-heading">Download PortPilot <span class="version-badge">v3.4.0</span></h2>
-        <p class="section-subtitle">Free, open source, no account required</p>
-
-        <h3 class="platform-heading">Windows</h3>
-        <div class="download-options">
-          <a href="https://github.com/m4cd4r4/PortPilot/releases/download/v3.4.0/PortPilot-3.4.0-x64.exe" class="download-card" rel="noopener">
-            <div class="download-icon" aria-hidden="true">&#128230;</div>
-            <div class="download-info">
-              <h4>Windows Installer</h4>
-              <p>NSIS installer for Windows 10/11</p>
-            </div>
-            <span class="download-size">~113 MB</span>
+        <div class="downloads">
+          <a href="https://github.com/m4cd4r4/PortPilot/releases/download/v3.4.0/PortPilot-3.4.0-x64.exe" class="dl" rel="noopener">
+            <span class="dl-os">Windows</span><b>Installer</b><span class="dl-size">.exe &middot; 113 MB</span>
           </a>
-          <a href="https://github.com/m4cd4r4/PortPilot/releases/download/v3.4.0/PortPilot-3.4.0-portable.exe" class="download-card" rel="noopener">
-            <div class="download-icon" aria-hidden="true">&#128188;</div>
-            <div class="download-info">
-              <h4>Portable</h4>
-              <p>No install needed, run anywhere</p>
-            </div>
-            <span class="download-size">~113 MB</span>
+          <a href="https://github.com/m4cd4r4/PortPilot/releases/download/v3.4.0/PortPilot-3.4.0-portable.exe" class="dl" rel="noopener">
+            <span class="dl-os">Windows</span><b>Portable</b><span class="dl-size">.exe &middot; 113 MB</span>
+          </a>
+          <a href="https://github.com/m4cd4r4/PortPilot/releases/download/v3.4.0/PortPilot-3.4.0-x86_64.AppImage" class="dl" rel="noopener">
+            <span class="dl-os">Linux</span><b>AppImage</b><span class="dl-size">123 MB</span>
+          </a>
+          <a href="https://github.com/m4cd4r4/PortPilot/releases/download/v3.4.0/PortPilot-3.4.0-amd64.deb" class="dl" rel="noopener">
+            <span class="dl-os">Debian / Ubuntu</span><b>.deb</b><span class="dl-size">86 MB</span>
           </a>
         </div>
-
-        <h3 class="platform-heading">&#128039; Linux</h3>
-        <div class="download-options">
-          <a href="https://github.com/m4cd4r4/PortPilot/releases/download/v3.4.0/PortPilot-3.4.0-x86_64.AppImage" class="download-card" rel="noopener">
-            <div class="download-icon" aria-hidden="true">&#128039;</div>
-            <div class="download-info">
-              <h4>AppImage</h4>
-              <p>Universal Linux package</p>
-            </div>
-            <span class="download-size">~123 MB</span>
-          </a>
-          <a href="https://github.com/m4cd4r4/PortPilot/releases/download/v3.4.0/PortPilot-3.4.0-amd64.deb" class="download-card" rel="noopener">
-            <div class="download-icon" aria-hidden="true">&#128230;</div>
-            <div class="download-info">
-              <h4>.deb</h4>
-              <p>Debian / Ubuntu</p>
-            </div>
-            <span class="download-size">~86 MB</span>
-          </a>
-        </div>
-
-        <h3 class="platform-heading">Source</h3>
-        <div class="download-options">
-          <a href="https://github.com/m4cd4r4/PortPilot" class="download-card" rel="noopener">
-            <div class="download-icon" aria-hidden="true">&#128295;</div>
-            <div class="download-info">
-              <h4>GitHub</h4>
-              <p><code>npm install</code> then <code>npm start</code></p>
-            </div>
-            <span class="download-size">Source</span>
-          </a>
-        </div>
+        <p class="dl-more">From source: <code>npm install</code> then <code>npm start</code> on <a href="https://github.com/m4cd4r4/PortPilot" rel="noopener">GitHub</a>. Older builds on <a href="https://github.com/m4cd4r4/PortPilot/releases" rel="noopener">Releases</a>.</p>
+        <details class="shortcuts">
+          <summary>Keyboard shortcuts</summary>
+          <dl>
+            <div><dt><kbd>Ctrl</kbd>+<kbd>R</kbd></dt><dd>Refresh</dd></div>
+            <div><dt><kbd>Ctrl</kbd>+<kbd>N</kbd></dt><dd>Add app</dd></div>
+            <div><dt><kbd>Ctrl</kbd>+<kbd>F</kbd></dt><dd>Search apps and ports</dd></div>
+            <div><dt><kbd>Ctrl</kbd>+<kbd>G</kbd></dt><dd>New group</dd></div>
+            <div><dt><kbd>Esc</kbd></dt><dd>Close a dialog</dd></div>
+          </dl>
+        </details>
       </div>
     </section>
   </main>
 
-  <!-- Footer -->
-  <footer class="footer" role="contentinfo">
-    <div class="container">
-      <div class="footer-content">
-        <div class="footer-brand">
-          <h3>&#9875; PortPilot</h3>
-          <p>Made by <a href="https://github.com/m4cd4r4" rel="noopener">Macdara</a></p>
-        </div>
-        <nav class="footer-links" aria-label="Footer navigation">
-          <a href="https://github.com/m4cd4r4/PortPilot" rel="noopener">GitHub</a>
-          <a href="https://github.com/m4cd4r4/PortPilot/issues" rel="noopener">Report Issue</a>
-          <a href="https://github.com/m4cd4r4/PortPilot/releases" rel="noopener">Releases</a>
-        </nav>
-      </div>
-      <p class="copyright">MIT Licence &middot; 2026 Macdara</p>
+  <footer class="footer">
+    <div class="container footer-row">
+      <p class="footer-brand"><img src="logo-128.png" alt="" width="24" height="24"> PortPilot &middot; MIT Licence &middot; made by <a href="https://github.com/m4cd4r4" rel="noopener">Macdara</a></p>
+      <nav class="footer-links" aria-label="Footer navigation">
+        <a href="https://github.com/m4cd4r4/PortPilot" rel="noopener">GitHub</a>
+        <a href="https://github.com/m4cd4r4/PortPilot/blob/master/CHANGELOG.md" rel="noopener">Changelog</a>
+        <a href="https://github.com/m4cd4r4/PortPilot/issues" rel="noopener">Report an issue</a>
+      </nav>
     </div>
   </footer>
 

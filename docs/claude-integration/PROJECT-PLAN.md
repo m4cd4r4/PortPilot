@@ -39,6 +39,7 @@ Inputs: the 2026-10-05 audit (summary under "Baseline" below) and [`docs/ux-rese
 | - | release-3-4-0 | Off-plan: version bump to 3.4.0, changelog and README for Waves 2-3 (#36-#56). Tag push builds a DRAFT release (first end-to-end run of #41). Publishing is ask-first | merged (PR #57, v3.4.0 published 2026-10-07) | - | S |
 | - | conflict-toast-dedupe | Off-plan fix: auto-scan re-toasted every standing port conflict each interval, stacking yellow toasts over the Dev Servers row buttons and the crash toast. A scan now toasts only conflicts new since the last scan (key: app, port, holder pid), several in one toast; the row strip carries the standing state. `conflictToast` in `src/core/conflict.js`, tests in `tests/conflict.test.cjs` | merged ([#56](https://github.com/m4cd4r4/PortPilot/pull/56)) | - | S |
 | - | mobile-app-names | Off-plan fix: app names no longer render 0px wide at phone width (`styles.css`, `max-width: 600px` query) | merged (PR #42) | - | S |
+| - | landing-redesign-340 | Off-plan: landing page (`docs/index.html`, `docs/style.css`) and README rebuilt around Claude Code + 3.4; P porthole logo on every surface; demo-seed screenshots and component crops; favicon served from `docs/`. Page 6,916 -> 4,103px at 1440, README 796 -> 279 lines | PR open | - | M |
 
 Status vocabulary: `later` / `materialised` / `merged (PR #N)` / `superseded`.
 
