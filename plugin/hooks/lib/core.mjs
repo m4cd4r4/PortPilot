@@ -372,7 +372,25 @@ var require_conflict = __commonJS({
         ];
         return { kind, port, holderName, sentence, title, actions };
       }
-      return { CONFIRM_MS: CONFIRM_MS2, fmtAge: fmtAge2, describeConflict: describeConflict2 };
+      function conflictKey(c) {
+        const pid = c && c.occupiedBy ? c.occupiedBy.pid : null;
+        return `${c && c.appId}:${c && c.port}:${pid == null ? "" : pid}`;
+      }
+      function conflictToast(seen, conflicts) {
+        const list = Array.isArray(conflicts) ? conflicts : [];
+        const keys = new Set(list.map(conflictKey));
+        const fresh = list.filter((c) => !(seen && seen.has(conflictKey(c))));
+        let message = null;
+        if (fresh.length === 1) {
+          const c = fresh[0];
+          const h = c.occupiedBy || {};
+          message = `Port ${c.port} blocked for ${c.appName} by ${h.processName || "Unknown"}` + (h.pid != null ? ` (PID ${h.pid})` : "");
+        } else if (fresh.length > 1) {
+          message = `${fresh.length} port conflicts - see the marked rows`;
+        }
+        return { keys, message };
+      }
+      return { CONFIRM_MS: CONFIRM_MS2, fmtAge: fmtAge2, describeConflict: describeConflict2, conflictKey, conflictToast };
     });
   }
 });

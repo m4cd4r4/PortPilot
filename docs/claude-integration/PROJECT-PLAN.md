@@ -36,6 +36,7 @@ Inputs: the 2026-10-05 audit (summary under "Baseline" below) and [`docs/ux-rese
 | 18 | crash-channel-push | MCP channel push of crash + stderr tail into the session that started the app | superseded by #10 (mod `$.prompt.submit` reaches the session without a channel) | 4 | - |
 | - | groups-patch-app | Off-plan fix: move-to-group / drag-to-group patch the fresh config via `config:patchApp` instead of saving a stale copy; `tests/patch-app.test.cjs` | merged (PR #40) | - | S |
 | - | release-drafts | Off-plan: `release.yml` creates DRAFT releases with `fail_on_unmatched_files` (action-gh-release v2). Untested end to end until the next tag push | merged (PR #41) | - | S |
+| - | conflict-toast-dedupe | Off-plan fix: auto-scan re-toasted every standing port conflict each interval, stacking yellow toasts over the Dev Servers row buttons and the crash toast. A scan now toasts only conflicts new since the last scan (key: app, port, holder pid), several in one toast; the row strip carries the standing state. `conflictToast` in `src/core/conflict.js`, tests in `tests/conflict.test.cjs` | merged ([#56](https://github.com/m4cd4r4/PortPilot/pull/56)) | - | S |
 | - | mobile-app-names | Off-plan fix: app names no longer render 0px wide at phone width (`styles.css`, `max-width: 600px` query) | merged (PR #42) | - | S |
 
 Status vocabulary: `later` / `materialised` / `merged (PR #N)` / `superseded`.

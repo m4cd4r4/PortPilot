@@ -7,7 +7,7 @@
  * the free-port label, and fmtAge.
  */
 const assert = require('assert');
-const { describeConflict, fmtAge, CONFIRM_MS } = require('../src/core/conflict');
+const { describeConflict, fmtAge, CONFIRM_MS, conflictKey, conflictToast } = require('../src/core/conflict');
 
 let passed = 0;
 let failed = 0;
@@ -81,6 +81,47 @@ t('fmtAge buckets', () => {
 });
 
 t('CONFIRM_MS is 3 s', () => assert.equal(CONFIRM_MS, 3000));
+
+const cA = { appId: 'a', appName: 'buoy-preview', port: 8000, occupiedBy: { processName: 'python.exe', pid: 77 } };
+const cB = { appId: 'b', appName: 'harbor-web', port: 3000, occupiedBy: { processName: 'node.exe', pid: 12 } };
+
+t('conflictToast: first sighting names port, app and holder', () => {
+  const r = conflictToast(new Set(), [cA]);
+  assert.equal(r.message, 'Port 8000 blocked for buoy-preview by python.exe (PID 77)');
+});
+
+t('conflictToast: a standing conflict is not re-announced on the next scan', () => {
+  const first = conflictToast(new Set(), [cA]);
+  const second = conflictToast(first.keys, [cA]);
+  assert.equal(second.message, null);
+  assert.equal(conflictToast(second.keys, [cA]).message, null);
+});
+
+t('conflictToast: several new conflicts share one toast', () => {
+  assert.equal(conflictToast(new Set(), [cA, cB]).message, '2 port conflicts - see the marked rows');
+});
+
+t('conflictToast: only the new one is announced alongside a standing one', () => {
+  const first = conflictToast(new Set(), [cA]);
+  assert.match(conflictToast(first.keys, [cA, cB]).message, /^Port 3000 blocked for harbor-web/);
+});
+
+t('conflictToast: a conflict that clears and returns is announced again', () => {
+  const first = conflictToast(new Set(), [cA]);
+  const cleared = conflictToast(first.keys, []);
+  assert.equal(cleared.message, null);
+  assert.ok(conflictToast(cleared.keys, [cA]).message);
+});
+
+t('conflictToast: a new holder pid on the same port is a new conflict', () => {
+  const first = conflictToast(new Set(), [cA]);
+  const moved = { ...cA, occupiedBy: { processName: 'python.exe', pid: 78 } };
+  assert.ok(conflictToast(first.keys, [moved]).message);
+});
+
+t('conflictKey matches across the scan and start paths', () => {
+  assert.equal(conflictKey(cA), 'a:8000:77');
+});
 
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);
