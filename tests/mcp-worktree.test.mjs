@@ -74,8 +74,36 @@ t('review 5 (M5): a Git Bash /i/ path matches I:/ on Windows only', () => {
 t('review 5 (M5): commands compare in cmd-safe form', () => {
   const apps = [{ id: 'o', name: 'y', cwd: 'C:/t/y', command: 'npm run dev > /tmp/dev.log 2>&1' }];
   assert.equal(observedDuplicate(apps, { cwd: 'C:/t/y', command: 'npm run dev' }, 'win32').id, 'o');
-  const saved = [{ id: 'p', name: 'z', cwd: 'C:/t/z', command: 'npm run dev' }];
+  const saved = [{ id: 'p', name: 'z', cwd: 'C:/t/z', command: 'npm run dev', env: { PORT: '4000' } }];
   assert.equal(observedDuplicate(saved, { cwd: 'C:/t/z', command: 'PORT=4000 npm run dev &' }, 'win32').id, 'p');
+});
+
+t('review 6 (M1): a plain add on another port or with other env is a second instance, not a duplicate', () => {
+  const apps = [{ id: 'w', name: 'web', cwd: 'I:/x/web', command: 'npm run dev', preferredPort: 3000 }];
+  assert.equal(observedDuplicate(apps, { cwd: 'I:/x/web', command: 'PORT=4000 npm run dev' }, 'win32'), null);
+  assert.equal(observedDuplicate(apps, { cwd: 'I:/x/web', command: 'npm run dev', env: { PORT: '4000' }, preferredPort: 4000 }, 'win32'), null);
+  assert.equal(observedDuplicate(apps, { cwd: 'I:/x/web', command: 'npm run dev', preferredPort: 4000 }, 'win32'), null);
+  assert.equal(observedDuplicate(apps, { cwd: 'I:/x/web', command: 'npm run dev', preferredPort: 3000 }, 'win32').id, 'w');
+});
+
+t('review 6 (M2/L3/L4): cmdSafe keeps quoted > and <, splits VAR= by shell words, strips >& and | tee', () => {
+  const cases = [
+    ['npm run dev -- --title "a > b"', 'npm run dev -- --title "a > b"', {}],
+    ['node -e "require(\'http\').createServer((q,r)=>r.end()).listen(3000)"', 'node -e "require(\'http\').createServer((q,r)=>r.end()).listen(3000)"', {}],
+    ['VAR=a\\ b npm run dev', 'npm run dev', { VAR: 'a b' }],
+    ['FOO=a"b c" npm run dev', 'npm run dev', { FOO: 'ab c' }],
+    ['npm run dev >& log', 'npm run dev', {}],
+    ['npm run dev 2>&1 | tee dev.log', 'npm run dev', {}],
+    ['npm run dev && echo hi', 'npm run dev && echo hi', {}],
+    ['npm run dev -- --port 3000>x.log', 'npm run dev -- --port 3000', {}],
+  ];
+  for (const [raw, command, env] of cases) {
+    assert.deepStrictEqual(cmdSafe(raw), { command, env }, raw);
+    assert.deepStrictEqual(pluginCmdSafe(raw), { command, env }, raw);
+  }
+  const obs = (command) => ({ id: 'o', name: 'y', command, registeredBy: 'observed' });
+  assert.equal(startRefusal(obs('npm run dev -- --title "a > b"')), null);
+  assert.match(startRefusal(obs("node -e 'a=>b'")), /< or > outside double quotes/);
 });
 
 t('review 5 (M3): cmdSafe matches the plugin\'s, and start_app refuses an observed app with a redirect or VAR=', () => {

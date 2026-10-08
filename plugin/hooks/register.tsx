@@ -116,14 +116,20 @@ async function scanPorts($: EngineInterface, platform: Platform): Promise<Listen
   return null
 }
 
-async function holderName($: EngineInterface, platform: Platform, listeners: Listeners, port: number) {
+/** Names the port's holder; `names` caches per PID so a process holding several ports costs one tasklist. */
+async function holderName($: EngineInterface, platform: Platform, listeners: Listeners, port: number, names: Map<number, string | null> = new Map()) {
   const holder = listeners.get(port)
   if (!holder || platform !== 'win32' || !holder.pid || holder.processName !== 'Unknown') return
-  try {
-    const { stdout } = await $.process.run(['tasklist', '/FI', `PID eq ${holder.pid}`, '/FO', 'CSV', '/NH'], { timeoutMs: 10_000 })
-    const name = parseTasklistName(stdout)
-    if (name) listeners.set(port, { ...holder, processName: name })
-  } catch { /* the name stays Unknown */ }
+  if (!names.has(holder.pid)) {
+    let name: string | null = null
+    try {
+      const { stdout } = await $.process.run(['tasklist', '/FI', `PID eq ${holder.pid}`, '/FO', 'CSV', '/NH'], { timeoutMs: 10_000 })
+      name = parseTasklistName(stdout) || null
+    } catch { /* the name stays Unknown */ }
+    names.set(holder.pid, name)
+  }
+  const name = names.get(holder.pid)
+  if (name) listeners.set(port, { ...holder, processName: name })
 }
 
 // Fixed for the process; a reload recomputes them.
@@ -211,8 +217,9 @@ async function startTool($: EngineInterface) {
 async function checkObserved($: EngineInterface, snap: Snapshot) {
   const cur = await read($, observeState)
   if (!cur.notes.length) return
-  // Name each new port's holder (one tasklist per port on Windows) so Claude can tell its own server apart.
-  if (platform && snap.listeners) for (const p of freshPorts(cur, snap)) await holderName($, platform, snap.listeners, p)
+  // Name each new port's holder (one tasklist per PID on Windows) so Claude can tell its own server apart.
+  const names = new Map<number, string | null>()
+  if (platform && snap.listeners) for (const p of freshPorts(cur, snap)) await holderName($, platform, snap.listeners, p, names)
   const now = await $.clock.now()
   await update($, observeState, (s) => {
     const { state, notices } = checkNotices(s, snap, now)

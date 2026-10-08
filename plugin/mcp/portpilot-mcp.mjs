@@ -23780,29 +23780,95 @@ function appAtCwd(apps, cwd, platform = process.platform) {
   return (apps || []).find((a) => a && a.cwd && cwdKey(a.cwd, platform) === cwdKey(cwd, platform)) || null;
 }
 function cmdSafe(raw) {
-  let s = String(raw || "").trim();
+  let s = String(raw || "").trim().replace(/(^|[^&])&$/, "$1").trim();
   const env = {};
-  for (let m; m = s.match(/^([A-Za-z_][A-Za-z0-9_]*)=("[^"]*"|'[^']*'|\S*)\s+(.*)$/); s = m[3]) env[m[1]] = m[2].replace(/^(['"])(.*)\1$/, "$2");
-  for (let prev; prev !== s; ) {
-    prev = s;
-    s = s.replace(/\s*&$/, "").replace(/(?:\s+\d?(?:>>?|<)|\s*(?:>>?|<)|\s*&>>?)\s*(?:&\d+|"[^"]*"|'[^']*'|[^\s&]+)$/, "").trim();
+  for (let w = shellWords(s); w.length > 1 && w[0].bare && /^[A-Za-z_][A-Za-z0-9_]*=/.test(w[0].raw); w = shellWords(s)) {
+    const name = w[0].raw.slice(0, w[0].raw.indexOf("="));
+    env[name] = w[0].text.slice(name.length + 1);
+    s = s.slice(w[1].start);
   }
-  return { command: s.replace(/\s+/g, " "), env };
+  const cut = trailingShellOnly(shellWords(s));
+  if (cut > 0) s = s.slice(0, cut);
+  return { command: s.trim().replace(/\s+/g, " "), env };
+}
+function shellWords(s) {
+  const out = [];
+  let cur = null, q = null;
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+    if (!q && /\s/.test(ch)) {
+      if (cur) {
+        cur.end = i;
+        out.push(cur);
+        cur = null;
+      }
+      continue;
+    }
+    if (!cur) cur = { start: i, end: s.length, text: "", bare: !(ch === '"' || ch === "'" || ch === "\\"), redirAt: -1 };
+    if (!q && (ch === ">" || ch === "<") && cur.redirAt < 0) cur.redirAt = i - cur.start;
+    if (q) {
+      if (ch === q) q = null;
+      else if (q === '"' && ch === "\\" && i + 1 < s.length) cur.text += s[++i];
+      else cur.text += ch;
+    } else if (ch === '"' || ch === "'") q = ch;
+    else if (ch === "\\" && i + 1 < s.length) cur.text += s[++i];
+    else cur.text += ch;
+  }
+  if (cur) out.push(cur);
+  return out.map((w) => ({ ...w, raw: s.slice(w.start, w.end) }));
+}
+var REDIRECT = /^\d?(?:&>>?|>>?&?|<)/;
+function trailingShellOnly(words) {
+  for (let i = 1; i < words.length; i++) {
+    const w = words[i];
+    const whole = w.bare && REDIRECT.test(w.raw);
+    if (!whole && !(w.redirAt > 0)) continue;
+    const head = whole ? w.raw : w.raw.slice(w.redirAt);
+    const op0 = head.match(REDIRECT);
+    if (!op0) continue;
+    let k = i + (head.length > op0[0].length ? 1 : 2);
+    while (k < words.length) {
+      const x = words[k];
+      const op = x.bare && x.raw.match(REDIRECT);
+      if (op) k += x.raw.length > op[0].length ? 1 : 2;
+      else if (x.bare && x.raw === "|" && words[k + 1] && words[k + 1].text === "tee") k = words.length;
+      else if (x.bare && x.raw === "&" && k === words.length - 1) k += 1;
+      else break;
+    }
+    if (k >= words.length) return whole ? w.start : w.start + w.redirAt;
+  }
+  return -1;
+}
+function cmdRedirects(command) {
+  let q = false;
+  for (const ch of String(command || "")) {
+    if (ch === '"') q = !q;
+    else if (!q && (ch === "<" || ch === ">")) return true;
+  }
+  return false;
 }
 function startRefusal(app) {
   if (!app || app.registeredBy !== "observed") return null;
   const command = String(app.command || "").trim();
   const safe = cmdSafe(command);
-  if (safe.command === command.replace(/\s+/g, " ")) return null;
-  const env = Object.keys(safe.env).length ? ` and put ${JSON.stringify(safe.env)} in the app's env` : "";
-  return `"${app.name}" was registered from a bash start and its command (${command}) has a shell redirection, a trailing & or a leading VAR= assignment, which cmd.exe would run differently. Fix it with update_app: command "${safe.command}"${env}.`;
+  if (safe.command !== command.replace(/\s+/g, " ")) {
+    const env = Object.keys(safe.env).length ? ` and put ${JSON.stringify(safe.env)} in the app's env` : "";
+    return `"${app.name}" was registered from a bash start and its command (${command}) has a shell redirection, a trailing & or a leading VAR= assignment, which cmd.exe would run differently. Fix it with update_app: command "${safe.command}"${env}.`;
+  }
+  if (cmdRedirects(command)) return `"${app.name}" was registered from a bash start and its command (${command}) has a < or > outside double quotes, which cmd.exe reads as a redirection. Fix the command with update_app (double-quote that argument).`;
+  return null;
 }
-function observedDuplicate(apps, { cwd, command, registeredBy }, platform = process.platform) {
+function observedDuplicate(apps, { cwd, command, registeredBy, env, preferredPort }, platform = process.platform) {
   const same = appAtCwd(apps, cwd, platform);
   if (!same) return null;
   if (registeredBy === "observed") return same;
-  const want = cmdSafe(command).command;
-  return (apps || []).find((a) => a && a.cwd && cwdKey(a.cwd, platform) === cwdKey(cwd, platform) && cmdSafe(a.command).command === want) || null;
+  const key = (cmd, extra, port) => {
+    const safe = cmdSafe(cmd);
+    const e = { ...safe.env, ...extra || {} };
+    return JSON.stringify([safe.command, Object.keys(e).sort().map((k) => [k, String(e[k])]), port || null]);
+  };
+  const want = key(command, env, preferredPort);
+  return (apps || []).find((a) => a && a.cwd && cwdKey(a.cwd, platform) === cwdKey(cwd, platform) && key(a.command, a.env, a.preferredPort) === want) || null;
 }
 var WORKTREE_COLORS = ["#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6", "#EC4899", "#06B6D4", "#84CC16", "#F97316", "#6366F1"];
 function pickColor(seed) {
@@ -24342,7 +24408,7 @@ function createServer2() {
       }
       return updateConfig((config2) => {
         if (!config2.apps) config2.apps = [];
-        const same = observedDuplicate(config2.apps, { cwd, command, registeredBy });
+        const same = observedDuplicate(config2.apps, { cwd, command, registeredBy, env, preferredPort });
         if (same) {
           return { content: [{ type: "text", text: JSON.stringify({ success: true, existing: true, message: `"${same.name}" is already registered for ${cwd}`, app: same }, null, 2) }] };
         }
