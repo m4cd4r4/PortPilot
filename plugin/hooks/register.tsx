@@ -14,7 +14,8 @@
  * the call through untouched: a wrong deny costs more than a missed one.
  * A start in a directory no app owns also runs untouched; once a new port
  * held by this session's process tree is listening, observe.mjs records the
- * project through add_app as an observed app (never routed, still guarded).
+ * project through add_app as an observed app (never routed, still guarded),
+ * when the listener provably belongs to that start (observe.mjs).
  *
  * Crash band (C4): when an app this session started crashes, a band above
  * the prompt shows `✕ web crashed · :3000 · exit 1` and its last output line,
@@ -53,7 +54,7 @@ import {
   type Platform,
   type Runtime,
 } from './guard-core.mjs'
-import { completeObservations, noteStart, parseProcTable, type ObserveIo, type Pending, type ToolReply } from './observe.mjs'
+import { completeObservations, noteStart, parseProcTable, pickPendingFiles, removeArgv, type ObserveIo, type Pending, type ToolReply } from './observe.mjs'
 
 const REFRESH_MS = 15_000
 const MAX_BANDS = 2
@@ -206,11 +207,11 @@ async function startTool($: EngineInterface) {
   return portpilotTool($, 'start_app')
 }
 
-/** `SELF <pid>` and one `pid ppid name` line per process, for observe.mjs's parseProcTable. */
+/** `SELF <pid>`, then each process with its parent, name, creation time (Windows) and command line, for observe.mjs's parseProcTable. */
 async function procTable($: EngineInterface) {
   const argv = platform === 'win32'
-    ? ['powershell', '-NoProfile', '-NonInteractive', '-Command', "'SELF ' + $PID; Get-CimInstance Win32_Process | ForEach-Object { '' + $_.ProcessId + ' ' + $_.ParentProcessId + ' ' + $_.Name }"]
-    : ['sh', '-c', 'echo SELF $$; ps -axo pid=,ppid=,comm=']
+    ? ['powershell', '-NoProfile', '-NonInteractive', '-Command', "'SELF ' + $PID; $t = [char]9; Get-CimInstance Win32_Process | ForEach-Object { $c = 0; if ($_.CreationDate) { $c = ([DateTimeOffset]$_.CreationDate).ToUnixTimeMilliseconds() }; '' + $_.ProcessId + $t + $_.ParentProcessId + $t + $c + $t + $_.Name + $t + (('' + $_.CommandLine) -replace '[\\r\\n\\t]', ' ') }"]
+    : ['sh', '-c', 'echo SELF $$; ps -axo pid=,ppid=,comm=; echo ARGS; ps -axo pid=,args=']
   try {
     const { exitCode, stdout } = await $.process.run(argv, { timeoutMs: 15_000 })
     if (exitCode === 0) return parseProcTable(stdout)
@@ -233,19 +234,28 @@ async function cwdOf($: EngineInterface, pid: number): Promise<string | null> {
   }
 }
 
+/** $.fs has no delete: one argv process per file, the path never shell-parsed (see removeArgv). */
+async function removeFile($: EngineInterface, file: string) {
+  const argv = removeArgv(file, platform === 'win32')
+  if (!argv) return
+  try { await $.process.run(argv, { timeoutMs: 5000 }) } catch { /* pruned on a later tick */ }
+}
+
 /** The engine-backed callers observe.mjs composes; pendings live in <configDir>/observing. */
 function observeIo($: EngineInterface): ObserveIo {
   const at = (key: string) => `${dir}/observing/${key}.json`
   return {
     readPending: (key) => readJson<Pending>($, at(key)),
     writePending: (key, rec) => $.fs.write(at(key), JSON.stringify(rec)),
+    removePending: (key) => removeFile($, at(key)),
     listPending: async () => {
       if (!dir || !(await $.fs.exists(`${dir}/observing`))) return []
-      const names = (await $.fs.list(`${dir}/observing`)).filter((f) => f.name.endsWith('.json'))
-      const all = await Promise.all(names.map((f) => readJson<Pending>($, `${dir}/observing/${f.name}`)))
+      const { read: names, prune } = pickPendingFiles(await $.fs.list(`${dir}/observing`), await $.clock.now())
+      for (const name of prune) await removeFile($, `${dir}/observing/${name}`)
+      const all = await Promise.all(names.map((name) => readJson<Pending>($, `${dir}/observing/${name}`)))
       return all.filter((p): p is Pending => !!p)
     },
-    snapshot: async () => { const s = await snapshot($); return { config: s.config, listeners: s.listeners } },
+    snapshot: async () => { const s = await snapshot($); return { config: s.config, runtime: s.runtime, listeners: s.listeners } },
     procTable: () => procTable($),
     cwdOf: (pid) => cwdOf($, pid),
     readJson: (path) => readJson($, path),
@@ -257,7 +267,7 @@ function observeIo($: EngineInterface): ObserveIo {
 /** Records any observed start that is now listening; refreshes the line when one was. */
 async function observe($: EngineInterface) {
   if (!platform || !dir) return
-  const done = await completeObservations(observeIo($), { now: await $.clock.now(), windows: platform === 'win32' })
+  const done = await completeObservations(observeIo($), { now: await $.clock.now(), windows: platform === 'win32', session: await $.session.id() })
   if (done.some((d) => d.done === 'recorded')) void refresh($)
 }
 
@@ -353,7 +363,7 @@ export const register: Register = (on) => {
     if (decision.action === 'pass') {
       // A start in a directory no app owns runs exactly as typed; PortPilot
       // only notes it, and records it once a new port of this session's is up.
-      const noted = await noteStart(observeIo($), { start, sessionCwd, config, listeners, home, windows, session: await $.session.id(), now: await $.clock.now() })
+      const noted = await noteStart(observeIo($), { start, sessionCwd, config, listeners, home, windows, session: await $.session.id(), now: await $.clock.now(), command: e.command })
       const ran = await next(e)
       if (noted) void observe($).catch(() => {})
       return ran

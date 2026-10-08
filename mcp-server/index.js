@@ -81,9 +81,18 @@ function normPath(p) {
   return path.normalize(String(p || '')).replace(/\\/g, '/').replace(/\/+$/, '').toLowerCase();
 }
 
-/** The registered app whose cwd is this directory, or null. */
-function appAtCwd(apps, cwd) {
-  return (apps || []).find(a => a && a.cwd && normPath(a.cwd) === normPath(cwd)) || null;
+/**
+ * The registered app whose cwd is this directory, or null. Case folds only
+ * where the default file system does (Windows, macOS): on Linux /a/Web and
+ * /a/web are two projects.
+ */
+function appAtCwd(apps, cwd, platform = process.platform) {
+  const fold = platform === 'win32' || platform === 'darwin';
+  const key = (p) => {
+    const s = path.normalize(String(p || '')).replace(/\\/g, '/').replace(/\/+$/, '');
+    return fold ? s.toLowerCase() : s;
+  };
+  return (apps || []).find(a => a && a.cwd && key(a.cwd) === key(cwd)) || null;
 }
 
 // Deterministic colour from a seed (branch or path) so re-registering a worktree

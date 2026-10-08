@@ -36,8 +36,15 @@ t('nests under parent matched by main-worktree cwd', () => {
 
 t('add_app observed: the app already at a cwd is found whatever its slashes or case', () => {
   const apps = [{ id: 'a', name: 'shop', cwd: 'I:\\Scratch\\Shop\\' }];
-  assert.equal(appAtCwd(apps, 'i:/scratch/shop').id, 'a');
-  assert.equal(appAtCwd(apps, 'I:/Scratch/Shop/web'), null);
+  assert.equal(appAtCwd(apps, 'i:/scratch/shop', 'win32').id, 'a');
+  assert.equal(appAtCwd(apps, 'I:/Scratch/Shop/web', 'win32'), null);
+});
+
+t('add_app observed: appAtCwd folds case on Windows and macOS only', () => {
+  const apps = [{ id: 'a', name: 'web', cwd: '/home/u/Web/' }];
+  assert.equal(appAtCwd(apps, '/home/u/web', 'darwin').id, 'a');
+  assert.equal(appAtCwd(apps, '/home/u/web', 'linux'), null);
+  assert.equal(appAtCwd(apps, '/home/u/Web', 'linux').id, 'a');
 });
 
 t('re-registering the same cwd updates and keeps the id', () => {

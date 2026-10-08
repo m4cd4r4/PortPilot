@@ -23771,8 +23771,13 @@ function generateId() {
 function normPath(p) {
   return path.normalize(String(p || "")).replace(/\\/g, "/").replace(/\/+$/, "").toLowerCase();
 }
-function appAtCwd(apps, cwd) {
-  return (apps || []).find((a) => a && a.cwd && normPath(a.cwd) === normPath(cwd)) || null;
+function appAtCwd(apps, cwd, platform = process.platform) {
+  const fold = platform === "win32" || platform === "darwin";
+  const key = (p) => {
+    const s = path.normalize(String(p || "")).replace(/\\/g, "/").replace(/\/+$/, "");
+    return fold ? s.toLowerCase() : s;
+  };
+  return (apps || []).find((a) => a && a.cwd && key(a.cwd) === key(cwd)) || null;
 }
 var WORKTREE_COLORS = ["#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6", "#EC4899", "#06B6D4", "#84CC16", "#F97316", "#6366F1"];
 function pickColor(seed) {
