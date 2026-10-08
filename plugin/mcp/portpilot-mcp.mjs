@@ -23771,6 +23771,9 @@ function generateId() {
 function normPath(p) {
   return path.normalize(String(p || "")).replace(/\\/g, "/").replace(/\/+$/, "").toLowerCase();
 }
+function appAtCwd(apps, cwd) {
+  return (apps || []).find((a) => a && a.cwd && normPath(a.cwd) === normPath(cwd)) || null;
+}
 var WORKTREE_COLORS = ["#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6", "#EC4899", "#06B6D4", "#84CC16", "#F97316", "#6366F1"];
 function pickColor(seed) {
   const s = String(seed || "");
@@ -24217,7 +24220,7 @@ function createServer2() {
       const app = findApp(config2.apps || [], identifier);
       if (!app) return { content: [{ type: "text", text: `App not found: ${identifier}` }], isError: true };
       const result = await startApp(app, configFile.logPathFor(getConfigPath(), app.id));
-      if (result.success || result.verified) stampStart(getConfigPath(), app, sessionId);
+      if (result.success) stampStart(getConfigPath(), app, sessionId);
       return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }], isError: !result.success };
     }
   );
@@ -24292,11 +24295,17 @@ function createServer2() {
       isFavorite: external_exports.boolean().optional().describe("Mark as favorite"),
       autoStart: external_exports.boolean().optional().describe("Auto-start on launch"),
       group: external_exports.string().optional().describe("Group name to assign to"),
-      description: external_exports.string().optional().describe("Short description")
+      description: external_exports.string().optional().describe("Short description"),
+      registeredBy: external_exports.enum(["observed"]).optional().describe("Set by the PortPilot Claude Code plugin when it records a server it saw start; not for manual use"),
+      observedSession: external_exports.string().optional().describe("The Claude Code session the observed start came from")
     },
-    async ({ name, command, cwd, preferredPort, isFavorite, autoStart, group, description }) => {
+    async ({ name, command, cwd, preferredPort, isFavorite, autoStart, group, description, registeredBy, observedSession }) => {
       return updateConfig((config2) => {
         if (!config2.apps) config2.apps = [];
+        const same = registeredBy === "observed" && appAtCwd(config2.apps, cwd);
+        if (same) {
+          return { content: [{ type: "text", text: JSON.stringify({ success: true, existing: true, message: `"${same.name}" is already registered for ${cwd}`, app: same }, null, 2) }] };
+        }
         if (config2.apps.some((a) => a.name.toLowerCase() === name.toLowerCase())) {
           return { content: [{ type: "text", text: `App "${name}" already exists` }], isError: true };
         }
@@ -24314,6 +24323,7 @@ function createServer2() {
           group: group || null,
           description: description || null,
           color: "#4fc3f7",
+          ...registeredBy ? { registeredBy, observedSession: observedSession || null, observedAt: now } : {},
           createdAt: now,
           updatedAt: now
         };
@@ -24596,6 +24606,7 @@ async function main() {
 var isMain = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
 if (isMain) main().catch(console.error);
 export {
+  appAtCwd,
   detachedCommand,
   normPath,
   pickColor,

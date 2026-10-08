@@ -31,11 +31,6 @@ type World = {
   cwd?: string
   withStartTool?: boolean
   startFails?: boolean
-  withAddTool?: boolean
-  addFails?: boolean
-  pkg?: object
-  clock?: false
-  addCalls?: unknown[]
   config?: object | null
   bashRuns?: string[]
   startCalls?: unknown[]
@@ -51,7 +46,6 @@ type World = {
 /** Fakes the world beneath the plugin. */
 function world(on: On, w: World = {}) {
   mock.env(on, { OS: 'Windows_NT', APPDATA: 'C:/fake/AppData', USERPROFILE: 'C:/Users/me' })
-  if (w.clock !== false) mock.clock(on) // tests that drive time mock their own first
   const config = w.config === undefined ? CONFIG : w.config
   on('fs.read', async (_$, e) => {
     const path = e.path.split(String.fromCharCode(92)).join('/') // the engine hands Windows paths with backslashes
@@ -59,7 +53,6 @@ function world(on: On, w: World = {}) {
     if (path === `${DIR}/portpilot-runtime.json`) return { value: JSON.stringify(w.runtime ?? RUNTIME) }
     if (path === `${DIR}/logs/api.log` && w.log != null) return { value: w.log }
     if (path === `${DIR}/inbox/sess-1.json` && w.inbox) return { value: JSON.stringify(w.inbox) }
-    if (path.endsWith('/package.json') && w.pkg) return { value: JSON.stringify(w.pkg) }
     return { deny: `ENOENT ${e.path}` }
   })
   on('process.run', async (_$, e) => {
@@ -69,13 +62,11 @@ function world(on: On, w: World = {}) {
       : ''
     return { value: { exitCode: 0, stdout, stderr: '', isStdoutTruncated: false, isStderrTruncated: false } } as never
   })
-  on('fs.exists', async () => ({ value: true }))
   on('session.cwd', async () => ({ value: w.cwd ?? 'C:/work' }))
   on('session.id', async () => ({ value: 'sess-1' }))
   on('tool.list', async () => ({ value: w.withStartTool === false ? [] : [
     { name: 'Bash', description: 'shell', mcp: false },
     { name: 'mcp__portpilot__start_app', description: 'start an app', mcp: true },
-    ...(w.withAddTool ? [{ name: 'mcp__portpilot__add_app', description: 'add an app', mcp: true }] : []),
   ] }))
   on('ui.status', async (_$, e) => { w.statuses?.push(e.text); return { value: undefined } })
   on('ui.toast', async (_$, e) => { w.toasts?.push(e.text); return { value: undefined } })
@@ -84,11 +75,6 @@ function world(on: On, w: World = {}) {
   // The engine's own drawing, for when the band has nothing to show.
   on('ui.render', async () => ({ type: 'Box' }))
   on('tool.call', async (_$, e) => {
-    if (e.tool === 'mcp__portpilot__add_app') {
-      w.addCalls?.push(e)
-      if (w.addFails) return { isError: true, result: 'exists', text: 'App "shop" already exists' } as never
-      return { result: 'added', text: JSON.stringify({ success: true, app: { id: 'new1', name: 'shop' } }) } as never
-    }
     if (e.tool === 'mcp__portpilot__start_app') {
       w.startCalls?.push(e)
       if (w.startFails) return { isError: true, result: 'start failed', text: '{"success":false,"error":"Port 4000 did not open"}' } as never
@@ -170,37 +156,13 @@ test('non-server commands are not touched', async ($, on) => {
 test('session start sets the status line and refreshes it on the timer', async ($, on) => {
   const statuses: (string | undefined)[] = []
   const clock = mock.clock(on)
-  world(on, { statuses, clock: false })
+  world(on, { statuses })
   on('session.start', async (_$, e) => ({ cwd: e.cwd }))
   await $.session.start({ cwd: 'C:/work', surface: 'terminal', isInteractive: true })
   await clock.settle()
   expect(statuses).toEqual(['⚓ 1 up · :3000 web✦'])
   await clock.advance(15_000)
   expect(statuses.length).toBe(2)
-})
-
-// ---- auto-register (run-history PR A) ----------------------------------------
-
-test('an unregistered project with a certain port is registered, then routed', async ($, on) => {
-  const bashRuns: string[] = []
-  const addCalls: unknown[] = []
-  const startCalls: unknown[] = []
-  world(on, { cwd: 'C:/work/Shop', bashRuns, addCalls, startCalls, withAddTool: true, pkg: { scripts: { dev: 'next dev' } } })
-  const r = await $.tool.call(bash('PORT=3005 npm run dev'))
-  expect(bashRuns).toEqual([])
-  expect(addCalls).toEqual([expect.objectContaining({ name: 'Shop', command: 'npm run dev', cwd: 'C:/work/Shop', preferredPort: 3005 })])
-  expect(startCalls).toEqual([expect.objectContaining({ identifier: 'new1', sessionId: 'sess-1' })])
-  expect(r.result).toEqual(expect.objectContaining({ stdout: expect.stringContaining('registered it as "Shop" first') }))
-})
-
-test('add_app returning isError denies; never a shell start', async ($, on) => {
-  const bashRuns: string[] = []
-  const startCalls: unknown[] = []
-  world(on, { cwd: 'C:/work/Shop', bashRuns, startCalls, withAddTool: true, addFails: true, pkg: { scripts: { dev: 'vite' } } })
-  const r = await $.tool.call(bash('npm run dev -- --port 3005'))
-  expect(startCalls).toEqual([])
-  expect(bashRuns).toEqual([])
-  expect(r.deny).toContain('so the start did not run')
 })
 
 // ---- crash band (C4) --------------------------------------------------------
@@ -219,7 +181,7 @@ const BAND = { component: 'AbovePrompt', props: { hasSurvey: false, isWorking: f
 /** Starts the session so the first refresh finds the crash. */
 async function started($: Parameters<TestBody>[0], on: On, w: World) {
   const clock = mock.clock(on, { now: NOW })
-  world(on, { ...w, clock: false })
+  world(on, w)
   on('session.start', async (_$, e) => ({ cwd: e.cwd }))
   await $.session.start({ cwd: 'C:/work', surface: 'terminal', isInteractive: true })
   await clock.settle()

@@ -2,7 +2,7 @@
 
 **Approved by Macdara 2026-10-08: all five open-question recommendations accepted.**
 
-Brief: [`docs/prompts/run-history.md`](../prompts/run-history.md). Design only; no feature code in this commit. Three PRs: **A** (auto-register in the guard), **B1** (run records, snapshot, pruning, `find_run`), **B2** (desktop History view, thumbnails, Re-run).
+Brief: [`docs/prompts/run-history.md`](../prompts/run-history.md). Design only; no feature code in this commit. Three PRs: **A** (observe and record unregistered starts), **B1** (run records, snapshot, pruning, `find_run`), **B2** (desktop History view, thumbnails, Re-run).
 
 ## Corrections to the brief (source files win)
 
@@ -12,70 +12,33 @@ Brief: [`docs/prompts/run-history.md`](../prompts/run-history.md). Design only; 
 4. **Thumbnails need the desktop app running.** MCP, web-agent and VS Code starts run in plain Node with no Electron, so `capturePage` is only available in the desktop process.
 5. **Exit codes exist only for desktop-started apps.** MCP and VS Code starts are detached shells (`detachedCommand`, index.js L431); their exit code is never seen. A record's `exitCode` is null unless the desktop process owned the child or a crash stamp carried one.
 
-## PR A: auto-register in the guard
+## PR A: observe, don't take over
 
-New pure function in `guard-core.mjs`, `planAutoRegister(c)`, called by `register.tsx` only when `decide()` returned `pass`. `decide()` itself does not change, so every existing deny and pass path is untouched.
+**Pivot, 2026-10-08 (Macdara).** The first design registered an unknown project and then rerouted Claude's start through `start_app` (bash -> a saved cmd.exe command, PORT injected, a per-directory claim, a 60 s "still starting" deny). Two review rounds kept finding new bugs in that take-over, so PR A now only watches.
 
-### Decision rules (all must hold, else `pass` with no side effect)
+**The first start of an unregistered project runs exactly as Claude typed it.** The guard never denies, rewrites or reroutes it on this path. `decide()` is master's, plus one exception below.
 
-| # | Rule | Why |
-|---|------|-----|
-| 1 | `settings.autoRegister !== false` | opt-out |
-| 2 | `start.certain && start.bare` | the guard's #15 guarantee: only a bare start can be replaced by `start_app` |
-| 3 | `appInDir(apps, dir)` is null | a registered dir keeps today's rules |
-| 4 | `dir` is not the home dir, its Desktop/Documents/Downloads, a drive root or `/` | a stray `python -m http.server` in `~` is not a project |
-| 8 | (review fix) the session cwd and any `cd` target are not UNC, and the dir exists | `normPath` folds `//wsl.localhost/x` into `/wsl.localhost/x` |
-| 9 | (review fix) the command uses only `[A-Za-z0-9_-=.:/@+, ]` | it is later run by cmd.exe or sh, not bash: `$VAR`, quotes, `\`, `%`, globs and `~` read differently |
-| 5 | the port is certain (next table) | `start_app` verifies by polling that port |
-| 6 | the port is not in `listeners` | a busy port is `decide`'s business, never a registration |
-| 7 | the MCP `add_app` and `start_app` tools are both connected | otherwise nothing can be routed |
+### Mechanism (`plugin/hooks/observe.mjs`, wired in `register.tsx`)
 
-### What counts as a certain port, in order
+1. **Note** (Bash hook, `decide()` passed): a certain start (`parseStart(...).certain`) in a directory no app owns writes `<configDir>/observing/<key>.json`: `{ dir, cwd, raw, session, at, before }`, where `before` is the ports listening at that moment. One file per directory; a second start there within the window keeps the first's baseline.
+2. **Complete** (after the Bash call returns, and on the 15 s status tick, which covers `run_in_background` and `&` starts whose Bash call returns before the server listens): a port missing from `before`, whose listener pid has this session's Claude process among its ancestors (one process-table read: `Get-CimInstance Win32_Process` / `ps -axo pid,ppid,comm`), and, where the platform reports a process cwd (Linux `/proc/<pid>/cwd`, macOS `lsof -d cwd`), running in the noted cwd, is recorded with `add_app { command: raw, cwd, preferredPort: <observed port>, registeredBy: 'observed', observedSession }`. The port is the observed one, never read from flags.
+3. **Uncertain = nothing:** two new ports for one pending, or one port two pendings could own, ends `ambiguous`. No match within 60 s ends `expired`. A failed or missing `add_app` ends without a retry.
+4. **Idempotent by cwd:** `add_app` with `registeredBy: 'observed'` returns the existing app when one has that cwd (`appAtCwd`), so two sessions observing one project make one app. Never a direct config write.
 
-1. An explicit port in the command (`start.port`, already parsed).
-2. A literal `--port N` / `-p N` in the `package.json` script the command names (`npm run dev` reads `scripts.dev`); `-p` counts only for a tool that takes it (`tsc -p 2020 && vite` is not 2020).
-   (review fix) A forwarded flag counts only when npm forwards it (after `--`; `npm run dev --port 3005` is npm config and uncertain even to `decide`) and the script sets no port of its own; `PORT=` only when the script tool binds `$PORT` (Next, Nuxt, react-scripts; not Vite or http.server). `npm dev`/`serve`/`preview` are not npm commands and are not starts. The cwd is saved with an upper-case drive letter.
-3. `python -m http.server` with no port: 8000 (the module's fixed default, not configurable elsewhere).
+Never observed: uncertain or unparseable commands; one-shot tool runs (`next build`, `vite build`, `astro check`, `nuxi generate`, ...) even with a port flag; UNC or root paths; the home folder and its Desktop, Documents, Downloads; `settings.autoRegister === false` (Settings: "Record new projects Claude starts").
 
-Framework defaults (Vite 5173, Next 3000) are **not** certain: `vite.config`, `.env` or `next.config` can move them. Those starts pass untouched. Open question 1.
+### Observed apps in the guard
 
-### How each field is derived
+- **Deny path applies:** a second start on a busy port is denied with "reuse http://localhost:N", as for any app.
+- **Route path does not:** `decide()` skips the route when `app.registeredBy === 'observed'`, because `start_app` runs the command through cmd.exe with PORT set, which can behave differently from the bash Claude used. A free-port start passes as typed and is not observed again (the directory is owned now).
 
-- **cwd**: `dir` from `startDir`, written back in the platform's own form (not the lower-cased comparison form).
-- **command**: the raw start step with the leading `PORT=N` stripped (`start_app` sets `PORT` from `preferredPort`, processManager L56 and index.js L452) and a trailing `&` removed. A `--port N` flag stays, so `registeredStart(app).port` still matches on the next start.
-- **preferredPort**: the certain port.
-- **name**: `package.json` `name` (scope dropped: `@acme/web` becomes `web`), else the folder name. On a clash with an existing name, append the parent folder (`web (checkout-mockup)`), then `-2`, `-3`.
-- **worktree**: when `git rev-parse --git-common-dir` (run by the mod via `$.process.run`) resolves to a registered app's repo, call `add_worktree` with that parent instead of `add_app`, so the row nests.
-- **group/description**: `description: "Auto-registered from Claude Code"`, so the user can find and delete them.
+### Parser corrections kept from the review rounds
 
-### Flow in `register.tsx`
-
-`decide` pass -> read `package.json` (if any) and settings -> `planAutoRegister` -> `add_app` (or `add_worktree`) -> parse the new id -> `start_app` with the session id -> `routeResult`. The route note says the app was registered. (Review fix: now `auto-register.mjs` with injected I/O, tested in CI.) Only a doubt before the claim runs the command as written. A per-dir claim (`<configDir>/claims/<key>`, atomic `mkdir`, stale after 60 s) serialises concurrent hooks; a held claim, or a re-read showing the dir registered or the port held, denies with the reuse message. A failed, refused or thrown `add_app` never falls through to a shell start: it denies. A `start_app` failure after a successful add is reported through `routeResult` as today (a deny with the reason), because the detached process may still be running and a second shell start would collide. A `start_app` timeout (`verified`, not `success`) reads "registered <name>, still starting on :<port>. Do not start it again"; `start_app` now records that start, and `decide` denies a route while the app is `starting` (60 s grace).
-
-The ✦ in the status line needs no new code: `start_app` stamps `startedBy.kind = 'claude'`.
-
-### Opt-out
-
-`settings.autoRegister` (default true) in `portpilot-config.json`, a toggle in desktop Settings under "Claude Code": "Register new projects when Claude starts them". The mod reads it from the config it already loads.
+`npm run dev --port N` (npm keeps a flag before `--`) is uncertain; `-p N` is a port only for the tools that take it (Next, Nuxt, http-server, serve, flask, or a forwarded script); `npm dev/serve/preview` start nothing; `parseStart` returns `raw`; the saved cwd has an upper-case drive letter.
 
 ### Tests (`tests/plugin-mod.test.mjs`, in `test:unit`)
 
-| Command / state | Expected |
-|---|---|
-| `npm run dev -- --port 3005`, unregistered dir, port free | plan `{name, command: 'npm run dev -- --port 3005', port: 3005}` |
-| `PORT=3005 npm run dev` | plan, command `npm run dev`, port 3005 |
-| `cd mock && python -m http.server` | plan, port 8000, cwd `<session>/mock` |
-| `npm run dev`, script `vite --port 5174` | plan, port 5174 |
-| `npm run dev`, script `next dev` | `pass`, no plan |
-| `npm install && npm run dev --port 3005` | `pass` (uncertain) |
-| `npm run dev --port $P`, `$(...)`, unbalanced quotes | `pass` |
-| `--port 3005` start piped to `tee`, or with `> log`, or `FOO=1 npm run dev` | `pass` (not bare) |
-| port 3005 listening | no plan; `decide` keeps its deny |
-| dir is home or a drive root | `pass` |
-| `settings.autoRegister: false` | `pass` |
-| dir already registered | no plan; existing route/pass unchanged |
-| name clash with `web` | `web (<parent folder>)` |
-| `add_app` returns `isError` (mod-level, `register.test.ts`) | `next(e)`, command untouched |
+The real `noteStart` / `completeObservations` with fake listeners, process table, files and `add_app`: untouched first start (`$VAR`, quotes, `&`, `2>&1`, pipes); one add with the observed port; no listener -> expiry; another session's or another cwd's port -> nothing; two ports / two pendings -> nothing; concurrent starts in one cwd -> one app; build commands -> nothing; observed app busy -> reuse deny, free -> pass, managed -> still routes; opt-out; uncertain commands; paths; parser corrections. `tests/mcp-worktree.test.mjs` covers `appAtCwd`.
 
 ## PR B1: run records
 
@@ -209,7 +172,7 @@ Proposed rows (Wave 4, after the Wave 3 gate):
 
 | # | Slug | Scope | Wave | Effort |
 |---|------|-------|------|--------|
-| 19 | guard-auto-register | PR A: `planAutoRegister`, `parseStart.raw`, `settings.autoRegister`, tests | 4 | S-M |
+| 19 | guard-auto-register | PR A: observe-and-record (`observe.mjs`), `add_app` `registeredBy: observed`, `parseStart.raw`, `settings.autoRegister`, tests | 4 | S-M |
 | 20 | run-history-core | PR B1: `runHistory.js`, hooks in record*, snapshot, pruning, `find_run`, tests | 4 | M |
 | 21 | run-history-view | PR B2: History tab, offscreen thumbnails, Re-run, demo-seed runs + screenshots | 4 | M-L |
 | 22 | vscode-run-history | History node in the VS Code view (after #17) | 5 | S |
@@ -223,3 +186,8 @@ Order: #19 and #20 are independent (guard vs core) and can run in parallel; #21 
 3. **Snapshot refs in the project repo**: acceptable to write `refs/portpilot/runs/*` into each repo? *Recommended: yes. They are invisible to branches and normal push/fetch, deduplicate, and restore without conflicts. A per-repo opt-out falls back to "no snapshot".*
 4. **A `rerun_run` MCP tool** in B1, or only `find_run` with steps? *Recommended: `find_run` only for now. Re-run creates a worktree and installs packages, which the user should trigger from the desktop until the flow has been used.*
 5. **Retention caps**: 500 runs / 150 MB with pinning? *Recommended: yes, both editable in Settings.*
+
+## Open items
+
+- **Follow-up: promote an observed app to managed.** A user action (desktop row menu, or an MCP `update_app` flag) that clears `registeredBy: observed` after checking the saved command runs the same under `start_app` (cmd.exe, PORT set). Until then observed apps are guarded but never routed.
+- **Follow-up: a `&` start inside a foreground Bash call** detaches from its bash, which exits; on Windows the listener's parent chain then no longer reaches the Claude process, so the start is not recorded. `run_in_background` keeps the chain and is recorded.

@@ -9,7 +9,7 @@ import path from 'node:path';
 import fs from 'node:fs';
 import os from 'node:os';
 import { execSync } from 'node:child_process';
-import { normPath, pickColor, resolveWorktreeGit, registerWorktree } from '../mcp-server/index.js';
+import { normPath, appAtCwd, pickColor, resolveWorktreeGit, registerWorktree } from '../mcp-server/index.js';
 
 let pass = 0, fail = 0;
 function t(name, fn) {
@@ -32,6 +32,12 @@ t('nests under parent matched by main-worktree cwd', () => {
   assert.equal(r.app.name, 'MyProj');
   assert.equal(r.app.worktreePath, 'C:/repo/wt-x');
   assert.equal(config.apps.length, 2);
+});
+
+t('add_app observed: the app already at a cwd is found whatever its slashes or case', () => {
+  const apps = [{ id: 'a', name: 'shop', cwd: 'I:\\Scratch\\Shop\\' }];
+  assert.equal(appAtCwd(apps, 'i:/scratch/shop').id, 'a');
+  assert.equal(appAtCwd(apps, 'I:/Scratch/Shop/web'), null);
 });
 
 t('re-registering the same cwd updates and keeps the id', () => {

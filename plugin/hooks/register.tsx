@@ -12,6 +12,9 @@
  *     start_app MCP tool instead, so the start is recorded and verified.
  * Anything else, and any failure to read the config or scan ports, passes
  * the call through untouched: a wrong deny costs more than a missed one.
+ * A start in a directory no app owns also runs untouched; once a new port
+ * held by this session's process tree is listening, observe.mjs records the
+ * project through add_app as an observed app (never routed, still guarded).
  *
  * Crash band (C4): when an app this session started crashes, a band above
  * the prompt shows `✕ web crashed · :3000 · exit 1` and its last output line,
@@ -47,11 +50,10 @@ import {
   targetPort,
   type Config,
   type Listeners,
-  type PackageJson,
   type Platform,
   type Runtime,
 } from './guard-core.mjs'
-import { autoRegisterFlow, type AutoRegisterIo, type ToolReply } from './auto-register.mjs'
+import { completeObservations, noteStart, parseProcTable, type ObserveIo, type Pending, type ToolReply } from './observe.mjs'
 
 const REFRESH_MS = 15_000
 const MAX_BANDS = 2
@@ -204,60 +206,59 @@ async function startTool($: EngineInterface) {
   return portpilotTool($, 'start_app')
 }
 
-/** `git rev-parse --git-dir --git-common-dir` in dir, or nulls outside a repo. */
-async function gitDirs($: EngineInterface, cwd: string) {
+/** `SELF <pid>` and one `pid ppid name` line per process, for observe.mjs's parseProcTable. */
+async function procTable($: EngineInterface) {
+  const argv = platform === 'win32'
+    ? ['powershell', '-NoProfile', '-NonInteractive', '-Command', "'SELF ' + $PID; Get-CimInstance Win32_Process | ForEach-Object { '' + $_.ProcessId + ' ' + $_.ParentProcessId + ' ' + $_.Name }"]
+    : ['sh', '-c', 'echo SELF $$; ps -axo pid=,ppid=,comm=']
   try {
-    const { exitCode, stdout } = await $.process.run(['git', '-C', cwd, 'rev-parse', '--path-format=absolute', '--git-dir', '--git-common-dir'], { timeoutMs: 5000 })
-    const [gitDir, commonDir] = stdout.trim().split(/\r?\n/)
-    if (exitCode === 0 && gitDir && commonDir) return { gitDir, commonDir }
-  } catch { /* not a repo, or no git */ }
-  return { gitDir: null, commonDir: null }
+    const { exitCode, stdout } = await $.process.run(argv, { timeoutMs: 15_000 })
+    if (exitCode === 0) return parseProcTable(stdout)
+  } catch { /* no table: nothing matches */ }
+  return parseProcTable('')
 }
 
-const CLAIM_STALE_MS = 60_000
-
-/** cmd.exe or POSIX argv for mkdir/rmdir of one directory (mkdir fails when it exists: the atomic claim). */
-function dirArgv(op: 'mkdir' | 'rmdir', path: string): string[] {
-  return platform === 'win32' ? ['cmd', '/d', '/c', op, path.replace(/\//g, '\\')] : [op, path]
-}
-
-/** A per-directory claim under the config dir, so two starts of one new project serialise. */
-async function claim($: EngineInterface, key: string): Promise<'ok' | 'busy' | 'error'> {
-  if (!dir) return 'error'
-  const path = `${dir}/claims/${key}`
-  try { await $.fs.write(`${dir}/claims/.keep`, '') } catch { return 'error' }
-  for (let attempt = 0; attempt < 2; attempt++) {
-    const { exitCode } = await $.process.run(dirArgv('mkdir', path), { timeoutMs: 5000 })
-    if (exitCode === 0) return 'ok'
-    if (!(await $.fs.exists(path))) return 'error'
-    // A claim left by a hook that died is stale after a minute.
-    const { mtimeMs } = await $.fs.stat(path, { resolve: false })
-    if ((await $.clock.now()) - mtimeMs < CLAIM_STALE_MS) return 'busy'
-    await $.process.run(dirArgv('rmdir', path), { timeoutMs: 5000 })
+/** A listener's working directory where the platform reports it (not on Windows). */
+async function cwdOf($: EngineInterface, pid: number): Promise<string | null> {
+  const argv = platform === 'linux' ? ['readlink', `/proc/${pid}/cwd`]
+    : platform === 'darwin' ? ['lsof', '-a', '-d', 'cwd', '-p', String(pid), '-Fn'] : null
+  if (!argv) return null
+  try {
+    const { exitCode, stdout } = await $.process.run(argv, { timeoutMs: 5000 })
+    if (exitCode !== 0) return null
+    const line = platform === 'darwin' ? stdout.split(/\r?\n/).find((l) => l.startsWith('n'))?.slice(1) : stdout.trim()
+    return line || null
+  } catch {
+    return null
   }
-  return 'busy'
 }
 
-async function release($: EngineInterface, key: string) {
-  if (dir) await $.process.run(dirArgv('rmdir', `${dir}/claims/${key}`), { timeoutMs: 5000 })
-}
-
-/** The engine-backed callers autoRegisterFlow composes. */
-function autoRegisterIo($: EngineInterface): AutoRegisterIo {
+/** The engine-backed callers observe.mjs composes; pendings live in <configDir>/observing. */
+function observeIo($: EngineInterface): ObserveIo {
+  const at = (key: string) => `${dir}/observing/${key}.json`
   return {
-    readJson: (path) => readJson<PackageJson>($, path),
-    exists: (path) => $.fs.exists(path),
-    tool: async (name) => (await portpilotTool($, name))?.name ?? null,
-    call: async ({ tool, ...args }) => {
-      const r = await $.tool.call({ tool: tool as McpToolName, ...args } as never)
-      return r as ToolReply
+    readPending: (key) => readJson<Pending>($, at(key)),
+    writePending: (key, rec) => $.fs.write(at(key), JSON.stringify(rec)),
+    listPending: async () => {
+      if (!dir || !(await $.fs.exists(`${dir}/observing`))) return []
+      const names = (await $.fs.list(`${dir}/observing`)).filter((f) => f.name.endsWith('.json'))
+      const all = await Promise.all(names.map((f) => readJson<Pending>($, `${dir}/observing/${f.name}`)))
+      return all.filter((p): p is Pending => !!p)
     },
-    gitDirs: (cwd) => gitDirs($, cwd),
-    sessionId: () => $.session.id(),
-    claim: (key) => claim($, key),
-    release: (key) => release($, key),
-    reread: async () => { const s = await snapshot($); return { config: s.config, listeners: s.listeners } },
+    snapshot: async () => { const s = await snapshot($); return { config: s.config, listeners: s.listeners } },
+    procTable: () => procTable($),
+    cwdOf: (pid) => cwdOf($, pid),
+    readJson: (path) => readJson($, path),
+    tool: async (name) => (await portpilotTool($, name))?.name ?? null,
+    call: async ({ tool, ...args }) => (await $.tool.call({ tool: tool as McpToolName, ...args } as never)) as ToolReply,
   }
+}
+
+/** Records any observed start that is now listening; refreshes the line when one was. */
+async function observe($: EngineInterface) {
+  if (!platform || !dir) return
+  const done = await completeObservations(observeIo($), { now: await $.clock.now(), windows: platform === 'win32' })
+  if (done.some((d) => d.done === 'recorded')) void refresh($)
 }
 
 async function restart($: EngineInterface, crash: ShownCrash) {
@@ -283,7 +284,7 @@ export const register: Register = (on) => {
     const now = await $.clock.now()
     await update($, inboxCursor, (c) => c || now)
     void refresh($)
-    $.clock.every(REFRESH_MS, () => { void refresh($) })
+    $.clock.every(REFRESH_MS, () => { void refresh($); void observe($).catch(() => {}) })
     return started
   })
 
@@ -346,15 +347,16 @@ export const register: Register = (on) => {
     const port = targetPort({ start, dir: where, config, windows })
     if (port) await holderName($, platform, listeners, port)
 
-    const decision = decide({ start, dir: where, config, runtime, listeners, windows, now: await $.clock.now() })
+    const decision = decide({ start, dir: where, config, runtime, listeners, windows })
 
     if (decision.action === 'deny') return { deny: decision.reason }
     if (decision.action === 'pass') {
-      // An unregistered project's certain start: register it, then route it.
-      // undefined (run as written) only before the claim; it never throws.
-      const routed = await autoRegisterFlow(autoRegisterIo($), { start, dir: where, config, listeners, windows, home, sessionCwd })
-      if (routed) void refresh($)
-      return routed ?? next(e)
+      // A start in a directory no app owns runs exactly as typed; PortPilot
+      // only notes it, and records it once a new port of this session's is up.
+      const noted = await noteStart(observeIo($), { start, sessionCwd, config, listeners, home, windows, session: await $.session.id(), now: await $.clock.now() })
+      const ran = await next(e)
+      if (noted) void observe($).catch(() => {})
+      return ran
     }
 
     // Route: start the registered app through PortPilot's own MCP tool.

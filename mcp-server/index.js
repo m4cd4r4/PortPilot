@@ -81,6 +81,11 @@ function normPath(p) {
   return path.normalize(String(p || '')).replace(/\\/g, '/').replace(/\/+$/, '').toLowerCase();
 }
 
+/** The registered app whose cwd is this directory, or null. */
+function appAtCwd(apps, cwd) {
+  return (apps || []).find(a => a && a.cwd && normPath(a.cwd) === normPath(cwd)) || null;
+}
+
 // Deterministic colour from a seed (branch or path) so re-registering a worktree
 // keeps its colour and sibling branches get distinct ones. Slice 10 will replace
 // this with the Peacock window colour when present.
@@ -637,10 +642,7 @@ function createServer() {
       const app = findApp(config.apps || [], identifier);
       if (!app) return { content: [{ type: 'text', text: `App not found: ${identifier}` }], isError: true };
       const result = await startApp(app, configFile.logPathFor(getConfigPath(), app.id));
-      // `verified` without `success`: spawned, port not up within the wait. It
-      // may still be starting, so record the start: the guard then reads it as
-      // starting and refuses a second copy instead of spawning one.
-      if (result.success || result.verified) stampStart(getConfigPath(), app, sessionId);
+      if (result.success) stampStart(getConfigPath(), app, sessionId);
       return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }], isError: !result.success };
     }
   );
@@ -731,11 +733,20 @@ function createServer() {
       isFavorite: z.boolean().optional().describe('Mark as favorite'),
       autoStart: z.boolean().optional().describe('Auto-start on launch'),
       group: z.string().optional().describe('Group name to assign to'),
-      description: z.string().optional().describe('Short description')
+      description: z.string().optional().describe('Short description'),
+      registeredBy: z.enum(['observed']).optional().describe('Set by the PortPilot Claude Code plugin when it records a server it saw start; not for manual use'),
+      observedSession: z.string().optional().describe('The Claude Code session the observed start came from')
     },
-    async ({ name, command, cwd, preferredPort, isFavorite, autoStart, group, description }) => {
+    async ({ name, command, cwd, preferredPort, isFavorite, autoStart, group, description, registeredBy, observedSession }) => {
       return updateConfig((config) => {
         if (!config.apps) config.apps = [];
+
+        // An observation is idempotent by directory: a second one (another
+        // session, a later start) changes nothing and never adds a copy.
+        const same = registeredBy === 'observed' && appAtCwd(config.apps, cwd);
+        if (same) {
+          return { content: [{ type: 'text', text: JSON.stringify({ success: true, existing: true, message: `"${same.name}" is already registered for ${cwd}`, app: same }, null, 2) }] };
+        }
 
         if (config.apps.some(a => a.name.toLowerCase() === name.toLowerCase())) {
           return { content: [{ type: 'text', text: `App "${name}" already exists` }], isError: true };
@@ -751,6 +762,7 @@ function createServer() {
           group: group || null,
           description: description || null,
           color: '#4fc3f7',
+          ...(registeredBy ? { registeredBy, observedSession: observedSession || null, observedAt: now } : {}),
           createdAt: now, updatedAt: now
         };
 
@@ -1092,4 +1104,4 @@ async function main() {
 const isMain = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
 if (isMain) main().catch(console.error);
 
-export { normPath, pickColor, resolveWorktreeGit, registerWorktree, stampStart, detachedCommand, prepareLog };
+export { normPath, appAtCwd, pickColor, resolveWorktreeGit, registerWorktree, stampStart, detachedCommand, prepareLog };
