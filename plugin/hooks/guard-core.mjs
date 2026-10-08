@@ -22,12 +22,13 @@ const MAX_NAME = 16;
  * Listening TCP ports from the platform's scan output.
  * @param {'win32'|'darwin'|'linux'} platform
  * @param {string} stdout  `netstat -ano` | `lsof -iTCP -sTCP:LISTEN -n -P` | `ss -tlnp`
- * @returns {Map<number, {port:number, pid:number|null, processName:string}>}
+ * @returns {Map<number, {port:number, pid:number|null, processName:string, address:string}>}
+ *   address  the bind address as the scan prints it (`0.0.0.0`, `[::1]`, `*`)
  */
 export function parseListeners(platform, stdout) {
   const out = new Map();
-  const add = (port, pid, processName) => {
-    if (port >= 1 && port <= 65535 && !out.has(port)) out.set(port, { port, pid: pid || null, processName: processName || 'Unknown' });
+  const add = (port, pid, processName, address) => {
+    if (port >= 1 && port <= 65535 && !out.has(port)) out.set(port, { port, pid: pid || null, processName: processName || 'Unknown', address: address || '' });
   };
   for (const raw of String(stdout || '').split(/\r?\n/)) {
     const line = raw.trim();
@@ -37,19 +38,19 @@ export function parseListeners(platform, stdout) {
       if (!/^TCP\b/i.test(line)) continue;
       const parts = line.split(/\s+/);
       if (parts.length < 5 || !/:0$/.test(parts[2])) continue;
-      const m = parts[1].match(/:(\d+)$/);
-      if (m) add(Number(m[1]), Number(parts[4]));
+      const m = parts[1].match(/^(.*):(\d+)$/);
+      if (m) add(Number(m[2]), Number(parts[4]), null, m[1]);
     } else if (platform === 'darwin') {
       const parts = line.split(/\s+/);
-      const m = parts.length >= 9 && parts[8].match(/:(\d+)$/);
-      if (m) add(Number(m[1]), Number(parts[1]), parts[0]);
+      const m = parts.length >= 9 && parts[8].match(/^(.*):(\d+)$/);
+      if (m) add(Number(m[2]), Number(parts[1]), parts[0], m[1]);
     } else {
       if (!/^LISTEN\b/.test(line) && !/^tcp/i.test(line)) continue;
-      const m = line.match(/:(\d+)\s/);
+      const m = line.match(/(\S*):(\d+)\s/);
       if (!m) continue;
       const pid = line.match(/pid=(\d+)/);
       const name = line.match(/users:\(\("([^"]+)"/);
-      add(Number(m[1]), pid ? Number(pid[1]) : null, name ? name[1] : null);
+      add(Number(m[2]), pid ? Number(pid[1]) : null, name ? name[1] : null, m[1]);
     }
   }
   return out;
@@ -433,9 +434,14 @@ export function decide({ start, dir, config, runtime, listeners, windows = false
     const holderStartedBy = holderApp && rtApps[holderApp.id] ? rtApps[holderApp.id].startedBy : null;
     const conflict = describeConflict({ port, holder, holderApp, holderStartedBy, app });
     if (app && holderApp && holderApp.id === app.id) {
+      // An observed app was registered from a port Claude picked; if it picked
+      // another process's port, every start here is denied until it is fixed.
+      const suspect = app.registeredBy === 'observed'
+        ? ` ${app.name} was registered from an observed start. If ${holder.processName}${holder.pid ? ` (PID ${holder.pid})` : ''} is not this project's server, that registration is wrong: fix its preferredPort with update_app (or delete_app it), then start again.`
+        : '';
       return {
         action: 'deny',
-        reason: `PortPilot: ${app.name} is already running on :${port} - reuse http://localhost:${port} instead of starting a second copy. (${conflict.sentence})`,
+        reason: `PortPilot: ${app.name} is already running on :${port} - reuse http://localhost:${port} instead of starting a second copy. (${conflict.sentence})${suspect}`,
       };
     }
     return {

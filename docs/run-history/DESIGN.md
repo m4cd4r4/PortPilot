@@ -23,8 +23,8 @@ Brief: [`docs/prompts/run-history.md`](../prompts/run-history.md). Design only; 
 ### Mechanism (`plugin/hooks/observe.mjs`, wired in `register.tsx`)
 
 1. **Note** (Bash hook, `decide()` passed): a certain start in a directory no app owns adds `{ dir, cwd, command, name, at }` to this session's `$.state` (`portpilot.observe`), where `command` is the start step as typed and `name` is the suggested app name (`package.json` name, else the folder, made unique). The ports listening at that moment become the baseline. At most 5 notes; a restart in one directory replaces its note. No shared files.
-2. **Check** (after every tool call, and on the 15 s status tick, which covers `run_in_background`): only while a note is under 2 minutes old. A port that was not listening at the last check, and that no registered app holds (`holdersOf`), gets one notice per port per session, naming every recent note: `PortPilot: :4799 started listening after `npm run dev` in pp-live-proj. If you started it, register it with PortPilot's add_app tool (cwd "...", command as you ran it, name "...", preferredPort 4799, registeredBy "observed"). If you did not start it, ignore this.`
-3. **Delivery:** notices queue in the session state and ride the next tool result as `context` (what a PostToolUse hook's `additionalContext` is): the model reads it, the user does not see it. A tick's notice waits for the next tool call.
+2. **Check** (after every tool call, and on the 15 s status tick, which covers `run_in_background`): only while a note is under 2 minutes old. The ports not listening at the last check, and not held by a *running* registered app (sidecar pid or sidecar start on that port; a `preferredPort` alone does not count), go into **one notice per check**, one line per holding process with its PID, process name (one `tasklist` per new port on Windows) and bind address. Several ports of one PID share a line; the lowest below 49152 is suggested as `preferredPort`, the rest are marked extra listeners of the same process. The notice tells Claude to register only a port it is confident its own start opened and to ignore ones held by processes it did not start, and suggests a cmd-safe command (`cmdSafe`: trailing redirections and `&` dropped, leading `VAR=value` moved to `env`). Each port is told once a session.
+3. **Delivery:** notices queue in the session state, stamped with their time, and ride the next tool result as `context` (what a PostToolUse hook's `additionalContext` is): the model reads it, the user does not see it. A tick's notice waits for the next tool call; one older than 2 minutes is dropped, and opting out clears the queue.
 4. **Claude attributes, PortPilot never registers on its own.** The `add_app` description tells Claude to use `registeredBy: 'observed'` for this; the plugin stamps `observedSession` with this session's id (Claude cannot see it).
 5. **Idempotent by cwd:** `add_app` with `registeredBy: 'observed'` returns the existing app when one has that cwd (`appAtCwd`: case-insensitive on Windows and macOS, exact on Linux). A plain `add_app` of the same command in a directory an observed app already holds also returns it (live check: Claude re-registered without `registeredBy` once). Never a direct config write.
 
@@ -32,7 +32,9 @@ Never noted: uncertain or unparseable commands; one-shot tool runs (`next build`
 
 ### Observed apps in the guard
 
-- **Deny path applies:** a second start on a busy port is denied with "reuse http://localhost:N", as for any app.
+- **Deny path applies:** a second start on a busy port is denied with "reuse http://localhost:N", as for any app. For an observed app the deny also names the holder's process and PID and says how to fix a wrong registration (`update_app` / `delete_app`), so a port Claude mis-attributed does not deny every later start unexplained.
+- **start_app refuses** an observed app whose command still has a shell redirection, a trailing `&` or a leading `VAR=` (cmd.exe would write `/tmp/x` as `<drive>:\tmp\x` or fail on `PORT=4000`); `add_app` saves observed commands in cmd-safe form, the assignments in `env`.
+- **Dedupe:** `add_app` returns an existing app for the same directory (Git Bash `/i/x` = `I:/x` on Windows) when the call is observed, or when any app there has the same cmd-safe command.
 - **Route path does not:** `decide()` skips the route when `app.registeredBy === 'observed'`, because `start_app` runs the command through cmd.exe with PORT set, which can behave differently from the bash Claude used. A free-port start passes as typed and is not noted again (the directory is owned now).
 
 ### Parser corrections kept from the review rounds
@@ -42,6 +44,12 @@ Never noted: uncertain or unparseable commands; one-shot tool runs (`next build`
 ### Tests
 
 `tests/plugin-mod.test.mjs` (in `test:unit`, CI) drives the real `decide` / `noteStart` / `checkNotices` with fake scans: untouched first start; the notice names port, directory, command; one notice per port; no notice without a recent unregistered start (none, expired, already listening); none for a registered app's port; build and uncertain commands; observed app busy -> reuse deny, free -> pass, managed -> still routes; opt-out; paths; two notes named in one notice. `tests/mcp-worktree.test.mjs` covers `appAtCwd` and `observedDuplicate`. `plugin/hooks/register.test.ts` (`claude plugin test plugin`, local) runs the wiring in the engine: the notice reaches the result's `context` once, and an observed `add_app` gets this session's id.
+
+### Known limits
+
+- **Flapping port:** a port told once and then gone and back is not told again in that session (`noticed`), so a server that restarts on another port is told, one that restarts on the same port after a wrong attribution is not.
+- **Start shapes:** only the starts `parseStart` reads as certain are noted; a start after another step (`npm install && npm run dev`), from a script file, or through a task runner is never noted.
+- **No suspect check by process age:** the plugin's scan has no process start time, so an observed app registered on a port held by a process older than `observedAt` is not flagged on its own; the observed-app deny names the holder so Claude can see it.
 
 ## PR B1: run records
 

@@ -1,6 +1,6 @@
 // Types for guard-core.mjs, so register.tsx type-checks against it.
 
-export type Listener = { port: number; pid: number | null; processName: string };
+export type Listener = { port: number; pid: number | null; processName: string; address?: string };
 export type Listeners = Map<number, Listener>;
 export type Platform = 'win32' | 'darwin' | 'linux';
 

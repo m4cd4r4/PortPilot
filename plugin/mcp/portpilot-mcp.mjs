@@ -23771,20 +23771,38 @@ function generateId() {
 function normPath(p) {
   return path.normalize(String(p || "")).replace(/\\/g, "/").replace(/\/+$/, "").toLowerCase();
 }
+function cwdKey(p, platform = process.platform) {
+  let s = path.normalize(String(p || "")).replace(/\\/g, "/").replace(/\/+$/, "");
+  if (platform === "win32") s = s.replace(/^\/([a-zA-Z])(?=\/|$)/, (_, d) => `${d.toUpperCase()}:`);
+  return platform === "win32" || platform === "darwin" ? s.toLowerCase() : s;
+}
 function appAtCwd(apps, cwd, platform = process.platform) {
-  const fold = platform === "win32" || platform === "darwin";
-  const key = (p) => {
-    const s = path.normalize(String(p || "")).replace(/\\/g, "/").replace(/\/+$/, "");
-    return fold ? s.toLowerCase() : s;
-  };
-  return (apps || []).find((a) => a && a.cwd && key(a.cwd) === key(cwd)) || null;
+  return (apps || []).find((a) => a && a.cwd && cwdKey(a.cwd, platform) === cwdKey(cwd, platform)) || null;
+}
+function cmdSafe(raw) {
+  let s = String(raw || "").trim();
+  const env = {};
+  for (let m; m = s.match(/^([A-Za-z_][A-Za-z0-9_]*)=("[^"]*"|'[^']*'|\S*)\s+(.*)$/); s = m[3]) env[m[1]] = m[2].replace(/^(['"])(.*)\1$/, "$2");
+  for (let prev; prev !== s; ) {
+    prev = s;
+    s = s.replace(/\s*&$/, "").replace(/(?:\s+\d?(?:>>?|<)|\s*(?:>>?|<)|\s*&>>?)\s*(?:&\d+|"[^"]*"|'[^']*'|[^\s&]+)$/, "").trim();
+  }
+  return { command: s.replace(/\s+/g, " "), env };
+}
+function startRefusal(app) {
+  if (!app || app.registeredBy !== "observed") return null;
+  const command = String(app.command || "").trim();
+  const safe = cmdSafe(command);
+  if (safe.command === command.replace(/\s+/g, " ")) return null;
+  const env = Object.keys(safe.env).length ? ` and put ${JSON.stringify(safe.env)} in the app's env` : "";
+  return `"${app.name}" was registered from a bash start and its command (${command}) has a shell redirection, a trailing & or a leading VAR= assignment, which cmd.exe would run differently. Fix it with update_app: command "${safe.command}"${env}.`;
 }
 function observedDuplicate(apps, { cwd, command, registeredBy }, platform = process.platform) {
   const same = appAtCwd(apps, cwd, platform);
   if (!same) return null;
   if (registeredBy === "observed") return same;
-  const squash = (s) => String(s || "").trim().replace(/\s+/g, " ");
-  return same.registeredBy === "observed" && squash(same.command) === squash(command) ? same : null;
+  const want = cmdSafe(command).command;
+  return (apps || []).find((a) => a && a.cwd && cwdKey(a.cwd, platform) === cwdKey(cwd, platform) && cmdSafe(a.command).command === want) || null;
 }
 var WORKTREE_COLORS = ["#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6", "#EC4899", "#06B6D4", "#84CC16", "#F97316", "#6366F1"];
 function pickColor(seed) {
@@ -24231,6 +24249,8 @@ function createServer2() {
       const config2 = readConfig();
       const app = findApp(config2.apps || [], identifier);
       if (!app) return { content: [{ type: "text", text: `App not found: ${identifier}` }], isError: true };
+      const refused = startRefusal(app);
+      if (refused) return { content: [{ type: "text", text: refused }], isError: true };
       const result = await startApp(app, configFile.logPathFor(getConfigPath(), app.id));
       if (result.success) stampStart(getConfigPath(), app, sessionId);
       return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }], isError: !result.success };
@@ -24264,6 +24284,8 @@ function createServer2() {
       else if (favorites) apps = apps.filter((a) => a.isFavorite);
       else return { content: [{ type: "text", text: "Specify group or favorites: true" }], isError: true };
       const results = await Promise.all(apps.map(async (a) => {
+        const refused = startRefusal(a);
+        if (refused) return { name: a.name, success: false, error: refused };
         const result = await startApp(a, configFile.logPathFor(getConfigPath(), a.id));
         if (result.success) stampStart(getConfigPath(), a, sessionId);
         return { name: a.name, ...result };
@@ -24298,7 +24320,7 @@ function createServer2() {
   );
   server.tool(
     "add_app",
-    'Register a new app in PortPilot. When PortPilot tells you a port started listening after a dev-server start you ran (a "PortPilot: :<port> started listening after ..." note), and you did start it, call this with that cwd, the command as you ran it, preferredPort set to the port and registeredBy "observed". Observed registrations are idempotent per directory: a second call for the same cwd changes nothing.',
+    'Register a new app in PortPilot. When PortPilot tells you a port started listening after a dev-server start you ran (a "PortPilot: :<port> started listening after ..." note), and you are confident your own start opened that port (check the PID and process it names), call this with the cwd, command and env it suggests, preferredPort set to that port and registeredBy "observed". Never register a port held by a process you did not start. Observed registrations are idempotent per directory: a second call for the same cwd changes nothing.',
     {
       name: external_exports.string().describe("App display name"),
       command: external_exports.string().describe('Shell command to start (e.g. "npm run dev")'),
@@ -24308,10 +24330,16 @@ function createServer2() {
       autoStart: external_exports.boolean().optional().describe("Auto-start on launch"),
       group: external_exports.string().optional().describe("Group name to assign to"),
       description: external_exports.string().optional().describe("Short description"),
+      env: external_exports.record(external_exports.string()).optional().describe('Environment variables for the command (e.g. {"PORT":"4000"})'),
       registeredBy: external_exports.enum(["observed"]).optional().describe('"observed" when registering a server you started after PortPilot noted its new port; leave unset otherwise'),
       observedSession: external_exports.string().optional().describe("The Claude Code session the observed start came from (the PortPilot plugin fills this in)")
     },
-    async ({ name, command, cwd, preferredPort, isFavorite, autoStart, group, description, registeredBy, observedSession }) => {
+    async ({ name, command, cwd, preferredPort, isFavorite, autoStart, group, description, env, registeredBy, observedSession }) => {
+      if (registeredBy === "observed") {
+        const safe = cmdSafe(command);
+        command = safe.command;
+        env = { ...safe.env, ...env || {} };
+      }
       return updateConfig((config2) => {
         if (!config2.apps) config2.apps = [];
         const same = observedDuplicate(config2.apps, { cwd, command, registeredBy });
@@ -24329,7 +24357,7 @@ function createServer2() {
           cwd,
           preferredPort: preferredPort || null,
           fallbackRange: null,
-          env: {},
+          env: env || {},
           autoStart: autoStart || false,
           isFavorite: isFavorite || false,
           group: group || null,
@@ -24381,7 +24409,8 @@ function createServer2() {
       isFavorite: external_exports.boolean().optional(),
       autoStart: external_exports.boolean().optional(),
       group: external_exports.string().optional(),
-      description: external_exports.string().optional()
+      description: external_exports.string().optional(),
+      env: external_exports.record(external_exports.string()).optional().describe("Environment variables for the command; replaces the saved set")
     },
     async ({ identifier, ...updates }) => {
       return updateConfig((config2) => {
@@ -24619,6 +24648,7 @@ var isMain = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1
 if (isMain) main().catch(console.error);
 export {
   appAtCwd,
+  cmdSafe,
   detachedCommand,
   normPath,
   observedDuplicate,
@@ -24626,5 +24656,6 @@ export {
   prepareLog,
   registerWorktree,
   resolveWorktreeGit,
-  stampStart
+  stampStart,
+  startRefusal
 };

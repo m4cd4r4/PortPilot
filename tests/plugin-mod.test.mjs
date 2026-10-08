@@ -13,7 +13,7 @@ import assert from 'node:assert';
 import {
   parseListeners, parseTasklistName, appStates, statusLine, parseStart, normPath, startDir, decide, routeResult,
 } from '../plugin/hooks/guard-core.mjs';
-import { checkNotices, EMPTY, isOneShot, noteStart, NOTICE_MS, uniqueAppName } from '../plugin/hooks/observe.mjs';
+import { checkNotices, cmdSafe, EMPTY, isOneShot, noteStart, NOTICE_MS, takeQueued, uniqueAppName } from '../plugin/hooks/observe.mjs';
 
 let passed = 0;
 let failed = 0;
@@ -35,6 +35,7 @@ t('win32 netstat: LISTENING rows only, PID kept, established skipped', () => {
   assert.deepStrictEqual([...m.keys()].sort((a, b) => a - b), [3000, 5173]);
   assert.equal(m.get(3000).pid, 4812);
   assert.equal(m.get(3000).processName, 'Unknown');
+  assert.deepStrictEqual([m.get(3000).address, m.get(5173).address], ['0.0.0.0', '[::]']);
 });
 
 t('darwin lsof: port, pid and command name', () => {
@@ -44,7 +45,7 @@ t('darwin lsof: port, pid and command name', () => {
     'Python  555   mac   4u   IPv4 0xdef      0t0  TCP 127.0.0.1:8000 (LISTEN)',
   ].join('\n');
   const m = parseListeners('darwin', out);
-  assert.deepStrictEqual(m.get(3000), { port: 3000, pid: 71234, processName: 'node' });
+  assert.deepStrictEqual(m.get(3000), { port: 3000, pid: 71234, processName: 'node', address: '*' });
   assert.equal(m.get(8000).processName, 'Python');
   assert.equal(m.size, 2);
 });
@@ -56,7 +57,7 @@ t('linux ss -tlnp: port, pid and name from users:(...)', () => {
     'LISTEN 0      128    [::]:22           [::]:*',
   ].join('\n');
   const m = parseListeners('linux', out);
-  assert.deepStrictEqual(m.get(3000), { port: 3000, pid: 2211, processName: 'node' });
+  assert.deepStrictEqual(m.get(3000), { port: 3000, pid: 2211, processName: 'node', address: '0.0.0.0' });
   assert.equal(m.get(22).pid, null);
 });
 
@@ -353,10 +354,74 @@ t('observe: no notice without a recent unregistered start in this session', () =
   assert.deepStrictEqual(obsRun('npm run dev', { before: listen(5173) }).check(ports(5173)), []);
 });
 
-t('observe: no notice for a port a registered app holds', () => {
-  // 4000 is api's preferredPort; 4100 is web's by the sidecar's pid.
-  assert.deepStrictEqual(obsRun('npm run dev').check(ports(4000)), []);
+t('observe: no notice for a port a running registered app holds', () => {
+  // 4100 is web's by the sidecar's pid; 4000 is api's by its sidecar start.
   assert.deepStrictEqual(obsRun('npm run dev').check(ports(4100), T0 + 5_000, { apps: { web: { port: 4100, pid: 300 } } }), []);
+  assert.deepStrictEqual(obsRun('npm run dev').check(new Map([held(4000, 77)]), T0 + 5_000, { apps: { api: { pid: 999 } } }), []);
+});
+
+t('review 5 (M4): an app that merely has the port as preferredPort does not suppress the notice', () => {
+  // 4000 is api's preferredPort, but api has no sidecar entry: it is not running.
+  const [n] = obsRun('npm run dev').check(ports(4000));
+  assert.match(n, /^PortPilot: :4000 started listening after `npm run dev` in web\./);
+});
+
+t('review 5 (H1): an unrelated port in the window is named by its PID and process, apart from Claude\'s', () => {
+  const r = obsRun('npm run dev');
+  const listeners = new Map([
+    [4799, { port: 4799, pid: 300, processName: 'node.exe', address: '0.0.0.0' }],
+    [4800, { port: 4800, pid: 812, processName: 'python.exe', address: '127.0.0.1' }],
+  ]);
+  const notices = r.check(listeners);
+  assert.equal(notices.length, 1);
+  const [n] = notices;
+  assert.ok(n.includes('- :4799: node.exe, PID 300, bound to 0.0.0.0'), n);
+  assert.ok(n.includes('- :4800: python.exe, PID 812, bound to 127.0.0.1'), n);
+  assert.match(n, /Register only a port you are confident your own start opened\. A port held by a process you did not start is not yours: ignore it\./);
+  assert.match(n, /preferredPort set to the one port your start opened \(:4799 or :4800\)/);
+});
+
+t('review 5 (M2): ports of one process are one line, the lowest non-ephemeral suggested', () => {
+  const r = obsRun('npm run dev');
+  const one = (port) => [port, { port, pid: 300, processName: 'node.exe', address: '[::1]' }];
+  const notices = r.check(new Map([one(60123), one(24678), one(5173)]));
+  assert.equal(notices.length, 1);
+  assert.ok(notices[0].includes('- :5173: node.exe, PID 300, bound to [::1] (also :24678, :60123: extra listeners of the same process'), notices[0]);
+  assert.match(notices[0], /preferredPort 5173, registeredBy "observed"/);
+  // A process with only ephemeral ports still gets one suggested.
+  assert.match(obsRun('npm run dev').check(new Map([one(60123), one(50001)]))[0], /preferredPort 50001,/);
+});
+
+t('review 5 (M3): the notice suggests a cmd-safe command, with leading assignments as env', () => {
+  const [n] = obsRun('PORT=4000 NODE_ENV=development npm run dev > /tmp/dev.log 2>&1 &').check(ports(4000));
+  assert.ok(n.includes('command "npm run dev", env {"PORT":"4000","NODE_ENV":"development"}'), n);
+  assert.ok(n.startsWith('PortPilot: :4000 started listening after `PORT=4000 NODE_ENV=development npm run dev > /tmp/dev.log 2>&1`'), n);
+  assert.deepStrictEqual(cmdSafe('npm run dev -- --port 3005 >> dev.log 2>&1'), { command: 'npm run dev -- --port 3005', env: {} });
+  assert.deepStrictEqual(cmdSafe('npx vite --port 3005 &> out.log'), { command: 'npx vite --port 3005', env: {} });
+  assert.deepStrictEqual(cmdSafe('npm run dev -- --port 3000>x.log'), { command: 'npm run dev -- --port 3000', env: {} });
+});
+
+t('review 5 (H1): a deny for an observed app names the holder and how to fix a wrong registration', () => {
+  const obs = { apps: [...config.apps, { id: 'obs', name: 'shop-web', cwd: UNREG, command: 'npm run dev', preferredPort: 5173, registeredBy: 'observed' }] };
+  const r = obsRun('npm run dev', { cfg: obs, before: new Map([[5173, { port: 5173, pid: 812, processName: 'python.exe' }]]) });
+  assert.match(r.decision.reason, /If python\.exe \(PID 812\) is not this project's server, that registration is wrong: fix its preferredPort with update_app/);
+  // A managed app's deny is master's, word for word.
+  const managed = { apps: [...config.apps, { id: 'm', name: 'shop-web', cwd: UNREG, command: 'npm run dev', preferredPort: 5173 }] };
+  assert.doesNotMatch(obsRun('npm run dev', { cfg: managed, before: ports(5173) }).decision.reason, /observed/);
+});
+
+t('review 5 (L7): opting out clears queued notices, and takeQueued hands none over', () => {
+  const offCfg = { ...config, settings: { autoRegister: false } };
+  const queued = { ...EMPTY, queue: [{ text: 'PortPilot: :5173 ...', at: T0 }] };
+  assert.deepStrictEqual(takeQueued(queued, offCfg, T0 + 1_000), { state: { ...queued, queue: [] }, notices: [] });
+  assert.deepStrictEqual(checkNotices(queued, { config: offCfg, runtime: null, listeners: ports(5173) }, T0).state.queue, []);
+  assert.deepStrictEqual(takeQueued(queued, config, T0 + 1_000).notices, ['PortPilot: :5173 ...']);
+});
+
+t('review 5 (L8): a queued notice older than NOTICE_MS is dropped', () => {
+  const queued = { ...EMPTY, queue: [{ text: 'old', at: T0 }, { text: 'new', at: T0 + NOTICE_MS }] };
+  const r = takeQueued(queued, config, T0 + NOTICE_MS + 1);
+  assert.deepStrictEqual([r.notices, r.state.queue], [['new'], []]);
 });
 
 t('observe: a build, lint, uncertain or unparseable command is never noted', () => {

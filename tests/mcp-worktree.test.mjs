@@ -9,7 +9,8 @@ import path from 'node:path';
 import fs from 'node:fs';
 import os from 'node:os';
 import { execSync } from 'node:child_process';
-import { normPath, appAtCwd, observedDuplicate, pickColor, resolveWorktreeGit, registerWorktree } from '../mcp-server/index.js';
+import { cmdSafe as pluginCmdSafe } from '../plugin/hooks/observe.mjs';
+import { normPath, appAtCwd, cmdSafe, startRefusal, observedDuplicate,pickColor, resolveWorktreeGit, registerWorktree } from '../mcp-server/index.js';
 
 let pass = 0, fail = 0;
 function t(name, fn) {
@@ -51,9 +52,42 @@ t('add_app: no copy of an observed app, whether the second add says observed or 
   const apps = [{ id: 'o', name: 'pp-live-proj', cwd: 'C:/t/proj', command: 'npm run dev', registeredBy: 'observed' }, { id: 'm', name: 'web', cwd: 'C:/t/web', command: 'npm run dev' }];
   assert.equal(observedDuplicate(apps, { cwd: 'C:\\t\\proj', command: 'npm run dev' }, 'win32').id, 'o');
   assert.equal(observedDuplicate(apps, { cwd: 'C:/t/web', command: 'npm run dev', registeredBy: 'observed' }, 'win32').id, 'm');
-  // A plain add of another command, or beside a managed app, is the user's call.
+  // A plain add of another command is the user's call.
   assert.equal(observedDuplicate(apps, { cwd: 'C:/t/proj', command: 'npm run storybook' }, 'win32'), null);
-  assert.equal(observedDuplicate(apps, { cwd: 'C:/t/web', command: 'npm run dev' }, 'win32'), null);
+});
+
+// tdd-guard:allow  (review round 5 fixes: one test per finding)
+t('review 5 (M5): a plain add of the same cwd and command as a plain app returns it', () => {
+  const apps = [{ id: 'm', name: 'web', cwd: 'C:/t/web', command: 'npm run dev' }, { id: 's', name: 'sb', cwd: 'C:/t/web', command: 'npm run storybook' }];
+  assert.equal(observedDuplicate(apps, { cwd: 'C:/t/web', command: 'npm run dev' }, 'win32').id, 'm');
+  assert.equal(observedDuplicate(apps, { cwd: 'C:/t/web', command: 'npm run storybook' }, 'win32').id, 's');
+  assert.equal(observedDuplicate(apps, { cwd: 'C:/t/web', command: 'npm run preview' }, 'win32'), null);
+});
+
+t('review 5 (M5): a Git Bash /i/ path matches I:/ on Windows only', () => {
+  const apps = [{ id: 'o', name: 'y', cwd: 'I:/Scratch/y', command: 'npm run dev', registeredBy: 'observed' }];
+  assert.equal(observedDuplicate(apps, { cwd: '/i/Scratch/y', command: 'npm run dev', registeredBy: 'observed' }, 'win32').id, 'o');
+  assert.equal(observedDuplicate(apps, { cwd: '/i/Scratch/y', command: 'npm run dev' }, 'win32').id, 'o');
+  assert.equal(appAtCwd(apps, '/i/Scratch/y', 'linux'), null);
+});
+
+t('review 5 (M5): commands compare in cmd-safe form', () => {
+  const apps = [{ id: 'o', name: 'y', cwd: 'C:/t/y', command: 'npm run dev > /tmp/dev.log 2>&1' }];
+  assert.equal(observedDuplicate(apps, { cwd: 'C:/t/y', command: 'npm run dev' }, 'win32').id, 'o');
+  const saved = [{ id: 'p', name: 'z', cwd: 'C:/t/z', command: 'npm run dev' }];
+  assert.equal(observedDuplicate(saved, { cwd: 'C:/t/z', command: 'PORT=4000 npm run dev &' }, 'win32').id, 'p');
+});
+
+t('review 5 (M3): cmdSafe matches the plugin\'s, and start_app refuses an observed app with a redirect or VAR=', () => {
+  for (const raw of ['npm run dev > /tmp/dev.log 2>&1 &', 'PORT=4000 npm run dev', "A='x y' npm start", 'npx vite --port 3005 &> o.log', 'npm run dev -- --port 3005']) {
+    assert.deepStrictEqual(cmdSafe(raw), pluginCmdSafe(raw), raw);
+  }
+  const obs = (command) => ({ id: 'o', name: 'y', command, registeredBy: 'observed' });
+  assert.match(startRefusal(obs('npm run dev > /tmp/dev.log 2>&1')), /shell redirection.*update_app: command "npm run dev"\./);
+  assert.match(startRefusal(obs('PORT=4000 npm run dev')), /command "npm run dev" and put \{"PORT":"4000"\} in the app's env/);
+  assert.equal(startRefusal(obs('cd web && npm run dev')), null);
+  // A plain app's command is the user's: start_app runs it as on master.
+  assert.equal(startRefusal({ id: 'm', name: 'm', command: 'npm run dev > dev.log' }), null);
 });
 
 t('re-registering the same cwd updates and keeps the id', () => {

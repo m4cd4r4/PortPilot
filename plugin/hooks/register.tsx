@@ -55,7 +55,7 @@ import {
   type Platform,
   type Runtime,
 } from './guard-core.mjs'
-import { checkNotices, EMPTY, noteStart, observable } from './observe.mjs'
+import { checkNotices, EMPTY, freshPorts, noteStart, observable, takeQueued } from './observe.mjs'
 
 const REFRESH_MS = 15_000
 const MAX_BANDS = 2
@@ -209,19 +209,24 @@ async function startTool($: EngineInterface) {
 
 /** One new-port check while a noted start is recent; notices wait for the next tool result. */
 async function checkObserved($: EngineInterface, snap: Snapshot) {
-  if (!(await read($, observeState)).notes.length) return
+  const cur = await read($, observeState)
+  if (!cur.notes.length) return
+  // Name each new port's holder (one tasklist per port on Windows) so Claude can tell its own server apart.
+  if (platform && snap.listeners) for (const p of freshPorts(cur, snap)) await holderName($, platform, snap.listeners, p)
   const now = await $.clock.now()
-  await update($, observeState, (cur) => {
-    const { state, notices } = checkNotices(cur, snap, now)
-    return notices.length ? { ...state, queue: [...state.queue, ...notices] } : state
+  await update($, observeState, (s) => {
+    const { state, notices } = checkNotices(s, snap, now)
+    return notices.length ? { ...state, queue: [...state.queue, ...notices.map((text) => ({ text, at: now }))] } : state
   })
 }
 
-/** Takes the queued notices, once. */
+/** Takes the queued notices, once: none when opted out, none gone stale. */
 async function takeNotices($: EngineInterface): Promise<string[]> {
   if (!(await read($, observeState)).queue.length) return []
+  const config = dir ? await readJson<Config>($, `${dir}/portpilot-config.json`) : null
+  const now = await $.clock.now()
   let taken: string[] = []
-  await update($, observeState, (cur) => { taken = cur.queue; return { ...cur, queue: [] } })
+  await update($, observeState, (cur) => { const r = takeQueued(cur, config, now); taken = r.notices; return r.state })
   return taken
 }
 

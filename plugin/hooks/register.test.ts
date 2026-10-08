@@ -127,7 +127,7 @@ test('a new port after an unregistered start is put to Claude once, with the nex
   await $.tool.call(bash('sleep 30'))
   expect(seenContext()).toEqual([
     [],
-    [expect.stringContaining('PortPilot: :4799 started listening after `npm run dev` in shop.')],
+    [expect.stringMatching(/^PortPilot: :4799 started listening after `npm run dev` in shop\.\n- :4799: node\.exe, PID 999, bound to 0\.0\.0\.0\n/)],
     [],
   ])
 })

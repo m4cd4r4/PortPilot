@@ -9,15 +9,18 @@
  *    start in a directory no app owns adds a note {dir, cwd, command, name, at}
  *    to this session's state, and takes the ports listening now as the baseline.
  * 2. checkNotices (after every tool call, and on the 15 s status tick, which
- *    covers run_in_background starts): while a note is under NOTICE_MS old, a
- *    port not listening at the last check, and no registered app's, gets one
- *    notice per session naming the port, the noted command and its directory.
- *    The notice is handed to Claude with the next tool result.
+ *    covers run_in_background starts): while a note is under NOTICE_MS old,
+ *    the ports not listening at the last check, and not held by a running
+ *    registered app, go into one notice naming each port's PID, process and
+ *    bind address, the noted command (cmd-safe) and its directory. Claude
+ *    decides which, if any, its start opened. Each port is told once a session.
+ * 3. takeQueued (with the next tool result): hands Claude the queued notices,
+ *    dropping any older than NOTICE_MS, and all of them when opted out.
  *
  * Pure: register.tsx keeps the state in $.state and hands in the snapshot;
  * tests/plugin-mod.test.mjs drives the same functions with fakes.
  */
-import { holdersOf, normPath, startDir } from './guard-core.mjs';
+import { normPath, startDir } from './guard-core.mjs';
 
 export const NOTICE_MS = 2 * 60_000;
 const MAX_NOTES = 5;
@@ -103,33 +106,106 @@ export function noteStart(state, c) {
   return { ...state, notes, lastPorts: [...c.listeners.keys()] };
 }
 
-/** The text Claude reads for one new port. */
-export function noticeText(port, notes) {
-  const after = notes.map((n) => `\`${n.command}\` in ${baseName(n.cwd) || n.cwd}`).join(', or ');
-  const how = notes.map((n) => `cwd "${n.cwd}", command as you ran it (\`${n.command}\`), name "${n.name}"`).join('; or ');
-  return `PortPilot: :${port} started listening after ${after}. If you started it, register it with PortPilot's add_app tool (${how}, preferredPort ${port}, registeredBy "observed"). If you did not start it, ignore this.`;
+/**
+ * A bash start step as a command start_app can run under cmd.exe: leading
+ * `VAR=value` assignments move to env, trailing redirections and `&` go
+ * (they would write `/tmp/x` as `<drive>:\tmp\x`; PortPilot logs the app itself).
+ * Kept in step with cmdSafe in mcp-server/index.js.
+ * @returns {{command:string, env:Record<string,string>}}
+ */
+export function cmdSafe(raw) {
+  let s = String(raw || '').trim();
+  const env = {};
+  for (let m; (m = s.match(/^([A-Za-z_][A-Za-z0-9_]*)=("[^"]*"|'[^']*'|\S*)\s+(.*)$/)); s = m[3]) env[m[1]] = m[2].replace(/^(['"])(.*)\1$/, '$2');
+  for (let prev; prev !== s; ) {
+    prev = s;
+    s = s.replace(/\s*&$/, '').replace(/(?:\s+\d?(?:>>?|<)|\s*(?:>>?|<)|\s*&>>?)\s*(?:&\d+|"[^"]*"|'[^']*'|[^\s&]+)$/, '').trim();
+  }
+  return { command: s.replace(/\s+/g, ' '), env };
+}
+
+/** A registered app is running on the port: its sidecar pid holds it, or its sidecar records a start there. preferredPort alone is not. */
+function heldByRunningApp(port, holder, config, runtime) {
+  const rt = (runtime && runtime.apps) || {};
+  return ((config && config.apps) || []).some((a) => {
+    const r = a && a.id && rt[a.id];
+    return !!r && ((holder && holder.pid && r.pid === holder.pid) || Number(r.port || a.preferredPort) === port);
+  });
+}
+
+/** The ports a check would tell Claude about, so their holders can be named first. */
+export function freshPorts(state, { config, runtime = null, listeners }) {
+  if (!listeners || !state.notes.length) return [];
+  const before = new Set(state.lastPorts || listeners.keys());
+  const noticed = new Set(state.noticed);
+  return [...listeners.keys()].filter((p) => !before.has(p) && !noticed.has(p) && !heldByRunningApp(p, listeners.get(p), config, runtime)).sort((a, b) => a - b);
+}
+
+const EPHEMERAL = 49152;
+
+/** The port to suggest from one process's ports: the lowest below the ephemeral range, else the lowest. */
+function mainPort(list) {
+  return list.find((p) => p < EPHEMERAL) ?? list[0];
 }
 
 /**
- * One check: which new ports to tell Claude about.
+ * The text Claude reads for the new ports of one check, one line per process.
+ * @param {number[]} newPorts  sorted
+ * @param {Map} listeners      holders, names already resolved where possible
+ */
+export function noticeText(newPorts, notes, listeners = new Map()) {
+  const after = notes.map((n) => `\`${n.command}\` in ${baseName(n.cwd) || n.cwd}`).join(', or ');
+  const groups = new Map();
+  for (const p of newPorts) {
+    const h = listeners.get(p) || {};
+    const key = h.pid ? `pid:${h.pid}` : `port:${p}`;
+    if (!groups.has(key)) groups.set(key, { holder: h, ports: [] });
+    groups.get(key).ports.push(p);
+  }
+  const lines = [...groups.values()].map(({ holder, ports }) => {
+    const main = mainPort(ports);
+    const extra = ports.filter((p) => p !== main);
+    const proc = holder.processName && holder.processName !== 'Unknown' ? holder.processName : 'unknown process';
+    const who = `${proc}${holder.pid ? `, PID ${holder.pid}` : ''}${holder.address ? `, bound to ${holder.address}` : ''}`;
+    const also = extra.length ? ` (also ${extra.map((p) => `:${p}`).join(', ')}: extra listeners of the same process, not servers to register)` : '';
+    return { main, text: `- :${main}: ${who}${also}` };
+  });
+  const listed = newPorts.map((p) => `:${p}`).join(', ');
+  const how = notes.map((n) => {
+    const { command, env } = cmdSafe(n.command);
+    const envPart = Object.keys(env).length ? `, env ${JSON.stringify(env)}` : '';
+    return `cwd "${n.cwd}", command "${command}"${envPart}, name "${n.name}"`;
+  }).join('; or ');
+  const port = lines.length === 1 ? `preferredPort ${lines[0].main}` : `preferredPort set to the one port your start opened (${lines.map((l) => `:${l.main}`).join(' or ')})`;
+  return [
+    `PortPilot: ${listed} started listening after ${after}.`,
+    ...lines.map((l) => l.text),
+    'Register only a port you are confident your own start opened. A port held by a process you did not start is not yours: ignore it.',
+    `To register it, call PortPilot's add_app tool with ${how}, ${port}, registeredBy "observed".`,
+  ].join('\n');
+}
+
+/**
+ * One check: which new ports to tell Claude about, as at most one notice.
  * @param {object} snap  { config, runtime, listeners }  listeners null when the scan failed
  * @returns {{ state: object, notices: string[] }}
  */
 export function checkNotices(state, { config, runtime = null, listeners }, now) {
-  if (off(config)) return { state: { ...state, notes: [] }, notices: [] };
+  if (off(config)) return { state: { ...state, notes: [], queue: [] }, notices: [] };
   const notes = state.notes.filter((n) => now - n.at <= NOTICE_MS);
   if (!listeners) return { state: { ...state, notes }, notices: [] };
-  const ports = [...listeners.keys()];
-  const before = new Set(state.lastPorts || ports);
-  const noticed = new Set(state.noticed);
-  const notices = [];
-  if (notes.length) {
-    for (const port of ports) {
-      if (before.has(port) || noticed.has(port)) continue;
-      if (holdersOf(port, listeners.get(port), config, runtime).length) continue;
-      noticed.add(port);
-      notices.push(noticeText(port, notes));
-    }
-  }
-  return { state: { ...state, notes, lastPorts: ports, noticed: [...noticed].slice(-MAX_NOTICED) }, notices };
+  const fresh = freshPorts({ ...state, notes }, { config, runtime, listeners });
+  const notices = fresh.length ? [noticeText(fresh, notes, listeners)] : [];
+  const noticed = [...state.noticed, ...fresh].slice(-MAX_NOTICED);
+  return { state: { ...state, notes, lastPorts: [...listeners.keys()], noticed }, notices };
+}
+
+/**
+ * The queued notices to hand Claude now: none when opted out (the queue is
+ * cleared), and none older than NOTICE_MS (dropped).
+ * @returns {{ state: object, notices: string[] }}
+ */
+export function takeQueued(state, config, now) {
+  const notices = off(config) ? [] : state.queue.filter((q) => now - q.at <= NOTICE_MS).map((q) => q.text);
+  return { state: { ...state, queue: [] }, notices };
 }

@@ -86,28 +86,60 @@ function normPath(p) {
  * where the default file system does (Windows, macOS): on Linux /a/Web and
  * /a/web are two projects.
  */
+function cwdKey(p, platform = process.platform) {
+  let s = path.normalize(String(p || '')).replace(/\\/g, '/').replace(/\/+$/, '');
+  // Git Bash spells I:\x as /i/x (as the plugin's normPath reads it).
+  if (platform === 'win32') s = s.replace(/^\/([a-zA-Z])(?=\/|$)/, (_, d) => `${d.toUpperCase()}:`);
+  return platform === 'win32' || platform === 'darwin' ? s.toLowerCase() : s;
+}
+
 function appAtCwd(apps, cwd, platform = process.platform) {
-  const fold = platform === 'win32' || platform === 'darwin';
-  const key = (p) => {
-    const s = path.normalize(String(p || '')).replace(/\\/g, '/').replace(/\/+$/, '');
-    return fold ? s.toLowerCase() : s;
-  };
-  return (apps || []).find(a => a && a.cwd && key(a.cwd) === key(cwd)) || null;
+  return (apps || []).find(a => a && a.cwd && cwdKey(a.cwd, platform) === cwdKey(cwd, platform)) || null;
+}
+
+/**
+ * A bash start as a command cmd.exe can run: leading `VAR=value` assignments
+ * move to env, trailing redirections and `&` go. Kept in step with cmdSafe in
+ * plugin/hooks/observe.mjs.
+ */
+function cmdSafe(raw) {
+  let s = String(raw || '').trim();
+  const env = {};
+  for (let m; (m = s.match(/^([A-Za-z_][A-Za-z0-9_]*)=("[^"]*"|'[^']*'|\S*)\s+(.*)$/)); s = m[3]) env[m[1]] = m[2].replace(/^(['"])(.*)\1$/, '$2');
+  for (let prev; prev !== s; ) {
+    prev = s;
+    s = s.replace(/\s*&$/, '').replace(/(?:\s+\d?(?:>>?|<)|\s*(?:>>?|<)|\s*&>>?)\s*(?:&\d+|"[^"]*"|'[^']*'|[^\s&]+)$/, '').trim();
+  }
+  return { command: s.replace(/\s+/g, ' '), env };
+}
+
+/**
+ * Why start_app will not run an app, or null. An observed app's command came
+ * from bash; a redirection or a leading `VAR=` would run differently (or
+ * write outside PortPilot's folders) under cmd.exe.
+ */
+function startRefusal(app) {
+  if (!app || app.registeredBy !== 'observed') return null;
+  const command = String(app.command || '').trim();
+  const safe = cmdSafe(command);
+  if (safe.command === command.replace(/\s+/g, ' ')) return null;
+  const env = Object.keys(safe.env).length ? ` and put ${JSON.stringify(safe.env)} in the app's env` : '';
+  return `"${app.name}" was registered from a bash start and its command (${command}) has a shell redirection, a trailing & or a leading VAR= assignment, which cmd.exe would run differently. Fix it with update_app: command "${safe.command}"${env}.`;
 }
 
 /**
  * The app an add_app call would duplicate, or null. An observation is
  * idempotent by directory: a second one (another session, a later start)
- * changes nothing. A plain add of the same command in a directory already
- * recorded by observation is the same server too (Claude registering it
- * again without registeredBy), so it is not copied either.
+ * changes nothing. Any add of the same command in a directory already
+ * registered is the same server too, so it is not copied either. Commands
+ * compare in their cmd-safe form (`npm run dev > x.log` is `npm run dev`).
  */
 function observedDuplicate(apps, { cwd, command, registeredBy }, platform = process.platform) {
   const same = appAtCwd(apps, cwd, platform);
   if (!same) return null;
   if (registeredBy === 'observed') return same;
-  const squash = (s) => String(s || '').trim().replace(/\s+/g, ' ');
-  return same.registeredBy === 'observed' && squash(same.command) === squash(command) ? same : null;
+  const want = cmdSafe(command).command;
+  return (apps || []).find(a => a && a.cwd && cwdKey(a.cwd, platform) === cwdKey(cwd, platform) && cmdSafe(a.command).command === want) || null;
 }
 
 // Deterministic colour from a seed (branch or path) so re-registering a worktree
@@ -665,6 +697,8 @@ function createServer() {
       const config = readConfig();
       const app = findApp(config.apps || [], identifier);
       if (!app) return { content: [{ type: 'text', text: `App not found: ${identifier}` }], isError: true };
+      const refused = startRefusal(app);
+      if (refused) return { content: [{ type: 'text', text: refused }], isError: true };
       const result = await startApp(app, configFile.logPathFor(getConfigPath(), app.id));
       if (result.success) stampStart(getConfigPath(), app, sessionId);
       return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }], isError: !result.success };
@@ -706,6 +740,8 @@ function createServer() {
       else return { content: [{ type: 'text', text: 'Specify group or favorites: true' }], isError: true };
 
       const results = await Promise.all(apps.map(async a => {
+        const refused = startRefusal(a);
+        if (refused) return { name: a.name, success: false, error: refused };
         const result = await startApp(a, configFile.logPathFor(getConfigPath(), a.id));
         if (result.success) stampStart(getConfigPath(), a, sessionId);
         return { name: a.name, ...result };
@@ -748,7 +784,7 @@ function createServer() {
 
   server.tool(
     'add_app',
-    'Register a new app in PortPilot. When PortPilot tells you a port started listening after a dev-server start you ran (a "PortPilot: :<port> started listening after ..." note), and you did start it, call this with that cwd, the command as you ran it, preferredPort set to the port and registeredBy "observed". Observed registrations are idempotent per directory: a second call for the same cwd changes nothing.',
+    'Register a new app in PortPilot. When PortPilot tells you a port started listening after a dev-server start you ran (a "PortPilot: :<port> started listening after ..." note), and you are confident your own start opened that port (check the PID and process it names), call this with the cwd, command and env it suggests, preferredPort set to that port and registeredBy "observed". Never register a port held by a process you did not start. Observed registrations are idempotent per directory: a second call for the same cwd changes nothing.',
     {
       name: z.string().describe('App display name'),
       command: z.string().describe('Shell command to start (e.g. "npm run dev")'),
@@ -758,10 +794,17 @@ function createServer() {
       autoStart: z.boolean().optional().describe('Auto-start on launch'),
       group: z.string().optional().describe('Group name to assign to'),
       description: z.string().optional().describe('Short description'),
+      env: z.record(z.string()).optional().describe('Environment variables for the command (e.g. {"PORT":"4000"})'),
       registeredBy: z.enum(['observed']).optional().describe('"observed" when registering a server you started after PortPilot noted its new port; leave unset otherwise'),
       observedSession: z.string().optional().describe('The Claude Code session the observed start came from (the PortPilot plugin fills this in)')
     },
-    async ({ name, command, cwd, preferredPort, isFavorite, autoStart, group, description, registeredBy, observedSession }) => {
+    async ({ name, command, cwd, preferredPort, isFavorite, autoStart, group, description, env, registeredBy, observedSession }) => {
+      // An observed command came from bash: save it in the form cmd.exe runs.
+      if (registeredBy === 'observed') {
+        const safe = cmdSafe(command);
+        command = safe.command;
+        env = { ...safe.env, ...(env || {}) };
+      }
       return updateConfig((config) => {
         if (!config.apps) config.apps = [];
 
@@ -778,7 +821,7 @@ function createServer() {
         const newApp = {
           id: generateId(), name, command, cwd,
           preferredPort: preferredPort || null,
-          fallbackRange: null, env: {},
+          fallbackRange: null, env: env || {},
           autoStart: autoStart || false,
           isFavorite: isFavorite || false,
           group: group || null,
@@ -836,7 +879,8 @@ function createServer() {
       isFavorite: z.boolean().optional(),
       autoStart: z.boolean().optional(),
       group: z.string().optional(),
-      description: z.string().optional()
+      description: z.string().optional(),
+      env: z.record(z.string()).optional().describe('Environment variables for the command; replaces the saved set')
     },
     async ({ identifier, ...updates }) => {
       return updateConfig((config) => {
@@ -1126,4 +1170,4 @@ async function main() {
 const isMain = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
 if (isMain) main().catch(console.error);
 
-export { normPath, appAtCwd, observedDuplicate, pickColor, resolveWorktreeGit, registerWorktree, stampStart, detachedCommand, prepareLog };
+export { normPath, appAtCwd, cmdSafe, startRefusal, observedDuplicate,pickColor, resolveWorktreeGit, registerWorktree, stampStart, detachedCommand, prepareLog };
