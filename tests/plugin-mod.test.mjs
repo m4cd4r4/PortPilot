@@ -13,7 +13,7 @@ import assert from 'node:assert';
 import {
   parseListeners, parseTasklistName, appStates, statusLine, parseStart, normPath, startDir, decide, routeResult,
 } from '../plugin/hooks/guard-core.mjs';
-import { completeObservations, isOneShot, noteStart, parseProcTable, pickPendingFiles, READ_LIMIT, removeArgv, sessionPid, uniqueAppName } from '../plugin/hooks/observe.mjs';
+import { checkNotices, EMPTY, isOneShot, noteStart, NOTICE_MS, uniqueAppName } from '../plugin/hooks/observe.mjs';
 
 let passed = 0;
 let failed = 0;
@@ -285,319 +285,137 @@ t('decide: pass when no registered app matches and the port is free', () => {
   assert.deepStrictEqual(r, { action: 'pass' });
 });
 
-// ---- observe, don't take over (docs/run-history/DESIGN.md, PR A) -----------
+// ---- observe, don't take over: Claude confirms (docs/run-history/DESIGN.md, PR A) ----
 // tdd-guard:allow  (table-driven port of the design's test table)
 
 const UNREG = 'I:/Scratch/shop/apps/web';
 const HOME = 'C:/Users/me';
 const T0 = Date.parse('2026-10-08T02:00:00Z');
-// This session: claude.exe 100 -> bash 200 -> node 300 (the server); the probe
-// (powershell 900) is also a child of 100. Another session: claude.exe 500 -> node 600.
-const TABLE = 'SELF 900\n1 0 System\n100 1 claude.exe\n900 100 powershell.exe\n200 100 bash.exe\n300 200 node.exe\n310 200 node.exe\n500 1 claude.exe\n600 500 node.exe\n';
-const held = (port, pid) => [port, { port, pid, processName: 'node.exe' }];
+const held = (port, pid = 300) => [port, { port, pid, processName: 'node.exe' }];
+const ports = (...list) => new Map(list.map((p) => held(p)));
 
 /**
- * Fake I/O for observe.mjs over an in-memory observing/ folder. `after` is the
- * listener map once the server is up; add_app records its calls.
+ * The wiring register.tsx runs: decide, note the start (Bash hook, before the
+ * call), then a check per later tool result or status tick.
  */
-function obsWorld({ cfg = config, rt = null, after = new Map(), table = TABLE, cwds = {}, addTool = true, addReply = null, pkg = null } = {}) {
-  const files = new Map();
-  const adds = [];
-  let up = false;
-  const io = {
-    readPending: async (key) => files.get(key) || null,
-    writePending: async (key, rec) => { files.set(key, rec); },
-    removePending: async (key) => { files.delete(key); },
-    listPending: async () => [...files.values()],
-    snapshot: async () => ({ config: cfg, runtime: rt, listeners: up ? after : listen() }),
-    procTable: async () => parseProcTable(table),
-    cwdOf: async (pid) => cwds[pid] || null,
-    readJson: async () => pkg,
-    tool: async (name) => (name === 'add_app' && addTool ? 'mcp__portpilot__add_app' : null),
-    call: async (args) => { adds.push(args); return addReply || { text: JSON.stringify({ success: true, app: { id: 'new1' } }) }; },
-  };
-  return { io, files, adds, serverUp: () => { up = true; } };
-}
-
-/** The Bash hook's pass path as register.tsx composes it: decide, note, the server comes up, complete. */
-async function observeRun(command, { cwd = UNREG, cfg = config, runtime = {}, before = listen(), up = true, at = T0 + 5_000, ...w } = {}) {
-  const world = obsWorld({ cfg, ...w });
+function obsRun(command, { cwd = UNREG, cfg = config, runtime = {}, before = listen(), pkg = null } = {}) {
   const start = parseStart(command);
-  if (!start) return { decision: null, noted: null, results: [], ...world };
+  let state = EMPTY;
+  if (!start) return { decision: null, state, check: () => [] };
   const dir = startDir(cwd, start.cd, { windows: true, home: HOME });
-  const decision = decide({ start, dir, config: cfg, runtime, listeners: before, windows: true, session: 'sess-1' });
-  if (decision.action !== 'pass') return { decision, noted: null, results: [], ...world };
-  const noted = await noteStart(world.io, { start, sessionCwd: cwd, config: cfg, listeners: before, home: HOME, windows: true, session: 'sess-1', now: T0 });
-  if (up) world.serverUp();
-  const results = await completeObservations(world.io, { now: at, windows: true, session: 'sess-1' });
-  return { decision, noted, results, ...world };
+  const decision = decide({ start, dir, config: cfg, runtime, listeners: before, windows: true });
+  if (decision.action === 'pass') state = noteStart(state, { start, sessionCwd: cwd, config: cfg, listeners: before, home: HOME, windows: true, now: T0, pkg });
+  const check = (listeners, at = T0 + 5_000, rt = runtime) => {
+    const r = checkNotices(state, { config: cfg, runtime: rt, listeners }, at);
+    state = r.state;
+    return r.notices;
+  };
+  return { decision, get state() { return state; }, check };
 }
 
-t('observe: the first start passes untouched, whatever bash syntax it uses', async () => {
+t('observe: the first start passes untouched, whatever bash syntax it uses', () => {
   for (const cmd of ['npm run dev', 'npx vite --base $BASE --port 5174', "npx vite --base '/app/'", 'npm run dev &',
     'npm run dev > dev.log 2>&1 &', 'cd web && pnpm dev', 'npm run dev -- --port 3005 | tee dev.log']) {
-    const r = await observeRun(cmd, { up: false });
+    const r = obsRun(cmd);
     assert.deepStrictEqual(r.decision, { action: 'pass' }, cmd);
-    assert.ok(r.noted, cmd);
-    assert.deepStrictEqual(r.adds, [], cmd);
+    assert.equal(r.state.notes.length, 1, cmd);
   }
-  assert.equal((await observeRun('npx vite --base $BASE --port 5174', { up: false })).noted.raw, 'npx vite --base $BASE --port 5174');
+  assert.equal(obsRun('npx vite --base $BASE --port 5174').state.notes[0].command, 'npx vite --base $BASE --port 5174');
 });
 
-t('observe: a new listener in this session records exactly one app, on the OBSERVED port', async () => {
-  // The command says 3005; the server bound 5173. The observation wins.
-  const r = await observeRun('npm run dev -- --port 3005', { after: new Map([held(5173, 300)]), pkg: { name: '@acme/shop-web' } });
-  assert.deepStrictEqual(r.adds, [{
-    tool: 'mcp__portpilot__add_app', name: 'shop-web', command: 'npm run dev -- --port 3005', cwd: UNREG, preferredPort: 5173,
-    description: 'Recorded from Claude Code', registeredBy: 'observed', observedSession: 'sess-1',
-  }]);
-  assert.deepStrictEqual(r.results.map((x) => [x.done, x.port]), [['recorded', 5173]]);
-  // Done: a later tick adds nothing.
-  assert.deepStrictEqual(await completeObservations(r.io, { now: T0 + 20_000, windows: true, session: 'sess-1' }), []);
-  assert.equal(r.adds.length, 1);
+t('observe: the notice names the port, the directory and the command, and how to register', () => {
+  const r = obsRun('npm run dev -- --port 3005', { pkg: { name: '@acme/shop-web' } });
+  const [n] = r.check(ports(5173));
+  assert.match(n, /^PortPilot: :5173 started listening after `npm run dev -- --port 3005` in web\./);
+  assert.match(n, /add_app/);
+  assert.ok(n.includes(`cwd "${UNREG}"`) && n.includes('name "shop-web"') && n.includes('preferredPort 5173') && n.includes('registeredBy "observed"'), n);
 });
 
-t('observe: no listener records nothing, and the observation expires', async () => {
-  const r = await observeRun('npm run dev', { up: false });
-  assert.deepStrictEqual([r.results, r.adds], [[], []]);
-  assert.deepStrictEqual((await completeObservations(r.io, { now: T0 + 61_000, windows: true, session: 'sess-1' })).map((x) => x.done), ['expired']);
-  r.serverUp();
-  assert.deepStrictEqual(await completeObservations(r.io, { now: T0 + 70_000, windows: true, session: 'sess-1' }), []);
-  assert.deepStrictEqual(r.adds, []);
+t('observe: one notice per port per session', () => {
+  const r = obsRun('npm run dev');
+  assert.equal(r.check(ports(5173)).length, 1);
+  assert.deepStrictEqual(r.check(ports(5173), T0 + 20_000), []);
+  // Gone and back: still told once.
+  r.check(listen(), T0 + 30_000);
+  assert.deepStrictEqual(r.check(ports(5173), T0 + 40_000), []);
+  // A second new port is its own notice.
+  assert.equal(r.check(ports(5173, 5174), T0 + 50_000).length, 1);
 });
 
-t('observe: a port that is not this session\'s, or not in this cwd, is never recorded', async () => {
-  const other = await observeRun('npm run dev', { after: new Map([held(5173, 600)]) });
-  assert.deepStrictEqual([other.results, other.adds], [[], []]);
-  // A port listening before the start is not the start's.
-  const old = await observeRun('npm run dev', { before: listen(5173), after: new Map([held(5173, 300)]) });
-  assert.deepStrictEqual(old.adds, []);
-  // Where the platform reports a cwd, it must be the start's.
-  const elsewhere = await observeRun('npm run dev', { after: new Map([held(5173, 300)]), cwds: { 300: 'I:/Scratch/other' } });
-  assert.deepStrictEqual(elsewhere.adds, []);
-  assert.equal((await observeRun('npm run dev', { after: new Map([held(5173, 300)]), cwds: { 300: 'i:\\scratch\\shop\\apps\\web' } })).adds.length, 1);
-  // No process table (the probe failed): nothing.
-  assert.deepStrictEqual((await observeRun('npm run dev', { after: new Map([held(5173, 300)]), table: '' })).adds, []);
+t('observe: no notice without a recent unregistered start in this session', () => {
+  // Nothing noted: a new port says nothing.
+  assert.deepStrictEqual(checkNotices(EMPTY, { config, runtime: null, listeners: ports(5173) }, T0).notices, []);
+  // A note past two minutes has expired.
+  const r = obsRun('npm run dev');
+  assert.deepStrictEqual(r.check(ports(5173), T0 + NOTICE_MS + 1), []);
+  assert.deepStrictEqual(r.state.notes, []);
+  // A port already listening at the start is not new.
+  assert.deepStrictEqual(obsRun('npm run dev', { before: listen(5173) }).check(ports(5173)), []);
 });
 
-t('observe: two new ports, or one port two pendings could own, is uncertain: nothing', async () => {
-  const two = await observeRun('npm run dev', { after: new Map([held(5173, 300), held(4100, 310)]) });
-  assert.deepStrictEqual([two.results.map((x) => x.done), two.adds], [['ambiguous'], []]);
-  // Two cwds started in this session, one new port: which one bound it is a guess.
-  const w = obsWorld({ after: new Map([held(5173, 300)]) });
-  for (const cwd of [UNREG, 'I:/Scratch/shop/apps/api']) {
-    await noteStart(w.io, { start: parseStart('npm run dev'), sessionCwd: cwd, config, listeners: listen(), home: HOME, windows: true, session: 'sess-1', now: T0 });
-  }
-  w.serverUp();
-  const res = await completeObservations(w.io, { now: T0 + 5_000, windows: true, session: 'sess-1' });
-  assert.deepStrictEqual([res.map((x) => x.done), w.adds], [['ambiguous', 'ambiguous'], []]);
+t('observe: no notice for a port a registered app holds', () => {
+  // 4000 is api's preferredPort; 4100 is web's by the sidecar's pid.
+  assert.deepStrictEqual(obsRun('npm run dev').check(ports(4000)), []);
+  assert.deepStrictEqual(obsRun('npm run dev').check(ports(4100), T0 + 5_000, { apps: { web: { port: 4100, pid: 300 } } }), []);
 });
 
-t('observe: two concurrent starts in one cwd make one pending and one app', async () => {
-  const w = obsWorld({ after: new Map([held(5173, 300)]) });
-  const note = (now, before) => noteStart(w.io, { start: parseStart('npm run dev'), sessionCwd: UNREG, config, listeners: before, home: HOME, windows: true, session: 'sess-1', now });
-  const first = await note(T0, listen());
-  // The second start sees the first's port already up; it keeps the first's baseline.
-  const second = await note(T0 + 1_000, listen(5173));
-  assert.deepStrictEqual(second, first);
-  assert.equal(w.files.size, 1);
-  w.serverUp();
-  await Promise.all([completeObservations(w.io, { now: T0 + 5_000, windows: true, session: 'sess-1' }), completeObservations(w.io, { now: T0 + 5_000, windows: true, session: 'sess-1' })]);
-  assert.equal(w.adds.length, 1);
-});
-
-t('observe: a build, lint or check command is never recorded, even with a port flag', async () => {
-  for (const cmd of ['npx next build --port 3005', 'npx vite build', 'npx astro check', 'npx nuxi generate', 'next build', 'npm run build']) {
-    const r = await observeRun(cmd, { after: new Map([held(5173, 300)]) });
-    assert.deepStrictEqual([r.noted, r.adds], [null, []], cmd);
-  }
-});
-
-t('observe: an observed app is guarded (busy port: reuse), never routed (free port: pass)', async () => {
-  const plain = { apps: [...config.apps, { id: 'obs', name: 'shop-web', cwd: UNREG, command: 'npm run dev', preferredPort: 5173, registeredBy: 'observed' }] };
-  const reuse = await observeRun('npm run dev', { cfg: plain, before: new Map([held(5173, 300)]), runtime: { apps: { obs: { port: 5173, pid: 300 } } } });
-  assert.match(reuse.decision.reason, /shop-web is already running on :5173 - reuse http:\/\/localhost:5173/);
-  // Free port: the same bare start a managed app would route runs as typed, and is not observed again.
-  const free = await observeRun('npm run dev', { cfg: plain, after: new Map([held(5173, 300)]) });
-  assert.deepStrictEqual([free.decision, free.noted, free.adds], [{ action: 'pass' }, null, []]);
-  // The same app, managed, still routes.
-  const managed = { apps: [...config.apps, { id: 'm', name: 'shop-web', cwd: UNREG, command: 'npm run dev', preferredPort: 5173 }] };
-  assert.equal((await observeRun('npm run dev', { cfg: managed })).decision.action, 'route');
-});
-
-t('observe: settings.autoRegister false records nothing', async () => {
-  const off = { ...config, settings: { autoRegister: false } };
-  const r = await observeRun('npm run dev', { cfg: off, after: new Map([held(5173, 300)]) });
-  assert.deepStrictEqual([r.noted, r.adds], [null, []]);
-  // Turned off while a start was pending: it is dropped, not recorded.
-  const w = obsWorld({ cfg: off, after: new Map([held(5173, 300)]) });
-  await noteStart(w.io, { start: parseStart('npm run dev'), sessionCwd: UNREG, config, listeners: listen(), home: HOME, windows: true, session: 'sess-1', now: T0 });
-  w.serverUp();
-  assert.deepStrictEqual((await completeObservations(w.io, { now: T0 + 5_000, windows: true, session: 'sess-1' })).map((x) => x.done), ['off']);
-  assert.deepStrictEqual(w.adds, []);
-});
-
-t('observe: uncertain or unparseable commands are not observed', async () => {
-  for (const cmd of ['npm install && npm run dev', 'PORT=$P npm run dev', 'npm run dev --port 3005', 'npm run dev -- --port 3005 "unbalanced',
+t('observe: a build, lint, uncertain or unparseable command is never noted', () => {
+  for (const cmd of ['npx next build --port 3005', 'npx vite build', 'npx astro check', 'npx nuxi generate', 'next build', 'npm run build',
+    'npm install && npm run dev', 'PORT=$P npm run dev', 'npm run dev --port 3005', 'npm run dev -- --port 3005 "unbalanced',
     'cd "$(mktemp -d)" && npm run dev', 'set PORT=3005 && npm run dev']) {
-    const r = await observeRun(cmd, { after: new Map([held(5173, 300)]) });
-    assert.deepStrictEqual([r.noted, r.adds], [null, []], cmd);
+    const r = obsRun(cmd);
+    assert.deepStrictEqual([r.state.notes, r.check(ports(5173))], [[], []], cmd);
   }
 });
 
-t('observe: never a UNC path, a root, the home folder or its Desktop, Documents, Downloads', async () => {
+t('observe: an observed app is guarded (busy port: reuse), never routed (free port: pass, not noted)', () => {
+  const plain = { apps: [...config.apps, { id: 'obs', name: 'shop-web', cwd: UNREG, command: 'npm run dev', preferredPort: 5173, registeredBy: 'observed' }] };
+  const reuse = obsRun('npm run dev', { cfg: plain, before: ports(5173), runtime: { apps: { obs: { port: 5173, pid: 300 } } } });
+  assert.match(reuse.decision.reason, /shop-web is already running on :5173 - reuse http:\/\/localhost:5173/);
+  const free = obsRun('npm run dev', { cfg: plain });
+  assert.deepStrictEqual([free.decision, free.state.notes], [{ action: 'pass' }, []]);
+  const managed = { apps: [...config.apps, { id: 'm', name: 'shop-web', cwd: UNREG, command: 'npm run dev', preferredPort: 5173 }] };
+  assert.equal(obsRun('npm run dev', { cfg: managed }).decision.action, 'route');
+});
+
+t('observe: settings.autoRegister false means no note and no notice', () => {
+  const off = { ...config, settings: { autoRegister: false } };
+  const r = obsRun('npm run dev', { cfg: off });
+  assert.deepStrictEqual([r.state.notes, r.check(ports(5173))], [[], []]);
+  // Turned off after the note: the note is dropped, nothing said.
+  const on = obsRun('npm run dev');
+  assert.deepStrictEqual(checkNotices(on.state, { config: off, runtime: null, listeners: ports(5173) }, T0 + 5_000), { state: { ...on.state, notes: [] }, notices: [] });
+});
+
+t('observe: never a UNC path, a root, the home folder or its Desktop, Documents, Downloads', () => {
   for (const cwd of ['//wsl.localhost/Ubuntu/home/u/app', 'C:/Users/me', 'C:/Users/Me/', 'C:/Users/me/Desktop', 'C:/Users/me/documents', 'C:/Users/me/Downloads', 'D:/']) {
-    assert.equal((await observeRun('python -m http.server', { cwd, up: false })).noted, null, cwd);
+    assert.deepStrictEqual(obsRun('python -m http.server', { cwd }).state.notes, [], cwd);
   }
-  assert.equal((await observeRun('cd \\\\server\\share\\app && npm run dev', { up: false })).noted, null);
-  assert.equal((await observeRun('cd / && python -m http.server', { up: false })).noted, null);
-  assert.ok((await observeRun('python -m http.server', { cwd: 'C:/Users/me/Documents/site', up: false })).noted);
+  assert.deepStrictEqual(obsRun('cd \\\\server\\share\\app && npm run dev').state.notes, []);
+  assert.deepStrictEqual(obsRun('cd / && python -m http.server').state.notes, []);
+  assert.equal(obsRun('python -m http.server', { cwd: 'C:/Users/me/Documents/site' }).state.notes.length, 1);
 });
 
-t('observe: the saved cwd has an upper-case drive letter, Git Bash form included', async () => {
-  assert.equal((await observeRun('npm run dev', { cwd: 'i:/Scratch/shop', up: false })).noted.cwd, 'I:/Scratch/shop');
-  assert.equal((await observeRun('npm run dev', { cwd: '/i/Scratch/shop', up: false })).noted.cwd, 'I:/Scratch/shop');
+t('observe: the noted cwd has an upper-case drive letter, Git Bash form included', () => {
+  assert.equal(obsRun('npm run dev', { cwd: 'i:/Scratch/shop' }).state.notes[0].cwd, 'I:/Scratch/shop');
+  assert.equal(obsRun('npm run dev', { cwd: '/i/Scratch/shop' }).state.notes[0].cwd, 'I:/Scratch/shop');
 });
 
-t('observe: add_app missing or failing records nothing and does not retry', async () => {
-  const none = await observeRun('npm run dev', { after: new Map([held(5173, 300)]), addTool: false });
-  assert.deepStrictEqual([none.results.map((x) => x.done), none.adds], [['no-tool'], []]);
-  const failed = await observeRun('npm run dev', { after: new Map([held(5173, 300)]), addReply: { isError: true, text: 'exists' } });
-  assert.deepStrictEqual(failed.results.map((x) => x.done), ['failed']);
-  assert.deepStrictEqual(await completeObservations(failed.io, { now: T0 + 20_000, windows: true, session: 'sess-1' }), []);
+t('observe: two recent starts are both named; a restart in one dir replaces its note', () => {
+  let s = EMPTY;
+  const note = (cwd, now) => { s = noteStart(s, { start: parseStart('npm run dev'), sessionCwd: cwd, config, listeners: listen(), home: HOME, windows: true, now }); };
+  note(UNREG, T0); note('I:/Scratch/shop/apps/api', T0 + 1_000); note(UNREG, T0 + 2_000);
+  assert.deepStrictEqual(s.notes.map((n) => n.cwd), ['I:/Scratch/shop/apps/api', UNREG]);
+  const [n] = checkNotices(s, { config, runtime: null, listeners: ports(5173) }, T0 + 5_000).notices;
+  assert.match(n, /in api, or `npm run dev` in web/);
 });
 
-t('observe: a name clash appends the parent folder, then -2', () => {
+t('observe: a suggested name avoids a clash: parent folder, then -2', () => {
   const apps = [{ id: 'a', name: 'Web' }];
   assert.equal(uniqueAppName('web', 'I:/x/apps/web', apps), 'web (apps)');
   assert.equal(uniqueAppName('web', 'I:/x/apps/web', [...apps, { id: 'b', name: 'web (apps)' }]), 'web (apps)-2');
-});
-
-t('observe: the process table and this session\'s pid', () => {
-  const table = parseProcTable(TABLE.replace(/\n/g, '\r\n'));
-  assert.equal(table.self, 900);
-  assert.equal(sessionPid(table), 100);
-  // POSIX ps: no claude in the chain, the nearest node owns it.
-  assert.equal(sessionPid(parseProcTable('SELF 50\n  40 1 /usr/bin/node\n  50 40 sh\n')), 40);
-  assert.equal(sessionPid(parseProcTable('')), null);
   assert.equal(isOneShot('PORT=1 npx vite build'), true);
   assert.equal(isOneShot('npx vite --port 3005'), false);
-});
-
-// ---- review round 3: attribution ------------------------------------------------
-
-// Windows table with creation times and command lines: pid, ppid, created, name, cmd.
-const row = (pid, ppid, created, name, cmd = '') => `${pid}\t${ppid}\t${created}\t${name}\t${cmd}`;
-const BASH = (cmd) => `"C:\\Program Files\\Git\\bin\\bash.exe" -c "source snap.sh 2>/dev/null || true && eval '${cmd.replace(/'/g, "'\\''")}' < /dev/null"`;
-const wtable = (...rows) => ['SELF 900', row(1, 0, 0, 'System'), row(100, 1, T0 - 600_000, 'claude.exe', 'claude.exe'),
-  row(900, 100, T0 + 4_000, 'powershell.exe', 'powershell -Command probe'), ...rows].join('\r\n');
-
-t('round 3: another session\'s pending is never completed here, even with a matching port', async () => {
-  const w = obsWorld({ after: new Map([held(5173, 300)]) });
-  await noteStart(w.io, { start: parseStart('npm run dev'), sessionCwd: UNREG, config, listeners: listen(), home: HOME, windows: true, session: 'sess-2', now: T0 });
-  w.serverUp();
-  assert.deepStrictEqual(await completeObservations(w.io, { now: T0 + 5_000, windows: true, session: 'sess-1' }), []);
-  assert.deepStrictEqual([w.adds, w.files.size], [[], 1]);
-  // Its own session records it.
-  assert.deepStrictEqual((await completeObservations(w.io, { now: T0 + 5_000, windows: true, session: 'sess-2' })).map((x) => x.done), ['recorded']);
-});
-
-t('round 3: Claude\'s own unrelated background server is not taken', async () => {
-  const table = wtable(row(200, 100, T0 + 1_000, 'bash.exe', BASH('npm run dev')), row(300, 200, T0 + 1_100, 'node.exe', 'node npm-cli.js run dev'),
-    row(210, 100, T0 + 1_500, 'bash.exe', BASH('node tests/test-servers.js')), row(310, 210, T0 + 1_600, 'node.exe', 'node tests/test-servers.js'));
-  // Only the unrelated server is up: nothing.
-  const r = await observeRun('npm run dev', { table, after: new Map([held(9100, 310)]) });
-  assert.deepStrictEqual([r.results, r.adds], [[], []]);
-  // Both up: the noted start's port, not the other.
-  const both = await observeRun('npm run dev', { table, after: new Map([held(9100, 310), held(5173, 300)]) });
-  assert.deepStrictEqual(both.adds.map((a) => a.preferredPort), [5173]);
-});
-
-t('round 3: a port held by claude.exe itself, or an MCP server\'s child, is not taken', async () => {
-  const self = await observeRun('npm run dev', { table: wtable(), after: new Map([held(5173, 100)]) });
-  assert.deepStrictEqual(self.adds, []);
-  // MCP stdio server (node, Claude's direct child) -> browser with a debug port.
-  const mcp = wtable(row(400, 100, T0 + 1_000, 'node.exe', 'node chrome-devtools-mcp'), row(410, 400, T0 + 1_200, 'chrome.exe', 'chrome --remote-debugging-port=9333'));
-  assert.deepStrictEqual((await observeRun('npm run dev', { table: mcp, after: new Map([held(9333, 410)]) })).adds, []);
-  // The same under `cmd /c npx` (a shell child of Claude): the command lines do not carry `npm run dev`.
-  const viaCmd = wtable(row(400, 100, T0 + 1_000, 'cmd.exe', 'cmd /c npx chrome-devtools-mcp'), row(410, 400, T0 + 1_200, 'chrome.exe', 'chrome --remote-debugging-port=9333'));
-  assert.deepStrictEqual((await observeRun('npm run dev', { table: viaCmd, after: new Map([held(9333, 410)]) })).adds, []);
-});
-
-t('round 3: a registered app\'s port is not taken', async () => {
-  // 4000 is api's preferredPort; 4100 is held by the sidecar's pid of web.
-  assert.deepStrictEqual((await observeRun('npm run dev', { after: new Map([held(4000, 300)]) })).adds, []);
-  assert.deepStrictEqual((await observeRun('npm run dev', { rt: { apps: { web: { port: 4100, pid: 300 } } }, after: new Map([held(4100, 300)]) })).adds, []);
-});
-
-t('round 3: two same-session starts in two dirs resolve by command line', async () => {
-  const api = 'I:/Scratch/shop/apps/api';
-  const table = wtable(row(200, 100, T0 + 1_000, 'bash.exe', BASH(`cd ${UNREG} && npm run dev`)), row(300, 200, T0 + 1_100, 'node.exe', 'node vite.js'),
-    row(210, 100, T0 + 1_500, 'bash.exe', BASH(`cd ${api} && npm run dev`)), row(310, 210, T0 + 1_600, 'node.exe', 'node vite.js'));
-  const w = obsWorld({ table, after: new Map([held(5173, 300), held(5174, 310)]) });
-  for (const d of [UNREG, api]) {
-    const command = `cd ${d} && npm run dev`;
-    await noteStart(w.io, { start: parseStart(command), sessionCwd: 'I:/Scratch', config, listeners: listen(), home: HOME, windows: true, session: 'sess-1', now: T0, command });
-  }
-  w.serverUp();
-  const res = await completeObservations(w.io, { now: T0 + 5_000, windows: true, session: 'sess-1' });
-  assert.deepStrictEqual(res.map((x) => [x.done, x.port]).sort(), [['recorded', 5173], ['recorded', 5174]]);
-  assert.deepStrictEqual(w.adds.map((a) => [a.cwd, a.preferredPort]).sort(), [[api, 5174], [UNREG, 5173]]);
-  // Same command in both, no cd to tell them apart: still ambiguous.
-  const same = wtable(row(200, 100, T0 + 1_000, 'bash.exe', BASH('npm run dev')), row(300, 200, T0 + 1_100, 'node.exe', ''),
-    row(210, 100, T0 + 1_500, 'bash.exe', BASH('npm run dev')), row(310, 210, T0 + 1_600, 'node.exe', ''));
-  const w2 = obsWorld({ table: same, after: new Map([held(5173, 300), held(5174, 310)]) });
-  for (const d of [UNREG, api]) await noteStart(w2.io, { start: parseStart('npm run dev'), sessionCwd: d, config, listeners: listen(), home: HOME, windows: true, session: 'sess-1', now: T0, command: 'npm run dev' });
-  w2.serverUp();
-  assert.deepStrictEqual((await completeObservations(w2.io, { now: T0 + 5_000, windows: true, session: 'sess-1' })).map((x) => x.done), ['ambiguous', 'ambiguous']);
-});
-
-t('round 3: a reused pid in the chain is rejected by creation time', async () => {
-  // The bash pid was reused after the note, but the server predates it: not a parent.
-  const reused = wtable(row(200, 100, T0 + 3_000, 'bash.exe', BASH('npm run dev')), row(300, 200, T0 + 1_000, 'node.exe', 'node npm-cli.js run dev'));
-  assert.deepStrictEqual((await observeRun('npm run dev', { table: reused, after: new Map([held(5173, 300)]) })).adds, []);
-  // A server started before the note is not this start's, whatever its parent.
-  const old = wtable(row(200, 100, T0 - 60_000, 'bash.exe', BASH('npm run dev')), row(300, 200, T0 - 59_000, 'node.exe', 'node npm-cli.js run dev'));
-  assert.deepStrictEqual((await observeRun('npm run dev', { table: old, after: new Map([held(5173, 300)]) })).adds, []);
-  const ok = wtable(row(200, 100, T0 + 1_000, 'bash.exe', BASH('npm run dev')), row(300, 200, T0 + 1_100, 'node.exe', 'node npm-cli.js run dev'));
-  assert.equal((await observeRun('npm run dev', { table: ok, after: new Map([held(5173, 300)]) })).adds.length, 1);
-});
-
-t('round 3: quoted commands match the eval-wrapped shell command line', async () => {
-  const cmd = "npx vite --base '/app/' --port 5174";
-  const table = wtable(row(200, 100, T0 + 1_000, 'bash.exe', BASH(cmd)), row(300, 200, T0 + 1_100, 'node.exe', 'node vite.js --base /app/'));
-  assert.equal((await observeRun(cmd, { table, after: new Map([held(5174, 300)]) })).adds.length, 1);
-});
-
-t('round 3: finished files are deleted, stale ones pruned, reads bounded', async () => {
-  const r = await observeRun('npm run dev', { after: new Map([held(5173, 300)]) });
-  assert.deepStrictEqual([r.adds.length, r.files.size], [1, 0]);
-  const x = await observeRun('npm run dev', { up: false });
-  await completeObservations(x.io, { now: T0 + 61_000, windows: true, session: 'sess-1' });
-  assert.equal(x.files.size, 0);
-  // Another session's pending, past an hour: pruned by whoever ticks.
-  const w = obsWorld();
-  await noteStart(w.io, { start: parseStart('npm run dev'), sessionCwd: UNREG, config, listeners: listen(), home: HOME, windows: true, session: 'gone', now: T0 });
-  await completeObservations(w.io, { now: T0 + 30 * 60_000, windows: true, session: 'sess-1' });
-  assert.equal(w.files.size, 1);
-  await completeObservations(w.io, { now: T0 + 61 * 60_000, windows: true, session: 'sess-1' });
-  assert.equal(w.files.size, 0);
-  // The real listing: newest first, at most READ_LIMIT read and pruned, foreign names left alone.
-  const entries = [...Array(60)].map((_, i) => ({ name: `dir-${i.toString(16)}.json`, mtimeMs: T0 - i * 1_000 }));
-  const picked = pickPendingFiles([...entries, { name: 'dir-ff.json', mtimeMs: T0 - 2 * 3_600_000 }, { name: 'notes.txt', mtimeMs: 0 }], T0);
-  assert.deepStrictEqual([picked.read.length, picked.read[0], picked.prune], [READ_LIMIT, 'dir-0.json', ['dir-ff.json']]);
-  assert.deepStrictEqual(removeArgv('C:/Users/me/AppData/Roaming/portpilot/observing/dir-1a.json', true),
-    ['cmd', '/d', '/c', 'del', '/f', '/q', 'C:\\Users\\me\\AppData\\Roaming\\portpilot\\observing\\dir-1a.json']);
-  assert.deepStrictEqual(removeArgv('/home/u/.config/portpilot/observing/dir-1a.json', false), ['rm', '-f', '--', '/home/u/.config/portpilot/observing/dir-1a.json']);
-  for (const [f, win] of [['C:/x/observing/config.json', true], ['C:/a&b/observing/dir-1.json', true], ['/x/observing/../config.json', false]]) assert.equal(removeArgv(f, win), null, f);
-});
-
-t('round 3: the process table reads POSIX args and Windows tab rows', () => {
-  const posix = parseProcTable('SELF 50\n  40 1 claude\n  50 40 sh\n ARGS\n  40 claude --resume\n  50 sh -c echo SELF $$\n');
-  assert.deepStrictEqual(posix.procs.get(40), { pid: 40, ppid: 1, name: 'claude', created: 0, cmd: 'claude --resume' });
-  const win = parseProcTable(`SELF 9\r\n${row(9, 8, 123, 'powershell.exe', 'powershell -c x')}\r\n${row(8, 1, 100, 'claude.exe', '')}\r\n`);
-  assert.deepStrictEqual(win.procs.get(9), { pid: 9, ppid: 8, name: 'powershell.exe', created: 123, cmd: 'powershell -c x' });
-  assert.equal(sessionPid(win), 8);
 });
 
 // ---- parser corrections kept from the review rounds ---------------------------

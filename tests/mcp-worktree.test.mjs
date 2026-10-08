@@ -9,7 +9,7 @@ import path from 'node:path';
 import fs from 'node:fs';
 import os from 'node:os';
 import { execSync } from 'node:child_process';
-import { normPath, appAtCwd, pickColor, resolveWorktreeGit, registerWorktree } from '../mcp-server/index.js';
+import { normPath, appAtCwd, observedDuplicate, pickColor, resolveWorktreeGit, registerWorktree } from '../mcp-server/index.js';
 
 let pass = 0, fail = 0;
 function t(name, fn) {
@@ -45,6 +45,15 @@ t('add_app observed: appAtCwd folds case on Windows and macOS only', () => {
   assert.equal(appAtCwd(apps, '/home/u/web', 'darwin').id, 'a');
   assert.equal(appAtCwd(apps, '/home/u/web', 'linux'), null);
   assert.equal(appAtCwd(apps, '/home/u/Web', 'linux').id, 'a');
+});
+
+t('add_app: no copy of an observed app, whether the second add says observed or not', () => {
+  const apps = [{ id: 'o', name: 'pp-live-proj', cwd: 'C:/t/proj', command: 'npm run dev', registeredBy: 'observed' }, { id: 'm', name: 'web', cwd: 'C:/t/web', command: 'npm run dev' }];
+  assert.equal(observedDuplicate(apps, { cwd: 'C:\\t\\proj', command: 'npm run dev' }, 'win32').id, 'o');
+  assert.equal(observedDuplicate(apps, { cwd: 'C:/t/web', command: 'npm run dev', registeredBy: 'observed' }, 'win32').id, 'm');
+  // A plain add of another command, or beside a managed app, is the user's call.
+  assert.equal(observedDuplicate(apps, { cwd: 'C:/t/proj', command: 'npm run storybook' }, 'win32'), null);
+  assert.equal(observedDuplicate(apps, { cwd: 'C:/t/web', command: 'npm run dev' }, 'win32'), null);
 });
 
 t('re-registering the same cwd updates and keeps the id', () => {

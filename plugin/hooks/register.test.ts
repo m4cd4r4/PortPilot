@@ -41,6 +41,7 @@ type World = {
   log?: string
   inbox?: object
   writes?: { path: string, text: string }[]
+  netstat?: () => string
 }
 
 /** Fakes the world beneath the plugin. */
@@ -57,7 +58,7 @@ function world(on: On, w: World = {}) {
   })
   on('process.run', async (_$, e) => {
     const [cmd] = e.argv
-    const stdout = cmd === 'netstat' ? NETSTAT
+    const stdout = cmd === 'netstat' ? (w.netstat ? w.netstat() : NETSTAT)
       : cmd === 'tasklist' ? '"node.exe","4812","Console","1","52,000 K"'
       : ''
     return { value: { exitCode: 0, stdout, stderr: '', isStdoutTruncated: false, isStderrTruncated: false } } as never
@@ -94,6 +95,49 @@ test('a start on a busy port is denied and names the holder', async ($, on) => {
   expect(bashRuns).toEqual([])
   expect(r.deny).toContain('web is already running on :3000')
   expect(r.deny).toContain('reuse http://localhost:3000')
+})
+
+// A test's own $.tool.call carries no context back: a plugin in the outermost
+// tier reads what reaches the model after PortPilot's hook, and reports it as
+// a toast (plugins run isolated: no shared variables).
+const contextProbe = {
+  name: 'context-probe',
+  tier: 'prepend' as const,
+  register: ((on: On) => {
+    on('tool.call', async ($, e, next) => {
+      const r = await next(e)
+      $.ui.toast(`CTX ${JSON.stringify(('result' in r && r.context) || [])}`)
+      return r
+    })
+  }) as never,
+}
+
+test('a new port after an unregistered start is put to Claude once, with the next result', { plugins: [contextProbe] }, async ($, on) => {
+  const bashRuns: string[] = []
+  const toasts: string[] = []
+  let up = false
+  const NEW = '  TCP    0.0.0.0:4799           0.0.0.0:0              LISTENING       999'
+  world(on, { cwd: 'C:/work/shop', bashRuns, toasts, netstat: () => (up ? `${NETSTAT}\r\n${NEW}` : NETSTAT) })
+  mock.clock(on, { now: Date.parse('2026-10-08T03:00:00Z') })
+  const seenContext = () => toasts.filter((t) => t.startsWith('CTX ')).map((t) => JSON.parse(t.slice(4)) as string[])
+  await $.tool.call(bash('npm run dev'))
+  expect(bashRuns).toEqual(['npm run dev'])
+  up = true
+  await $.tool.call(bash('sleep 30'))
+  await $.tool.call(bash('sleep 30'))
+  expect(seenContext()).toEqual([
+    [],
+    [expect.stringContaining('PortPilot: :4799 started listening after `npm run dev` in shop.')],
+    [],
+  ])
+})
+
+test('an observed add_app is stamped with this session', async ($, on) => {
+  const calls: unknown[] = []
+  on('tool.call', { tool: 'mcp__portpilot__add_app' }, async (_$, e) => { calls.push(e); return { result: 'ok', text: 'ok' } as never })
+  world(on)
+  await $.tool.call({ tool: 'mcp__portpilot__add_app', name: 'shop', command: 'npm run dev', cwd: 'C:/work/shop', registeredBy: 'observed', observedSession: 'guess' } as never)
+  expect(calls).toEqual([expect.objectContaining({ observedSession: 'sess-1' })])
 })
 
 test('an unmanaged holder is named by its tasklist image', async ($, on) => {

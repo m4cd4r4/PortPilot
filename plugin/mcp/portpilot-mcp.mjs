@@ -23779,6 +23779,13 @@ function appAtCwd(apps, cwd, platform = process.platform) {
   };
   return (apps || []).find((a) => a && a.cwd && key(a.cwd) === key(cwd)) || null;
 }
+function observedDuplicate(apps, { cwd, command, registeredBy }, platform = process.platform) {
+  const same = appAtCwd(apps, cwd, platform);
+  if (!same) return null;
+  if (registeredBy === "observed") return same;
+  const squash = (s) => String(s || "").trim().replace(/\s+/g, " ");
+  return same.registeredBy === "observed" && squash(same.command) === squash(command) ? same : null;
+}
 var WORKTREE_COLORS = ["#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6", "#EC4899", "#06B6D4", "#84CC16", "#F97316", "#6366F1"];
 function pickColor(seed) {
   const s = String(seed || "");
@@ -24291,7 +24298,7 @@ function createServer2() {
   );
   server.tool(
     "add_app",
-    "Register a new app in PortPilot",
+    'Register a new app in PortPilot. When PortPilot tells you a port started listening after a dev-server start you ran (a "PortPilot: :<port> started listening after ..." note), and you did start it, call this with that cwd, the command as you ran it, preferredPort set to the port and registeredBy "observed". Observed registrations are idempotent per directory: a second call for the same cwd changes nothing.',
     {
       name: external_exports.string().describe("App display name"),
       command: external_exports.string().describe('Shell command to start (e.g. "npm run dev")'),
@@ -24301,13 +24308,13 @@ function createServer2() {
       autoStart: external_exports.boolean().optional().describe("Auto-start on launch"),
       group: external_exports.string().optional().describe("Group name to assign to"),
       description: external_exports.string().optional().describe("Short description"),
-      registeredBy: external_exports.enum(["observed"]).optional().describe("Set by the PortPilot Claude Code plugin when it records a server it saw start; not for manual use"),
-      observedSession: external_exports.string().optional().describe("The Claude Code session the observed start came from")
+      registeredBy: external_exports.enum(["observed"]).optional().describe('"observed" when registering a server you started after PortPilot noted its new port; leave unset otherwise'),
+      observedSession: external_exports.string().optional().describe("The Claude Code session the observed start came from (the PortPilot plugin fills this in)")
     },
     async ({ name, command, cwd, preferredPort, isFavorite, autoStart, group, description, registeredBy, observedSession }) => {
       return updateConfig((config2) => {
         if (!config2.apps) config2.apps = [];
-        const same = registeredBy === "observed" && appAtCwd(config2.apps, cwd);
+        const same = observedDuplicate(config2.apps, { cwd, command, registeredBy });
         if (same) {
           return { content: [{ type: "text", text: JSON.stringify({ success: true, existing: true, message: `"${same.name}" is already registered for ${cwd}`, app: same }, null, 2) }] };
         }
@@ -24614,6 +24621,7 @@ export {
   appAtCwd,
   detachedCommand,
   normPath,
+  observedDuplicate,
   pickColor,
   prepareLog,
   registerWorktree,

@@ -95,6 +95,21 @@ function appAtCwd(apps, cwd, platform = process.platform) {
   return (apps || []).find(a => a && a.cwd && key(a.cwd) === key(cwd)) || null;
 }
 
+/**
+ * The app an add_app call would duplicate, or null. An observation is
+ * idempotent by directory: a second one (another session, a later start)
+ * changes nothing. A plain add of the same command in a directory already
+ * recorded by observation is the same server too (Claude registering it
+ * again without registeredBy), so it is not copied either.
+ */
+function observedDuplicate(apps, { cwd, command, registeredBy }, platform = process.platform) {
+  const same = appAtCwd(apps, cwd, platform);
+  if (!same) return null;
+  if (registeredBy === 'observed') return same;
+  const squash = (s) => String(s || '').trim().replace(/\s+/g, ' ');
+  return same.registeredBy === 'observed' && squash(same.command) === squash(command) ? same : null;
+}
+
 // Deterministic colour from a seed (branch or path) so re-registering a worktree
 // keeps its colour and sibling branches get distinct ones. Slice 10 will replace
 // this with the Peacock window colour when present.
@@ -733,7 +748,7 @@ function createServer() {
 
   server.tool(
     'add_app',
-    'Register a new app in PortPilot',
+    'Register a new app in PortPilot. When PortPilot tells you a port started listening after a dev-server start you ran (a "PortPilot: :<port> started listening after ..." note), and you did start it, call this with that cwd, the command as you ran it, preferredPort set to the port and registeredBy "observed". Observed registrations are idempotent per directory: a second call for the same cwd changes nothing.',
     {
       name: z.string().describe('App display name'),
       command: z.string().describe('Shell command to start (e.g. "npm run dev")'),
@@ -743,16 +758,14 @@ function createServer() {
       autoStart: z.boolean().optional().describe('Auto-start on launch'),
       group: z.string().optional().describe('Group name to assign to'),
       description: z.string().optional().describe('Short description'),
-      registeredBy: z.enum(['observed']).optional().describe('Set by the PortPilot Claude Code plugin when it records a server it saw start; not for manual use'),
-      observedSession: z.string().optional().describe('The Claude Code session the observed start came from')
+      registeredBy: z.enum(['observed']).optional().describe('"observed" when registering a server you started after PortPilot noted its new port; leave unset otherwise'),
+      observedSession: z.string().optional().describe('The Claude Code session the observed start came from (the PortPilot plugin fills this in)')
     },
     async ({ name, command, cwd, preferredPort, isFavorite, autoStart, group, description, registeredBy, observedSession }) => {
       return updateConfig((config) => {
         if (!config.apps) config.apps = [];
 
-        // An observation is idempotent by directory: a second one (another
-        // session, a later start) changes nothing and never adds a copy.
-        const same = registeredBy === 'observed' && appAtCwd(config.apps, cwd);
+        const same = observedDuplicate(config.apps, { cwd, command, registeredBy });
         if (same) {
           return { content: [{ type: 'text', text: JSON.stringify({ success: true, existing: true, message: `"${same.name}" is already registered for ${cwd}`, app: same }, null, 2) }] };
         }
@@ -1113,4 +1126,4 @@ async function main() {
 const isMain = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
 if (isMain) main().catch(console.error);
 
-export { normPath, appAtCwd, pickColor, resolveWorktreeGit, registerWorktree, stampStart, detachedCommand, prepareLog };
+export { normPath, appAtCwd, observedDuplicate, pickColor, resolveWorktreeGit, registerWorktree, stampStart, detachedCommand, prepareLog };

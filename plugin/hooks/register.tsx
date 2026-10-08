@@ -12,10 +12,11 @@
  *     start_app MCP tool instead, so the start is recorded and verified.
  * Anything else, and any failure to read the config or scan ports, passes
  * the call through untouched: a wrong deny costs more than a missed one.
- * A start in a directory no app owns also runs untouched; once a new port
- * held by this session's process tree is listening, observe.mjs records the
- * project through add_app as an observed app (never routed, still guarded),
- * when the listener provably belongs to that start (observe.mjs).
+ * A start in a directory no app owns also runs untouched; PortPilot notes it,
+ * and when a new port appears soon after, tells Claude (with the next tool
+ * result) so Claude can register it through add_app as an observed app (never
+ * routed, still guarded). Claude attributes the port; PortPilot never does
+ * (observe.mjs).
  *
  * Crash band (C4): when an app this session started crashes, a band above
  * the prompt shows `✕ web crashed · :3000 · exit 1` and its last output line,
@@ -54,7 +55,7 @@ import {
   type Platform,
   type Runtime,
 } from './guard-core.mjs'
-import { completeObservations, noteStart, parseProcTable, pickPendingFiles, removeArgv, type ObserveIo, type Pending, type ToolReply } from './observe.mjs'
+import { checkNotices, EMPTY, noteStart, observable } from './observe.mjs'
 
 const REFRESH_MS = 15_000
 const MAX_BANDS = 2
@@ -65,6 +66,8 @@ const logsOpen = atom({ plugin: 'portpilot', key: 'logsOpen' } as const, null)
 const seen = atom({ plugin: 'portpilot', key: 'seen' } as const, [])
 // The last inbox request handled; set to the session's start so older ones never replay.
 const inboxCursor = atom({ plugin: 'portpilot', key: 'inboxCursor' } as const, 0)
+// Unregistered starts this session ran, and the new-port notices for Claude (observe.mjs).
+const observeState = atom({ plugin: 'portpilot', key: 'observe' } as const, EMPTY)
 
 type Snapshot = { config: Config | null; runtime: Runtime | null; listeners: Listeners | null }
 
@@ -147,6 +150,7 @@ async function refresh($: EngineInterface) {
     if (config && !listeners) return
     $.ui.status(listeners ? statusLine(config, runtime, listeners) : undefined)
     if (listeners) await refreshCrashes($, config, runtime, listeners)
+    if (config && listeners) await checkObserved($, { config, runtime, listeners })
     if (config && listeners) await beatAndReadInbox($, config, runtime, listeners)
   } catch { /* the line stays as it was */ }
 }
@@ -198,77 +202,27 @@ async function refreshCrashes($: EngineInterface, config: Config | null, runtime
   }
 }
 
-async function portpilotTool($: EngineInterface, name: string) {
-  const tools = await $.tool.list()
-  return tools.find((t) => t.mcp && /portpilot/i.test(t.name) && t.name.endsWith(`__${name}`))
-}
-
 async function startTool($: EngineInterface) {
-  return portpilotTool($, 'start_app')
+  const tools = await $.tool.list()
+  return tools.find((t) => t.mcp && /portpilot/i.test(t.name) && t.name.endsWith('__start_app'))
 }
 
-/** `SELF <pid>`, then each process with its parent, name, creation time (Windows) and command line, for observe.mjs's parseProcTable. */
-async function procTable($: EngineInterface) {
-  const argv = platform === 'win32'
-    ? ['powershell', '-NoProfile', '-NonInteractive', '-Command', "'SELF ' + $PID; $t = [char]9; Get-CimInstance Win32_Process | ForEach-Object { $c = 0; if ($_.CreationDate) { $c = ([DateTimeOffset]$_.CreationDate).ToUnixTimeMilliseconds() }; '' + $_.ProcessId + $t + $_.ParentProcessId + $t + $c + $t + $_.Name + $t + (('' + $_.CommandLine) -replace '[\\r\\n\\t]', ' ') }"]
-    : ['sh', '-c', 'echo SELF $$; ps -axo pid=,ppid=,comm=; echo ARGS; ps -axo pid=,args=']
-  try {
-    const { exitCode, stdout } = await $.process.run(argv, { timeoutMs: 15_000 })
-    if (exitCode === 0) return parseProcTable(stdout)
-  } catch { /* no table: nothing matches */ }
-  return parseProcTable('')
+/** One new-port check while a noted start is recent; notices wait for the next tool result. */
+async function checkObserved($: EngineInterface, snap: Snapshot) {
+  if (!(await read($, observeState)).notes.length) return
+  const now = await $.clock.now()
+  await update($, observeState, (cur) => {
+    const { state, notices } = checkNotices(cur, snap, now)
+    return notices.length ? { ...state, queue: [...state.queue, ...notices] } : state
+  })
 }
 
-/** A listener's working directory where the platform reports it (not on Windows). */
-async function cwdOf($: EngineInterface, pid: number): Promise<string | null> {
-  const argv = platform === 'linux' ? ['readlink', `/proc/${pid}/cwd`]
-    : platform === 'darwin' ? ['lsof', '-a', '-d', 'cwd', '-p', String(pid), '-Fn'] : null
-  if (!argv) return null
-  try {
-    const { exitCode, stdout } = await $.process.run(argv, { timeoutMs: 5000 })
-    if (exitCode !== 0) return null
-    const line = platform === 'darwin' ? stdout.split(/\r?\n/).find((l) => l.startsWith('n'))?.slice(1) : stdout.trim()
-    return line || null
-  } catch {
-    return null
-  }
-}
-
-/** $.fs has no delete: one argv process per file, the path never shell-parsed (see removeArgv). */
-async function removeFile($: EngineInterface, file: string) {
-  const argv = removeArgv(file, platform === 'win32')
-  if (!argv) return
-  try { await $.process.run(argv, { timeoutMs: 5000 }) } catch { /* pruned on a later tick */ }
-}
-
-/** The engine-backed callers observe.mjs composes; pendings live in <configDir>/observing. */
-function observeIo($: EngineInterface): ObserveIo {
-  const at = (key: string) => `${dir}/observing/${key}.json`
-  return {
-    readPending: (key) => readJson<Pending>($, at(key)),
-    writePending: (key, rec) => $.fs.write(at(key), JSON.stringify(rec)),
-    removePending: (key) => removeFile($, at(key)),
-    listPending: async () => {
-      if (!dir || !(await $.fs.exists(`${dir}/observing`))) return []
-      const { read: names, prune } = pickPendingFiles(await $.fs.list(`${dir}/observing`), await $.clock.now())
-      for (const name of prune) await removeFile($, `${dir}/observing/${name}`)
-      const all = await Promise.all(names.map((name) => readJson<Pending>($, `${dir}/observing/${name}`)))
-      return all.filter((p): p is Pending => !!p)
-    },
-    snapshot: async () => { const s = await snapshot($); return { config: s.config, runtime: s.runtime, listeners: s.listeners } },
-    procTable: () => procTable($),
-    cwdOf: (pid) => cwdOf($, pid),
-    readJson: (path) => readJson($, path),
-    tool: async (name) => (await portpilotTool($, name))?.name ?? null,
-    call: async ({ tool, ...args }) => (await $.tool.call({ tool: tool as McpToolName, ...args } as never)) as ToolReply,
-  }
-}
-
-/** Records any observed start that is now listening; refreshes the line when one was. */
-async function observe($: EngineInterface) {
-  if (!platform || !dir) return
-  const done = await completeObservations(observeIo($), { now: await $.clock.now(), windows: platform === 'win32', session: await $.session.id() })
-  if (done.some((d) => d.done === 'recorded')) void refresh($)
+/** Takes the queued notices, once. */
+async function takeNotices($: EngineInterface): Promise<string[]> {
+  if (!(await read($, observeState)).queue.length) return []
+  let taken: string[] = []
+  await update($, observeState, (cur) => { taken = cur.queue; return { ...cur, queue: [] } })
+  return taken
 }
 
 async function restart($: EngineInterface, crash: ShownCrash) {
@@ -294,17 +248,35 @@ export const register: Register = (on) => {
     const now = await $.clock.now()
     await update($, inboxCursor, (c) => c || now)
     void refresh($)
-    $.clock.every(REFRESH_MS, () => { void refresh($); void observe($).catch(() => {}) })
+    $.clock.every(REFRESH_MS, () => { void refresh($) })
     return started
   })
 
   // Stamp this session on every PortPilot start, however Claude called it, so
   // a later crash finds its way back here. Overwrite any sessionId Claude
   // passed: the model cannot see its session id and guesses one.
+  // An observed registration names the session it came from, which Claude cannot see either.
+  // After every tool call: a Bash call may have brought a noted start's port
+  // up; hand Claude any notice with the result (as a PostToolUse hook would).
   on('tool.call', async ($, e, next) => {
-    if (!/portpilot/i.test(e.tool) || !/__start_(app|group)$/.test(e.tool)) return next(e)
-    return next({ ...e, sessionId: await $.session.id() } as typeof e)
-  }).catch(($, e, next) => next(e))
+    let call = e
+    if (/portpilot/i.test(e.tool) && /__start_(app|group)$/.test(e.tool)) call = { ...e, sessionId: await $.session.id() } as typeof e
+    else if (/portpilot/i.test(e.tool) && /__add_app$/.test(e.tool) && (e as { registeredBy?: unknown }).registeredBy === 'observed') {
+      call = { ...e, observedSession: await $.session.id() } as typeof e
+    }
+    const ran = await next(call)
+    if (!('result' in ran) || ran.result === undefined) return ran
+    try {
+      if (e.tool === 'Bash' && (await read($, observeState)).notes.length) {
+        const snap = await snapshot($)
+        if (snap.config && snap.listeners) await checkObserved($, snap)
+      }
+      const notices = await takeNotices($)
+      return notices.length ? { ...ran, context: [...(ran.context ?? []), ...notices] } : ran
+    } catch {
+      return ran
+    }
+  }).catch(($, e, next) => next(e)) // only the stamping can throw: the notice step catches its own
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     if (e.props.hasSurvey) return next(e)
@@ -362,11 +334,16 @@ export const register: Register = (on) => {
     if (decision.action === 'deny') return { deny: decision.reason }
     if (decision.action === 'pass') {
       // A start in a directory no app owns runs exactly as typed; PortPilot
-      // only notes it, and records it once a new port of this session's is up.
-      const noted = await noteStart(observeIo($), { start, sessionCwd, config, listeners, home, windows, session: await $.session.id(), now: await $.clock.now(), command: e.command })
-      const ran = await next(e)
-      if (noted) void observe($).catch(() => {})
-      return ran
+      // only notes it, so a port that appears next can be put to Claude.
+      try {
+        const noted = observable({ start, sessionCwd, config, home, windows })
+        if (noted) {
+          const pkg = await readJson<{ name?: unknown }>($, `${noted.cwd}/package.json`)
+          const now = await $.clock.now()
+          await update($, observeState, (s) => noteStart(s, { start, sessionCwd, config, listeners, home, windows, now, pkg }))
+        }
+      } catch { /* not noted: the start still runs */ }
+      return next(e)
     }
 
     // Route: start the registered app through PortPilot's own MCP tool.

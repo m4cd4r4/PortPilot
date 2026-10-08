@@ -15,6 +15,12 @@ export type ShownCrash = {
   tail: string
 }
 
+/** An unregistered start this session ran (mirrors Note in hooks/observe.d.mts). */
+export type ObserveNote = { dir: string; cwd: string; command: string; name: string; at: number }
+
+/** What observe.mjs keeps per session: recent starts, the last port scan, ports already told, notices not yet handed over. */
+export type ObserveState = { notes: ObserveNote[]; lastPorts: number[] | null; noticed: number[]; queue: string[] }
+
 declare module 'claude-code' {
   interface PluginState {
     portpilot: {
@@ -23,6 +29,7 @@ declare module 'claude-code' {
       logsOpen: string | null
       seen: string[]
       inboxCursor: number
+      observe: ObserveState
     }
   }
 }

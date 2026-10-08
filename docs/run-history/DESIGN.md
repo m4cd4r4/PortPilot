@@ -16,39 +16,32 @@ Brief: [`docs/prompts/run-history.md`](../prompts/run-history.md). Design only; 
 
 **Pivot, 2026-10-08 (Macdara).** The first design registered an unknown project and then rerouted Claude's start through `start_app` (bash -> a saved cmd.exe command, PORT injected, a per-directory claim, a 60 s "still starting" deny). Two review rounds kept finding new bugs in that take-over, so PR A now only watches.
 
+**Second pivot, same day: Claude confirms.** Round 3 attributed a new port to Claude's start by walking the process tree. A live check in real Claude Code 2.1.291 (`-p`) failed: with `run_in_background` the Bash shell is spawned through an intermediate process that exits, so the server's parent chain never reaches `claude.exe` and nothing was recorded. Process-tree attribution on Windows is not reliable, so PortPilot stops guessing who started a server and asks Claude, who knows what it ran.
+
 **The first start of an unregistered project runs exactly as Claude typed it.** The guard never denies, rewrites or reroutes it on this path. `decide()` is master's, plus one exception below.
 
 ### Mechanism (`plugin/hooks/observe.mjs`, wired in `register.tsx`)
 
-1. **Note** (Bash hook, `decide()` passed): a certain start (`parseStart(...).certain`) in a directory no app owns writes `<configDir>/observing/<key>.json`: `{ dir, cwd, raw, command, session, at, before }`, where `command` is the whole Bash command and `before` is the ports listening at that moment. One file per directory; a second start there within the window keeps the first's baseline.
-2. **Complete** (after the Bash call returns, and on the 15 s status tick, which covers `run_in_background` starts whose Bash call returns before the server listens): only pendings whose `session` is this session. One process-table read (`Get-CimInstance Win32_Process` with `CreationDate` and `CommandLine` / `ps -axo pid,ppid,comm` then `ps -axo pid,args`). A port is the pending's when all of these hold:
-   - it is missing from `before`, and no registered app holds it (`holdersOf`);
-   - its pid is not the Claude process, and its ancestors reach this session's Claude process through a shell (`bash`, `sh`, `dash`, `zsh`, `cmd`, `powershell`, `pwsh`) that is Claude's direct child. An MCP server's child, or a port Claude itself holds, has no such shell;
-   - on Windows, every link from the listener to that shell was created at or after the note (2 s clock skew), and each after its parent, so a reused pid cannot stand in;
-   - where command lines are reported, the shell's or a descendant's carries the noted command (best of: the whole Bash command, the start step, the step past its launcher in a descendant such as `run dev` in npm's node). An unrelated background server in another shell does not;
-   - where the platform reports a process cwd (Linux `/proc/<pid>/cwd`, macOS `lsof -d cwd`), it is the noted cwd.
+1. **Note** (Bash hook, `decide()` passed): a certain start in a directory no app owns adds `{ dir, cwd, command, name, at }` to this session's `$.state` (`portpilot.observe`), where `command` is the start step as typed and `name` is the suggested app name (`package.json` name, else the folder, made unique). The ports listening at that moment become the baseline. At most 5 notes; a restart in one directory replaces its note. No shared files.
+2. **Check** (after every tool call, and on the 15 s status tick, which covers `run_in_background`): only while a note is under 2 minutes old. A port that was not listening at the last check, and that no registered app holds (`holdersOf`), gets one notice per port per session, naming every recent note: `PortPilot: :4799 started listening after `npm run dev` in pp-live-proj. If you started it, register it with PortPilot's add_app tool (cwd "...", command as you ran it, name "...", preferredPort 4799, registeredBy "observed"). If you did not start it, ignore this.`
+3. **Delivery:** notices queue in the session state and ride the next tool result as `context` (what a PostToolUse hook's `additionalContext` is): the model reads it, the user does not see it. A tick's notice waits for the next tool call.
+4. **Claude attributes, PortPilot never registers on its own.** The `add_app` description tells Claude to use `registeredBy: 'observed'` for this; the plugin stamps `observedSession` with this session's id (Claude cannot see it).
+5. **Idempotent by cwd:** `add_app` with `registeredBy: 'observed'` returns the existing app when one has that cwd (`appAtCwd`: case-insensitive on Windows and macOS, exact on Linux). A plain `add_app` of the same command in a directory an observed app already holds also returns it (live check: Claude re-registered without `registeredBy` once). Never a direct config write.
 
-   It is recorded with `add_app { command: raw, cwd, preferredPort: <observed port>, registeredBy: 'observed', observedSession }`. The port is the observed one, never read from flags.
-3. **Uncertain = nothing:** two new ports equally matching one pending, or one port two pendings could own, ends `ambiguous`. Two starts in one session in two directories resolve when each command line points at exactly one port (`cd a && npm run dev` vs `cd b && npm run dev`). No match within 60 s ends `expired`. A failed or missing `add_app` ends without a retry.
-4. **Cleanup:** a pending's file is deleted when it ends (`$.fs` has no delete: `rm -f --` / `cmd /c del` with the path as one argv, only for `observing/dir-<hex>.json`). Each tick reads at most 50 files, newest first, and deletes any older than an hour, whichever session wrote them.
-
-**Known limitation: `&` inside a foreground Bash call is not recorded.** `npm run dev &` in a normal Bash call backgrounds the server, then the shell exits, so the server is re-parented and its chain no longer reaches Claude through a shell. The start still runs untouched; it expires unrecorded. Use `run_in_background`, which keeps the shell alive.
-5. **Idempotent by cwd:** `add_app` with `registeredBy: 'observed'` returns the existing app when one has that cwd (`appAtCwd`: case-insensitive on Windows and macOS, whose default file systems are, exact on Linux), so two sessions observing one project make one app. Never a direct config write.
-
-Never observed: uncertain or unparseable commands; one-shot tool runs (`next build`, `vite build`, `astro check`, `nuxi generate`, ...) even with a port flag; UNC or root paths; the home folder and its Desktop, Documents, Downloads; `settings.autoRegister === false` (Settings: "Record new projects Claude starts").
+Never noted: uncertain or unparseable commands; one-shot tool runs (`next build`, `vite build`, `astro check`, `nuxi generate`, ...) even with a port flag; UNC or root paths; the home folder and its Desktop, Documents, Downloads; `settings.autoRegister === false` (Settings: "Record new projects Claude starts"), which also drops a note already taken.
 
 ### Observed apps in the guard
 
 - **Deny path applies:** a second start on a busy port is denied with "reuse http://localhost:N", as for any app.
-- **Route path does not:** `decide()` skips the route when `app.registeredBy === 'observed'`, because `start_app` runs the command through cmd.exe with PORT set, which can behave differently from the bash Claude used. A free-port start passes as typed and is not observed again (the directory is owned now).
+- **Route path does not:** `decide()` skips the route when `app.registeredBy === 'observed'`, because `start_app` runs the command through cmd.exe with PORT set, which can behave differently from the bash Claude used. A free-port start passes as typed and is not noted again (the directory is owned now).
 
 ### Parser corrections kept from the review rounds
 
-`npm run dev --port N` (npm keeps a flag before `--`) is uncertain; `-p N` is a port only for the tools that take it (Next, Nuxt, http-server, serve, flask, or a forwarded script); `npm dev/serve/preview` start nothing; `parseStart` returns `raw`; the saved cwd has an upper-case drive letter.
+`npm run dev --port N` (npm keeps a flag before `--`) is uncertain; `-p N` is a port only for the tools that take it (Next, Nuxt, http-server, serve, flask, or a forwarded script); `npm dev/serve/preview` start nothing; `parseStart` returns `raw`; the noted cwd has an upper-case drive letter.
 
-### Tests (`tests/plugin-mod.test.mjs`, in `test:unit`)
+### Tests
 
-The real `noteStart` / `completeObservations` with fake listeners, process table, files and `add_app`: untouched first start (`$VAR`, quotes, `&`, `2>&1`, pipes); one add with the observed port; no listener -> expiry; another session's or another cwd's port -> nothing; two ports / two pendings -> nothing; concurrent starts in one cwd -> one app; build commands -> nothing; observed app busy -> reuse deny, free -> pass, managed -> still routes; opt-out; uncertain commands; paths; parser corrections. `tests/mcp-worktree.test.mjs` covers `appAtCwd`.
+`tests/plugin-mod.test.mjs` (in `test:unit`, CI) drives the real `decide` / `noteStart` / `checkNotices` with fake scans: untouched first start; the notice names port, directory, command; one notice per port; no notice without a recent unregistered start (none, expired, already listening); none for a registered app's port; build and uncertain commands; observed app busy -> reuse deny, free -> pass, managed -> still routes; opt-out; paths; two notes named in one notice. `tests/mcp-worktree.test.mjs` covers `appAtCwd` and `observedDuplicate`. `plugin/hooks/register.test.ts` (`claude plugin test plugin`, local) runs the wiring in the engine: the notice reaches the result's `context` once, and an observed `add_app` gets this session's id.
 
 ## PR B1: run records
 
