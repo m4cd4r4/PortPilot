@@ -23816,7 +23816,7 @@ function shellWords(s) {
     }
     if (!cur) cur = { start: i, end: s.length, text: "", bare: !(ch === '"' || ch === "'" || ch === "\\"), redirAt: -1, ctl: false };
     if (!q && (ch === ">" || ch === "<") && cur.redirAt < 0) cur.redirAt = i - cur.start;
-    if (!q && (/[;|()]/.test(ch) || ch === "&" && s[i - 1] !== ">" && s[i + 1] !== ">")) cur.ctl = true;
+    if (!q && (/[;|()]/.test(ch) || ch === "&" && s[i - 1] !== ">" && s[i - 1] !== "<" && s[i + 1] !== ">")) cur.ctl = true;
     if (q) {
       if (ch === q) q = null;
       else if (q === '"' && ch === "\\" && i + 1 < s.length) cur.text += s[++i];
@@ -23838,20 +23838,31 @@ function trailingShellOnly(words) {
     const from = w.raw === "|tee" ? k + 1 : w.raw === "|" && words[k + 1] && words[k + 1].text === "tee" ? k + 2 : -1;
     return from >= 0 && calm[from];
   };
+  const past = (k, head) => {
+    for (; ; ) {
+      const op = head.match(REDIRECT);
+      if (!op) return -1;
+      if (head.length > op[0].length) return k + 1;
+      const t = words[k + 1];
+      if (!t) return k + 1;
+      if (t.ctl) return -1;
+      if (!(t.redirAt > 0)) return k + 2;
+      k += 1;
+      head = t.raw.slice(t.redirAt);
+    }
+  };
   for (let i = 1; i < words.length; i++) {
     const w = words[i];
     if (teeAt(i)) return w.start;
     if (w.ctl) continue;
     const whole = w.bare && REDIRECT.test(w.raw);
     if (!whole && !(w.redirAt > 0)) continue;
-    const head = whole ? w.raw : w.raw.slice(w.redirAt);
-    const op0 = head.match(REDIRECT);
-    if (!op0) continue;
-    let k = i + (head.length > op0[0].length ? 1 : 2);
+    let k = past(i, whole ? w.raw : w.raw.slice(w.redirAt));
+    if (k < 0) continue;
     while (k < words.length) {
       const x = words[k];
-      const op = x.bare && !x.ctl && x.raw.match(REDIRECT);
-      if (op) k += x.raw.length > op[0].length ? 1 : 2;
+      const n = x.bare && !x.ctl && REDIRECT.test(x.raw) ? past(k, x.raw) : -1;
+      if (n >= 0) k = n;
       else if (teeAt(k)) k = words.length;
       else if (x.bare && x.raw === "&" && k === words.length - 1) k += 1;
       else break;
@@ -23873,7 +23884,7 @@ function startRefusal(app) {
   if (!app || app.registeredBy !== "observed") return null;
   const command = String(app.command || "").trim();
   const safe = cmdSafe(command);
-  if (safe.command !== command.replace(/\s+/g, " ")) {
+  if (safe.command !== command.trim().replace(/[^\S\r\n]+/g, " ")) {
     const env = Object.keys(safe.env).length ? ` and put ${JSON.stringify(safe.env)} in the app's env` : "";
     return `"${app.name}" was registered from a bash start and its command (${command}) has a shell redirection, a trailing & or a leading VAR= assignment, which cmd.exe would run differently. Fix it with update_app: command "${safe.command}"${env}.`;
   }

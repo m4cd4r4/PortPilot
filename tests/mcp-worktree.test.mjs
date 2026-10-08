@@ -113,6 +113,14 @@ t('review 6 (M2/L3/L4): cmdSafe keeps quoted > and <, splits VAR= by shell words
     ['npm run dev | tee >(cat)', 'npm run dev | tee >(cat)', {}],
     ['npm run dev | tee x ";" y', 'npm run dev', {}],
     ['npm run dev | tee x.log 2>&1', 'npm run dev', {}],
+    // review 9: a chain glued to a redirect target stays; a target's own glued redirect goes too.
+    ['npm run dev > dev.log||true', 'npm run dev > dev.log||true', {}],
+    ['npm run dev 2> err.log;wait', 'npm run dev 2> err.log;wait', {}],
+    ['npm run dev | tee x.log > y.log||true', 'npm run dev | tee x.log > y.log||true', {}],
+    ['npm run dev > a;b > c', 'npm run dev > a;b', {}],
+    ['npm run dev > x.log> y.log', 'npm run dev', {}],
+    ['npm run dev < /dev/null> dev.log', 'npm run dev', {}],
+    ['npm run dev 0<&- > x.log', 'npm run dev', {}],
   ];
   for (const [raw, command, env] of cases) {
     assert.deepStrictEqual(cmdSafe(raw), { command, env }, raw);
@@ -137,6 +145,9 @@ t('review 5 (M3): cmdSafe matches the plugin\'s, and start_app refuses an observ
   assert.match(startRefusal(obs('npm run dev > /tmp/dev.log 2>&1')), /shell redirection.*update_app: command "npm run dev"\./);
   assert.match(startRefusal(obs('PORT=4000 npm run dev')), /command "npm run dev" and put \{"PORT":"4000"\} in the app's env/);
   assert.equal(startRefusal(obs('cd web && npm run dev')), null);
+  // review 9: a line break is not a redirection; no refusal that loops on its own advice.
+  assert.equal(startRefusal(obs('npm run dev\necho hi')), null);
+  assert.equal(startRefusal(obs('npm run dev -- --title "a\nb"')), null);
   // A plain app's command is the user's: start_app runs it as on master.
   assert.equal(startRefusal({ id: 'm', name: 'm', command: 'npm run dev > dev.log' }), null);
 });
