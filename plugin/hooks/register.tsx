@@ -41,21 +41,17 @@ import {
   parseListeners,
   parseStart,
   parseTasklistName,
-  planAutoRegister,
   routeResult,
   startDir,
   statusLine,
   targetPort,
-  worktreeParent,
-  type App,
-  type AutoRegisterPlan,
   type Config,
   type Listeners,
   type PackageJson,
   type Platform,
   type Runtime,
-  type Start,
 } from './guard-core.mjs'
+import { autoRegisterFlow, type AutoRegisterIo, type ToolReply } from './auto-register.mjs'
 
 const REFRESH_MS = 15_000
 const MAX_BANDS = 2
@@ -218,59 +214,50 @@ async function gitDirs($: EngineInterface, cwd: string) {
   return { gitDir: null, commonDir: null }
 }
 
-/** The new app's id from add_app / add_worktree's JSON reply, else its name. */
-function addedId(text: string | undefined, fallback: string): string {
-  try {
-    const id = JSON.parse(String(text || '')).app?.id
-    if (typeof id === 'string' && id) return id
-  } catch { /* not JSON */ }
-  return fallback
+const CLAIM_STALE_MS = 60_000
+
+/** cmd.exe or POSIX argv for mkdir/rmdir of one directory (mkdir fails when it exists: the atomic claim). */
+function dirArgv(op: 'mkdir' | 'rmdir', path: string): string[] {
+  return platform === 'win32' ? ['cmd', '/d', '/c', op, path.replace(/\//g, '\\')] : [op, path]
 }
 
-/**
- * Registers an unregistered project's certain start, then routes it through
- * start_app. Returns undefined (run the command as written) when any rule
- * fails or the registration does; after a successful add, a start_app failure
- * is reported as decide's route would report it.
- */
-async function autoRegister(
-  $: EngineInterface,
-  c: { start: Start; dir: string; config: Config; listeners: Listeners; windows: boolean; home: string; sessionCwd: string },
-) {
-  const cwd = startDir(c.sessionCwd, c.start.cd, { windows: c.windows, home: c.home, keepCase: true })
-  const [pkg, addApp, addWt, start] = await Promise.all([
-    readJson<PackageJson>($, `${cwd}/package.json`),
-    portpilotTool($, 'add_app'),
-    portpilotTool($, 'add_worktree'),
-    startTool($),
-  ])
-  const plan: AutoRegisterPlan | null = planAutoRegister({
-    start: c.start, dir: c.dir, cwd, config: c.config, listeners: c.listeners, pkg, home: c.home,
-    tools: { add: !!addApp, start: !!start }, windows: c.windows,
-  })
-  if (!plan || !addApp || !start) return undefined
-
-  const parent = addWt ? worktreeParent({ dir: c.dir, ...(await gitDirs($, cwd)), config: c.config, windows: c.windows }) : null
-  const added = parent && addWt
-    ? await $.tool.call({ tool: addWt.name as McpToolName, path: plan.cwd, command: plan.command, preferredPort: plan.port, parent: parent.id })
-    : await $.tool.call({
-        tool: addApp.name as McpToolName, name: plan.name, command: plan.command, cwd: plan.cwd, preferredPort: plan.port,
-        description: 'Auto-registered from Claude Code',
-      })
-  if (!added || added.deny !== undefined || added.isError) return undefined
-
-  const id = addedId(added.text, plan.name)
-  const app: App = { id, name: parent ? parent.name : plan.name, cwd: plan.cwd, preferredPort: plan.port }
-  // Past the add, never fall back to a shell start: a detached start may
-  // still be coming up, and a second one would collide with it.
-  let ran: { deny?: string; isError?: boolean; text?: string }
-  try {
-    ran = await $.tool.call({ tool: start.name as McpToolName, identifier: id, sessionId: await $.session.id() })
-  } catch (err) {
-    ran = { isError: true, text: String((err as Error)?.message || err) }
+/** A per-directory claim under the config dir, so two starts of one new project serialise. */
+async function claim($: EngineInterface, key: string): Promise<'ok' | 'busy' | 'error'> {
+  if (!dir) return 'error'
+  const path = `${dir}/claims/${key}`
+  try { await $.fs.write(`${dir}/claims/.keep`, '') } catch { return 'error' }
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const { exitCode } = await $.process.run(dirArgv('mkdir', path), { timeoutMs: 5000 })
+    if (exitCode === 0) return 'ok'
+    if (!(await $.fs.exists(path))) return 'error'
+    // A claim left by a hook that died is stale after a minute.
+    const { mtimeMs } = await $.fs.stat(path, { resolve: false })
+    if ((await $.clock.now()) - mtimeMs < CLAIM_STALE_MS) return 'busy'
+    await $.process.run(dirArgv('rmdir', path), { timeoutMs: 5000 })
   }
-  void refresh($)
-  return routeResult({ app, port: plan.port, cd: c.start.cd, registered: true }, ran)
+  return 'busy'
+}
+
+async function release($: EngineInterface, key: string) {
+  if (dir) await $.process.run(dirArgv('rmdir', `${dir}/claims/${key}`), { timeoutMs: 5000 })
+}
+
+/** The engine-backed callers autoRegisterFlow composes. */
+function autoRegisterIo($: EngineInterface): AutoRegisterIo {
+  return {
+    readJson: (path) => readJson<PackageJson>($, path),
+    exists: (path) => $.fs.exists(path),
+    tool: async (name) => (await portpilotTool($, name))?.name ?? null,
+    call: async ({ tool, ...args }) => {
+      const r = await $.tool.call({ tool: tool as McpToolName, ...args } as never)
+      return r as ToolReply
+    },
+    gitDirs: (cwd) => gitDirs($, cwd),
+    sessionId: () => $.session.id(),
+    claim: (key) => claim($, key),
+    release: (key) => release($, key),
+    reread: async () => { const s = await snapshot($); return { config: s.config, listeners: s.listeners } },
+  }
 }
 
 async function restart($: EngineInterface, crash: ShownCrash) {
@@ -359,18 +346,14 @@ export const register: Register = (on) => {
     const port = targetPort({ start, dir: where, config, windows })
     if (port) await holderName($, platform, listeners, port)
 
-    const decision = decide({ start, dir: where, config, runtime, listeners, windows })
+    const decision = decide({ start, dir: where, config, runtime, listeners, windows, now: await $.clock.now() })
 
     if (decision.action === 'deny') return { deny: decision.reason }
     if (decision.action === 'pass') {
       // An unregistered project's certain start: register it, then route it.
-      // Any failure before the add lands runs the command as written.
-      let routed
-      try {
-        routed = await autoRegister($, { start, dir: where, config, listeners, windows, home, sessionCwd })
-      } catch {
-        routed = undefined
-      }
+      // undefined (run as written) only before the claim; it never throws.
+      const routed = await autoRegisterFlow(autoRegisterIo($), { start, dir: where, config, listeners, windows, home, sessionCwd })
+      if (routed) void refresh($)
       return routed ?? next(e)
     }
 

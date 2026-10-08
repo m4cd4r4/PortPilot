@@ -33,6 +33,8 @@ type World = {
   startFails?: boolean
   withAddTool?: boolean
   addFails?: boolean
+  pkg?: object
+  clock?: false
   addCalls?: unknown[]
   config?: object | null
   bashRuns?: string[]
@@ -49,6 +51,7 @@ type World = {
 /** Fakes the world beneath the plugin. */
 function world(on: On, w: World = {}) {
   mock.env(on, { OS: 'Windows_NT', APPDATA: 'C:/fake/AppData', USERPROFILE: 'C:/Users/me' })
+  if (w.clock !== false) mock.clock(on) // tests that drive time mock their own first
   const config = w.config === undefined ? CONFIG : w.config
   on('fs.read', async (_$, e) => {
     const path = e.path.split(String.fromCharCode(92)).join('/') // the engine hands Windows paths with backslashes
@@ -56,6 +59,7 @@ function world(on: On, w: World = {}) {
     if (path === `${DIR}/portpilot-runtime.json`) return { value: JSON.stringify(w.runtime ?? RUNTIME) }
     if (path === `${DIR}/logs/api.log` && w.log != null) return { value: w.log }
     if (path === `${DIR}/inbox/sess-1.json` && w.inbox) return { value: JSON.stringify(w.inbox) }
+    if (path.endsWith('/package.json') && w.pkg) return { value: JSON.stringify(w.pkg) }
     return { deny: `ENOENT ${e.path}` }
   })
   on('process.run', async (_$, e) => {
@@ -65,6 +69,7 @@ function world(on: On, w: World = {}) {
       : ''
     return { value: { exitCode: 0, stdout, stderr: '', isStdoutTruncated: false, isStderrTruncated: false } } as never
   })
+  on('fs.exists', async () => ({ value: true }))
   on('session.cwd', async () => ({ value: w.cwd ?? 'C:/work' }))
   on('session.id', async () => ({ value: 'sess-1' }))
   on('tool.list', async () => ({ value: w.withStartTool === false ? [] : [
@@ -165,7 +170,7 @@ test('non-server commands are not touched', async ($, on) => {
 test('session start sets the status line and refreshes it on the timer', async ($, on) => {
   const statuses: (string | undefined)[] = []
   const clock = mock.clock(on)
-  world(on, { statuses })
+  world(on, { statuses, clock: false })
   on('session.start', async (_$, e) => ({ cwd: e.cwd }))
   await $.session.start({ cwd: 'C:/work', surface: 'terminal', isInteractive: true })
   await clock.settle()
@@ -180,7 +185,7 @@ test('an unregistered project with a certain port is registered, then routed', a
   const bashRuns: string[] = []
   const addCalls: unknown[] = []
   const startCalls: unknown[] = []
-  world(on, { cwd: 'C:/work/Shop', bashRuns, addCalls, startCalls, withAddTool: true })
+  world(on, { cwd: 'C:/work/Shop', bashRuns, addCalls, startCalls, withAddTool: true, pkg: { scripts: { dev: 'next dev' } } })
   const r = await $.tool.call(bash('PORT=3005 npm run dev'))
   expect(bashRuns).toEqual([])
   expect(addCalls).toEqual([expect.objectContaining({ name: 'Shop', command: 'npm run dev', cwd: 'C:/work/Shop', preferredPort: 3005 })])
@@ -188,13 +193,14 @@ test('an unregistered project with a certain port is registered, then routed', a
   expect(r.result).toEqual(expect.objectContaining({ stdout: expect.stringContaining('registered it as "Shop" first') }))
 })
 
-test('add_app returning isError runs the command untouched', async ($, on) => {
+test('add_app returning isError denies; never a shell start', async ($, on) => {
   const bashRuns: string[] = []
   const startCalls: unknown[] = []
-  world(on, { cwd: 'C:/work/Shop', bashRuns, startCalls, withAddTool: true, addFails: true })
-  await $.tool.call(bash('npm run dev -- --port 3005'))
+  world(on, { cwd: 'C:/work/Shop', bashRuns, startCalls, withAddTool: true, addFails: true, pkg: { scripts: { dev: 'vite' } } })
+  const r = await $.tool.call(bash('npm run dev -- --port 3005'))
   expect(startCalls).toEqual([])
-  expect(bashRuns).toEqual(['npm run dev -- --port 3005'])
+  expect(bashRuns).toEqual([])
+  expect(r.deny).toContain('so the start did not run')
 })
 
 // ---- crash band (C4) --------------------------------------------------------
@@ -213,7 +219,7 @@ const BAND = { component: 'AbovePrompt', props: { hasSurvey: false, isWorking: f
 /** Starts the session so the first refresh finds the crash. */
 async function started($: Parameters<TestBody>[0], on: On, w: World) {
   const clock = mock.clock(on, { now: NOW })
-  world(on, w)
+  world(on, { ...w, clock: false })
   on('session.start', async (_$, e) => ({ cwd: e.cwd }))
   await $.session.start({ cwd: 'C:/work', surface: 'terminal', isInteractive: true })
   await clock.settle()

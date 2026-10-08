@@ -24217,7 +24217,7 @@ function createServer2() {
       const app = findApp(config2.apps || [], identifier);
       if (!app) return { content: [{ type: "text", text: `App not found: ${identifier}` }], isError: true };
       const result = await startApp(app, configFile.logPathFor(getConfigPath(), app.id));
-      if (result.success) stampStart(getConfigPath(), app, sessionId);
+      if (result.success || result.verified) stampStart(getConfigPath(), app, sessionId);
       return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }], isError: !result.success };
     }
   );

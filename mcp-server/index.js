@@ -637,7 +637,10 @@ function createServer() {
       const app = findApp(config.apps || [], identifier);
       if (!app) return { content: [{ type: 'text', text: `App not found: ${identifier}` }], isError: true };
       const result = await startApp(app, configFile.logPathFor(getConfigPath(), app.id));
-      if (result.success) stampStart(getConfigPath(), app, sessionId);
+      // `verified` without `success`: spawned, port not up within the wait. It
+      // may still be starting, so record the start: the guard then reads it as
+      // starting and refuses a second copy instead of spawning one.
+      if (result.success || result.verified) stampStart(getConfigPath(), app, sessionId);
       return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }], isError: !result.success };
     }
   );

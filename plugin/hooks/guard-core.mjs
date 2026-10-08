@@ -135,8 +135,10 @@ export function statusLine(config, runtime, listeners, now) {
 // A command that starts a long-running dev server. Deliberately narrow: a
 // false match on `npm run build` would deny or reroute a call that never
 // binds a port.
+// `npm dev` / `npm serve` / `npm preview` are not npm commands (only `npm
+// start` runs a script without `run`), so they start nothing.
 const DEV_START = [
-  /^(?:npm|pnpm|yarn|bun)\s+(?:run\s+)?(?:dev|start|serve|preview)(?:\s|$)/,
+  /^(?:(?:pnpm|yarn|bun)\s+(?:run\s+)?(?:dev|start|serve|preview)|npm\s+(?:start|run(?:-script)?\s+(?:dev|start|serve|preview)))(?:\s|$)/,
   /^(?:npx|pnpm\s+exec|bunx)\s+(?:next|vite|astro|nuxt|nuxi|serve|http-server|live-server)(?:\s|$)/,
   /^(?:next|vite|astro|nuxt)\s+(?:dev|start|preview)(?:\s|$)/,
   /^python3?\s+-m\s+http\.server(?:\s|$)/,
@@ -233,10 +235,18 @@ export function devStart(text) {
     body = m[3];
   }
   if (!DEV_START.some((re) => re.test(body))) return null;
-  // `npm run dev -- --port 3001` forwards the flag.
-  for (const re of PORT_PATTERNS) {
-    const m = body.match(re);
-    if (m) { port = Number(m[1]); break; }
+  // `npm run dev -- --port 3001` forwards the flag; npm keeps one before `--`
+  // for itself (`npm run dev --port 3005` sets npm_config_port and the
+  // script never sees it), so that port is unknown.
+  const npmOwn = /^npm\s/.test(body) ? body.split(/\s--(?=\s|$)/)[0] : '';
+  if (npmOwn && /(?:^|\s)(?:--port\b|-p\s)/.test(npmOwn)) {
+    port = null;
+    portKnown = false;
+  } else {
+    for (const re of PORT_PATTERNS) {
+      const m = body.match(re);
+      if (m) { port = Number(m[1]); break; }
+    }
   }
   if (PORT_UNREAD.test(body)) portKnown = false;
   // Redirects do not change what starts (parseStart marks the step not bare).
@@ -395,7 +405,7 @@ export function holdersOf(port, holder, config, runtime) {
   return apps.filter((a) => !rtApps[a.id] && Number(a.preferredPort) === port);
 }
 
-export function decide({ start, dir, config, runtime, listeners, windows = false }) {
+export function decide({ start, dir, config, runtime, listeners, windows = false, now }) {
   if (!start.certain) return { action: 'pass' };
   const apps = registeredApps(config);
   const rtApps = (runtime && runtime.apps) || {};
@@ -434,6 +444,14 @@ export function decide({ start, dir, config, runtime, listeners, windows = false
   // the start) would be silently changed or dropped.
   const reg = registeredStart(app);
   if (start.bare && reg && reg.script === start.script && port === (reg.port || Number(app.preferredPort))) {
+    // PortPilot started it moments ago and it has not bound yet (a slow first
+    // compile outlasts start_app's wait): a second start would collide with it.
+    if (runtimeStateOf(rtApps[app.id] || null, { listening: false, now }) === 'starting') {
+      return {
+        action: 'deny',
+        reason: `PortPilot: ${app.name} was started moments ago and is still starting on :${port}. Do not start it again; check it with PortPilot's get_status, then use http://localhost:${port}.`,
+      };
+    }
     return { action: 'route', app, port, cd: start.cd };
   }
   return { action: 'pass' };
@@ -441,30 +459,112 @@ export function decide({ start, dir, config, runtime, listeners, windows = false
 
 // ---- Auto-register ----------------------------------------------------------
 
-// A package script start with nothing after it: `npm run dev` reads scripts.dev.
-const SCRIPT_START = /^(?:npm|pnpm|yarn|bun) (dev|start|serve|preview)$/;
-const PORT_FLAG_ALL = /(?:^|\s)(?:--port[=\s]+|-p\s+)(\d{2,5})\b/g;
+// A package script start: `npm run dev -- --port 3005` reads scripts.dev.
+const SCRIPT_RUN = /^(npm|pnpm|yarn|bun)\s+(?:run(?:-script)?\s+)?(dev|start|serve|preview)(?:\s+(.*))?$/;
+// Tools whose `--port N` is their port; `-p N` only for those in P_FLAG_TOOLS
+// (`tsc -p 2020` is a project file, and Vite has no `-p`).
+const PORT_FLAG_TOOLS = new Set(['next', 'vite', 'astro', 'nuxt', 'nuxi', 'http-server', 'live-server', 'uvicorn', 'flask']);
+const P_FLAG_TOOLS = new Set(['next', 'nuxt', 'nuxi', 'http-server', 'flask']);
+// Tools that bind $PORT. Vite, Astro and http.server ignore it.
+const PORT_ENV_TOOLS = new Set(['next', 'nuxt', 'nuxi', 'react-scripts']);
 const HTTP_SERVER_DEFAULT = 8000;
+const SCRIPT_STEP_SPLIT = /&&|\|\||[;&|]/;
+// Text saved as an app's command is later run by cmd.exe (Windows) or sh,
+// not bash: `$VAR`, quotes, `\`, `%`, globs and `~` read differently there.
+const SAFE_COMMAND = /^[A-Za-z0-9_\-=.:/@+, ]+$/;
+const HOME_CHILDREN = ['Desktop', 'Documents', 'Downloads'];
+
+/** The tool a step runs: `npx next dev` -> next, `python -m http.server` -> http.server. */
+function toolOf(step) {
+  let s = String(step || '').trim();
+  for (let m; (m = s.match(/^(?:[A-Za-z_][A-Za-z0-9_]*=\S*|npx|bunx|cross-env|pnpm\s+exec)\s+(.*)$/)); ) s = m[1];
+  const py = s.match(/^python3?\s+(?:-m\s+(\S+)|manage\.py\s+(runserver))/);
+  if (py) return py[1] || py[2];
+  return (s.split(/\s+/)[0] || '').split('/').pop().toLowerCase();
+}
+
+/** A step's literal ports by its own tool's flags; unsure when a flag is not one the guard can read. */
+function stepPorts(step) {
+  const tool = toolOf(step);
+  const ports = new Set();
+  let unsure = false;
+  for (const m of String(step).matchAll(/(?:^|\s)(--port(?:=|\s+)|-p\s+)(\S+)/g)) {
+    const short = m[1].startsWith('-p');
+    if (short && !PORT_FLAG_TOOLS.has(tool)) continue;
+    const reads = short ? P_FLAG_TOOLS.has(tool) : PORT_FLAG_TOOLS.has(tool);
+    if (reads && /^\d{2,5}$/.test(m[2])) ports.add(Number(m[2]));
+    else unsure = true;
+  }
+  return { tool, ports, unsure };
+}
+
+function scriptRunPort([, mgr, name, args = ''], envPort, pkg) {
+  const script = pkg && pkg.scripts && typeof pkg.scripts[name] === 'string' ? pkg.scripts[name] : null;
+  if (!script) return null;
+  // npm forwards only what follows `--`; pnpm 7+ passes a `--` itself on.
+  let fwd = args.trim();
+  if (mgr === 'npm') {
+    if (fwd && !/^--(?:\s|$)/.test(fwd)) return null;
+    fwd = fwd.replace(/^--\s*/, '');
+  } else if (/(?:^|\s)--(?:\s|$)/.test(fwd)) return null;
+  const steps = script.split(SCRIPT_STEP_SPLIT).map((s) => s.trim()).filter(Boolean);
+  const read = steps.map(stepPorts);
+  if (!steps.length || read.some((r) => r.unsure)) return null;
+  const own = new Set(read.flatMap((r) => [...r.ports]));
+  const last = read[read.length - 1];
+  if (/(?:^|\s)(?:--port\b|-p\s)/.test(fwd)) {
+    // Forwarded flags land on the script's last step, and must not meet a port the script sets.
+    const withFwd = stepPorts(`${steps[steps.length - 1]} ${fwd}`);
+    if (own.size || withFwd.unsure || withFwd.ports.size !== 1) return null;
+    const p = [...withFwd.ports][0];
+    return envPort && envPort !== p ? null : p;
+  }
+  if (envPort) return !own.size && PORT_ENV_TOOLS.has(last.tool) ? envPort : null;
+  // Two different ports (`concurrently` a server and an API): unknown.
+  return own.size === 1 ? [...own][0] : null;
+}
+
+function directPort(body, envPort) {
+  const { tool, ports, unsure } = stepPorts(body);
+  if (unsure) return null;
+  if (tool === 'http.server') {
+    const m = body.match(/^python3?\s+-m\s+http\.server(?:\s+(\d{2,5}))?$/);
+    return m && !envPort ? (m[1] ? Number(m[1]) : HTTP_SERVER_DEFAULT) : null;
+  }
+  if (tool === 'runserver') {
+    const m = body.match(/runserver\s+(?:[\d.]+:)?(\d{2,5})$/);
+    return m && !envPort ? Number(m[1]) : null;
+  }
+  if (ports.size > 1) return null;
+  if (ports.size === 1) {
+    const p = [...ports][0];
+    return envPort && envPort !== p ? null : p;
+  }
+  return envPort && PORT_ENV_TOOLS.has(tool) ? envPort : null;
+}
 
 /**
- * The port a start in an unregistered directory will certainly bind, or null:
- * its explicit port, else the one literal `--port N` / `-p N` in the
- * package.json script it names, else 8000 for a bare `python -m http.server`.
- * Framework defaults (Vite 5173, Next 3000) are not certain: config files and
- * .env can move them.
+ * The port a start in an unregistered directory will certainly bind, or null.
+ * A package script start reads the script: a forwarded port flag counts only
+ * when npm forwards it (after `--`) and the script sets no port of its own;
+ * PORT= only when the script's tool binds $PORT (Next, Nuxt, react-scripts);
+ * else the one literal port the script's dev-server tool is given. A direct
+ * start counts its own tool's flags, and 8000 for a bare `python -m
+ * http.server`. Framework defaults (Vite 5173, Next 3000) are not certain:
+ * config files and .env can move them.
  */
 export function autoRegisterPort(start, pkg) {
-  if (start.port) return start.port;
-  const m = start.script.match(SCRIPT_START);
-  if (m) {
-    const script = pkg && pkg.scripts && typeof pkg.scripts[m[1]] === 'string' ? pkg.scripts[m[1]] : null;
-    if (!script || PORT_UNREAD.test(script)) return null;
-    // Two different ports (`concurrently` a server and an API): unknown.
-    const ports = new Set([...script.matchAll(PORT_FLAG_ALL)].map((x) => Number(x[1])));
-    return ports.size === 1 ? [...ports][0] : null;
+  let body = String(start.raw || '').trim();
+  let envPort = null;
+  for (let m; (m = body.match(/^PORT=(\S*)\s+(.*)$/)); body = m[2]) {
+    if (!/^\d{2,5}$/.test(m[1])) return null;
+    envPort = Number(m[1]);
   }
-  if (/^python3? -m http\.server$/.test(start.script)) return HTTP_SERVER_DEFAULT;
-  return null;
+  const run = body.match(SCRIPT_RUN);
+  const port = run ? scriptRunPort(run, envPort, pkg) : directPort(body, envPort);
+  // Never disagree with the port decide() read.
+  if (!port || (start.port && port !== start.port)) return null;
+  return port;
 }
 
 function baseName(p) {
@@ -505,7 +605,8 @@ export function planAutoRegister({ start, dir, cwd, config, listeners, pkg, home
   if (!start || !start.certain || !start.bare) return null;
   const apps = registeredApps(config);
   if (appInDir(apps, dir, windows)) return null;
-  if (dir === '/' || /^[a-z]:$/i.test(dir) || (home && dir === normPath(home, { windows }))) return null;
+  if (dir === '/' || /^[a-z]:$/i.test(dir)) return null;
+  if (home && [home, ...HOME_CHILDREN.map((d) => `${home}/${d}`)].some((h) => dir === normPath(h, { windows }))) return null;
   const port = autoRegisterPort(start, pkg);
   if (!port || listeners.has(port)) return null;
   if (!tools || !tools.add || !tools.start) return null;
@@ -513,10 +614,11 @@ export function planAutoRegister({ start, dir, cwd, config, listeners, pkg, home
   // start_app sets PORT from preferredPort; a --port flag stays so the next
   // bare start still matches the registered command.
   const command = String(start.raw || '').replace(/^(?:PORT=\d{2,5}\s+)+/, '').trim();
-  if (!command) return null;
+  if (!command || !SAFE_COMMAND.test(command)) return null;
+  const saved = windows ? cwd.replace(/^([a-z]):/, (_, d) => `${d.toUpperCase()}:`) : cwd;
   const pkgName = pkg && typeof pkg.name === 'string' ? pkg.name.replace(/^@[^/]+\//, '').trim() : '';
-  const name = uniqueAppName(pkgName || baseName(cwd) || 'app', cwd, apps);
-  return { name, command, cwd, port };
+  const name = uniqueAppName(pkgName || baseName(saved) || 'app', saved, apps);
+  return { name, command, cwd: saved, port };
 }
 
 /**
@@ -535,6 +637,16 @@ export function worktreeParent({ dir, gitDir, commonDir, config, windows = false
   return appInDir(registeredApps(config), main, windows);
 }
 
+/** start_app's reply for a spawn whose port did not come up within its wait (`verified`, not `success`). */
+function startTimedOut(text) {
+  try {
+    const r = JSON.parse(String(text || ''));
+    return r && r.success === false && r.verified === true;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * What the routed Bash call reports, from start_app's tool-call result.
  * A refused call (`deny`) or a failed start (`isError`) is a deny, never
@@ -545,12 +657,19 @@ export function worktreeParent({ dir, gitDir, commonDir, config, windows = false
  */
 export function routeResult(route, ran) {
   const name = route.app.name;
+  const registered = route.registered ? `PortPilot registered this directory as "${name}" just now. ` : '';
   if (ran && ran.deny !== undefined) {
-    return { deny: `PortPilot: ${name} is registered in PortPilot, and starting it through start_app was refused (${ran.deny}). Ask the user how they want it started.` };
+    return { deny: `PortPilot: ${registered}${name} is registered in PortPilot, and starting it through start_app was refused (${ran.deny}). Ask the user how they want it started.` };
   }
   const text = (ran && ran.text) || '';
   if (ran && ran.isError) {
-    return { deny: `PortPilot: ${name} is registered in PortPilot, and starting it through start_app failed: ${text || 'no detail'}. Ask the user how they want it started.` };
+    // start_app spawned it but the port was not up within its wait: the
+    // detached process may still be starting, so a retry would be a second copy.
+    if (startTimedOut(text)) {
+      const lead = route.registered ? `registered ${name}, still starting` : `${name} is still starting`;
+      return { deny: `PortPilot: ${lead}${route.port ? ` on :${route.port}` : ''}. Do not start it again; check it with PortPilot's get_status.` };
+    }
+    return { deny: `PortPilot: ${registered}${name} is registered in PortPilot, and starting it through start_app failed: ${text || 'no detail'}. Ask the user how they want it started.` };
   }
   const onPort = route.port ? ` on :${route.port}` : '';
   const cdNote = route.cd ? ` start_app ran it in the app's own directory, so the shell's working directory was not changed.` : '';

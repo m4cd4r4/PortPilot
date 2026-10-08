@@ -23,7 +23,9 @@ New pure function in `guard-core.mjs`, `planAutoRegister(c)`, called by `registe
 | 1 | `settings.autoRegister !== false` | opt-out |
 | 2 | `start.certain && start.bare` | the guard's #15 guarantee: only a bare start can be replaced by `start_app` |
 | 3 | `appInDir(apps, dir)` is null | a registered dir keeps today's rules |
-| 4 | `dir` is not the home dir, a drive root or `/` | a stray `python -m http.server` in `~` is not a project |
+| 4 | `dir` is not the home dir, its Desktop/Documents/Downloads, a drive root or `/` | a stray `python -m http.server` in `~` is not a project |
+| 8 | (review fix) the session cwd and any `cd` target are not UNC, and the dir exists | `normPath` folds `//wsl.localhost/x` into `/wsl.localhost/x` |
+| 9 | (review fix) the command uses only `[A-Za-z0-9_-=.:/@+, ]` | it is later run by cmd.exe or sh, not bash: `$VAR`, quotes, `\`, `%`, globs and `~` read differently |
 | 5 | the port is certain (next table) | `start_app` verifies by polling that port |
 | 6 | the port is not in `listeners` | a busy port is `decide`'s business, never a registration |
 | 7 | the MCP `add_app` and `start_app` tools are both connected | otherwise nothing can be routed |
@@ -31,7 +33,8 @@ New pure function in `guard-core.mjs`, `planAutoRegister(c)`, called by `registe
 ### What counts as a certain port, in order
 
 1. An explicit port in the command (`start.port`, already parsed).
-2. A literal `--port N` / `-p N` in the `package.json` script the command names (`npm run dev` reads `scripts.dev`), parsed with the same `PORT_PATTERNS`.
+2. A literal `--port N` / `-p N` in the `package.json` script the command names (`npm run dev` reads `scripts.dev`); `-p` counts only for a tool that takes it (`tsc -p 2020 && vite` is not 2020).
+   (review fix) A forwarded flag counts only when npm forwards it (after `--`; `npm run dev --port 3005` is npm config and uncertain even to `decide`) and the script sets no port of its own; `PORT=` only when the script tool binds `$PORT` (Next, Nuxt, react-scripts; not Vite or http.server). `npm dev`/`serve`/`preview` are not npm commands and are not starts. The cwd is saved with an upper-case drive letter.
 3. `python -m http.server` with no port: 8000 (the module's fixed default, not configurable elsewhere).
 
 Framework defaults (Vite 5173, Next 3000) are **not** certain: `vite.config`, `.env` or `next.config` can move them. Those starts pass untouched. Open question 1.
@@ -47,7 +50,7 @@ Framework defaults (Vite 5173, Next 3000) are **not** certain: `vite.config`, `.
 
 ### Flow in `register.tsx`
 
-`decide` pass -> read `package.json` (if any) and settings -> `planAutoRegister` -> `add_app` (or `add_worktree`) -> parse the new id -> `start_app` with the session id -> `routeResult`. The route note says the app was registered. Any thrown error or `isError` from `add_app` falls back to `next(e)`, so the command runs as written. A `start_app` failure after a successful add is reported through `routeResult` as today (a deny with the reason), because the detached process may still be running and a second shell start would collide.
+`decide` pass -> read `package.json` (if any) and settings -> `planAutoRegister` -> `add_app` (or `add_worktree`) -> parse the new id -> `start_app` with the session id -> `routeResult`. The route note says the app was registered. (Review fix: now `auto-register.mjs` with injected I/O, tested in CI.) Only a doubt before the claim runs the command as written. A per-dir claim (`<configDir>/claims/<key>`, atomic `mkdir`, stale after 60 s) serialises concurrent hooks; a held claim, or a re-read showing the dir registered or the port held, denies with the reuse message. A failed, refused or thrown `add_app` never falls through to a shell start: it denies. A `start_app` failure after a successful add is reported through `routeResult` as today (a deny with the reason), because the detached process may still be running and a second shell start would collide. A `start_app` timeout (`verified`, not `success`) reads "registered <name>, still starting on :<port>. Do not start it again"; `start_app` now records that start, and `decide` denies a route while the app is `starting` (60 s grace).
 
 The ✦ in the status line needs no new code: `start_app` stamps `startedBy.kind = 'claude'`.
 
