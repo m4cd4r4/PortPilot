@@ -105,11 +105,13 @@ function appAtCwd(apps, cwd, platform = process.platform) {
 function cmdSafe(raw) {
   let s = String(raw || '').trim().replace(/(^|[^&])&$/, '$1').trim();
   const env = {};
-  for (let w = shellWords(s); w.length > 1 && w[0].bare && /^[A-Za-z_][A-Za-z0-9_]*=/.test(w[0].raw); w = shellWords(s)) {
-    const name = w[0].raw.slice(0, w[0].raw.indexOf('='));
-    env[name] = w[0].text.slice(name.length + 1);
-    s = s.slice(w[1].start);
+  const lead = shellWords(s);
+  let i = 0;
+  for (; i < lead.length - 1 && lead[i].bare && /^[A-Za-z_][A-Za-z0-9_]*=/.test(lead[i].raw); i++) {
+    const name = lead[i].raw.slice(0, lead[i].raw.indexOf('='));
+    env[name] = lead[i].text.slice(name.length + 1);
   }
+  if (i) s = s.slice(lead[i].start);
   const cut = trailingShellOnly(shellWords(s));
   if (cut > 0) s = s.slice(0, cut);
   return { command: s.trim().replace(/\s+/g, ' '), env };
@@ -138,6 +140,16 @@ function shellWords(s) {
 
 const REDIRECT = /^\d?(?:&>>?|>>?&?|<)/;
 
+/** Past a trailing `| tee ...` starting at word k (nothing chained after it), or -1. */
+function teeEnd(words, k) {
+  const w = words[k];
+  if (!w || !w.bare) return -1;
+  const from = w.raw === '|tee' ? k + 1 : w.raw === '|' && words[k + 1] && words[k + 1].text === 'tee' ? k + 2 : -1;
+  if (from < 0) return -1;
+  for (let j = from; j < words.length; j++) if (words[j].bare && /^(?:&&|\|\||;|\||&)$|[;|]$/.test(words[j].raw)) return -1;
+  return words.length;
+}
+
 /**
  * Where a trailing run of redirections, `| tee ...` and `&` starts in s, or -1.
  * A `>` inside quotes is an argument; one glued to a word (`3000>x.log`) is a
@@ -146,6 +158,7 @@ const REDIRECT = /^\d?(?:&>>?|>>?&?|<)/;
 function trailingShellOnly(words) {
   for (let i = 1; i < words.length; i++) {
     const w = words[i];
+    if (teeEnd(words, i) === words.length) return w.start;
     const whole = w.bare && REDIRECT.test(w.raw);
     if (!whole && !(w.redirAt > 0)) continue;
     const head = whole ? w.raw : w.raw.slice(w.redirAt);
@@ -156,7 +169,7 @@ function trailingShellOnly(words) {
       const x = words[k];
       const op = x.bare && x.raw.match(REDIRECT);
       if (op) k += x.raw.length > op[0].length ? 1 : 2;
-      else if (x.bare && x.raw === '|' && words[k + 1] && words[k + 1].text === 'tee') k = words.length;
+      else if (teeEnd(words, k) === words.length) k = words.length;
       else if (x.bare && x.raw === '&' && k === words.length - 1) k += 1;
       else break;
     }

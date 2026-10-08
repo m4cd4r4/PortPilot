@@ -96,6 +96,12 @@ t('review 6 (M2/L3/L4): cmdSafe keeps quoted > and <, splits VAR= by shell words
     ['npm run dev 2>&1 | tee dev.log', 'npm run dev', {}],
     ['npm run dev && echo hi', 'npm run dev && echo hi', {}],
     ['npm run dev -- --port 3000>x.log', 'npm run dev -- --port 3000', {}],
+    // review 7: a lone | tee goes; anything chained after it stays whole.
+    ['npm run dev | tee dev.log', 'npm run dev', {}],
+    ['npm run dev |tee dev.log', 'npm run dev', {}],
+    ['npm run dev 2>&1 | tee x.log && echo done', 'npm run dev 2>&1 | tee x.log && echo done', {}],
+    ['npm run dev | grep x', 'npm run dev | grep x', {}],
+    ['A=1 B=2 npm start', 'npm start', { A: '1', B: '2' }],
   ];
   for (const [raw, command, env] of cases) {
     assert.deepStrictEqual(cmdSafe(raw), { command, env }, raw);
