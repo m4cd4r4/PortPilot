@@ -114,18 +114,26 @@ function cmdSafe(raw) {
   if (i) s = s.slice(lead[i].start);
   const cut = trailingShellOnly(shellWords(s));
   if (cut > 0) s = s.slice(0, cut);
-  return { command: s.trim().replace(/\s+/g, ' '), env };
+  return { command: s.trim().replace(/[^\S\r\n]+/g, ' '), env };
 }
 
-/** Bash words with their source span; `bare` when the word does not start quoted or escaped. */
+/**
+ * Bash words with their source span; `bare` when the word does not start quoted
+ * or escaped; `ctl` when it holds an unquoted `;`, `|`, `(`, `)` or an `&`
+ * that is not part of a redirection (`>&`, `&>`). An unquoted line break is a
+ * word of its own, with `ctl`.
+ */
 function shellWords(s) {
   const out = [];
   let cur = null, q = null;
+  const close = (i) => { if (cur) { cur.end = i; out.push(cur); cur = null; } };
   for (let i = 0; i < s.length; i++) {
     const ch = s[i];
-    if (!q && /\s/.test(ch)) { if (cur) { cur.end = i; out.push(cur); cur = null; } continue; }
-    if (!cur) cur = { start: i, end: s.length, text: '', bare: !(ch === '"' || ch === "'" || ch === '\\'), redirAt: -1 };
+    if (!q && (ch === '\n' || ch === '\r')) { close(i); out.push({ start: i, end: i + 1, text: ch, bare: true, redirAt: -1, ctl: true }); continue; }
+    if (!q && /\s/.test(ch)) { close(i); continue; }
+    if (!cur) cur = { start: i, end: s.length, text: '', bare: !(ch === '"' || ch === "'" || ch === '\\'), redirAt: -1, ctl: false };
     if (!q && (ch === '>' || ch === '<') && cur.redirAt < 0) cur.redirAt = i - cur.start;
+    if (!q && (/[;|()]/.test(ch) || (ch === '&' && s[i - 1] !== '>' && s[i + 1] !== '>'))) cur.ctl = true;
     if (q) {
       if (ch === q) q = null;
       else if (q === '"' && ch === '\\' && i + 1 < s.length) cur.text += s[++i];
@@ -134,31 +142,31 @@ function shellWords(s) {
     else if (ch === '\\' && i + 1 < s.length) cur.text += s[++i];
     else cur.text += ch;
   }
-  if (cur) out.push(cur);
+  close(s.length);
   return out.map((w) => ({ ...w, raw: s.slice(w.start, w.end) }));
 }
 
 const REDIRECT = /^\d?(?:&>>?|>>?&?|<)/;
 
-/** Past a trailing `| tee ...` starting at word k (nothing chained after it), or -1. */
-function teeEnd(words, k) {
-  const w = words[k];
-  if (!w || !w.bare) return -1;
-  const from = w.raw === '|tee' ? k + 1 : w.raw === '|' && words[k + 1] && words[k + 1].text === 'tee' ? k + 2 : -1;
-  if (from < 0) return -1;
-  for (let j = from; j < words.length; j++) if (words[j].bare && /^(?:&&|\|\||;|\||&)$|[;|]$/.test(words[j].raw)) return -1;
-  return words.length;
-}
-
 /**
  * Where a trailing run of redirections, `| tee ...` and `&` starts in s, or -1.
  * A `>` inside quotes is an argument; one glued to a word (`3000>x.log`) is a
- * redirection, as bash reads it.
+ * redirection, as bash reads it. A `| tee` is trailing only when no word after
+ * it chains another command (`;`, `&&`, `|`, `&`, a line break), glued or not.
  */
 function trailingShellOnly(words) {
+  const calm = new Array(words.length + 1).fill(true);
+  for (let j = words.length - 1; j >= 0; j--) calm[j] = calm[j + 1] && !words[j].ctl;
+  const teeAt = (k) => {
+    const w = words[k];
+    if (!w || !w.bare) return false;
+    const from = w.raw === '|tee' ? k + 1 : w.raw === '|' && words[k + 1] && words[k + 1].text === 'tee' ? k + 2 : -1;
+    return from >= 0 && calm[from];
+  };
   for (let i = 1; i < words.length; i++) {
     const w = words[i];
-    if (teeEnd(words, i) === words.length) return w.start;
+    if (teeAt(i)) return w.start;
+    if (w.ctl) continue;
     const whole = w.bare && REDIRECT.test(w.raw);
     if (!whole && !(w.redirAt > 0)) continue;
     const head = whole ? w.raw : w.raw.slice(w.redirAt);
@@ -167,13 +175,14 @@ function trailingShellOnly(words) {
     let k = i + (head.length > op0[0].length ? 1 : 2);
     while (k < words.length) {
       const x = words[k];
-      const op = x.bare && x.raw.match(REDIRECT);
+      const op = x.bare && !x.ctl && x.raw.match(REDIRECT);
       if (op) k += x.raw.length > op[0].length ? 1 : 2;
-      else if (teeEnd(words, k) === words.length) k = words.length;
+      else if (teeAt(k)) k = words.length;
       else if (x.bare && x.raw === '&' && k === words.length - 1) k += 1;
       else break;
     }
     if (k >= words.length) return whole ? w.start : w.start + w.redirAt;
+    i = Math.max(i, k - 1); // every start inside i..k parses to the same break at k
   }
   return -1;
 }

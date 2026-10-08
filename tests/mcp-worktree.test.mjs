@@ -102,6 +102,17 @@ t('review 6 (M2/L3/L4): cmdSafe keeps quoted > and <, splits VAR= by shell words
     ['npm run dev 2>&1 | tee x.log && echo done', 'npm run dev 2>&1 | tee x.log && echo done', {}],
     ['npm run dev | grep x', 'npm run dev | grep x', {}],
     ['A=1 B=2 npm start', 'npm start', { A: '1', B: '2' }],
+    // review 8: a chain glued to the tee's words, or on the next line, keeps it whole.
+    ['npm run dev | tee x.log;echo hi', 'npm run dev | tee x.log;echo hi', {}],
+    ['npm run dev | tee x.log&&echo hi', 'npm run dev | tee x.log&&echo hi', {}],
+    ['npm run dev | tee x.log& echo hi', 'npm run dev | tee x.log& echo hi', {}],
+    ['npm run dev | tee x.log|grep y', 'npm run dev | tee x.log|grep y', {}],
+    ['npm run dev | tee x |& cat', 'npm run dev | tee x |& cat', {}],
+    ['npm run dev | tee x.log\necho hi', 'npm run dev | tee x.log\necho hi', {}],
+    ['(npm run dev | tee x)', '(npm run dev | tee x)', {}],
+    ['npm run dev | tee >(cat)', 'npm run dev | tee >(cat)', {}],
+    ['npm run dev | tee x ";" y', 'npm run dev', {}],
+    ['npm run dev | tee x.log 2>&1', 'npm run dev', {}],
   ];
   for (const [raw, command, env] of cases) {
     assert.deepStrictEqual(cmdSafe(raw), { command, env }, raw);
@@ -110,6 +121,12 @@ t('review 6 (M2/L3/L4): cmdSafe keeps quoted > and <, splits VAR= by shell words
   const obs = (command) => ({ id: 'o', name: 'y', command, registeredBy: 'observed' });
   assert.equal(startRefusal(obs('npm run dev -- --title "a > b"')), null);
   assert.match(startRefusal(obs("node -e 'a=>b'")), /< or > outside double quotes/);
+  // review 8: long tee and redirect runs stay linear.
+  for (const raw of ['a ' + '|tee '.repeat(20000) + '; x', 'a ' + '>x '.repeat(20000) + 'y']) {
+    const t0 = Date.now();
+    cmdSafe(raw);
+    assert.ok(Date.now() - t0 < 2000, `${raw.length} chars took ${Date.now() - t0} ms`);
+  }
 });
 
 t('review 5 (M3): cmdSafe matches the plugin\'s, and start_app refuses an observed app with a redirect or VAR=', () => {
