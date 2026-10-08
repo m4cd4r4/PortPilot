@@ -81,6 +81,175 @@ function normPath(p) {
   return path.normalize(String(p || '')).replace(/\\/g, '/').replace(/\/+$/, '').toLowerCase();
 }
 
+/**
+ * The registered app whose cwd is this directory, or null. Case folds only
+ * where the default file system does (Windows, macOS): on Linux /a/Web and
+ * /a/web are two projects.
+ */
+function cwdKey(p, platform = process.platform) {
+  let s = path.normalize(String(p || '')).replace(/\\/g, '/').replace(/\/+$/, '');
+  // Git Bash spells I:\x as /i/x (as the plugin's normPath reads it).
+  if (platform === 'win32') s = s.replace(/^\/([a-zA-Z])(?=\/|$)/, (_, d) => `${d.toUpperCase()}:`);
+  return platform === 'win32' || platform === 'darwin' ? s.toLowerCase() : s;
+}
+
+function appAtCwd(apps, cwd, platform = process.platform) {
+  return (apps || []).find(a => a && a.cwd && cwdKey(a.cwd, platform) === cwdKey(cwd, platform)) || null;
+}
+
+/**
+ * A bash start as a command cmd.exe can run: leading `VAR=value` assignments
+ * move to env, trailing redirections and `&` go. Kept in step with cmdSafe in
+ * plugin/hooks/observe.mjs.
+ */
+function cmdSafe(raw) {
+  let s = String(raw || '').trim().replace(/(^|[^&])&$/, '$1').trim();
+  const env = {};
+  const lead = shellWords(s);
+  let i = 0;
+  for (; i < lead.length - 1 && lead[i].bare && /^[A-Za-z_][A-Za-z0-9_]*=/.test(lead[i].raw); i++) {
+    const name = lead[i].raw.slice(0, lead[i].raw.indexOf('='));
+    env[name] = lead[i].text.slice(name.length + 1);
+  }
+  if (i) s = s.slice(lead[i].start);
+  const cut = trailingShellOnly(shellWords(s));
+  if (cut > 0) s = s.slice(0, cut);
+  return { command: s.trim().replace(/[^\S\r\n]+/g, ' '), env };
+}
+
+/**
+ * Bash words with their source span; `bare` when the word does not start quoted
+ * or escaped; `ctl` when it holds an unquoted `;`, `|`, `(`, `)` or an `&`
+ * that is not part of a redirection (`>&`, `<&`, `&>`). An unquoted line break is a
+ * word of its own, with `ctl`.
+ */
+function shellWords(s) {
+  const out = [];
+  let cur = null, q = null;
+  const close = (i) => { if (cur) { cur.end = i; out.push(cur); cur = null; } };
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+    if (!q && (ch === '\n' || ch === '\r')) { close(i); out.push({ start: i, end: i + 1, text: ch, bare: true, redirAt: -1, ctl: true }); continue; }
+    if (!q && /\s/.test(ch)) { close(i); continue; }
+    if (!cur) cur = { start: i, end: s.length, text: '', bare: !(ch === '"' || ch === "'" || ch === '\\'), redirAt: -1, ctl: false };
+    if (!q && (ch === '>' || ch === '<') && cur.redirAt < 0) cur.redirAt = i - cur.start;
+    if (!q && (/[;|()]/.test(ch) || (ch === '&' && s[i - 1] !== '>' && s[i - 1] !== '<' && s[i + 1] !== '>'))) cur.ctl = true;
+    if (q) {
+      if (ch === q) q = null;
+      else if (q === '"' && ch === '\\' && i + 1 < s.length) cur.text += s[++i];
+      else cur.text += ch;
+    } else if (ch === '"' || ch === "'") q = ch;
+    else if (ch === '\\' && i + 1 < s.length) cur.text += s[++i];
+    else cur.text += ch;
+  }
+  close(s.length);
+  return out.map((w) => ({ ...w, raw: s.slice(w.start, w.end) }));
+}
+
+const REDIRECT = /^\d?(?:&>>?|>>?&?|<)/;
+
+/**
+ * Where a trailing run of redirections, `| tee ...` and `&` starts in s, or -1.
+ * A `>` inside quotes is an argument; one glued to a word (`3000>x.log`) is a
+ * redirection, as bash reads it. A `| tee` is trailing only when no word after
+ * it chains another command (`;`, `&&`, `|`, `&`, a line break), glued or not.
+ */
+function trailingShellOnly(words) {
+  const calm = new Array(words.length + 1).fill(true);
+  for (let j = words.length - 1; j >= 0; j--) calm[j] = calm[j + 1] && !words[j].ctl;
+  const teeAt = (k) => {
+    const w = words[k];
+    if (!w || !w.bare) return false;
+    const from = w.raw === '|tee' ? k + 1 : w.raw === '|' && words[k + 1] && words[k + 1].text === 'tee' ? k + 2 : -1;
+    return from >= 0 && calm[from];
+  };
+  // Past the redirection whose operator opens `head` (in word k), following a target
+  // with its own glued redirection (`> x.log> y.log`); -1 when a target chains a command.
+  const past = (k, head) => {
+    for (;;) {
+      const op = head.match(REDIRECT);
+      if (!op) return -1;
+      if (head.length > op[0].length) return k + 1;
+      const t = words[k + 1];
+      if (!t) return k + 1;
+      if (t.ctl) return -1;
+      if (!(t.redirAt > 0)) return k + 2;
+      k += 1;
+      head = t.raw.slice(t.redirAt);
+    }
+  };
+  for (let i = 1; i < words.length; i++) {
+    const w = words[i];
+    if (teeAt(i)) return w.start;
+    if (w.ctl) continue;
+    const whole = w.bare && REDIRECT.test(w.raw);
+    if (!whole && !(w.redirAt > 0)) continue;
+    let k = past(i, whole ? w.raw : w.raw.slice(w.redirAt));
+    if (k < 0) continue;
+    while (k < words.length) {
+      const x = words[k];
+      const n = x.bare && !x.ctl && REDIRECT.test(x.raw) ? past(k, x.raw) : -1;
+      if (n >= 0) k = n;
+      else if (teeAt(k)) k = words.length;
+      else if (x.bare && x.raw === '&' && k === words.length - 1) k += 1;
+      else break;
+    }
+    if (k >= words.length) return whole ? w.start : w.start + w.redirAt;
+    // Words inside i..k are operators and their targets, glued redirections followed
+    // by past(); a start there would walk the same chain to the same break at k.
+    i = Math.max(i, k - 1);
+  }
+  return -1;
+}
+
+/** A `<` or `>` outside double quotes: cmd.exe reads it as a redirection (it ignores single quotes). */
+function cmdRedirects(command) {
+  let q = false;
+  for (const ch of String(command || '')) {
+    if (ch === '"') q = !q;
+    else if (!q && (ch === '<' || ch === '>')) return true;
+  }
+  return false;
+}
+
+/**
+ * Why start_app will not run an app, or null. An observed app's command came
+ * from bash; a redirection or a leading `VAR=` would run differently (or
+ * write outside PortPilot's folders) under cmd.exe.
+ */
+function startRefusal(app) {
+  if (!app || app.registeredBy !== 'observed') return null;
+  const command = String(app.command || '').trim();
+  const safe = cmdSafe(command);
+  if (safe.command !== command.trim().replace(/[^\S\r\n]+/g, ' ')) {
+    const env = Object.keys(safe.env).length ? ` and put ${JSON.stringify(safe.env)} in the app's env` : '';
+    return `"${app.name}" was registered from a bash start and its command (${command}) has a shell redirection, a trailing & or a leading VAR= assignment, which cmd.exe would run differently. Fix it with update_app: command "${safe.command}"${env}.`;
+  }
+  if (cmdRedirects(command)) return `"${app.name}" was registered from a bash start and its command (${command}) has a < or > outside double quotes, which cmd.exe reads as a redirection. Fix the command with update_app (double-quote that argument).`;
+  return null;
+}
+
+/**
+ * The app an add_app call would duplicate, or null. An observation is
+ * idempotent by directory: a second one (another session, a later start)
+ * changes nothing. Any add of the same command in a directory already
+ * registered is the same server too, so it is not copied either, unless it
+ * runs on another port or with other env (a second instance). Commands
+ * compare in their cmd-safe form (`npm run dev > x.log` is `npm run dev`).
+ */
+function observedDuplicate(apps, { cwd, command, registeredBy, env, preferredPort }, platform = process.platform) {
+  const same = appAtCwd(apps, cwd, platform);
+  if (!same) return null;
+  if (registeredBy === 'observed') return same;
+  const key = (cmd, extra, port) => {
+    const safe = cmdSafe(cmd);
+    const e = { ...safe.env, ...(extra || {}) };
+    return JSON.stringify([safe.command, Object.keys(e).sort().map(k => [k, String(e[k])]), port || null]);
+  };
+  const want = key(command, env, preferredPort);
+  return (apps || []).find(a => a && a.cwd && cwdKey(a.cwd, platform) === cwdKey(cwd, platform) && key(a.command, a.env, a.preferredPort) === want) || null;
+}
+
 // Deterministic colour from a seed (branch or path) so re-registering a worktree
 // keeps its colour and sibling branches get distinct ones. Slice 10 will replace
 // this with the Peacock window colour when present.
@@ -636,6 +805,8 @@ function createServer() {
       const config = readConfig();
       const app = findApp(config.apps || [], identifier);
       if (!app) return { content: [{ type: 'text', text: `App not found: ${identifier}` }], isError: true };
+      const refused = startRefusal(app);
+      if (refused) return { content: [{ type: 'text', text: refused }], isError: true };
       const result = await startApp(app, configFile.logPathFor(getConfigPath(), app.id));
       if (result.success) stampStart(getConfigPath(), app, sessionId);
       return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }], isError: !result.success };
@@ -677,6 +848,8 @@ function createServer() {
       else return { content: [{ type: 'text', text: 'Specify group or favorites: true' }], isError: true };
 
       const results = await Promise.all(apps.map(async a => {
+        const refused = startRefusal(a);
+        if (refused) return { name: a.name, success: false, error: refused };
         const result = await startApp(a, configFile.logPathFor(getConfigPath(), a.id));
         if (result.success) stampStart(getConfigPath(), a, sessionId);
         return { name: a.name, ...result };
@@ -719,7 +892,7 @@ function createServer() {
 
   server.tool(
     'add_app',
-    'Register a new app in PortPilot',
+    'Register a new app in PortPilot. When PortPilot tells you a port started listening after a dev-server start you ran (a "PortPilot: :<port> started listening after ..." note), and you are confident your own start opened that port (check the PID and process it names), call this with the cwd, command and env it suggests, preferredPort set to that port and registeredBy "observed". Never register a port held by a process you did not start. Observed registrations are idempotent per directory: a second call for the same cwd changes nothing.',
     {
       name: z.string().describe('App display name'),
       command: z.string().describe('Shell command to start (e.g. "npm run dev")'),
@@ -728,11 +901,25 @@ function createServer() {
       isFavorite: z.boolean().optional().describe('Mark as favorite'),
       autoStart: z.boolean().optional().describe('Auto-start on launch'),
       group: z.string().optional().describe('Group name to assign to'),
-      description: z.string().optional().describe('Short description')
+      description: z.string().optional().describe('Short description'),
+      env: z.record(z.string()).optional().describe('Environment variables for the command (e.g. {"PORT":"4000"})'),
+      registeredBy: z.enum(['observed']).optional().describe('"observed" when registering a server you started after PortPilot noted its new port; leave unset otherwise'),
+      observedSession: z.string().optional().describe('The Claude Code session the observed start came from (the PortPilot plugin fills this in)')
     },
-    async ({ name, command, cwd, preferredPort, isFavorite, autoStart, group, description }) => {
+    async ({ name, command, cwd, preferredPort, isFavorite, autoStart, group, description, env, registeredBy, observedSession }) => {
+      // An observed command came from bash: save it in the form cmd.exe runs.
+      if (registeredBy === 'observed') {
+        const safe = cmdSafe(command);
+        command = safe.command;
+        env = { ...safe.env, ...(env || {}) };
+      }
       return updateConfig((config) => {
         if (!config.apps) config.apps = [];
+
+        const same = observedDuplicate(config.apps, { cwd, command, registeredBy, env, preferredPort });
+        if (same) {
+          return { content: [{ type: 'text', text: JSON.stringify({ success: true, existing: true, message: `"${same.name}" is already registered for ${cwd}`, app: same }, null, 2) }] };
+        }
 
         if (config.apps.some(a => a.name.toLowerCase() === name.toLowerCase())) {
           return { content: [{ type: 'text', text: `App "${name}" already exists` }], isError: true };
@@ -742,12 +929,13 @@ function createServer() {
         const newApp = {
           id: generateId(), name, command, cwd,
           preferredPort: preferredPort || null,
-          fallbackRange: null, env: {},
+          fallbackRange: null, env: env || {},
           autoStart: autoStart || false,
           isFavorite: isFavorite || false,
           group: group || null,
           description: description || null,
           color: '#4fc3f7',
+          ...(registeredBy ? { registeredBy, observedSession: observedSession || null, observedAt: now } : {}),
           createdAt: now, updatedAt: now
         };
 
@@ -799,7 +987,8 @@ function createServer() {
       isFavorite: z.boolean().optional(),
       autoStart: z.boolean().optional(),
       group: z.string().optional(),
-      description: z.string().optional()
+      description: z.string().optional(),
+      env: z.record(z.string()).optional().describe('Environment variables for the command; replaces the saved set')
     },
     async ({ identifier, ...updates }) => {
       return updateConfig((config) => {
@@ -1089,4 +1278,4 @@ async function main() {
 const isMain = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
 if (isMain) main().catch(console.error);
 
-export { normPath, pickColor, resolveWorktreeGit, registerWorktree, stampStart, detachedCommand, prepareLog };
+export { normPath, appAtCwd, cmdSafe, startRefusal, observedDuplicate,pickColor, resolveWorktreeGit, registerWorktree, stampStart, detachedCommand, prepareLog };

@@ -23771,6 +23771,138 @@ function generateId() {
 function normPath(p) {
   return path.normalize(String(p || "")).replace(/\\/g, "/").replace(/\/+$/, "").toLowerCase();
 }
+function cwdKey(p, platform = process.platform) {
+  let s = path.normalize(String(p || "")).replace(/\\/g, "/").replace(/\/+$/, "");
+  if (platform === "win32") s = s.replace(/^\/([a-zA-Z])(?=\/|$)/, (_, d) => `${d.toUpperCase()}:`);
+  return platform === "win32" || platform === "darwin" ? s.toLowerCase() : s;
+}
+function appAtCwd(apps, cwd, platform = process.platform) {
+  return (apps || []).find((a) => a && a.cwd && cwdKey(a.cwd, platform) === cwdKey(cwd, platform)) || null;
+}
+function cmdSafe(raw) {
+  let s = String(raw || "").trim().replace(/(^|[^&])&$/, "$1").trim();
+  const env = {};
+  const lead = shellWords(s);
+  let i = 0;
+  for (; i < lead.length - 1 && lead[i].bare && /^[A-Za-z_][A-Za-z0-9_]*=/.test(lead[i].raw); i++) {
+    const name = lead[i].raw.slice(0, lead[i].raw.indexOf("="));
+    env[name] = lead[i].text.slice(name.length + 1);
+  }
+  if (i) s = s.slice(lead[i].start);
+  const cut = trailingShellOnly(shellWords(s));
+  if (cut > 0) s = s.slice(0, cut);
+  return { command: s.trim().replace(/[^\S\r\n]+/g, " "), env };
+}
+function shellWords(s) {
+  const out = [];
+  let cur = null, q = null;
+  const close = (i) => {
+    if (cur) {
+      cur.end = i;
+      out.push(cur);
+      cur = null;
+    }
+  };
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+    if (!q && (ch === "\n" || ch === "\r")) {
+      close(i);
+      out.push({ start: i, end: i + 1, text: ch, bare: true, redirAt: -1, ctl: true });
+      continue;
+    }
+    if (!q && /\s/.test(ch)) {
+      close(i);
+      continue;
+    }
+    if (!cur) cur = { start: i, end: s.length, text: "", bare: !(ch === '"' || ch === "'" || ch === "\\"), redirAt: -1, ctl: false };
+    if (!q && (ch === ">" || ch === "<") && cur.redirAt < 0) cur.redirAt = i - cur.start;
+    if (!q && (/[;|()]/.test(ch) || ch === "&" && s[i - 1] !== ">" && s[i - 1] !== "<" && s[i + 1] !== ">")) cur.ctl = true;
+    if (q) {
+      if (ch === q) q = null;
+      else if (q === '"' && ch === "\\" && i + 1 < s.length) cur.text += s[++i];
+      else cur.text += ch;
+    } else if (ch === '"' || ch === "'") q = ch;
+    else if (ch === "\\" && i + 1 < s.length) cur.text += s[++i];
+    else cur.text += ch;
+  }
+  close(s.length);
+  return out.map((w) => ({ ...w, raw: s.slice(w.start, w.end) }));
+}
+var REDIRECT = /^\d?(?:&>>?|>>?&?|<)/;
+function trailingShellOnly(words) {
+  const calm = new Array(words.length + 1).fill(true);
+  for (let j = words.length - 1; j >= 0; j--) calm[j] = calm[j + 1] && !words[j].ctl;
+  const teeAt = (k) => {
+    const w = words[k];
+    if (!w || !w.bare) return false;
+    const from = w.raw === "|tee" ? k + 1 : w.raw === "|" && words[k + 1] && words[k + 1].text === "tee" ? k + 2 : -1;
+    return from >= 0 && calm[from];
+  };
+  const past = (k, head) => {
+    for (; ; ) {
+      const op = head.match(REDIRECT);
+      if (!op) return -1;
+      if (head.length > op[0].length) return k + 1;
+      const t = words[k + 1];
+      if (!t) return k + 1;
+      if (t.ctl) return -1;
+      if (!(t.redirAt > 0)) return k + 2;
+      k += 1;
+      head = t.raw.slice(t.redirAt);
+    }
+  };
+  for (let i = 1; i < words.length; i++) {
+    const w = words[i];
+    if (teeAt(i)) return w.start;
+    if (w.ctl) continue;
+    const whole = w.bare && REDIRECT.test(w.raw);
+    if (!whole && !(w.redirAt > 0)) continue;
+    let k = past(i, whole ? w.raw : w.raw.slice(w.redirAt));
+    if (k < 0) continue;
+    while (k < words.length) {
+      const x = words[k];
+      const n = x.bare && !x.ctl && REDIRECT.test(x.raw) ? past(k, x.raw) : -1;
+      if (n >= 0) k = n;
+      else if (teeAt(k)) k = words.length;
+      else if (x.bare && x.raw === "&" && k === words.length - 1) k += 1;
+      else break;
+    }
+    if (k >= words.length) return whole ? w.start : w.start + w.redirAt;
+    i = Math.max(i, k - 1);
+  }
+  return -1;
+}
+function cmdRedirects(command) {
+  let q = false;
+  for (const ch of String(command || "")) {
+    if (ch === '"') q = !q;
+    else if (!q && (ch === "<" || ch === ">")) return true;
+  }
+  return false;
+}
+function startRefusal(app) {
+  if (!app || app.registeredBy !== "observed") return null;
+  const command = String(app.command || "").trim();
+  const safe = cmdSafe(command);
+  if (safe.command !== command.trim().replace(/[^\S\r\n]+/g, " ")) {
+    const env = Object.keys(safe.env).length ? ` and put ${JSON.stringify(safe.env)} in the app's env` : "";
+    return `"${app.name}" was registered from a bash start and its command (${command}) has a shell redirection, a trailing & or a leading VAR= assignment, which cmd.exe would run differently. Fix it with update_app: command "${safe.command}"${env}.`;
+  }
+  if (cmdRedirects(command)) return `"${app.name}" was registered from a bash start and its command (${command}) has a < or > outside double quotes, which cmd.exe reads as a redirection. Fix the command with update_app (double-quote that argument).`;
+  return null;
+}
+function observedDuplicate(apps, { cwd, command, registeredBy, env, preferredPort }, platform = process.platform) {
+  const same = appAtCwd(apps, cwd, platform);
+  if (!same) return null;
+  if (registeredBy === "observed") return same;
+  const key = (cmd, extra, port) => {
+    const safe = cmdSafe(cmd);
+    const e = { ...safe.env, ...extra || {} };
+    return JSON.stringify([safe.command, Object.keys(e).sort().map((k) => [k, String(e[k])]), port || null]);
+  };
+  const want = key(command, env, preferredPort);
+  return (apps || []).find((a) => a && a.cwd && cwdKey(a.cwd, platform) === cwdKey(cwd, platform) && key(a.command, a.env, a.preferredPort) === want) || null;
+}
 var WORKTREE_COLORS = ["#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6", "#EC4899", "#06B6D4", "#84CC16", "#F97316", "#6366F1"];
 function pickColor(seed) {
   const s = String(seed || "");
@@ -24216,6 +24348,8 @@ function createServer2() {
       const config2 = readConfig();
       const app = findApp(config2.apps || [], identifier);
       if (!app) return { content: [{ type: "text", text: `App not found: ${identifier}` }], isError: true };
+      const refused = startRefusal(app);
+      if (refused) return { content: [{ type: "text", text: refused }], isError: true };
       const result = await startApp(app, configFile.logPathFor(getConfigPath(), app.id));
       if (result.success) stampStart(getConfigPath(), app, sessionId);
       return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }], isError: !result.success };
@@ -24249,6 +24383,8 @@ function createServer2() {
       else if (favorites) apps = apps.filter((a) => a.isFavorite);
       else return { content: [{ type: "text", text: "Specify group or favorites: true" }], isError: true };
       const results = await Promise.all(apps.map(async (a) => {
+        const refused = startRefusal(a);
+        if (refused) return { name: a.name, success: false, error: refused };
         const result = await startApp(a, configFile.logPathFor(getConfigPath(), a.id));
         if (result.success) stampStart(getConfigPath(), a, sessionId);
         return { name: a.name, ...result };
@@ -24283,7 +24419,7 @@ function createServer2() {
   );
   server.tool(
     "add_app",
-    "Register a new app in PortPilot",
+    'Register a new app in PortPilot. When PortPilot tells you a port started listening after a dev-server start you ran (a "PortPilot: :<port> started listening after ..." note), and you are confident your own start opened that port (check the PID and process it names), call this with the cwd, command and env it suggests, preferredPort set to that port and registeredBy "observed". Never register a port held by a process you did not start. Observed registrations are idempotent per directory: a second call for the same cwd changes nothing.',
     {
       name: external_exports.string().describe("App display name"),
       command: external_exports.string().describe('Shell command to start (e.g. "npm run dev")'),
@@ -24292,11 +24428,23 @@ function createServer2() {
       isFavorite: external_exports.boolean().optional().describe("Mark as favorite"),
       autoStart: external_exports.boolean().optional().describe("Auto-start on launch"),
       group: external_exports.string().optional().describe("Group name to assign to"),
-      description: external_exports.string().optional().describe("Short description")
+      description: external_exports.string().optional().describe("Short description"),
+      env: external_exports.record(external_exports.string()).optional().describe('Environment variables for the command (e.g. {"PORT":"4000"})'),
+      registeredBy: external_exports.enum(["observed"]).optional().describe('"observed" when registering a server you started after PortPilot noted its new port; leave unset otherwise'),
+      observedSession: external_exports.string().optional().describe("The Claude Code session the observed start came from (the PortPilot plugin fills this in)")
     },
-    async ({ name, command, cwd, preferredPort, isFavorite, autoStart, group, description }) => {
+    async ({ name, command, cwd, preferredPort, isFavorite, autoStart, group, description, env, registeredBy, observedSession }) => {
+      if (registeredBy === "observed") {
+        const safe = cmdSafe(command);
+        command = safe.command;
+        env = { ...safe.env, ...env || {} };
+      }
       return updateConfig((config2) => {
         if (!config2.apps) config2.apps = [];
+        const same = observedDuplicate(config2.apps, { cwd, command, registeredBy, env, preferredPort });
+        if (same) {
+          return { content: [{ type: "text", text: JSON.stringify({ success: true, existing: true, message: `"${same.name}" is already registered for ${cwd}`, app: same }, null, 2) }] };
+        }
         if (config2.apps.some((a) => a.name.toLowerCase() === name.toLowerCase())) {
           return { content: [{ type: "text", text: `App "${name}" already exists` }], isError: true };
         }
@@ -24308,12 +24456,13 @@ function createServer2() {
           cwd,
           preferredPort: preferredPort || null,
           fallbackRange: null,
-          env: {},
+          env: env || {},
           autoStart: autoStart || false,
           isFavorite: isFavorite || false,
           group: group || null,
           description: description || null,
           color: "#4fc3f7",
+          ...registeredBy ? { registeredBy, observedSession: observedSession || null, observedAt: now } : {},
           createdAt: now,
           updatedAt: now
         };
@@ -24359,7 +24508,8 @@ function createServer2() {
       isFavorite: external_exports.boolean().optional(),
       autoStart: external_exports.boolean().optional(),
       group: external_exports.string().optional(),
-      description: external_exports.string().optional()
+      description: external_exports.string().optional(),
+      env: external_exports.record(external_exports.string()).optional().describe("Environment variables for the command; replaces the saved set")
     },
     async ({ identifier, ...updates }) => {
       return updateConfig((config2) => {
@@ -24596,11 +24746,15 @@ async function main() {
 var isMain = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
 if (isMain) main().catch(console.error);
 export {
+  appAtCwd,
+  cmdSafe,
   detachedCommand,
   normPath,
+  observedDuplicate,
   pickColor,
   prepareLog,
   registerWorktree,
   resolveWorktreeGit,
-  stampStart
+  stampStart,
+  startRefusal
 };

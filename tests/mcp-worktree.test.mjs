@@ -9,7 +9,8 @@ import path from 'node:path';
 import fs from 'node:fs';
 import os from 'node:os';
 import { execSync } from 'node:child_process';
-import { normPath, pickColor, resolveWorktreeGit, registerWorktree } from '../mcp-server/index.js';
+import { cmdSafe as pluginCmdSafe } from '../plugin/hooks/observe.mjs';
+import { normPath, appAtCwd, cmdSafe, startRefusal, observedDuplicate,pickColor, resolveWorktreeGit, registerWorktree } from '../mcp-server/index.js';
 
 let pass = 0, fail = 0;
 function t(name, fn) {
@@ -32,6 +33,123 @@ t('nests under parent matched by main-worktree cwd', () => {
   assert.equal(r.app.name, 'MyProj');
   assert.equal(r.app.worktreePath, 'C:/repo/wt-x');
   assert.equal(config.apps.length, 2);
+});
+
+t('add_app observed: the app already at a cwd is found whatever its slashes or case', () => {
+  const apps = [{ id: 'a', name: 'shop', cwd: 'I:\\Scratch\\Shop\\' }];
+  assert.equal(appAtCwd(apps, 'i:/scratch/shop', 'win32').id, 'a');
+  assert.equal(appAtCwd(apps, 'I:/Scratch/Shop/web', 'win32'), null);
+});
+
+t('add_app observed: appAtCwd folds case on Windows and macOS only', () => {
+  const apps = [{ id: 'a', name: 'web', cwd: '/home/u/Web/' }];
+  assert.equal(appAtCwd(apps, '/home/u/web', 'darwin').id, 'a');
+  assert.equal(appAtCwd(apps, '/home/u/web', 'linux'), null);
+  assert.equal(appAtCwd(apps, '/home/u/Web', 'linux').id, 'a');
+});
+
+t('add_app: no copy of an observed app, whether the second add says observed or not', () => {
+  const apps = [{ id: 'o', name: 'pp-live-proj', cwd: 'C:/t/proj', command: 'npm run dev', registeredBy: 'observed' }, { id: 'm', name: 'web', cwd: 'C:/t/web', command: 'npm run dev' }];
+  assert.equal(observedDuplicate(apps, { cwd: 'C:\\t\\proj', command: 'npm run dev' }, 'win32').id, 'o');
+  assert.equal(observedDuplicate(apps, { cwd: 'C:/t/web', command: 'npm run dev', registeredBy: 'observed' }, 'win32').id, 'm');
+  // A plain add of another command is the user's call.
+  assert.equal(observedDuplicate(apps, { cwd: 'C:/t/proj', command: 'npm run storybook' }, 'win32'), null);
+});
+
+// tdd-guard:allow  (review round 5 fixes: one test per finding)
+t('review 5 (M5): a plain add of the same cwd and command as a plain app returns it', () => {
+  const apps = [{ id: 'm', name: 'web', cwd: 'C:/t/web', command: 'npm run dev' }, { id: 's', name: 'sb', cwd: 'C:/t/web', command: 'npm run storybook' }];
+  assert.equal(observedDuplicate(apps, { cwd: 'C:/t/web', command: 'npm run dev' }, 'win32').id, 'm');
+  assert.equal(observedDuplicate(apps, { cwd: 'C:/t/web', command: 'npm run storybook' }, 'win32').id, 's');
+  assert.equal(observedDuplicate(apps, { cwd: 'C:/t/web', command: 'npm run preview' }, 'win32'), null);
+});
+
+t('review 5 (M5): a Git Bash /i/ path matches I:/ on Windows only', () => {
+  const apps = [{ id: 'o', name: 'y', cwd: 'I:/Scratch/y', command: 'npm run dev', registeredBy: 'observed' }];
+  assert.equal(observedDuplicate(apps, { cwd: '/i/Scratch/y', command: 'npm run dev', registeredBy: 'observed' }, 'win32').id, 'o');
+  assert.equal(observedDuplicate(apps, { cwd: '/i/Scratch/y', command: 'npm run dev' }, 'win32').id, 'o');
+  assert.equal(appAtCwd(apps, '/i/Scratch/y', 'linux'), null);
+});
+
+t('review 5 (M5): commands compare in cmd-safe form', () => {
+  const apps = [{ id: 'o', name: 'y', cwd: 'C:/t/y', command: 'npm run dev > /tmp/dev.log 2>&1' }];
+  assert.equal(observedDuplicate(apps, { cwd: 'C:/t/y', command: 'npm run dev' }, 'win32').id, 'o');
+  const saved = [{ id: 'p', name: 'z', cwd: 'C:/t/z', command: 'npm run dev', env: { PORT: '4000' } }];
+  assert.equal(observedDuplicate(saved, { cwd: 'C:/t/z', command: 'PORT=4000 npm run dev &' }, 'win32').id, 'p');
+});
+
+t('review 6 (M1): a plain add on another port or with other env is a second instance, not a duplicate', () => {
+  const apps = [{ id: 'w', name: 'web', cwd: 'I:/x/web', command: 'npm run dev', preferredPort: 3000 }];
+  assert.equal(observedDuplicate(apps, { cwd: 'I:/x/web', command: 'PORT=4000 npm run dev' }, 'win32'), null);
+  assert.equal(observedDuplicate(apps, { cwd: 'I:/x/web', command: 'npm run dev', env: { PORT: '4000' }, preferredPort: 4000 }, 'win32'), null);
+  assert.equal(observedDuplicate(apps, { cwd: 'I:/x/web', command: 'npm run dev', preferredPort: 4000 }, 'win32'), null);
+  assert.equal(observedDuplicate(apps, { cwd: 'I:/x/web', command: 'npm run dev', preferredPort: 3000 }, 'win32').id, 'w');
+});
+
+t('review 6 (M2/L3/L4): cmdSafe keeps quoted > and <, splits VAR= by shell words, strips >& and | tee', () => {
+  const cases = [
+    ['npm run dev -- --title "a > b"', 'npm run dev -- --title "a > b"', {}],
+    ['node -e "require(\'http\').createServer((q,r)=>r.end()).listen(3000)"', 'node -e "require(\'http\').createServer((q,r)=>r.end()).listen(3000)"', {}],
+    ['VAR=a\\ b npm run dev', 'npm run dev', { VAR: 'a b' }],
+    ['FOO=a"b c" npm run dev', 'npm run dev', { FOO: 'ab c' }],
+    ['npm run dev >& log', 'npm run dev', {}],
+    ['npm run dev 2>&1 | tee dev.log', 'npm run dev', {}],
+    ['npm run dev && echo hi', 'npm run dev && echo hi', {}],
+    ['npm run dev -- --port 3000>x.log', 'npm run dev -- --port 3000', {}],
+    // review 7: a lone | tee goes; anything chained after it stays whole.
+    ['npm run dev | tee dev.log', 'npm run dev', {}],
+    ['npm run dev |tee dev.log', 'npm run dev', {}],
+    ['npm run dev 2>&1 | tee x.log && echo done', 'npm run dev 2>&1 | tee x.log && echo done', {}],
+    ['npm run dev | grep x', 'npm run dev | grep x', {}],
+    ['A=1 B=2 npm start', 'npm start', { A: '1', B: '2' }],
+    // review 8: a chain glued to the tee's words, or on the next line, keeps it whole.
+    ['npm run dev | tee x.log;echo hi', 'npm run dev | tee x.log;echo hi', {}],
+    ['npm run dev | tee x.log&&echo hi', 'npm run dev | tee x.log&&echo hi', {}],
+    ['npm run dev | tee x.log& echo hi', 'npm run dev | tee x.log& echo hi', {}],
+    ['npm run dev | tee x.log|grep y', 'npm run dev | tee x.log|grep y', {}],
+    ['npm run dev | tee x |& cat', 'npm run dev | tee x |& cat', {}],
+    ['npm run dev | tee x.log\necho hi', 'npm run dev | tee x.log\necho hi', {}],
+    ['(npm run dev | tee x)', '(npm run dev | tee x)', {}],
+    ['npm run dev | tee >(cat)', 'npm run dev | tee >(cat)', {}],
+    ['npm run dev | tee x ";" y', 'npm run dev', {}],
+    ['npm run dev | tee x.log 2>&1', 'npm run dev', {}],
+    // review 9: a chain glued to a redirect target stays; a target's own glued redirect goes too.
+    ['npm run dev > dev.log||true', 'npm run dev > dev.log||true', {}],
+    ['npm run dev 2> err.log;wait', 'npm run dev 2> err.log;wait', {}],
+    ['npm run dev | tee x.log > y.log||true', 'npm run dev | tee x.log > y.log||true', {}],
+    ['npm run dev > a;b > c', 'npm run dev > a;b', {}],
+    ['npm run dev > x.log> y.log', 'npm run dev', {}],
+    ['npm run dev < /dev/null> dev.log', 'npm run dev', {}],
+    ['npm run dev 0<&- > x.log', 'npm run dev', {}],
+  ];
+  for (const [raw, command, env] of cases) {
+    assert.deepStrictEqual(cmdSafe(raw), { command, env }, raw);
+    assert.deepStrictEqual(pluginCmdSafe(raw), { command, env }, raw);
+  }
+  const obs = (command) => ({ id: 'o', name: 'y', command, registeredBy: 'observed' });
+  assert.equal(startRefusal(obs('npm run dev -- --title "a > b"')), null);
+  assert.match(startRefusal(obs("node -e 'a=>b'")), /< or > outside double quotes/);
+  // review 8: long tee and redirect runs stay linear.
+  for (const raw of ['a ' + '|tee '.repeat(20000) + '; x', 'a ' + '>x '.repeat(20000) + 'y']) {
+    const t0 = Date.now();
+    cmdSafe(raw);
+    assert.ok(Date.now() - t0 < 2000, `${raw.length} chars took ${Date.now() - t0} ms`);
+  }
+});
+
+t('review 5 (M3): cmdSafe matches the plugin\'s, and start_app refuses an observed app with a redirect or VAR=', () => {
+  for (const raw of ['npm run dev > /tmp/dev.log 2>&1 &', 'PORT=4000 npm run dev', "A='x y' npm start", 'npx vite --port 3005 &> o.log', 'npm run dev -- --port 3005']) {
+    assert.deepStrictEqual(cmdSafe(raw), pluginCmdSafe(raw), raw);
+  }
+  const obs = (command) => ({ id: 'o', name: 'y', command, registeredBy: 'observed' });
+  assert.match(startRefusal(obs('npm run dev > /tmp/dev.log 2>&1')), /shell redirection.*update_app: command "npm run dev"\./);
+  assert.match(startRefusal(obs('PORT=4000 npm run dev')), /command "npm run dev" and put \{"PORT":"4000"\} in the app's env/);
+  assert.equal(startRefusal(obs('cd web && npm run dev')), null);
+  // review 9: a line break is not a redirection; no refusal that loops on its own advice.
+  assert.equal(startRefusal(obs('npm run dev\necho hi')), null);
+  assert.equal(startRefusal(obs('npm run dev -- --title "a\nb"')), null);
+  // A plain app's command is the user's: start_app runs it as on master.
+  assert.equal(startRefusal({ id: 'm', name: 'm', command: 'npm run dev > dev.log' }), null);
 });
 
 t('re-registering the same cwd updates and keeps the id', () => {

@@ -405,6 +405,7 @@ function setupEventListeners() {
   document.getElementById('setting-stop-apps-on-quit').addEventListener('change', saveSettings);
   document.getElementById('setting-auto-resize').addEventListener('change', saveSettings);
   document.getElementById('setting-notify-crash').addEventListener('change', saveSettings);
+  document.getElementById('setting-auto-register').addEventListener('change', saveSettings);
   document.getElementById('btn-export').addEventListener('click', exportConfig);
   document.getElementById('btn-import').addEventListener('click', importConfig);
 
@@ -2485,6 +2486,7 @@ async function loadSettings() {
     document.getElementById('setting-auto-resize').checked = state.settings.autoResizeWindow === true;
     document.getElementById('setting-notify-crash').checked = state.settings.notifyOnCrash !== false;
     document.getElementById('setting-open-at-login').checked = state.settings.openAtLogin !== false;
+    document.getElementById('setting-auto-register').checked = state.settings.autoRegister !== false;
     state.favoritesExpanded = result.settings.favoritesExpanded !== false;
     state.otherProjectsExpanded = result.settings.otherProjectsExpanded !== false;
     const pge = result.settings.portGroupExpanded;
@@ -2508,7 +2510,8 @@ async function saveSettings() {
     stopAppsOnQuit: document.getElementById('setting-stop-apps-on-quit').checked,
     autoResizeWindow: document.getElementById('setting-auto-resize').checked,
     notifyOnCrash: document.getElementById('setting-notify-crash').checked,
-    openAtLogin: document.getElementById('setting-open-at-login').checked
+    openAtLogin: document.getElementById('setting-open-at-login').checked,
+    autoRegister: document.getElementById('setting-auto-register').checked
   };
   await window.portpilot.config.updateSettings(settings);
   state.settings = settings;

@@ -22,12 +22,13 @@ const MAX_NAME = 16;
  * Listening TCP ports from the platform's scan output.
  * @param {'win32'|'darwin'|'linux'} platform
  * @param {string} stdout  `netstat -ano` | `lsof -iTCP -sTCP:LISTEN -n -P` | `ss -tlnp`
- * @returns {Map<number, {port:number, pid:number|null, processName:string}>}
+ * @returns {Map<number, {port:number, pid:number|null, processName:string, address:string}>}
+ *   address  the bind address as the scan prints it (`0.0.0.0`, `[::1]`, `*`)
  */
 export function parseListeners(platform, stdout) {
   const out = new Map();
-  const add = (port, pid, processName) => {
-    if (port >= 1 && port <= 65535 && !out.has(port)) out.set(port, { port, pid: pid || null, processName: processName || 'Unknown' });
+  const add = (port, pid, processName, address) => {
+    if (port >= 1 && port <= 65535 && !out.has(port)) out.set(port, { port, pid: pid || null, processName: processName || 'Unknown', address: address || '' });
   };
   for (const raw of String(stdout || '').split(/\r?\n/)) {
     const line = raw.trim();
@@ -37,19 +38,19 @@ export function parseListeners(platform, stdout) {
       if (!/^TCP\b/i.test(line)) continue;
       const parts = line.split(/\s+/);
       if (parts.length < 5 || !/:0$/.test(parts[2])) continue;
-      const m = parts[1].match(/:(\d+)$/);
-      if (m) add(Number(m[1]), Number(parts[4]));
+      const m = parts[1].match(/^(.*):(\d+)$/);
+      if (m) add(Number(m[2]), Number(parts[4]), null, m[1]);
     } else if (platform === 'darwin') {
       const parts = line.split(/\s+/);
-      const m = parts.length >= 9 && parts[8].match(/:(\d+)$/);
-      if (m) add(Number(m[1]), Number(parts[1]), parts[0]);
+      const m = parts.length >= 9 && parts[8].match(/^(.*):(\d+)$/);
+      if (m) add(Number(m[2]), Number(parts[1]), parts[0], m[1]);
     } else {
       if (!/^LISTEN\b/.test(line) && !/^tcp/i.test(line)) continue;
-      const m = line.match(/:(\d+)\s/);
+      const m = line.match(/(\S*):(\d+)\s/);
       if (!m) continue;
       const pid = line.match(/pid=(\d+)/);
       const name = line.match(/users:\(\("([^"]+)"/);
-      add(Number(m[1]), pid ? Number(pid[1]) : null, name ? name[1] : null);
+      add(Number(m[2]), pid ? Number(pid[1]) : null, name ? name[1] : null, m[1]);
     }
   }
   return out;
@@ -135,8 +136,10 @@ export function statusLine(config, runtime, listeners, now) {
 // A command that starts a long-running dev server. Deliberately narrow: a
 // false match on `npm run build` would deny or reroute a call that never
 // binds a port.
+// `npm dev` / `npm serve` / `npm preview` are not npm commands (only `npm
+// start` runs a script without `run`), so they start nothing.
 const DEV_START = [
-  /^(?:npm|pnpm|yarn|bun)\s+(?:run\s+)?(?:dev|start|serve|preview)(?:\s|$)/,
+  /^(?:(?:pnpm|yarn|bun)\s+(?:run\s+)?(?:dev|start|serve|preview)|npm\s+(?:start|run(?:-script)?\s+(?:dev|start|serve|preview)))(?:\s|$)/,
   /^(?:npx|pnpm\s+exec|bunx)\s+(?:next|vite|astro|nuxt|nuxi|serve|http-server|live-server)(?:\s|$)/,
   /^(?:next|vite|astro|nuxt)\s+(?:dev|start|preview)(?:\s|$)/,
   /^python3?\s+-m\s+http\.server(?:\s|$)/,
@@ -150,6 +153,10 @@ const PORT_PATTERNS = [
   /^python3?\s+-m\s+http\.server\s+(\d{2,5})\b/,
   /runserver\s+(?:[\d.]+:)?(\d{2,5})\b/,
 ];
+
+// Starts whose `-p N` is a port: a package script (forwarded on), and the
+// tools that take `-p`. Vite, Astro, uvicorn and live-server have no `-p`.
+const P_FLAG = /^(?:(?:(?:npx|pnpm\s+exec|bunx)\s+)?(?:next|nuxt|nuxi|http-server|serve)\s|(?:npm|pnpm|yarn|bun)\s|flask\s)/;
 
 // The same flags with their value, removed to compare two commands' scripts.
 const PORT_STRIP = [
@@ -233,10 +240,20 @@ export function devStart(text) {
     body = m[3];
   }
   if (!DEV_START.some((re) => re.test(body))) return null;
-  // `npm run dev -- --port 3001` forwards the flag.
-  for (const re of PORT_PATTERNS) {
-    const m = body.match(re);
-    if (m) { port = Number(m[1]); break; }
+  // `npm run dev -- --port 3001` forwards the flag; npm keeps one before `--`
+  // for itself (`npm run dev --port 3005` sets npm_config_port and the
+  // script never sees it), so that port is unknown.
+  const npmOwn = /^npm\s/.test(body) ? body.split(/\s--(?=\s|$)/)[0] : '';
+  if (npmOwn && /(?:^|\s)(?:--port\b|-p\s)/.test(npmOwn)) {
+    port = null;
+    portKnown = false;
+  } else {
+    for (const re of PORT_PATTERNS) {
+      // `-p N` is a port only for the tools that take it (`vite -p` is not).
+      if (re === PORT_PATTERNS[1] && !P_FLAG.test(body)) continue;
+      const m = body.match(re);
+      if (m) { port = Number(m[1]); break; }
+    }
   }
   if (PORT_UNREAD.test(body)) portKnown = false;
   // Redirects do not change what starts (parseStart marks the step not bare).
@@ -249,10 +266,11 @@ export function devStart(text) {
 
 /**
  * Parse a Bash command for a dev-server start.
- * @returns {null | {cd: string|null, port: number|null, script: string, certain: boolean, bare: boolean}}
+ * @returns {null | {cd: string|null, port: number|null, script: string, raw: string, certain: boolean, bare: boolean}}
  *   cd       the directory a leading `cd X &&` chain moves to (as written), or null
  *   port     an explicit port (`--port`, `-p`, `PORT=`, `export PORT=`), or null
  *   script   the start, normalised for comparing with an app's command
+ *   raw      the start step as written (runnable, unlike script)
  *   certain  the directory and the port can be read from the command: no
  *            other step before the start, no subshell, no PORT read from a variable
  *   bare     certain, and nothing but a leading cd chain and a trailing `&`
@@ -273,7 +291,7 @@ export function parseStart(command) {
       if (!start.portKnown) certain = false;
       const last = i === steps.length - 1;
       if (start.env || step.redirect || !(last && (step.op === null || step.op === '&'))) bare = false;
-      return { cd, port, script: start.script, certain, bare: certain && bare };
+      return { cd, port, script: start.script, raw: step.text, certain, bare: certain && bare };
     }
     // A step before the start: it must run first and must not move the
     // directory in a way the command does not show.
@@ -302,11 +320,14 @@ export function parseStart(command) {
 
 // ---- Paths ------------------------------------------------------------------
 
-/** Comparable form of a path: forward slashes, no trailing slash, `.`/`..` folded. */
-export function normPath(p, { windows = false } = {}) {
+/**
+ * Comparable form of a path: forward slashes, no trailing slash, `.`/`..` folded.
+ * keepCase skips the windows lower-casing, for a path that is written back.
+ */
+export function normPath(p, { windows = false, keepCase = false } = {}) {
   let s = String(p || '').replace(/\\/g, '/');
   // Git Bash spells I:\x as /i/x.
-  if (windows) s = s.replace(/^\/([a-zA-Z])(?=\/|$)/, '$1:');
+  if (windows) s = s.replace(/^\/([a-zA-Z])(?=\/|$)/, (_, d) => `${d.toUpperCase()}:`);
   const abs = s.startsWith('/') ? '/' : '';
   const out = [];
   for (const part of s.split('/')) {
@@ -315,7 +336,7 @@ export function normPath(p, { windows = false } = {}) {
     out.push(part);
   }
   const joined = abs + out.join('/');
-  return windows ? joined.toLowerCase() : joined;
+  return windows && !keepCase ? joined.toLowerCase() : joined;
 }
 
 function isAbsolute(p) {
@@ -323,12 +344,12 @@ function isAbsolute(p) {
 }
 
 /** The directory a start runs in: the session cwd, moved by a leading cd. */
-export function startDir(sessionCwd, cd, { windows = false, home = '' } = {}) {
-  if (!cd) return normPath(sessionCwd, { windows });
+export function startDir(sessionCwd, cd, { windows = false, home = '', keepCase = false } = {}) {
+  if (!cd) return normPath(sessionCwd, { windows, keepCase });
   let target = cd;
   if (target.startsWith('~')) target = home + target.slice(1);
   if (!isAbsolute(target)) target = `${sessionCwd}/${target}`;
-  return normPath(target, { windows });
+  return normPath(target, { windows, keepCase });
 }
 
 // ---- Guard decision ---------------------------------------------------------
@@ -413,9 +434,14 @@ export function decide({ start, dir, config, runtime, listeners, windows = false
     const holderStartedBy = holderApp && rtApps[holderApp.id] ? rtApps[holderApp.id].startedBy : null;
     const conflict = describeConflict({ port, holder, holderApp, holderStartedBy, app });
     if (app && holderApp && holderApp.id === app.id) {
+      // An observed app was registered from a port Claude picked; if it picked
+      // another process's port, every start here is denied until it is fixed.
+      const suspect = app.registeredBy === 'observed'
+        ? ` ${app.name} was registered from an observed start. If ${holder.processName}${holder.pid ? ` (PID ${holder.pid})` : ''} is not this project's server, that registration is wrong: fix its preferredPort with update_app (or delete_app it), then start again.`
+        : '';
       return {
         action: 'deny',
-        reason: `PortPilot: ${app.name} is already running on :${port} - reuse http://localhost:${port} instead of starting a second copy. (${conflict.sentence})`,
+        reason: `PortPilot: ${app.name} is already running on :${port} - reuse http://localhost:${port} instead of starting a second copy. (${conflict.sentence})${suspect}`,
       };
     }
     return {
@@ -428,8 +454,11 @@ export function decide({ start, dir, config, runtime, listeners, windows = false
   // port: start it through PortPilot. start_app runs the registered command,
   // so anything else (another script, another port, a pipe or a step around
   // the start) would be silently changed or dropped.
+  // An app PortPilot only observed (registeredBy 'observed') is never routed:
+  // start_app runs its command through cmd.exe with PORT set, which can run
+  // differently from the bash Claude typed it in.
   const reg = registeredStart(app);
-  if (start.bare && reg && reg.script === start.script && port === (reg.port || Number(app.preferredPort))) {
+  if (start.bare && reg && app.registeredBy !== 'observed' && reg.script === start.script && port === (reg.port || Number(app.preferredPort))) {
     return { action: 'route', app, port, cd: start.cd };
   }
   return { action: 'pass' };
