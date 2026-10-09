@@ -11,3 +11,4 @@ Captured, not built. Each came up while building something else.
 - **Stop leaves the server running on Linux.** `processManager.killProcess` runs `kill -9 <pid>` on the shell wrapper only, so the node child can keep its port after Stop (Windows uses `taskkill /T`). Found when CI's Re-run test hit EADDRINUSE on ubuntu. Kill the process group.
 - **History in the VS Code view** is plan row #22.
 - **Re-run clean-up.** Deleting a re-run app does not run `git worktree remove` for its sibling worktree yet (found in PR B2).
+- **Live preview per app (row previews follow-up).** The Apps row shows the run's one-off thumbnail, taken when the page first answers, so it can go stale while the app keeps running. A refreshing preview per app is a separate, larger idea (capture cadence, cost, privacy); the row drawer has no preview either. Plan row #23 covers the static row thumbnail only.

@@ -124,5 +124,26 @@
     return `${g.branch || 'detached'} @ ${g.sha.slice(0, 7)}${dirty}`;
   }
 
-  return { filterRuns, facets, runStateOf, startedByWord, formatWhen, formatBytes, footerText, gitLine };
+  /**
+   * The thumbnail each Apps row may show: per app, its newest OPEN run, and only
+   * when that run already has a page.thumb. A newer run still waiting for its
+   * capture hides the older run's page rather than showing the wrong one.
+   * Returns { [appId]: { id, thumb, port } }.
+   */
+  function rowThumbs(runs) {
+    const newest = new Map();
+    for (const r of runs || []) {
+      if (!r || !r.appId || r.stoppedAt) continue;
+      const t = Date.parse(r.startedAt) || 0;
+      const cur = newest.get(r.appId);
+      if (!cur || t >= cur.t) newest.set(r.appId, { t, run: r });
+    }
+    const out = {};
+    for (const [appId, { run }] of newest) {
+      if (run.page && run.page.thumb) out[appId] = { id: run.id, thumb: run.page.thumb, port: run.port ?? null };
+    }
+    return out;
+  }
+
+  return { filterRuns, facets, runStateOf, startedByWord, formatWhen, formatBytes, footerText, gitLine, rowThumbs };
 });

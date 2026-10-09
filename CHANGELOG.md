@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Page previews on the Apps tab.** A running app's row (parent and worktree rows) shows a 32 x 18 px thumbnail of its page, taken from the thumbnail PortPilot already captured for its open run. It reuses the History tab's capture and IPC, opens no extra window and does not make rows taller. Stopped apps show none, and rows without a thumbnail look as before. Hidden at phone width. **Settings > Show page previews on running apps** turns it off.
+
 ### Documentation
 - README "Ways to use PortPilot": one paragraph and image each for the desktop app, web portal, VS Code extension and Claude Code. Images come from the committed scripts in `docs/demo/tools/` (`desktop-shots.mjs`, `web-shot.mjs`, `claude-shots.mjs`) on the fictional demo seed.
 

@@ -1375,6 +1375,27 @@ body {
   }
 }
 
+/* Page preview on a running app's row. 18px is the row's content height (a
+   running row is 24px with 3px padding), so a row with a preview is no taller
+   than one without. */
+.row-thumb {
+  flex-shrink: 0;
+  box-sizing: border-box;
+  width: 32px;
+  height: 18px;
+  overflow: hidden;
+  line-height: 0;
+  border-radius: 3px;
+  background: var(--bg-tertiary);
+  border: var(--border-width) solid var(--border-color);
+}
+.row-thumb img { width: 100%; height: 100%; object-fit: cover; object-position: top; display: block; }
+/* Phone width has no spare 32px: the name area already clips the port chip, and
+   the port matters more than a picture. */
+@media (max-width: 600px) {
+  .row-thumb { display: none; }
+}
+
 /* Row state cell (UX A1): shape + word, then uptime / reason / provenance.
    Shape and word carry the state; --state-color only reinforces it (D5). */
 .state-cell {

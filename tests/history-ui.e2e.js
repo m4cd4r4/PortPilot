@@ -143,6 +143,42 @@ async function main() {
     assert(fs.existsSync(path.join(runHistory.historyDirFor(configPath), run.page.thumb)), 'thumb file exists');
     assert.strictEqual(electronApp.windows().length, 1, 'no capture window left open');
 
+    console.log('step: apps row preview');
+    await win.click('.view-tab[data-view="apps"]');
+    const shopThumb = '.app-card[data-id="app_shop"] .row-thumb img';
+    await until(async () => (await win.$$(shopThumb)).length === 1, 15000, 'preview on the running shop row');
+    const rowInfo = await win.evaluate(() => {
+      // The row proper: a conflict strip hangs off the same card and is not part of the row's density.
+      const h = (id) => { const c = document.querySelector(`.app-card[data-id="${id}"]`); const s = c.querySelector('.conflict-strip'); return Math.round(c.getBoundingClientRect().height - (s ? s.getBoundingClientRect().height : 0)); };
+      const img = document.querySelector('.app-card[data-id="app_shop"] .row-thumb img');
+      const cell = img.parentElement;
+      const shop = h('app_shop');
+      cell.style.display = 'none';
+      const shopNoThumb = h('app_shop');
+      cell.style.display = '';
+      return { shopNoThumb, shop, plain: h('app_plain'), plainThumb: !!document.querySelector('.app-card[data-id="app_plain"] .row-thumb'), decoded: img.complete && img.naturalWidth > 0 };
+    });
+    console.log('row preview', JSON.stringify(rowInfo));
+    assert.strictEqual(rowInfo.shop, rowInfo.shopNoThumb, 'the preview does not make its own row taller');
+    assert.strictEqual(rowInfo.plainThumb, false, 'a stopped app shows no preview');
+    assert.strictEqual(rowInfo.decoded, true, 'the preview is decoded at render');
+    assert.strictEqual(electronApp.windows().length, 1, 'the row preview opened no extra window');
+    await win.waitForTimeout(7000); // two auto-scan refreshes: the preview stays, nothing new opens
+    assert.strictEqual((await win.$$(shopThumb)).length, 1, 'the preview survives the auto-scan refresh');
+    assert.strictEqual(electronApp.windows().length, 1, 'a refresh opened no capture window');
+    for (const [w, h] of [[1440, 900], [390, 844]]) {
+      await win.setViewportSize({ width: w, height: h });
+      await win.waitForTimeout(400);
+      await win.screenshot({ path: path.join(os.tmpdir(), `pp-ui-apps-${w}.png`) });
+    }
+    await win.setViewportSize({ width: 1440, height: 900 });
+    await win.click('#btn-settings');
+    await win.uncheck('#setting-row-previews');
+    await until(async () => (await win.$$(shopThumb)).length === 0, 8000, 'preview gone when the setting is off');
+    await win.check('#setting-row-previews');
+    await until(async () => (await win.$$(shopThumb)).length === 1, 8000, 'preview back when the setting is on');
+    await win.click('#settings-close');
+
     console.log('step: asserts ok');
     const shots = path.join(root, 'docs', 'demo', 'screenshots');
     fs.mkdirSync(shots, { recursive: true });

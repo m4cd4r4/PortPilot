@@ -406,6 +406,7 @@ function setupEventListeners() {
   document.getElementById('setting-auto-resize').addEventListener('change', saveSettings);
   document.getElementById('setting-notify-crash').addEventListener('change', saveSettings);
   document.getElementById('setting-auto-register').addEventListener('change', saveSettings);
+  document.getElementById('setting-row-previews').addEventListener('change', saveSettings);
   document.getElementById('btn-export').addEventListener('click', exportConfig);
   document.getElementById('btn-import').addEventListener('click', importConfig);
 
@@ -833,6 +834,7 @@ async function loadApps() {
     updateAppsCount();
     refreshHealth();
     fillFreePorts();
+    if (window.PortPilotRowThumbs) window.PortPilotRowThumbs.refresh();
 
     if (state.settings.autoResizeWindow) {
       try {
@@ -1037,6 +1039,7 @@ function renderApps() {
   dom.appsList.innerHTML = html;
   reapplyArmed(dom.appsList);
   updateGroupSelects();
+  if (window.PortPilotRowThumbs) window.PortPilotRowThumbs.sync();
 }
 
 // Render a top-level app plus any branch/worktree children nested beneath it.
@@ -1185,6 +1188,7 @@ function renderAppCard(app, branchCount = 0) {
         ${statsHtml}
         ${badges.length > 0 ? `<div class="req-badges">${badges.join('')}</div>` : ''}
       </div>
+      ${window.PortPilotRowThumbs ? window.PortPilotRowThumbs.html(app, !!isRunning) : ''}
       ${stateCellHtml}
       <span class="expand-indicator">${icon('chevron', 10)}</span>
       <div class="app-actions-visible">
@@ -2490,6 +2494,7 @@ async function loadSettings() {
     document.getElementById('setting-history-snapshots').checked = state.settings.historySnapshots !== false;
     document.getElementById('setting-history-max-runs').value = state.settings.historyMaxRuns || 500;
     document.getElementById('setting-history-max-mb').value = state.settings.historyMaxMB || 150;
+    document.getElementById('setting-row-previews').checked = state.settings.rowPreviews !== false;
     state.favoritesExpanded = result.settings.favoritesExpanded !== false;
     state.otherProjectsExpanded = result.settings.otherProjectsExpanded !== false;
     const pge = result.settings.portGroupExpanded;
@@ -2517,11 +2522,14 @@ async function saveSettings() {
     autoRegister: document.getElementById('setting-auto-register').checked,
     historySnapshots: document.getElementById('setting-history-snapshots').checked,
     historyMaxRuns: Math.max(10, parseInt(document.getElementById('setting-history-max-runs').value) || 500),
-    historyMaxMB: Math.max(10, parseInt(document.getElementById('setting-history-max-mb').value) || 150)
+    historyMaxMB: Math.max(10, parseInt(document.getElementById('setting-history-max-mb').value) || 150),
+    rowPreviews: document.getElementById('setting-row-previews').checked
   };
   await window.portpilot.config.updateSettings(settings);
+  const previewsChanged = (state.settings.rowPreviews !== false) !== settings.rowPreviews;
   state.settings = settings;
   setupAutoScan();   // apply new autoScan / scanInterval immediately
+  if (previewsChanged && window.PortPilotRowThumbs) window.PortPilotRowThumbs.settingChanged();
   showToast('Settings saved', 'success');
 }
 
