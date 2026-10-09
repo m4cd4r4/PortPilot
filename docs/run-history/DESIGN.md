@@ -53,7 +53,7 @@ Never noted: uncertain or unparseable commands; one-shot tool runs (`next build`
 
 ## PR B1: run records
 
-New module `src/core/runHistory.js`, zero dependencies, loaded by the desktop app, web agent and MCP server (and by VS Code through `copy-runtime.js` at its next build; no extension code changes).
+New module `src/core/runHistory.js`, zero dependencies, loaded by the desktop app, web agent and MCP server (and by VS Code through `copy-runtime.js` at its next build; no extension code changes beyond one line in `copy-runtime.js` listing `core/runHistory.js`). It ships as `runHistory.cjs` beside `configFile.cjs` (desktop `extraResources`, `build-plugin.mjs`, `copy-runtime.js`). Opt-outs: per repo with `git config portpilot.snapshots false`, globally with `settings.historySnapshots = false`. Caps are `settings.historyMaxRuns` (500) and `settings.historyMaxMB` (150); pinned runs count toward the run cap, at most 50 pins.
 
 ### Where it hooks in
 
@@ -91,7 +91,7 @@ Local only; nothing is sent anywhere. The git snapshot lives in the project's ow
 }
 ```
 
-`git` is null outside a repo. `skipped` is `"not-a-repo" | "too-large" | "git-missing" | "timeout"`. `files` is capped at 50 names, because file names are what free-text search most often hits ("checkout").
+`git` is null outside a repo, and also for a run whose process exited before the async git patch landed (known limit). `skipped` is `"not-a-repo" | "too-large" | "git-missing" | "timeout" | "unborn-head" | "opted-out" | "error"` (the last three were added in B1). `files` is capped at 50 names, because file names are what free-text search most often hits ("checkout").
 
 ### Dirty-tree snapshot: temporary-index commit + ref (chosen)
 
@@ -117,7 +117,7 @@ Untracked capture decides it: the brief's core case is an uncommitted mockup, wh
 
 ### Retention and pruning
 
-Caps: **500 runs** and **150 MB** (`runs.json` plus `thumbs/`). Both settings. Pruning runs inside the same `updateJson` that appends: drop the oldest unpinned runs until both caps hold, delete their thumbs, then (outside the lock, best-effort) `git update-ref -d` each dropped ref where `repoRoot` still exists. A weekly sweep in the desktop app removes orphan thumbs and refs whose run is gone. Pinned runs never prune; at most 50 pins.
+Caps: **500 runs** and **150 MB** (`runs.json` plus `thumbs/`). Both settings. Pruning runs inside the same `updateJson` that appends: drop the oldest unpinned runs until both caps hold, delete their thumbs, then (outside the lock, best-effort, one `git update-ref --stdin` per repo started after the start returns) delete each dropped ref where `repoRoot` still exists. The 20 MB snapshot guard counts every dirty path, tracked or not. **Moved to B2:** the weekly sweep that removes orphan thumbs and refs whose run is gone (refs leak today only if the process dies between `update-ref` and the record patch, or `runs.json` is lost). Pinned runs never prune; at most 50 pins.
 
 ### MCP tool: `find_run` (tool 20)
 
@@ -194,9 +194,9 @@ Order: #19 and #20 are independent (guard vs core) and can run in parallel; #21 
 
 1. **Framework-default ports**: should `npm run dev` with a bare `vite`/`next dev` script auto-register? *Recommended: no in PR A. Pass untouched; revisit with a "learn the port after it binds" follow-up, which keeps the never-guess guarantee.*
 2. **Re-run dependencies**: install fresh in the new worktree, or junction `node_modules` from the original checkout? *Recommended: fresh install. A junction breaks Turbopack and risks the recursive-delete trap; a lockfile install is slower but always correct.*
-3. **Snapshot refs in the project repo**: acceptable to write `refs/portpilot/runs/*` into each repo? *Recommended: yes. They are invisible to branches and normal push/fetch, deduplicate, and restore without conflicts. A per-repo opt-out falls back to "no snapshot".*
-4. **A `rerun_run` MCP tool** in B1, or only `find_run` with steps? *Recommended: `find_run` only for now. Re-run creates a worktree and installs packages, which the user should trigger from the desktop until the flow has been used.*
-5. **Retention caps**: 500 runs / 150 MB with pinning? *Recommended: yes, both editable in Settings.*
+3. **Snapshot refs in the project repo**: acceptable to write `refs/portpilot/runs/*` into each repo? **Answered 2026-10-08: yes, with a per-repo opt-out.** *Recommended: yes. They are invisible to branches and normal push/fetch, deduplicate, and restore without conflicts. A per-repo opt-out falls back to "no snapshot".*
+4. **A `rerun_run` MCP tool** in B1, or only `find_run` with steps? **Answered 2026-10-08: `find_run` only; it returns the literal `rerun.steps` (plus a `rerun.note`), and `running` means the run is open AND its port is listening.** *Recommended: `find_run` only for now. Re-run creates a worktree and installs packages, which the user should trigger from the desktop until the flow has been used.*
+5. **Retention caps**: 500 runs / 150 MB with pinning? **Answered 2026-10-08: yes; max 50 pins; caps editable in Settings.** *Recommended: yes, both editable in Settings.*
 
 ## Open items
 

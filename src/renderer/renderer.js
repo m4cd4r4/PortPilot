@@ -2487,6 +2487,9 @@ async function loadSettings() {
     document.getElementById('setting-notify-crash').checked = state.settings.notifyOnCrash !== false;
     document.getElementById('setting-open-at-login').checked = state.settings.openAtLogin !== false;
     document.getElementById('setting-auto-register').checked = state.settings.autoRegister !== false;
+    document.getElementById('setting-history-snapshots').checked = state.settings.historySnapshots !== false;
+    document.getElementById('setting-history-max-runs').value = state.settings.historyMaxRuns || 500;
+    document.getElementById('setting-history-max-mb').value = state.settings.historyMaxMB || 150;
     state.favoritesExpanded = result.settings.favoritesExpanded !== false;
     state.otherProjectsExpanded = result.settings.otherProjectsExpanded !== false;
     const pge = result.settings.portGroupExpanded;
@@ -2511,7 +2514,10 @@ async function saveSettings() {
     autoResizeWindow: document.getElementById('setting-auto-resize').checked,
     notifyOnCrash: document.getElementById('setting-notify-crash').checked,
     openAtLogin: document.getElementById('setting-open-at-login').checked,
-    autoRegister: document.getElementById('setting-auto-register').checked
+    autoRegister: document.getElementById('setting-auto-register').checked,
+    historySnapshots: document.getElementById('setting-history-snapshots').checked,
+    historyMaxRuns: Math.max(10, parseInt(document.getElementById('setting-history-max-runs').value) || 500),
+    historyMaxMB: Math.max(10, parseInt(document.getElementById('setting-history-max-mb').value) || 150)
   };
   await window.portpilot.config.updateSettings(settings);
   state.settings = settings;
