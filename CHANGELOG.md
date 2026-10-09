@@ -7,11 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.5.0] - 2026-10-09
+
 ### Added
+- **Run history.** Every start, stop and crash writes a local run record. A dirty tree, untracked files included, is snapshotted to `refs/portpilot/runs/<id>` through a temporary index, so the real index and branches never move. Runs are pruned at 500 runs or 150 MB; pinned runs (at most 50) never prune. History is best-effort: a failure never fails a start, stop or crash record.
+- **`find_run` MCP tool (tool 20).** Claude looks up a past run by app, branch, SHA, file or date and gets the literal steps to get that version back.
+- **Observe, don't take over (dev-server guard).** A certain dev-server start in an unregistered directory runs as typed. If a port appears within 2 minutes, the guard asks Claude once to register it through `add_app` (`registeredBy: observed`, idempotent by directory). Observed apps are guarded against busy ports but never routed. `settings.autoRegister` turns it off.
 - **History tab in the desktop app.** Lists every recorded run with a page thumbnail, state word, branch, SHA and dirty-file count. Search by app, branch, file or SHA; filter by app, branch, date range or dirty only; Open URL is enabled only while that run is up; Copy SHA; Pin. The footer shows run count and size against the cap.
 - **Re-run this version.** Recreates a run's commit and uncommitted files in a sibling worktree (`<repo>-run-<id>`), installs from the lockfile, registers it under the original app and starts it on a free port (`--port N` is rewritten, otherwise `PORT` is set). The new run records `rerunOf`. It refuses by name when the repo is gone, the snapshot was pruned or the run had no git state.
 - **Page thumbnails.** A hidden offscreen window renders each live run's page once and stores a 480 px JPEG. It never leaves localhost and never stays open.
 - **Weekly orphan sweep** removes thumbnails and `refs/portpilot/runs/*` refs whose run no longer exists.
+
+### Changed
+- **`start_app` and `bulk_start` leave an app alone when its port is already listening**, so a second call cannot record a run for a process Claude never launched.
 
 ## [3.4.0] - 2026-10-07
 
