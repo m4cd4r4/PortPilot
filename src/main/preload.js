@@ -52,6 +52,7 @@ contextBridge.exposeInMainWorld('portpilot', {
   history: {
     list: () => ipcRenderer.invoke('history:list'),
     thumbs: (ids) => ipcRenderer.invoke('history:thumbs', ids),
+    rowThumbs: () => ipcRenderer.invoke('history:rowThumbs'),
     pin: (runId, pinned) => ipcRenderer.invoke('history:pin', runId, pinned),
     rerun: (runId) => ipcRenderer.invoke('history:rerun', runId)
   },

@@ -148,6 +148,8 @@
   const history = {
     list: () => ok({ runs: historyRuns, live: liveRunIds, stats: { runs: 312, bytes: 41 * 1024 * 1024, maxBytes: 150 * 1024 * 1024 } }),
     thumbs: (ids) => ok({ thumbs: Object.fromEntries((ids || []).filter((id) => historyThumbs[id]).map((id) => [id, historyThumbs[id]])) }),
+    // Same rule as runView.rowThumbs: the newest open run per app, if it has a thumb.
+    rowThumbs: () => ok({ byApp: Object.fromEntries(historyRuns.filter((r) => !r.stoppedAt && r.page && r.page.thumb).map((r) => [r.appId, { id: r.id, thumb: r.page.thumb, port: r.port ?? null }])) }),
     pin: (id, pinned) => { const r = historyRuns.find((x) => x.id === id); if (r) r.pinned = !!pinned; return ok(); },
     rerun: (id) => new Promise((resolve) => {
       ['checking', 'worktree', 'install', 'register', 'start', 'done'].forEach((stage, i) => {

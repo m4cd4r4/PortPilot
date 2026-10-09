@@ -7,6 +7,7 @@ const path = require('path');
 
 const runHistory = require('../core/runHistory');
 const runSweep = require('../core/runSweep');
+const { rowThumbs } = require('../core/runView');
 const { readRuntime } = require('../core/configFile');
 const { probe } = require('./healthCheck');
 
@@ -46,6 +47,22 @@ function setupHistoryIpc(ipcMain, configStore) {
         live: await liveRunIds(configPath(), runs),
         stats: runSweep.historyStats(configPath()),
       };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  // Apps rows: which open run's thumbnail each app shows. An open run alone does
+  // not prove its server is the one running now (a stop outside PortPilot leaves
+  // it open), so the app must also have a runtime record, as in liveRunIds; the
+  // renderer then matches the live port. No probes, so it is cheap enough for the
+  // 3-second refresh; pixels still come from history:thumbs.
+  ipcMain.handle('history:rowThumbs', async () => {
+    try {
+      const runtime = readRuntime(configPath()).apps || {};
+      const byApp = rowThumbs(runHistory.readRuns(configPath()));
+      for (const appId of Object.keys(byApp)) if (!runtime[appId]) delete byApp[appId];
+      return { success: true, byApp };
     } catch (err) {
       return { success: false, error: err.message };
     }

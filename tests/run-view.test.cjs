@@ -77,6 +77,17 @@ const run = (over = {}) => ({
   await t('a closed run is never shown running', () => {
     assert.strictEqual(view.runStateOf(run(), false).state, 'stopped');
   });
+  await t('rowThumbs: newest open run per app, only when it has a thumb', () => {
+    const open = (id, appId, startedAt, thumb) => run({ id, appId, startedAt, stoppedAt: null, page: thumb ? { thumb } : null });
+    const got = view.rowThumbs([
+      open('r_old', 'a1', '2026-10-09T01:00:00Z', 'thumbs/r_old.jpg'),
+      open('r_new', 'a1', '2026-10-09T02:00:00Z', null),            // newer run, capture pending: hide the old page
+      open('r_two', 'a2', '2026-10-09T01:30:00Z', 'thumbs/r_two.jpg'),
+      run({ id: 'r_closed', appId: 'a3', stoppedAt: '2026-10-09T03:00:00Z' }), // closed: never shown
+    ]);
+    assert.deepStrictEqual(got, { a2: { id: 'r_two', thumb: 'thumbs/r_two.jpg', port: 3005 } });
+    assert.deepStrictEqual(view.rowThumbs(null), {});
+  });
   await t('formatting: when, git line, footer', () => {
     assert.match(view.formatWhen(run()), /^\w{3} \d{1,2} \w{3}, \d\d:\d\d - (\w{3} \d{1,2} \w{3}, )?\d\d:\d\d$/);
     assert.match(view.formatWhen(run({ stoppedAt: null })), / -$/);
