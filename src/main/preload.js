@@ -48,6 +48,14 @@ contextBridge.exposeInMainWorld('portpilot', {
     stale: () => ipcRenderer.invoke('worktrees:stale')
   },
 
+  // Run history
+  history: {
+    list: () => ipcRenderer.invoke('history:list'),
+    thumbs: (ids) => ipcRenderer.invoke('history:thumbs', ids),
+    pin: (runId, pinned) => ipcRenderer.invoke('history:pin', runId, pinned),
+    rerun: (runId) => ipcRenderer.invoke('history:rerun', runId)
+  },
+
   // Health probe
   health: {
     check: (appId, port) => ipcRenderer.invoke('health:check', appId, port)
@@ -81,7 +89,7 @@ contextBridge.exposeInMainWorld('portpilot', {
 
   // Event listeners
   on: (channel, callback) => {
-    const validChannels = ['trigger-scan', 'config-changed', 'toast', 'crash-toast'];
+    const validChannels = ['trigger-scan', 'config-changed', 'toast', 'crash-toast', 'history-progress'];
     if (validChannels.includes(channel)) {
       ipcRenderer.on(channel, (_, ...args) => callback(...args));
     }

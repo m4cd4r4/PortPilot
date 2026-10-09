@@ -192,6 +192,19 @@ if (!gotTheLock) {
       if (app && app.reservePort) reserver.reserve(app);
     });
 
+    // History: thumbnails for open runs, and the weekly orphan sweep (30 s after
+    // launch, then hourly; the sweep itself only runs when a week has passed).
+    try {
+      require('./thumbnails').startThumbnailWatcher(configStore.configPath);
+      const { sweepIfDue } = require('../core/runSweep');
+      const sweepTimer = setTimeout(function again() {
+        sweepIfDue(configStore.configPath).finally(() => setTimeout(again, 60 * 60 * 1000).unref());
+      }, 30000);
+      sweepTimer.unref();
+    } catch (err) {
+      console.error('Run history background tasks failed to start:', err);
+    }
+
     // Hold reserved ports for opted-in, stopped apps at startup.
     reserver.sync(configStore.getApps(), (id) => getRunningApps().some(a => a.id === id && a.running))
       .catch((err) => console.error('Port reservation sync failed:', err));

@@ -195,7 +195,7 @@ function readRuntime(configPath) {
   return runtime;
 }
 
-function recordStart(configPath, appId, startedBy, { pid = null, port = null } = {}) {
+function recordStart(configPath, appId, startedBy, { pid = null, port = null, rerunOf = null } = {}) {
   if (!appId || !startedBy) return false;
   let stamped = false;
   try {
@@ -208,7 +208,7 @@ function recordStart(configPath, appId, startedBy, { pid = null, port = null } =
     console.error('[configFile] Failed to record app start:', err.message);
   }
   // After the stamp: a contended history lock must not delay provenance.
-  history((h) => h.openRun(configPath, appId, startedBy, { port }));
+  history((h) => h.openRun(configPath, appId, startedBy, { port, rerunOf }));
   return stamped;
 }
 

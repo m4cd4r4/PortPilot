@@ -100,6 +100,63 @@
   const ok = (extra) => Promise.resolve(Object.assign({ success: true }, extra));
   const noop = () => ok();
 
+  // ---- Run history (the History tab) ----
+  // Fictional runs, newest first once sorted. Two are live (their apps are in
+  // `running`: harbor-web x2 and tugboat-api), one crashed and pinned, one has no git, one is a re-run.
+  const thumbSvg = (bg, bar, accent) => 'data:image/svg+xml;utf8,' + encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="480" height="300" viewBox="0 0 480 300">`
+    + `<rect width="480" height="300" fill="${bg}"/><rect width="480" height="34" fill="${bar}"/>`
+    + `<circle cx="18" cy="17" r="5" fill="${accent}"/><rect x="40" y="12" width="120" height="10" rx="5" fill="${accent}" opacity=".6"/>`
+    + `<rect x="32" y="64" width="250" height="26" rx="6" fill="${accent}"/><rect x="32" y="104" width="400" height="10" rx="5" fill="${bar}"/>`
+    + `<rect x="32" y="124" width="340" height="10" rx="5" fill="${bar}"/>`
+    + `<rect x="32" y="168" width="124" height="96" rx="8" fill="${bar}"/><rect x="178" y="168" width="124" height="96" rx="8" fill="${bar}"/>`
+    + `<rect x="324" y="168" width="124" height="96" rx="8" fill="${bar}"/></svg>`);
+  const mins = (m) => ago(m * 60);
+  const run = (o) => ({
+    repoRoot: o.cwd, relCwd: '', url: o.port ? `http://localhost:${o.port}/` : null, stoppedAt: null, endedBy: null,
+    exitCode: null, page: null, pinned: false, ...o,
+  });
+  const gitOf = (branch, sha, subject, files = []) => ({ branch, sha, subject, dirty: files.length > 0, files, snapshot: files.length ? { ref: `refs/portpilot/runs/${sha.slice(0, 7)}`, commit: sha, bytes: 12000 } : null, skipped: null });
+  const human = (at) => ({ kind: 'human', surface: 'desktop', at });
+  const historyRuns = [
+    run({ id: 'r_demo01', appId: 'a_web', appName: 'harbor-web', cwd: 'C:/dev/harbor/web', command: 'npm run dev', port: 3000, startedBy: human(mins(134)), startedAt: mins(134),
+      git: gitOf('main', '4be07c1aa91d', 'chore: bump deps', ['src/app/page.tsx', 'src/lib/cart.ts']), page: { title: 'Harbor - Home', thumb: 'thumbs/r_demo01.jpg' } }),
+    run({ id: 'r_demo02', appId: 'a_web_checkout', appName: 'harbor-web', cwd: 'C:/dev/harbor/web-checkout', command: 'npm run dev', port: 3002,
+      startedBy: { kind: 'claude', surface: 'mcp', sessionId: 'a3f2c91e-demo', label: 'checkout drift fix', at: mins(18) }, startedAt: mins(18),
+      git: gitOf('feat/checkout-drift', '9c41e0a73b2f', 'wip: checkout layout', ['src/pages/checkout.tsx', 'public/mock/checkout-v2.html', 'src/styles/checkout.css']), page: { title: 'Checkout - Harbor', thumb: 'thumbs/r_demo02.jpg' } }),
+    run({ id: 'r_demo03', appId: 'a_api', appName: 'tugboat-api', cwd: 'C:/dev/harbor/api', command: 'uvicorn main:app --reload', port: 8000, startedBy: human(mins(52)), startedAt: mins(52),
+      git: gitOf('main', '77d0e12c4a90', 'fix: tide table rounding') }),
+    run({ id: 'r_demo04', appId: 'a_metrics', appName: 'anchor-metrics', cwd: 'C:/dev/tools/metrics', command: 'python main.py', port: 9090, startedBy: human(mins(210)), startedAt: mins(210),
+      stoppedAt: mins(205), endedBy: 'crash', exitCode: 1, pinned: true, git: gitOf('main', 'e5a1b30f9c11', 'feat: tide store', ['main.py']) }),
+    run({ id: 'r_demo05', appId: 'a_docs', appName: 'dockyard-docs', cwd: 'C:/dev/tools/docs', command: 'npm run dev', port: 4321, startedBy: human(mins(60 * 26)), startedAt: mins(60 * 26),
+      stoppedAt: mins(60 * 25), endedBy: 'stop', rerunOf: 'r_demo09', git: gitOf('docs/ports-page', '3a9f6c20d7e4', 'docs: ports page'), page: { title: 'Dockyard Docs', thumb: 'thumbs/r_demo05.jpg' } }),
+    run({ id: 'r_demo06', appId: 'a_admin', appName: 'lighthouse-admin', cwd: 'C:/dev/harbor/admin', command: 'npm run dev', port: 5173,
+      startedBy: { kind: 'claude', surface: 'mcp', sessionId: 'b71c9e04-demo', at: mins(60 * 30) }, startedAt: mins(60 * 30), stoppedAt: mins(60 * 29), endedBy: 'stop',
+      git: gitOf('release/2.4', 'c08d4417be52', 'release: 2.4.0 candidate', ['package.json']), page: { title: 'Lighthouse - Sign in', thumb: 'thumbs/r_demo06.jpg' } }),
+    run({ id: 'r_demo07', appId: 'a_gw', appName: 'beacon-gateway', cwd: 'C:/dev/tools/gateway', command: 'node server.js', port: 4000, startedBy: human(mins(60 * 52)), startedAt: mins(60 * 52),
+      stoppedAt: mins(60 * 50), endedBy: 'unknown', git: null }),
+    run({ id: 'r_demo08', appId: 'a_web', appName: 'harbor-web', cwd: 'C:/dev/harbor/web', command: 'npm run dev', port: 3000, startedBy: human(mins(60 * 75)), startedAt: mins(60 * 75),
+      stoppedAt: mins(60 * 73), endedBy: 'stop', git: gitOf('feat/live-search', '1f7b9d03a6c8', 'feat: live search box'), page: { title: 'Harbor - Search', thumb: 'thumbs/r_demo08.jpg' } }),
+  ];
+  const historyThumbs = {
+    r_demo01: thumbSvg('#1a1b26', '#24283b', '#7aa2f7'), r_demo02: thumbSvg('#1f2335', '#2f3549', '#bb9af7'),
+    r_demo05: thumbSvg('#16161e', '#292e42', '#9ece6a'), r_demo06: thumbSvg('#1a1b26', '#2a2f45', '#e0af68'),
+    r_demo08: thumbSvg('#1f2335', '#2f3549', '#7dcfff'),
+  };
+  const liveRunIds = ['r_demo01', 'r_demo02', 'r_demo03'];
+  const progressListeners = [];
+  const history = {
+    list: () => ok({ runs: historyRuns, live: liveRunIds, stats: { runs: 312, bytes: 41 * 1024 * 1024, maxBytes: 150 * 1024 * 1024 } }),
+    thumbs: (ids) => ok({ thumbs: Object.fromEntries((ids || []).filter((id) => historyThumbs[id]).map((id) => [id, historyThumbs[id]])) }),
+    pin: (id, pinned) => { const r = historyRuns.find((x) => x.id === id); if (r) r.pinned = !!pinned; return ok(); },
+    rerun: (id) => new Promise((resolve) => {
+      ['checking', 'worktree', 'install', 'register', 'start', 'done'].forEach((stage, i) => {
+        setTimeout(() => progressListeners.forEach((cb) => cb({ runId: id, stage, line: stage === 'install' ? 'added 412 packages' : undefined })), 300 * i);
+      });
+      setTimeout(() => resolve({ success: true, port: 3004, appId: 'a_rerun' }), 1800);
+    }),
+  };
+
   window.portpilot = {
     ports: {
       scan: () => ok({ ports }),
@@ -139,7 +196,9 @@
     crash: { askClaude: () => ok({ short: 'b71c' }) },
     // The crash toast main.js would send when anchor-metrics dies, with a live
     // Claude session to hand it to (the shape crashAlert.buildCrashAlert makes).
+    history,
     on: (channel, cb) => {
+      if (channel === 'history-progress') { progressListeners.push(cb); return; }
       if (channel !== 'crash-toast') return;
       setTimeout(() => cb({
         appId: 'a_metrics', name: 'anchor-metrics', title: 'anchor-metrics crashed 2x in 5m',

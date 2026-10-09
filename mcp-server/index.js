@@ -25,6 +25,8 @@ import { createRequire } from 'module';
 // =============================================================================
 
 function getConfigPath() {
+  // The desktop sets this when it shells out (Re-run), so a custom userData dir is honoured.
+  if (process.env.PORTPILOT_CONFIG_PATH) return process.env.PORTPILOT_CONFIG_PATH;
   const platform = os.platform();
   let configDir;
   // NOTE: must match Electron's app.getPath('userData'), which is derived from

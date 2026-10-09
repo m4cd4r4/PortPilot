@@ -201,7 +201,7 @@ function patchRun(configPath, runId, captured) {
  * Record a start. The record is written synchronously; git state is patched in
  * afterwards. Returns { id, done } where done resolves when the patch is in.
  */
-function openRun(configPath, appId, startedBy, { port = null } = {}) {
+function openRun(configPath, appId, startedBy, { port = null, rerunOf = null } = {}) {
   const { app, settings } = readApp(configPath, appId);
   const now = new Date();
   const id = newId(now);
@@ -225,6 +225,7 @@ function openRun(configPath, appId, startedBy, { port = null } = {}) {
     page: null,
     pinned: false,
   };
+  if (rerunOf) record.rerunOf = String(rerunOf);
   const { result: dropped } = configFile.updateJson(runsPathFor(configPath), (data) => {
     if (!Array.isArray(data.runs)) data.runs = [];
     // The app is being started again, so any run still open for it was lost
@@ -346,13 +347,13 @@ function pinRun(configPath, runId, pinned) {
   return result;
 }
 
-/** Attach a thumbnail (path under history/) and re-check the byte cap. */
-function setThumb(configPath, runId, thumb) {
+/** Attach a thumbnail (path under history/) and the page title, then re-check the byte cap. */
+function setThumb(configPath, runId, thumb, title = null) {
   const settings = readApp(configPath, null).settings;
   const { result: dropped } = configFile.updateJson(runsPathFor(configPath), (data) => {
     const run = (data.runs || []).find((r) => r.id === runId);
     if (!run) return [];
-    run.page = { ...(run.page || {}), thumb };
+    run.page = { ...(run.page || {}), thumb, ...(title ? { title: String(title).slice(0, 200) } : {}) };
     return prune(data, historyDirFor(configPath), capsFrom(settings));
   }, emptyRuns);
   dropRefs(dropped);
@@ -374,6 +375,6 @@ function closeRun(configPath, appId, { endedBy, exitCode = null }) {
 }
 
 module.exports = {
-  historyDirFor, runsPathFor, readRuns, openRun, closeRun, pinRun, setThumb, whenIdle,
+  historyDirFor, runsPathFor, readRuns, openRun, closeRun, pinRun, setThumb, whenIdle, deleteRefs, REF_RE,
   MAX_PINS, DEFAULT_MAX_RUNS, DEFAULT_MAX_MB,
 };
