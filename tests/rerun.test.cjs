@@ -126,6 +126,19 @@ async function main() {
     assert.strictEqual(store.getApps().filter((a) => a.parentId === 'app_shop').length, 1);
     await stopApp(again.appId);
 
+    // Pressed while its re-run is up: same app, same port, nothing re-registered or restarted.
+    const before = JSON.stringify(store.getApps());
+    const up = await rerunVersion(run, { configStore: store, configPath }, {
+      mcpEntry: () => path.join(root, 'mcp-server', 'index.js'),
+      findAvailablePort,
+      isRunning: () => true,
+      startApp: async () => ({ success: false, error: 'App is already running' }),
+    });
+    assert.strictEqual(up.success, true, JSON.stringify(up));
+    assert.strictEqual(up.appId, again.appId);
+    assert.strictEqual(up.port, again.port, 'the running app keeps its port');
+    assert.strictEqual(JSON.stringify(store.getApps()), before, 'config untouched');
+
     // Refusals name which thing is missing.
     const gone = await rerunVersion({ ...run, repoRoot: path.join(tmp, 'nope') }, { configStore: store, configPath }, {});
     assert.strictEqual(gone.code, 'repo-gone');

@@ -123,6 +123,7 @@ async function rerunVersion(run, ctx, deps = {}) {
     mcpEntry: deps.mcpEntry || defaultMcpEntry,
     findAvailablePort: deps.findAvailablePort || require('./portScanner').findAvailablePort,
     startApp: deps.startApp || require('./processManager').startApp,
+    isRunning: deps.isRunning || ((id) => require('./processManager').getRunningApps().some((a) => a.id === id && a.running)),
     recordStart: deps.recordStart || require('../core/configFile').recordStart,
     makeStartedBy: deps.makeStartedBy || require('../core/status').makeStartedBy,
     ...deps,
@@ -208,12 +209,14 @@ async function rerunVersion(run, ctx, deps = {}) {
       const existing = apps.find((a) => a.cwd && normPath(a.cwd) === normPath(runDir));
       let app;
       let port;
-      if (existing && Number(existing.preferredPort)) {
-        // Repeat press: the app is already registered with its own port and command.
+      if (existing && Number(existing.preferredPort) && d.isRunning(existing.id)) {
+        // Pressed again while its re-run is up: same app, same port, nothing to register.
         port = Number(existing.preferredPort);
         app = existing;
       } else {
         const claimed = new Set(apps.map((a) => Number(a.preferredPort)).filter(Boolean));
+        // A stopped re-run may reuse its own port if it is still free (its old server can linger on some platforms).
+        if (existing) claimed.delete(Number(existing.preferredPort));
         port = await pickPort(Number(run.port) || 3000, claimed, d.findAvailablePort);
         if (!port) return fail('no-port', 'No free port found near the original one.');
         const { command } = rerun.rewritePort(run.command, port);
