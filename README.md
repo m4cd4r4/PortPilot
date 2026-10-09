@@ -8,13 +8,13 @@
 
 PortPilot runs your local dev servers. With the Claude Code plugin, Claude sees the same apps, ports and crashes you do, and reuses a running server instead of starting a second copy.
 
-[![Version](https://img.shields.io/badge/version-3.4.0-blue.svg)](https://github.com/m4cd4r4/PortPilot/releases/tag/v3.4.0)
+[![Version](https://img.shields.io/badge/version-3.5.0-blue.svg)](https://github.com/m4cd4r4/PortPilot/releases/tag/v3.5.0)
 [![Tests](https://img.shields.io/badge/tests-Playwright%20E2E-blue.svg)](tests/)
 [![Licence](https://img.shields.io/badge/licence-MIT-green.svg)](LICENSE)
 [![MCP](https://img.shields.io/badge/MCP-19%20tools-purple.svg)](mcp-server/README.md)
 [![VS Code Marketplace](https://vsmarketplacebadges.dev/version-short/macdara.portpilot.svg)](https://marketplace.visualstudio.com/items?itemName=macdara.portpilot)
 
-**[Download v3.4.0](#install)** &nbsp;&middot;&nbsp; **[Add the Claude Code plugin](#use-it-with-claude-code)** &nbsp;&middot;&nbsp; **[Website](https://m4cd4r4.github.io/PortPilot/)**
+**[Download v3.5.0](#install)** &nbsp;&middot;&nbsp; **[Add the Claude Code plugin](#use-it-with-claude-code)** &nbsp;&middot;&nbsp; **[Website](https://m4cd4r4.github.io/PortPilot/)**
 
 </div>
 
@@ -139,10 +139,10 @@ claude mcp list   # portpilot: ... - ✓ Connected
 
 | Platform | Download |
 |----------|----------|
-| Windows installer | [PortPilot-3.4.0-x64.exe](https://github.com/m4cd4r4/PortPilot/releases/download/v3.4.0/PortPilot-3.4.0-x64.exe) (113 MB) |
-| Windows portable | [PortPilot-3.4.0-portable.exe](https://github.com/m4cd4r4/PortPilot/releases/download/v3.4.0/PortPilot-3.4.0-portable.exe) (113 MB) |
-| Linux AppImage | [PortPilot-3.4.0-x86_64.AppImage](https://github.com/m4cd4r4/PortPilot/releases/download/v3.4.0/PortPilot-3.4.0-x86_64.AppImage) (123 MB) |
-| Debian / Ubuntu | [PortPilot-3.4.0-amd64.deb](https://github.com/m4cd4r4/PortPilot/releases/download/v3.4.0/PortPilot-3.4.0-amd64.deb) (86 MB) |
+| Windows installer | [PortPilot-3.5.0-x64.exe](https://github.com/m4cd4r4/PortPilot/releases/download/v3.5.0/PortPilot-3.5.0-x64.exe) (113 MB) |
+| Windows portable | [PortPilot-3.5.0-portable.exe](https://github.com/m4cd4r4/PortPilot/releases/download/v3.5.0/PortPilot-3.5.0-portable.exe) (113 MB) |
+| Linux AppImage | [PortPilot-3.5.0-x86_64.AppImage](https://github.com/m4cd4r4/PortPilot/releases/download/v3.5.0/PortPilot-3.5.0-x86_64.AppImage) (123 MB) |
+| Debian / Ubuntu | [PortPilot-3.5.0-amd64.deb](https://github.com/m4cd4r4/PortPilot/releases/download/v3.5.0/PortPilot-3.5.0-amd64.deb) (86 MB) |
 
 macOS: build from source; it is supported but not officially tested. Install it, click Scan, then add your projects. Older builds are on [Releases](https://github.com/m4cd4r4/PortPilot/releases).
 
