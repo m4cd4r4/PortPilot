@@ -2433,6 +2433,8 @@ body {
   color-scheme: dark light;
 }
 
+/* Keep a row's title and its time within one glance on very wide windows. */
+#history-section { max-width: 1440px; margin-inline: auto; }
 .history-list { display: flex; flex-direction: column; gap: 2px; }
 .hrow {
   display: grid;

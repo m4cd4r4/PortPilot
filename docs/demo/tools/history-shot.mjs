@@ -12,6 +12,9 @@ const [out = path.join(repo, 'docs', 'demo', 'screenshots'), w = '1440,390'] = p
 const browser = await chromium.launch({ executablePath: 'C:/Program Files/BraveSoftware/Brave-Browser/Application/brave.exe' });
 for (const width of w.split(',').map(Number)) {
   const page = await browser.newPage({ viewport: { width, height: width > 600 ? 1000 : 844 } });
+  const problems = [];
+  page.on('pageerror', (e) => problems.push(`pageerror: ${e.message}`));
+  page.on('console', (m) => { if (m.type() === 'error') problems.push(`console: ${m.text()}`); });
   await page.addInitScript({ path: path.join(repo, 'docs', 'demo', 'demo-seed.js') });
   await page.goto(pathToFileURL(path.join(repo, 'src', 'renderer', 'index.html')).href);
   await page.waitForSelector('.view-tab[data-view="history"]');
@@ -27,7 +30,7 @@ for (const width of w.split(',').map(Number)) {
     footer: document.getElementById('history-footer').textContent,
     words: [...document.querySelectorAll('.hrow .state-word')].map((e) => e.textContent),
   }));
-  console.log(width, JSON.stringify(info));
+  console.log(width, JSON.stringify({ ...info, problems }));
   await page.screenshot({ path: path.join(out, `history-${width}.png`), fullPage: true });
   await page.close();
 }
