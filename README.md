@@ -11,7 +11,7 @@ PortPilot runs your local dev servers. With the Claude Code plugin, Claude sees 
 [![Version](https://img.shields.io/badge/version-3.5.0-blue.svg)](https://github.com/m4cd4r4/PortPilot/releases/tag/v3.5.0)
 [![Tests](https://img.shields.io/badge/tests-Playwright%20E2E-blue.svg)](tests/)
 [![Licence](https://img.shields.io/badge/licence-MIT-green.svg)](LICENSE)
-[![MCP](https://img.shields.io/badge/MCP-19%20tools-purple.svg)](mcp-server/README.md)
+[![MCP](https://img.shields.io/badge/MCP-20%20tools-purple.svg)](mcp-server/README.md)
 [![VS Code Marketplace](https://vsmarketplacebadges.dev/version-short/macdara.portpilot.svg)](https://marketplace.visualstudio.com/items?itemName=macdara.portpilot)
 
 **[Download v3.5.0](#install)** &nbsp;&middot;&nbsp; **[Add the Claude Code plugin](#use-it-with-claude-code)** &nbsp;&middot;&nbsp; **[Website](https://m4cd4r4.github.io/PortPilot/)**
@@ -37,9 +37,9 @@ The MCP server is bundled, so there is no `npm install`. One install gives Claud
   ```
 - **Dev-server guard.** A start on a busy port is turned away with the URL to reuse. A clean start goes through PortPilot. If the guard can't tell what a command does, it lets it run.
 - **Crash band with Fix it.** When an app Claude started crashes, the session gets a band with Restart, Logs and Fix it. Fix it hands Claude the crash and the stderr tail.
-- **The PortPilot tools**: list, start, stop, scan, kill and group, as the 19 [MCP tools](#mcp-tools).
+- **The PortPilot tools**: list, start, stop, scan, kill and group, as the 20 [MCP tools](#mcp-tools).
 
-## New in the desktop app (3.4)
+## New in the desktop app (3.4 and 3.5)
 
 Each row now tells you what is happening and who did it.
 
