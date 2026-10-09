@@ -33,8 +33,30 @@
       </div>
     </header>
 
+    <nav class="view-tabs" role="tablist" aria-label="View">
+      <button type="button" role="tab" class="view-tab active" data-view="apps" aria-selected="true">Apps</button>
+      <button type="button" role="tab" class="view-tab" data-view="history" aria-selected="false">History</button>
+    </nav>
+
     <!-- Main Content - Single Pane -->
-    <main class="content" role="main">
+    <main class="content" role="main" data-view="apps">
+      <!-- History Section (shown by the History tab) -->
+      <section id="history-section" class="section" aria-label="Run history">
+        <div class="history-filters">
+          <input type="search" id="history-search" class="input-search" placeholder="Search runs: app, branch, command, file, sha" aria-label="Search runs" autocomplete="off">
+          <select id="history-app" class="btn btn-small btn-secondary" aria-label="Filter by app"><option value="">App: all</option></select>
+          <select id="history-branch" class="btn btn-small btn-secondary" aria-label="Filter by branch"><option value="">Branch: all</option></select>
+          <label class="history-field">From <input type="date" id="history-from" class="history-date"></label>
+          <label class="history-field">To <input type="date" id="history-to" class="history-date"></label>
+          <label class="history-field"><input type="checkbox" id="history-dirty"> Dirty only</label>
+        </div>
+        <div id="history-list" class="history-list" aria-live="polite"></div>
+        <div class="history-footer">
+          <span id="history-footer"></span>
+          <button type="button" id="history-more" class="btn btn-small btn-secondary hidden">Show more</button>
+        </div>
+      </section>
+
       <!-- Apps Section -->
       <section id="apps-section" class="section">
         <div class="section-toolbar">
@@ -423,6 +445,8 @@
 
   <script src="../core/status.js"></script>
   <script src="../core/conflict.js"></script>
+  <script src="../core/runView.js"></script>
   <script src="renderer.js"></script>
+  <script src="history.js"></script>
 </body>
 </html>

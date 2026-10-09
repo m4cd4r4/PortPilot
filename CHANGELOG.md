@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **History tab in the desktop app.** Lists every recorded run with a page thumbnail, state word, branch, SHA and dirty-file count. Search by app, branch, file or SHA; filter by app, branch, date range or dirty only; Open URL is enabled only while that run is up; Copy SHA; Pin. The footer shows run count and size against the cap.
+- **Re-run this version.** Recreates a run's commit and uncommitted files in a sibling worktree (`<repo>-run-<id>`), installs from the lockfile, registers it under the original app and starts it on a free port (`--port N` is rewritten, otherwise `PORT` is set). The new run records `rerunOf`. It refuses by name when the repo is gone, the snapshot was pruned or the run had no git state.
+- **Page thumbnails.** A hidden offscreen window renders each live run's page once and stores a 480 px JPEG. It never leaves localhost and never stays open.
+- **Weekly orphan sweep** removes thumbnails and `refs/portpilot/runs/*` refs whose run no longer exists.
+
 ## [3.4.0] - 2026-10-07
 
 ### Added

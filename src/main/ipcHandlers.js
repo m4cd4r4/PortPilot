@@ -960,6 +960,8 @@ function setupIpcHandlers(ipcMain, configStore) {
       }
     });
   });
+
+  require('./historyIpc').setupHistoryIpc(ipcMain, configStore);
 }
 
 module.exports = { setupIpcHandlers, matchPortsToApps, getProcessDetails, detectWorktrees, detectStaleWorktrees };

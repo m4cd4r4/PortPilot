@@ -23733,6 +23733,7 @@ import os from "os";
 import { pathToFileURL } from "url";
 import { createRequire } from "module";
 function getConfigPath() {
+  if (process.env.PORTPILOT_CONFIG_PATH) return process.env.PORTPILOT_CONFIG_PATH;
   const platform = os.platform();
   let configDir;
   if (platform === "win32") {

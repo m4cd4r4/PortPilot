@@ -173,6 +173,15 @@ Desktop main process only. When a run is open and `page.thumb` is null, poll `he
 
 Clean-up is the existing delete-app flow plus `git worktree remove`.
 
+### As built (B2)
+
+- **Additive run field:** `rerunOf` (string run id), written only when a run is started by Re-run. Nothing else in the B1 schema changed.
+- **Placement:** the desktop app is a single pane, so the "sidebar tab" is an Apps | History switch under the header.
+- **Re-run details:** a run with a snapshot is created at `snapshot.ref`, falling back to `snapshot.commit`; a clean run uses `sha`. If none resolves the Re-run refuses (`ref-pruned` / `commit-gone`). A dirty run with no snapshot (too large, opted out, timed out) re-runs its commit only and says so. `reset --mixed <sha>` runs on creation, or on reuse when HEAD is still at the snapshot commit; a reused folder at any other commit is refused. A failed `worktree add`, reset or install is taken back out, so the next press starts clean. Pressing Re-run again reuses the registered app and its port. The install is skipped when `node_modules` already exists in the install directory. No `node_modules` junction is used (open question 2). Record values (sha, ref, `relCwd`) are validated before they reach git, and the register CLI is given the desktop's config path (`PORTPILOT_CONFIG_PATH`).
+- **Thumbnails:** a 2 s `runs.json` watcher in the main process; captures are serial and refuse any non-loopback URL.
+- **Orphan sweep:** `core/runSweep.js` runs 30 s after ready and then hourly, acting at most once a week; it removes thumbnails and `refs/portpilot/runs/*` refs whose run is gone.
+- **Tests:** `tests/run-view.test.cjs` (filtering, state words, port rewrite, lockfile detection, sweep), `tests/history-helpers.test.cjs`, `tests/rerun.test.cjs` (real Re-run against a throwaway repo) and `tests/history-ui.e2e.js` (real Electron, throwaway `--user-data-dir`).
+
 ## PROJECT-PLAN overlap and proposed rows
 
 - **#12 drawer-timeline (A10)**: the run records are the timeline's start/stop/crash events. #12 should read `history/runs.json` rather than add a second store; the A5 drawer gains "Recent runs" for one app.
