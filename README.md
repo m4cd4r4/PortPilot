@@ -22,6 +22,47 @@ PortPilot runs your local dev servers. With the Claude Code plugin, Claude sees 
 
 Local-first: no account, no telemetry, no cloud. Windows 10/11 and Linux.
 
+## Ways to use PortPilot
+
+Four surfaces, one config file and one run record. An app you add in one shows up in the others, and a start or crash in one is visible in all of them.
+
+**Desktop app.** The full view: apps, ports, conflicts, crashes and the History tab. Pick it when you want everything on one screen, or a tray icon that keeps your servers alive after you close the window.
+
+![Desktop app, Apps tab, with grouped apps, two port conflicts and a crashed app](docs/demo/screenshots/desktop-apps-1440.png)
+
+**Web portal.** The same Apps view in your browser, from `npm run agent` or from VS Code. It binds `127.0.0.1` only and needs a per-session token. Pick it on a machine where you cannot install the desktop app. The History tab and crash toasts are not in the portal yet.
+
+![Web portal in a browser showing the same Apps view](docs/demo/screenshots/web-apps-1440.png)
+
+**VS Code extension.** The sidebar tree, a status bar item and a crash toast, without leaving the editor. Running apps come first, stopped ones fold away, and a ✦ marks anything Claude started. Pick it if you live in VS Code.
+
+![PortPilot sidebar in VS Code with running apps first, two crashed apps and a crash toast](docs/screenshots/vscode-overview.png)
+
+**Claude Code.** Install the plugin and Claude sees what you see: a status line, a guard that points a second start at the running server, a crash band with Fix it, and the 20 MCP tools such as `find_run`. Pick it when Claude is the one starting your servers.
+
+![Claude Code turning away a second npm run dev because harbor-web is already up on :3000](docs/demo/screenshots/claude-guard.png)
+
+<details>
+<summary><b>More Claude Code views</b></summary>
+
+Status line, worst state first, ✦ on apps Claude started:
+
+![Claude Code status line: 1 crashed, 6 up](docs/demo/screenshots/claude-statusline.png)
+
+Crash band with Fix it, Restart, Logs and Dismiss:
+
+![Claude Code crash band for anchor-metrics with the last stderr line](docs/demo/screenshots/claude-crash-band.png)
+
+`find_run` bringing back a past version of a page, with the literal steps:
+
+![find_run result with the commands that recreate the checkout branch](docs/demo/screenshots/claude-find-run.png)
+
+The Claude Code images are terminal frames rendered around the plugin's real output on the demo data, not captures of the Claude Code app.
+
+</details>
+
+Refresh every image here with `docs/demo/tools/` (`desktop-shots.mjs`, `web-shot.mjs`, `claude-shots.mjs`, `history-shot.mjs`); the demo data is fictional.
+
 ## Use it with Claude Code
 
 ```text

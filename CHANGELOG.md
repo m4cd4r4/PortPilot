@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Documentation
+- README "Ways to use PortPilot": one paragraph and image each for the desktop app, web portal, VS Code extension and Claude Code. Images come from the committed scripts in `docs/demo/tools/` (`desktop-shots.mjs`, `web-shot.mjs`, `claude-shots.mjs`) on the fictional demo seed.
+
 ## [3.5.0] - 2026-10-09
 
 ### Added
