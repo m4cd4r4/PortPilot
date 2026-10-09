@@ -55,6 +55,7 @@ function loadCore(name) {
 }
 const configFile = loadCore('configFile');
 const status = loadCore('status');
+const runHistory = loadCore('runHistory');
 const emptyConfig = () => ({ apps: [], settings: {}, groups: [] });
 
 function readConfig() {
@@ -649,6 +650,16 @@ function startApp(app, logPath = null) {
 }
 
 /**
+ * An app whose port is already listening is running: starting it again cannot
+ * bind, yet checkPort would see the OLD process and report success, which would
+ * stamp a start (and open a run) for a process Claude never launched.
+ */
+function alreadyRunning(app, check = checkPort) {
+  if (!app.preferredPort || !check(app.preferredPort)) return null;
+  return { success: true, alreadyRunning: true, verified: true, message: `${app.name} is already running on port ${app.preferredPort}; left as it is` };
+}
+
+/**
  * Record that Claude started `app` through this server, so every surface shows
  * "claude <session>". Best-effort: returns false (never throws) on a bad
  * session id or a failed write - the start itself already succeeded.
@@ -683,6 +694,112 @@ function stopApp(app) {
 
   if (app.preferredPort) return killPort(app.preferredPort);
   return { success: false, error: 'Could not find running process' };
+}
+
+// =============================================================================
+// RUN HISTORY (find_run)
+// =============================================================================
+
+const FIND_RUN_DEFAULT = 5;
+const FIND_RUN_MAX = 20;
+
+/**
+ * Filter and rank run records, newest first. Pure: the caller adds `running`
+ * and `rerun`. `since`/`until` are ISO strings (inclusive).
+ */
+function findRuns(runs, { query, app, branch, since, until, dirty_only, limit } = {}) {
+  const lower = (v) => String(v || '').toLowerCase();
+  const terms = lower(query).split(/\s+/).filter(Boolean);
+  // Every term must hit somewhere. A sha only matches from its start, so a
+  // short hex fragment from the middle of one does not pull in stray runs.
+  const textOf = (r) => lower([
+    r.appName, r.command, r.git && r.git.branch, r.git && r.git.subject,
+    r.page && r.page.title, ...((r.git && r.git.files) || []),
+  ].join('\n'));
+  // A date-only bound is a LOCAL calendar day (the server runs on the user's
+  // machine): since = its first moment, until = its last. Date.parse alone
+  // reads it as midnight UTC, which drops a whole day for anyone off UTC.
+  const bound = (v, endOfDay) => {
+    if (!v) return null;
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(v).trim());
+    if (!m) return Date.parse(v);
+    const day = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+    if (endOfDay) day.setDate(day.getDate() + 1);
+    return day.getTime() - (endOfDay ? 1 : 0);
+  };
+  const sinceMs = bound(since, false);
+  const untilMs = bound(until, true);
+  const matched = runs.filter((r) => {
+    const started = Date.parse(r.startedAt);
+    if ((sinceMs !== null || untilMs !== null) && Number.isNaN(started)) return false;
+    if (app && r.appId !== app && lower(r.appName) !== lower(app)) return false;
+    if (branch && !lower(r.git && r.git.branch).includes(lower(branch))) return false;
+    if (sinceMs !== null && started < sinceMs) return false;
+    if (untilMs !== null && started > untilMs) return false;
+    if (dirty_only && !(r.git && r.git.dirty)) return false;
+    if (terms.length) {
+      const text = textOf(r);
+      const sha = lower(r.git && r.git.sha);
+      if (!terms.every((t) => text.includes(t) || (sha && sha.startsWith(t)))) return false;
+    }
+    return true;
+  });
+  matched.sort((a, b) => Date.parse(b.startedAt) - Date.parse(a.startedAt));
+  const n = Math.min(Math.max(Math.floor(Number(limit)) || FIND_RUN_DEFAULT, 1), FIND_RUN_MAX);
+  const page = matched.slice(0, n);
+  return { count: page.length, total: matched.length, runs: page };
+}
+
+const LOCKFILE_INSTALL = [
+  ['package-lock.json', 'npm ci'],
+  ['pnpm-lock.yaml', 'pnpm install --frozen-lockfile'],
+  ['yarn.lock', 'yarn install --frozen-lockfile'],
+  ['bun.lockb', 'bun install --frozen-lockfile'],
+  ['bun.lock', 'bun install --frozen-lockfile'],
+];
+
+/**
+ * The literal commands that bring a run back: a detached worktree at the
+ * snapshot (or the commit, for a clean tree), a lockfile install, the start
+ * command. Claude runs them with its own tools or asks the user to press
+ * Re-run. \`exists\` is injectable for tests.
+ */
+function rerunSteps(run, exists = fs.existsSync) {
+  const fwd = (p) => String(p).replace(/\\/g, '/');
+  const start = run.command || '';
+  const inPlace = run.cwd ? [`cd "${fwd(run.cwd)}" && ${start}`] : [start];
+  if (!run.git) {
+    return { steps: inPlace, note: 'Git state was not captured for this run (the capture had not finished or failed); this starts whatever is in the folder now.' };
+  }
+  if (!run.repoRoot || !run.git.sha) {
+    return { steps: inPlace, note: 'Not a git repository (or no commits yet), so the files cannot be restored; this starts whatever is in the folder now.' };
+  }
+  const root = fwd(run.repoRoot);
+  const rel = run.relCwd ? fwd(run.relCwd) : '';
+  const wt = `${root}-run-${String(run.id).replace(/^r_/, '')}`;
+  const target = run.git.snapshot ? run.git.snapshot.ref : run.git.sha;
+  const steps = [`git -C "${root}" worktree add --detach "${wt}" ${target}`];
+
+  const dirs = [rel, ''].filter((d, i, a) => a.indexOf(d) === i);
+  const at = (d, file) => [root, d, file].filter(Boolean).join('/');
+  let install = null;
+  for (const d of dirs) {
+    const hit = LOCKFILE_INSTALL.find(([file]) => exists(at(d, file)));
+    if (hit) { install = { d, cmd: hit[1] }; break; }
+  }
+  if (!install) {
+    const d = dirs.find((dir) => exists(at(dir, 'package.json')));
+    if (d !== undefined) install = { d, cmd: 'npm install' };
+  }
+  const inWt = (d) => `cd "${[wt, d].filter(Boolean).join('/')}"`;
+  if (install) steps.push(`${inWt(install.d)} && ${install.cmd}`);
+  steps.push(`${inWt(rel)} && ${start}`);
+
+  const out = { steps };
+  if (run.git.dirty && !run.git.snapshot) {
+    out.note = `Uncommitted changes were not captured (skipped: ${run.git.skipped || 'unknown'}); this reproduces the commit only.`;
+  }
+  return out;
 }
 
 // =============================================================================
@@ -807,8 +924,9 @@ function createServer() {
       if (!app) return { content: [{ type: 'text', text: `App not found: ${identifier}` }], isError: true };
       const refused = startRefusal(app);
       if (refused) return { content: [{ type: 'text', text: refused }], isError: true };
-      const result = await startApp(app, configFile.logPathFor(getConfigPath(), app.id));
-      if (result.success) stampStart(getConfigPath(), app, sessionId);
+      const up = alreadyRunning(app);
+      const result = up || await startApp(app, configFile.logPathFor(getConfigPath(), app.id));
+      if (result.success && !up) stampStart(getConfigPath(), app, sessionId);
       return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }], isError: !result.success };
     }
   );
@@ -850,8 +968,9 @@ function createServer() {
       const results = await Promise.all(apps.map(async a => {
         const refused = startRefusal(a);
         if (refused) return { name: a.name, success: false, error: refused };
-        const result = await startApp(a, configFile.logPathFor(getConfigPath(), a.id));
-        if (result.success) stampStart(getConfigPath(), a, sessionId);
+        const up = alreadyRunning(a);
+        const result = up || await startApp(a, configFile.logPathFor(getConfigPath(), a.id));
+        if (result.success && !up) stampStart(getConfigPath(), a, sessionId);
         return { name: a.name, ...result };
       }));
       const ok = results.filter(r => r.success).length;
@@ -1137,6 +1256,38 @@ function createServer() {
       return { content: [{ type: 'text', text: JSON.stringify({ count: running.length, apps: running }, null, 2) }] };
     }
   );
+
+  // --- Find Run (run history) ---
+
+  server.tool(
+    'find_run',
+    'Find past runs of your apps: which version was running when, on which branch, with what uncommitted files. Every start, stop and crash is recorded locally with a git snapshot of the tree (uncommitted and untracked files included). Use it for "which version of the mockup was running on Monday" or "get back the checkout page from last week". Returns newest first; each run carries rerun.steps, the literal commands (git worktree add, install, start) that bring that version back.',
+    {
+      query: z.string().max(200).optional().describe('Free text, every word must match: app name, branch, page title, changed file names, command, commit subject, or the start of a commit sha'),
+      app: z.string().optional().describe('App id or name'),
+      branch: z.string().optional().describe('Branch name or part of it'),
+      since: z.string().optional().describe('ISO date (a whole local day, from its start) or date-time with offset. Resolve words like "Monday" to a date in the user\'s time zone first'),
+      until: z.string().optional().describe('ISO date (a whole local day, to its end) or date-time with offset, inclusive'),
+      dirty_only: z.boolean().optional().describe('Only runs that had uncommitted changes'),
+      limit: z.number().int().min(1).optional().describe(`How many runs to return (default ${FIND_RUN_DEFAULT}, max ${FIND_RUN_MAX})`)
+    },
+    async (filters) => {
+      for (const key of ['since', 'until']) {
+        if (filters[key] && Number.isNaN(Date.parse(filters[key]))) {
+          return { content: [{ type: 'text', text: `${key} is not a date: ${filters[key]}. Use an ISO date such as 2026-10-05 or 2026-10-05T09:00:00+08:00` }], isError: true };
+        }
+      }
+      const found = findRuns(runHistory.readRuns(getConfigPath()), filters);
+      const listening = new Set(scanPorts().map(p => p.port));
+      const runs = found.runs.map(r => ({
+        ...r,
+        // Open and still on its port. A record left open by a process that died unseen is not running.
+        running: !r.stoppedAt && !!r.port && listening.has(r.port),
+        rerun: rerunSteps(r)
+      }));
+      return { content: [{ type: 'text', text: JSON.stringify({ count: runs.length, total: found.total, runs }, null, 2) }] };
+    }
+  );
   return server;
 }
 
@@ -1278,4 +1429,4 @@ async function main() {
 const isMain = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
 if (isMain) main().catch(console.error);
 
-export { normPath, appAtCwd, cmdSafe, startRefusal, observedDuplicate,pickColor, resolveWorktreeGit, registerWorktree, stampStart, detachedCommand, prepareLog };
+export { findRuns, rerunSteps, alreadyRunning,normPath, appAtCwd, cmdSafe, startRefusal, observedDuplicate,pickColor, resolveWorktreeGit, registerWorktree, stampStart, detachedCommand, prepareLog };

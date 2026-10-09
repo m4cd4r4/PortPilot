@@ -174,6 +174,21 @@ function runtimePathFor(configPath) {
 
 const emptyRuntime = () => ({ apps: {} });
 
+// Run history (runHistory.js) is fed from the three record* calls below. It is
+// loaded lazily because it requires this module, and every call is best-effort:
+// a failure there must never fail the start, stop or crash it describes.
+function history(call) {
+  try {
+    let mod = null;
+    for (const p of ['./runHistory', './runHistory.cjs']) {
+      try { mod = require(p); break; } catch (err) { if (err.code !== 'MODULE_NOT_FOUND') throw err; }
+    }
+    if (mod) call(mod);
+  } catch (err) {
+    console.error('[configFile] Run history failed:', err.message);
+  }
+}
+
 function readRuntime(configPath) {
   const runtime = readJson(runtimePathFor(configPath), emptyRuntime);
   if (!runtime.apps || typeof runtime.apps !== 'object') runtime.apps = {};
@@ -182,20 +197,24 @@ function readRuntime(configPath) {
 
 function recordStart(configPath, appId, startedBy, { pid = null, port = null } = {}) {
   if (!appId || !startedBy) return false;
+  let stamped = false;
   try {
     updateJson(runtimePathFor(configPath), (runtime) => {
       if (!runtime.apps || typeof runtime.apps !== 'object') runtime.apps = {};
       runtime.apps[appId] = { startedBy, pid: pid || null, port: port || null };
     }, emptyRuntime);
-    return true;
+    stamped = true;
   } catch (err) {
     console.error('[configFile] Failed to record app start:', err.message);
-    return false;
   }
+  // After the stamp: a contended history lock must not delay provenance.
+  history((h) => h.openRun(configPath, appId, startedBy, { port }));
+  return stamped;
 }
 
 function recordStop(configPath, appId) {
   if (!appId) return false;
+  history((h) => h.closeRun(configPath, appId, { endedBy: 'stop' }));
   try {
     updateJson(runtimePathFor(configPath), (runtime) => {
       if (runtime.apps && runtime.apps[appId]) delete runtime.apps[appId];
@@ -218,6 +237,7 @@ const CRASH_TAIL_CHARS = 2000;
 
 function recordCrash(configPath, appId, exitCode, { errorTail = null, port = null } = {}) {
   if (!appId) return false;
+  history((h) => h.closeRun(configPath, appId, { endedBy: 'crash', exitCode }));
   try {
     updateJson(runtimePathFor(configPath), (runtime) => {
       if (!runtime.apps || typeof runtime.apps !== 'object') runtime.apps = {};

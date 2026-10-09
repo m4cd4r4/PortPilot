@@ -159,6 +159,21 @@
             <input type="checkbox" id="setting-auto-register" checked>
           </label>
         </div>
+        <div class="settings-section">
+          <h3>Run history</h3>
+          <label class="setting-row">
+            <span>Snapshot uncommitted files at each start</span>
+            <input type="checkbox" id="setting-history-snapshots" checked>
+          </label>
+          <label class="setting-row">
+            <span>Keep at most (runs)</span>
+            <input type="number" id="setting-history-max-runs" value="500" min="10" max="5000" class="input-small">
+          </label>
+          <label class="setting-row">
+            <span>Keep at most (MB)</span>
+            <input type="number" id="setting-history-max-mb" value="150" min="10" max="5000" class="input-small">
+          </label>
+        </div>
         <div class="settings-section" id="web-agent-section">
           <h3>Web Access <span class="preview-tag">preview</span></h3>
           <label class="setting-row">

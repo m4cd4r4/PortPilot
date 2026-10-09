@@ -69,7 +69,7 @@ The PortPilot MCP server works with Claude Code, Claude Desktop, Cursor, Windsur
 Setup outside the plugin: [mcp-server/README.md](mcp-server/README.md).
 
 <details id="mcp-tools">
-<summary><b>MCP tools (19)</b></summary>
+<summary><b>MCP tools (20)</b></summary>
 
 | Tool | Description |
 |------|-------------|
@@ -92,6 +92,7 @@ Setup outside the plugin: [mcp-server/README.md](mcp-server/README.md).
 | `delete_all_apps` | Remove all apps (requires confirmation) |
 | `list_groups` | List all app groups |
 | `move_to_group` | Move an app to a different group |
+| `find_run` | Find a past run by text, app, branch or time; returns its git state and literal re-run steps |
 
 Manual setup for Claude Code without the plugin:
 

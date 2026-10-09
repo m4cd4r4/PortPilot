@@ -23,6 +23,7 @@ const FILES = [
   'core/dispatch.js',
   'core/configPath.js',
   'core/configFile.js',
+  'core/runHistory.js',
   'core/status.js',
   'main/configStore.js',
   'main/portScanner.js',

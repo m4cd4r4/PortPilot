@@ -48,7 +48,7 @@ async function buildTo(base) {
   });
   // LF always: a Windows checkout (core.autocrlf) has CRLF sources, and the
   // committed copies must match a build on either OS byte for byte.
-  for (const name of ['configFile', 'status']) {
+  for (const name of ['configFile', 'status', 'runHistory']) {
     const src = fs.readFileSync(path.join(root, 'src', 'core', `${name}.js`), 'utf8');
     fs.writeFileSync(path.join(mcpDir, `${name}.cjs`), src.replace(/\r\n/g, '\n'));
   }
