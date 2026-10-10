@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
-import { readConfig, readRuntimeApps, rowStateOf, PortPilotApp, PortPilotGroup, RowState, RuntimeEntry } from './config';
+import { readConfig, readRuntimeApps, readRowThumbs, thumbDataUri, rowStateOf, PortPilotApp, PortPilotGroup, RowState, RuntimeEntry } from './config';
 import { scanPorts, computeRunning, ActivePort } from './portScanner';
-import { arrange, SortKey } from './treeModel';
+import { arrange, previewFor, RowThumbRef, SortKey } from './treeModel';
 
 export class GroupTreeItem extends vscode.TreeItem {
   constructor(
@@ -86,12 +86,15 @@ export function appRowState(activePort: ActivePort | undefined, entry: RuntimeEn
 
 export class AppTreeItem extends vscode.TreeItem {
   public readonly rowState: RowState;
+  /** Tooltip lines, kept so resolveTreeItem can put them under the preview image. */
+  public readonly tooltipLines: string[];
 
   constructor(
     public readonly app: PortPilotApp,
     public readonly activePort: ActivePort | undefined,
     public readonly children: AppTreeItem[] = [],
-    runtimeEntry?: RuntimeEntry
+    runtimeEntry?: RuntimeEntry,
+    public readonly preview: RowThumbRef | null = null
   ) {
     super(
       app.name,
@@ -139,7 +142,15 @@ export class AppTreeItem extends vscode.TreeItem {
       `Directory: ${app.cwd}`
     ];
     if (app.description) tooltipLines.push(`Description: ${app.description}`);
-    this.tooltip = tooltipLines.join('\n');
+    this.tooltipLines = tooltipLines;
+    // With a preview the tooltip stays unset: resolveTreeItem builds the image
+    // card lazily, so the 10s refresh never reads a thumbnail file.
+    if (preview) {
+      // A string tooltip doubles as the screen-reader label; a MarkdownString does not.
+      this.accessibilityInformation = { label: tooltipLines.join(', ') };
+    } else {
+      this.tooltip = tooltipLines.join('\n');
+    }
   }
 }
 
@@ -156,6 +167,14 @@ export class AppsTreeProvider implements vscode.TreeDataProvider<TreeNode> {
 
   setFoldStopped(fold: boolean): void {
     this.foldStopped = fold;
+    this._onDidChangeTreeData.fire(undefined);
+  }
+
+  /** Show a page preview in the hover card of running apps (portpilot.rowPreviews). */
+  rowPreviews = true;
+
+  setRowPreviews(show: boolean): void {
+    this.rowPreviews = show;
     this._onDidChangeTreeData.fire(undefined);
   }
 
@@ -184,6 +203,25 @@ export class AppsTreeProvider implements vscode.TreeDataProvider<TreeNode> {
     return element;
   }
 
+  /** Hover card: the page thumbnail above the usual tooltip lines. */
+  resolveTreeItem(item: vscode.TreeItem, element: TreeNode): vscode.TreeItem {
+    if (!(element instanceof AppTreeItem) || !element.preview) return item;
+    const uri = thumbDataUri(element.preview.thumb);
+    if (!uri) {
+      // The thumbnail file is gone or unreadable: keep the plain tooltip.
+      item.tooltip = element.tooltipLines.join('\n');
+      return item;
+    }
+    const md = new vscode.MarkdownString();
+    md.appendMarkdown(`![Page preview](${uri}|width=240)\n\n`);
+    element.tooltipLines.forEach((line, i) => {
+      if (i) md.appendMarkdown('  \n'); // hard line break, not a paragraph gap
+      md.appendText(line);
+    });
+    item.tooltip = md;
+    return item;
+  }
+
   getChildren(element?: TreeNode): TreeNode[] {
     if (element instanceof GroupTreeItem || element instanceof StoppedTreeItem) {
       return element.apps;
@@ -196,6 +234,7 @@ export class AppsTreeProvider implements vscode.TreeDataProvider<TreeNode> {
     const config = readConfig();
     if (!config.apps.length) return [];
     const runtime = readRuntimeApps();
+    const thumbs = this.rowPreviews ? readRowThumbs() : {};
 
     const groups = config.groups || [];
     const keyOf = (i: AppTreeItem): SortKey => ({
@@ -224,7 +263,8 @@ export class AppsTreeProvider implements vscode.TreeDataProvider<TreeNode> {
       // Branches are sorted running-first but never folded: they sit under an
       // already-expanded parent the user chose to look at.
       const kids = arrange((childrenByParent.get(app.id) ?? []).map(makeAppItem), keyOf, false).visible;
-      return new AppTreeItem(app, matched, kids, runtime[app.id]);
+      const preview = matched ? previewFor(thumbs, app.id, !!runtime[app.id], matched.port) : null;
+      return new AppTreeItem(app, matched, kids, runtime[app.id], preview);
     };
 
     // Running first, then the idle ones folded into a tail node when enabled.

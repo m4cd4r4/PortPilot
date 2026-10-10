@@ -24,6 +24,7 @@ const FILES = [
   'core/configPath.js',
   'core/configFile.js',
   'core/runHistory.js',
+  'core/runView.js',
   'core/status.js',
   'main/configStore.js',
   'main/portScanner.js',

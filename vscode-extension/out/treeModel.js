@@ -9,6 +9,7 @@ exports.isIdle = isIdle;
 exports.compareKeys = compareKeys;
 exports.arrange = arrange;
 exports.appIdByPort = appIdByPort;
+exports.previewFor = previewFor;
 exports.newCrashes = newCrashes;
 // Lower sorts first: the rows that need attention, then live ones, then idle.
 exports.STATE_WEIGHT = {
@@ -58,6 +59,18 @@ function appIdByPort(running) {
         if (!out.has(p.port))
             out.set(p.port, appId);
     return out;
+}
+/**
+ * The preview an Apps row may show, by the desktop's rule (rowThumbs.js): the app
+ * must be listening, have a runtime record, and the live port must match the open
+ * run's port. A stop outside PortPilot leaves a run open, so an open run alone
+ * does not prove its server is the one on screen.
+ */
+function previewFor(byApp, appId, hasRuntimeRecord, livePort) {
+    const cur = byApp[appId];
+    if (!cur || !hasRuntimeRecord || livePort == null)
+        return null;
+    return cur.port == null || cur.port === livePort ? cur : null;
 }
 /**
  * Crash stamps newer than `since`, oldest first, skipping apps that are

@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
+import type { RowThumbRef } from './treeModel';
 
 export interface PortPilotApp {
   id: string;
@@ -119,6 +120,19 @@ const configFile: ConfigFileApi = require(path.join(__dirname, '..', 'runtime', 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const status: StatusApi = require(path.join(__dirname, '..', 'runtime', 'core', 'status.js'));
 
+// Run history: the same history/runs.json and history/thumbs the desktop writes.
+interface RunHistoryApi {
+  readRuns(configPath: string): unknown[];
+  historyDirFor(configPath: string): string;
+}
+interface RunViewApi {
+  rowThumbs(runs: unknown[]): Record<string, RowThumbRef>;
+}
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const runHistory: RunHistoryApi = require(path.join(__dirname, '..', 'runtime', 'core', 'runHistory.js'));
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const runView: RunViewApi = require(path.join(__dirname, '..', 'runtime', 'core', 'runView.js'));
+
 /** Record that the user started an app from VS Code (best-effort, never throws). */
 export function recordHumanStart(app: PortPilotApp): boolean {
   return configFile.recordStart(getConfigPath(), app.id,
@@ -133,6 +147,37 @@ export function recordAppStop(appId: string): boolean {
 /** Per-app runtime entries (provenance, crash stamp). Empty on any read failure. */
 export function readRuntimeApps(): Record<string, RuntimeEntry> {
   try { return configFile.readRuntime(getConfigPath()).apps; } catch { return {}; }
+}
+
+// runs.json is the biggest file the 10s refresh touches: re-parse it only when it changes.
+let thumbCache: { key: string; thumbs: Record<string, RowThumbRef> } | null = null;
+
+/** Newest open run with a page thumbnail, per app. Empty on any read failure. */
+export function readRowThumbs(): Record<string, RowThumbRef> {
+  try {
+    const configPath = getConfigPath();
+    const runsFile = path.join(runHistory.historyDirFor(configPath), 'runs.json');
+    const key = `${runsFile}|${fs.statSync(runsFile).mtimeMs}`;
+    if (thumbCache?.key !== key) {
+      thumbCache = { key, thumbs: runView.rowThumbs(runHistory.readRuns(configPath)) };
+    }
+    return thumbCache.thumbs;
+  } catch { return {}; }
+}
+
+const THUMB_MAX_BYTES = 512 * 1024;
+
+/** A run's thumbnail as a data URI (thumbnails never leave this machine), or null. */
+export function thumbDataUri(thumb: string): string | null {
+  try {
+    const dir = path.resolve(runHistory.historyDirFor(getConfigPath()));
+    const file = path.resolve(dir, thumb);
+    // A thumb path read from runs.json must stay under history/.
+    if (!file.startsWith(dir + path.sep)) return null;
+    const st = fs.statSync(file);
+    if (!st.isFile() || st.size > THUMB_MAX_BYTES) return null;
+    return `data:image/jpeg;base64,${fs.readFileSync(file).toString('base64')}`;
+  } catch { return null; }
 }
 
 /** Where a detached app's output is written (logs/<appId>.log beside the config). */
