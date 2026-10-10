@@ -24,6 +24,7 @@ const crypto = require('crypto');
 
 const { createDispatcher } = require('../core/dispatch');
 const { getConfigDir } = require('../core/configPath');
+const browserApi = require('../core/browserApi');
 
 const HOST = '127.0.0.1';
 const DEFAULT_PORT = parseInt(process.env.PORTPILOT_AGENT_PORT || '7317', 10);
@@ -35,9 +36,10 @@ const MIME = { '.js': 'text/javascript', '.css': 'text/css', '.html': 'text/html
 
 /**
  * Build (but don't start) an agent bound to a ConfigStore.
+ * @param {object} [opts.browserDeps]  browserRun deps override (tests only; real spawn/CDP otherwise)
  * @returns {{ start: Function, stop: Function, getInfo: Function }}
  */
-function createAgent({ configStore, port = DEFAULT_PORT, token = crypto.randomBytes(32).toString('hex') }) {
+function createAgent({ configStore, port = DEFAULT_PORT, token = crypto.randomBytes(32).toString('hex'), browserDeps }) {
   const dispatch = createDispatcher(configStore);
   const sseClients = new Set();
 
@@ -117,6 +119,27 @@ function createAgent({ configStore, port = DEFAULT_PORT, token = crypto.randomBy
         const { action, args } = payload;
         if (typeof action !== 'string') return sendJson(res, 400, { success: false, error: 'Missing action' });
         sendJson(res, 200, await dispatch(action, Array.isArray(args) ? args : []));
+      });
+      return;
+    }
+
+    // ---- Browser-profile tools over plain HTTP, for harnesses that do not speak MCP ----
+    // POST /api/browser/<tool> with the tool's arguments as the JSON body; the answer is the same
+    // object the MCP tool returns (src/core/browserApi.js). Same Host, Origin and token checks as /api.
+    if (req.url.startsWith('/api/browser/')) {
+      if (req.method !== 'POST') return sendJson(res, 405, { success: false, error: 'Use POST' });
+      if (!originOk(req)) return sendJson(res, 403, { success: false, error: 'Bad origin' });
+      if (!tokenOk(req.headers['x-portpilot-token'])) return sendJson(res, 401, { success: false, error: 'Unauthorized' });
+      let tool;
+      try { tool = decodeURIComponent(req.url.slice('/api/browser/'.length).split('?')[0]); } catch { tool = ''; }
+      let raw = '', tooBig = false;
+      req.on('data', (chunk) => { raw += chunk; if (raw.length > 100_000) { tooBig = true; req.destroy(); } });
+      req.on('end', async () => {
+        if (tooBig) return;
+        let args;
+        try { args = JSON.parse(raw || '{}'); } catch { return sendJson(res, 400, { success: false, error: 'Invalid JSON' }); }
+        const result = await browserApi.call(configStore.configPath, tool, args, { surface: 'http', deps: browserDeps });
+        sendJson(res, result.code === 'UNKNOWN_TOOL' ? 404 : 200, result);
       });
       return;
     }

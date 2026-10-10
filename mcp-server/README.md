@@ -81,6 +81,11 @@ If prompted for permissions, add to `~/.claude/settings.json`:
 | `toggle_favorite` | Toggle favorite status |
 | `list_groups` | List all groups |
 | `move_to_group` | Move an app into a group |
+| `list_browser_profiles` | List named browser profiles: port, `cdpUrl`, state, who is using each |
+| `list_browsers` | List installed Chromium-family browsers |
+| `start_browser` | Start a named profile and get its port and `cdpUrl` |
+| `stop_browser` | Stop a profile PortPilot started |
+| `set_browser_mode` | Set a profile's mode: headed, offscreen or headless |
 
 ### `register-worktree` CLI
 

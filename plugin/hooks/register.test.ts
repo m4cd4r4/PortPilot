@@ -76,7 +76,7 @@ function world(on: On, w: World = {}) {
   // The engine's own drawing, for when the band has nothing to show.
   on('ui.render', async () => ({ type: 'Box' }))
   on('tool.call', async (_$, e) => {
-    if (e.tool === 'mcp__portpilot__start_app') {
+    if (e.tool === 'mcp__portpilot__start_app' || e.tool === 'mcp__portpilot__start_browser') {
       w.startCalls?.push(e)
       if (w.startFails) return { isError: true, result: 'start failed', text: '{"success":false,"error":"Port 4000 did not open"}' } as never
       return { result: 'started api on :4000', text: 'started api on :4000' } as never
@@ -291,6 +291,13 @@ test('every start_app call is stamped with this session, over any id Claude pass
     expect.objectContaining({ identifier: 'api', sessionId: 'sess-1' }),
     expect.objectContaining({ identifier: 'web', sessionId: 'sess-1' }),
   ])
+})
+
+test('start_browser calls are stamped with this session too', async ($, on) => {
+  const startCalls: unknown[] = []
+  world(on, { startCalls })
+  await $.tool.call({ tool: 'mcp__portpilot__start_browser', tool_use_id: 't4', name: 'shop-a', sessionId: 'session_guessed' } as never)
+  expect(startCalls).toEqual([expect.objectContaining({ name: 'shop-a', sessionId: 'sess-1' })])
 })
 
 // ---- heartbeat and inbox (slice 3) ------------------------------------------

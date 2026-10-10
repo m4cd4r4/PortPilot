@@ -11,7 +11,7 @@ PortPilot runs your local dev servers. With the Claude Code plugin, Claude sees 
 [![Version](https://img.shields.io/badge/version-3.6.0-blue.svg)](https://github.com/m4cd4r4/PortPilot/releases/tag/v3.6.0)
 [![Tests](https://img.shields.io/badge/tests-Playwright%20E2E-blue.svg)](tests/)
 [![Licence](https://img.shields.io/badge/licence-MIT-green.svg)](LICENSE)
-[![MCP](https://img.shields.io/badge/MCP-20%20tools-purple.svg)](mcp-server/README.md)
+[![MCP](https://img.shields.io/badge/MCP-25%20tools-purple.svg)](mcp-server/README.md)
 [![VS Code Marketplace](https://vsmarketplacebadges.dev/version-short/macdara.portpilot.svg)](https://marketplace.visualstudio.com/items?itemName=macdara.portpilot)
 
 **[Download v3.6.0](#install)** &nbsp;&middot;&nbsp; **[Add the Claude Code plugin](#use-it-with-claude-code)** &nbsp;&middot;&nbsp; **[Website](https://m4cd4r4.github.io/PortPilot/)**
@@ -38,7 +38,7 @@ Four surfaces, one config file and one run record. An app you add in one shows u
 
 ![PortPilot sidebar in VS Code with running apps first, two crashed apps and a crash toast](docs/screenshots/vscode-overview.png)
 
-**Claude Code.** Install the plugin and Claude sees what you see: a status line, a guard that points a second start at the running server, a crash band with Fix it, and the 20 MCP tools such as `find_run`. Pick it when Claude is the one starting your servers.
+**Claude Code.** Install the plugin and Claude sees what you see: a status line, a guard that points a second start at the running server, a crash band with Fix it, and the 25 MCP tools such as `find_run`. Pick it when Claude is the one starting your servers.
 
 ![Claude Code turning away a second npm run dev because harbor-web is already up on :3000](docs/demo/screenshots/claude-guard.png)
 
@@ -78,7 +78,7 @@ The MCP server is bundled, so there is no `npm install`. One install gives Claud
   ```
 - **Dev-server guard.** A start on a busy port is turned away with the URL to reuse. A clean start goes through PortPilot. If the guard can't tell what a command does, it lets it run.
 - **Crash band with Fix it.** When an app Claude started crashes, the session gets a band with Restart, Logs and Fix it. Fix it hands Claude the crash and the stderr tail.
-- **The PortPilot tools**: list, start, stop, scan, kill and group, as the 20 [MCP tools](#mcp-tools).
+- **The PortPilot tools**: list, start, stop, scan, kill and group, as the 25 [MCP tools](#mcp-tools).
 
 ## New in the desktop app (3.4 and 3.5)
 
@@ -116,7 +116,7 @@ The PortPilot MCP server works with Claude Code, Claude Desktop, Cursor, Windsur
 Setup outside the plugin: [mcp-server/README.md](mcp-server/README.md).
 
 <details id="mcp-tools">
-<summary><b>MCP tools (20)</b></summary>
+<summary><b>MCP tools (25)</b></summary>
 
 | Tool | Description |
 |------|-------------|
@@ -140,6 +140,13 @@ Setup outside the plugin: [mcp-server/README.md](mcp-server/README.md).
 | `list_groups` | List all app groups |
 | `move_to_group` | Move an app to a different group |
 | `find_run` | Find a past run by text, app, branch or time; returns its git state and literal re-run steps |
+| `list_browser_profiles` | List the named browser profiles: port, `cdpUrl`, state, who is using each, open tabs |
+| `list_browsers` | List the Chromium-family browsers installed here |
+| `start_browser` | Start a named profile (or reuse it) and get its port and `cdpUrl`; the caller never picks a port |
+| `stop_browser` | Stop a profile PortPilot started; never touches a process the profile did not start |
+| `set_browser_mode` | Set a profile's mode for its next start: headed, offscreen or headless |
+
+**Browser tools without MCP.** The web agent (`npm run agent`) serves the same five tools as `POST /api/browser/<tool>` with the arguments as a JSON body and the `X-PortPilot-Token` header (the token is in `agent.json` beside the config). The answer is the same JSON the MCP tool returns: `{ success: true, name, port, cdpUrl, state, ... }`, or `{ success: false, code, error, action }`. Who started a profile is shown as an advisory `claim`; it never blocks another caller.
 
 Manual setup for Claude Code without the plugin:
 
