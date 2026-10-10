@@ -43,9 +43,13 @@ class ConfigStore {
           clearTimeout(debounceTimer);
           debounceTimer = setTimeout(() => {
             console.log('[ConfigStore] Detected external config change, reloading...');
-            const oldConfig = JSON.stringify(this.config);
+            // browserProfiles are edited by the Browsers tab, MCP and the CLI through their own
+            // store and have their own view; the apps payload below does not carry them, so a
+            // profile-only edit refreshes the cache without announcing an apps change.
+            const sig = (c) => JSON.stringify({ ...c, browserProfiles: undefined });
+            const oldConfig = sig(this.config);
             this.config = this.load();
-            const newConfig = JSON.stringify(this.config);
+            const newConfig = sig(this.config);
 
             // Only notify if config actually changed
             if (oldConfig !== newConfig) {

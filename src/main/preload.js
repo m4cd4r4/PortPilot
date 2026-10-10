@@ -57,6 +57,18 @@ contextBridge.exposeInMainWorld('portpilot', {
     rerun: (runId) => ipcRenderer.invoke('history:rerun', runId)
   },
 
+  // Browser profiles (Browsers tab)
+  browsers: {
+    list: () => ipcRenderer.invoke('browser:list'),
+    start: (name) => ipcRenderer.invoke('browser:start', name),
+    stop: (name) => ipcRenderer.invoke('browser:stop', name),
+    setMode: (name, mode) => ipcRenderer.invoke('browser:setMode', name, mode),
+    save: (original, fields) => ipcRenderer.invoke('browser:save', original, fields),
+    remove: (name) => ipcRenderer.invoke('browser:remove', name),
+    duplicate: (from, fields) => ipcRenderer.invoke('browser:duplicate', from, fields),
+    extensions: (name) => ipcRenderer.invoke('browser:extensions', name)
+  },
+
   // Health probe
   health: {
     check: (appId, port) => ipcRenderer.invoke('health:check', appId, port)

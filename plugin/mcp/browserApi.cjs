@@ -614,8 +614,21 @@ var require_browserCdp = __commonJS({
       let id = 0;
       const pending = /* @__PURE__ */ new Map();
       await new Promise((resolve, reject) => {
-        ws.addEventListener("open", resolve, { once: true });
-        ws.addEventListener("error", () => reject(new Error("CDP socket error")), { once: true });
+        const timer = setTimeout(() => {
+          try {
+            ws.close();
+          } catch {
+          }
+          reject(new Error("CDP socket timed out"));
+        }, CALL_MS);
+        ws.addEventListener("open", () => {
+          clearTimeout(timer);
+          resolve();
+        }, { once: true });
+        ws.addEventListener("error", () => {
+          clearTimeout(timer);
+          reject(new Error("CDP socket error"));
+        }, { once: true });
       });
       ws.addEventListener("message", (ev) => {
         const msg = JSON.parse(ev.data);

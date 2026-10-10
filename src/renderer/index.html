@@ -36,6 +36,7 @@
     <nav class="view-tabs" role="tablist" aria-label="View">
       <button type="button" role="tab" class="view-tab active" data-view="apps" aria-selected="true">Apps</button>
       <button type="button" role="tab" class="view-tab" data-view="history" aria-selected="false">History</button>
+      <button type="button" role="tab" class="view-tab" data-view="browsers" aria-selected="false">Browsers</button>
     </nav>
 
     <!-- Main Content - Single Pane -->
@@ -55,6 +56,19 @@
           <span id="history-footer"></span>
           <button type="button" id="history-more" class="btn btn-small btn-secondary hidden">Show more</button>
         </div>
+      </section>
+
+      <!-- Browsers Section (shown by the Browsers tab) -->
+      <section id="browsers-section" class="section" aria-label="Browser profiles">
+        <div class="browsers-head">
+          <div class="browsers-intro">
+            <p>Named browsers for automated sessions. Claude asks for one by name and PortPilot supplies the port; nothing ever picks a port itself.</p>
+            <span id="browsers-summary" class="browsers-summary" aria-live="polite"></span>
+          </div>
+          <button type="button" id="browsers-add" class="btn btn-small btn-primary">Add profile</button>
+        </div>
+        <div id="browsers-list" class="browsers-list" aria-live="polite"></div>
+        <div class="browsers-foot">Each profile has its own folder, so sign-ins stay separate. PortPilot never copies cookies or passwords between profiles: sign in once in each.</div>
       </section>
 
       <!-- Apps Section -->
@@ -365,6 +379,22 @@
       </div>
     </div>
 
+    <!-- Browser profile dialog (add / edit / duplicate / extensions / remove) -->
+    <div id="modal-browser" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="browser-modal-title">
+      <div class="modal-content modal-small">
+        <div class="modal-header">
+          <h2 id="browser-modal-title">Browser profile</h2>
+          <button type="button" class="btn-close" id="browser-modal-close" aria-label="Close"></button>
+        </div>
+        <div id="browser-modal-body" class="modal-body"></div>
+        <div id="browser-modal-error" class="herr" role="alert"></div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" id="browser-modal-cancel">Cancel</button>
+          <button type="button" class="btn btn-primary" id="browser-modal-ok">Save</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Group Modal -->
     <div id="modal-group" class="modal hidden">
       <div class="modal-content modal-small">
@@ -450,8 +480,10 @@
   <script src="../core/status.js"></script>
   <script src="../core/conflict.js"></script>
   <script src="../core/runView.js"></script>
+  <script src="../core/browserView.js"></script>
   <script src="renderer.js"></script>
   <script src="history.js"></script>
+  <script src="browsers.js"></script>
   <script src="rowThumbs.js"></script>
 </body>
 </html>

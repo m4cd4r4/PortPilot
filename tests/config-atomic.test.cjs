@@ -211,6 +211,22 @@ function writer(file, tag, count) {
     }
   });
 
+  await t('a browser-profile-only change reloads the cache but does not announce an apps change', async () => {
+    const file = tmpConfig();
+    const store = new ConfigStore(null, file);
+    const seen = [];
+    store.onConfigChange = (payload) => seen.push(payload.apps.length);
+    try {
+      await sleep(150);
+      updateJson(file, c => { c.browserProfiles = [{ name: 'shop', port: 9231 }]; }, () => ({ apps: [] }));
+      await sleep(400);
+      assert.deepStrictEqual(seen, [], `an apps-change event fired for a profile edit: ${JSON.stringify(seen)}`);
+      assert.deepStrictEqual(store.config.browserProfiles, [{ name: 'shop', port: 9231 }], 'the cache still picks the profile up');
+    } finally {
+      store.close();
+    }
+  });
+
   fs.rmSync(root, { recursive: true, force: true });
   console.log(`\n${passed} passed, ${failed} failed\n`);
   process.exit(failed ? 1 : 0);
