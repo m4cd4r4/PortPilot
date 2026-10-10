@@ -127,14 +127,18 @@ class AppTreeItem extends vscode.TreeItem {
     app;
     activePort;
     children;
+    preview;
     rowState;
-    constructor(app, activePort, children = [], runtimeEntry) {
+    /** Tooltip lines, kept so resolveTreeItem can put them under the preview image. */
+    tooltipLines;
+    constructor(app, activePort, children = [], runtimeEntry, preview = null) {
         super(app.name, children.length > 0
             ? vscode.TreeItemCollapsibleState.Expanded
             : vscode.TreeItemCollapsibleState.None);
         this.app = app;
         this.activePort = activePort;
         this.children = children;
+        this.preview = preview;
         const isRunning = !!activePort;
         const port = activePort?.port ?? app.preferredPort;
         const isBranch = !!app.parentId;
@@ -175,7 +179,16 @@ class AppTreeItem extends vscode.TreeItem {
         ];
         if (app.description)
             tooltipLines.push(`Description: ${app.description}`);
-        this.tooltip = tooltipLines.join('\n');
+        this.tooltipLines = tooltipLines;
+        // With a preview the tooltip stays unset: resolveTreeItem builds the image
+        // card lazily, so the 10s refresh never reads a thumbnail file.
+        if (preview) {
+            // A string tooltip doubles as the screen-reader label; a MarkdownString does not.
+            this.accessibilityInformation = { label: tooltipLines.join(', ') };
+        }
+        else {
+            this.tooltip = tooltipLines.join('\n');
+        }
     }
 }
 exports.AppTreeItem = AppTreeItem;
@@ -187,6 +200,12 @@ class AppsTreeProvider {
     foldStopped = true;
     setFoldStopped(fold) {
         this.foldStopped = fold;
+        this._onDidChangeTreeData.fire(undefined);
+    }
+    /** Show a page preview in the hover card of running apps (portpilot.rowPreviews). */
+    rowPreviews = true;
+    setRowPreviews(show) {
+        this.rowPreviews = show;
         this._onDidChangeTreeData.fire(undefined);
     }
     async refresh() {
@@ -209,6 +228,26 @@ class AppsTreeProvider {
     getTreeItem(element) {
         return element;
     }
+    /** Hover card: the page thumbnail above the usual tooltip lines. */
+    resolveTreeItem(item, element) {
+        if (!(element instanceof AppTreeItem) || !element.preview)
+            return item;
+        const uri = (0, config_1.thumbDataUri)(element.preview.thumb);
+        if (!uri) {
+            // The thumbnail file is gone or unreadable: keep the plain tooltip.
+            item.tooltip = element.tooltipLines.join('\n');
+            return item;
+        }
+        const md = new vscode.MarkdownString();
+        md.appendMarkdown(`![Page preview](${uri}|width=240)\n\n`);
+        element.tooltipLines.forEach((line, i) => {
+            if (i)
+                md.appendMarkdown('  \n'); // hard line break, not a paragraph gap
+            md.appendText(line);
+        });
+        item.tooltip = md;
+        return item;
+    }
     getChildren(element) {
         if (element instanceof GroupTreeItem || element instanceof StoppedTreeItem) {
             return element.apps;
@@ -221,6 +260,7 @@ class AppsTreeProvider {
         if (!config.apps.length)
             return [];
         const runtime = (0, config_1.readRuntimeApps)();
+        const thumbs = this.rowPreviews ? (0, config_1.readRowThumbs)() : {};
         const groups = config.groups || [];
         const keyOf = (i) => ({
             state: i.rowState.state,
@@ -246,7 +286,8 @@ class AppsTreeProvider {
             // Branches are sorted running-first but never folded: they sit under an
             // already-expanded parent the user chose to look at.
             const kids = (0, treeModel_1.arrange)((childrenByParent.get(app.id) ?? []).map(makeAppItem), keyOf, false).visible;
-            return new AppTreeItem(app, matched, kids, runtime[app.id]);
+            const preview = matched ? (0, treeModel_1.previewFor)(thumbs, app.id, !!runtime[app.id], matched.port) : null;
+            return new AppTreeItem(app, matched, kids, runtime[app.id], preview);
         };
         // Running first, then the idle ones folded into a tail node when enabled.
         const ordered = (items, scope) => {

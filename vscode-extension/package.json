@@ -168,6 +168,11 @@
           "type": "boolean",
           "default": true,
           "description": "Sort running and crashed apps first and fold stopped apps into a collapsed \"Stopped (N)\" node at the end of each list."
+        },
+        "portpilot.rowPreviews": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show page previews on running apps: hover a running app to see a thumbnail of its page. Thumbnails are read from PortPilot's local run history and never leave this machine."
         }
       }
     },

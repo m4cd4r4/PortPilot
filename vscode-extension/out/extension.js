@@ -66,6 +66,13 @@ function activate(context) {
         if (e.affectsConfiguration('portpilot.foldStoppedApps'))
             applyFold(readFold());
     }));
+    // Page preview in the hover card of running apps (portpilot.rowPreviews).
+    const readPreviews = () => vscode.workspace.getConfiguration('portpilot').get('rowPreviews', true);
+    appsProvider.setRowPreviews(readPreviews());
+    context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(e => {
+        if (e.affectsConfiguration('portpilot.rowPreviews'))
+            appsProvider.setRowPreviews(readPreviews());
+    }));
     const setFold = (fold) => vscode.workspace.getConfiguration('portpilot').update('foldStoppedApps', fold, vscode.ConfigurationTarget.Global);
     const crashOutput = vscode.window.createOutputChannel('PortPilot Crashes');
     context.subscriptions.push(crashOutput);

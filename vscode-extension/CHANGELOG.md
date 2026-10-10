@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- **Page previews on running apps.** Hover a running app to see a thumbnail of its page above the usual details. The thumbnail is the one PortPilot captured when the app started, read from the local run history; nothing leaves your machine. Turn this off with `portpilot.rowPreviews`.
+
 ## 3.4.0
 
 - **Row state and who started it.** Each app shows its state, how long it has been in it and who started it: you, or a Claude Code session.

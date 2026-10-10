@@ -80,6 +80,38 @@ t('appIdByPort: first app wins a shared port', () => {
   assert.equal(m.get(3000), 'first');
 });
 
+// ---- row preview rule (mirrors the desktop rowThumbs rule) ----
+const thumbs = {
+  web: { id: 'r1', thumb: 'thumbs/r1.jpg', port: 3000 },
+  anyport: { id: 'r2', thumb: 'thumbs/r2.jpg', port: null },
+};
+
+t('previewFor: running with a record and a matching port shows the thumb', () => {
+  assert.equal(tm.previewFor(thumbs, 'web', true, 3000), thumbs.web);
+});
+
+t('previewFor: no runtime record hides it', () => {
+  assert.equal(tm.previewFor(thumbs, 'web', false, 3000), null);
+});
+
+t('previewFor: live port differing from the open run hides it', () => {
+  assert.equal(tm.previewFor(thumbs, 'web', true, 3001), null);
+});
+
+t('previewFor: no live port (not listening) hides it', () => {
+  assert.equal(tm.previewFor(thumbs, 'web', true, null), null);
+  assert.equal(tm.previewFor(thumbs, 'web', true, undefined), null);
+});
+
+t('previewFor: app without a thumb shows nothing', () => {
+  assert.equal(tm.previewFor(thumbs, 'other', true, 3000), null);
+  assert.equal(tm.previewFor({}, 'web', true, 3000), null);
+});
+
+t('previewFor: a run with no recorded port matches any live port', () => {
+  assert.equal(tm.previewFor(thumbs, 'anyport', true, 5173), thumbs.anyport);
+});
+
 // ---- crash detection ----
 const rt = {
   old: { crashed: { exitCode: 1, at: 100 } },

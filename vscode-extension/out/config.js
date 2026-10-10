@@ -39,6 +39,8 @@ exports.readConfig = readConfig;
 exports.recordHumanStart = recordHumanStart;
 exports.recordAppStop = recordAppStop;
 exports.readRuntimeApps = readRuntimeApps;
+exports.readRowThumbs = readRowThumbs;
+exports.thumbDataUri = thumbDataUri;
 exports.logPathFor = logPathFor;
 exports.updateConfig = updateConfig;
 exports.generateId = generateId;
@@ -80,6 +82,10 @@ function readConfig() {
 const configFile = require(path.join(__dirname, '..', 'runtime', 'core', 'configFile.js'));
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const status = require(path.join(__dirname, '..', 'runtime', 'core', 'status.js'));
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const runHistory = require(path.join(__dirname, '..', 'runtime', 'core', 'runHistory.js'));
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const runView = require(path.join(__dirname, '..', 'runtime', 'core', 'runView.js'));
 /** Record that the user started an app from VS Code (best-effort, never throws). */
 function recordHumanStart(app) {
     return configFile.recordStart(getConfigPath(), app.id, status.makeStartedBy({ kind: 'human', surface: 'vscode' }), { port: app.preferredPort });
@@ -95,6 +101,41 @@ function readRuntimeApps() {
     }
     catch {
         return {};
+    }
+}
+// runs.json is the biggest file the 10s refresh touches: re-parse it only when it changes.
+let thumbCache = null;
+/** Newest open run with a page thumbnail, per app. Empty on any read failure. */
+function readRowThumbs() {
+    try {
+        const configPath = getConfigPath();
+        const runsFile = path.join(runHistory.historyDirFor(configPath), 'runs.json');
+        const key = `${runsFile}|${fs.statSync(runsFile).mtimeMs}`;
+        if (thumbCache?.key !== key) {
+            thumbCache = { key, thumbs: runView.rowThumbs(runHistory.readRuns(configPath)) };
+        }
+        return thumbCache.thumbs;
+    }
+    catch {
+        return {};
+    }
+}
+const THUMB_MAX_BYTES = 512 * 1024;
+/** A run's thumbnail as a data URI (thumbnails never leave this machine), or null. */
+function thumbDataUri(thumb) {
+    try {
+        const dir = path.resolve(runHistory.historyDirFor(getConfigPath()));
+        const file = path.resolve(dir, thumb);
+        // A thumb path read from runs.json must stay under history/.
+        if (!file.startsWith(dir + path.sep))
+            return null;
+        const st = fs.statSync(file);
+        if (!st.isFile() || st.size > THUMB_MAX_BYTES)
+            return null;
+        return `data:image/jpeg;base64,${fs.readFileSync(file).toString('base64')}`;
+    }
+    catch {
+        return null;
     }
 }
 /** Where a detached app's output is written (logs/<appId>.log beside the config). */

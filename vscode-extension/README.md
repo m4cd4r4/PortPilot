@@ -42,6 +42,7 @@ The ✦ marks and the "Claude Code started it" line come from the PortPilot plug
 | Setting | Default | Description |
 |---------|---------|-------------|
 | `portpilot.foldStoppedApps` | `true` | Sort running and crashed apps first and fold stopped apps into a `Stopped (N)` node. |
+| `portpilot.rowPreviews` | `true` | Show a page preview when you hover a running app. |
 | `portpilot.webPortal.enabled` | `false` | Run the web portal whenever this window is open. |
 | `portpilot.webPortal.stopAppsOnStop` | `false` | Also stop the dev servers the portal started when it stops. |
 

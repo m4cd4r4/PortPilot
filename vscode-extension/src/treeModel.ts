@@ -61,6 +61,30 @@ export function appIdByPort(running: Map<string, { port: number }>): Map<number,
   return out;
 }
 
+/** An app's newest open run that already has a page thumbnail (runView.rowThumbs). */
+export interface RowThumbRef {
+  id: string;
+  thumb: string;
+  port: number | null;
+}
+
+/**
+ * The preview an Apps row may show, by the desktop's rule (rowThumbs.js): the app
+ * must be listening, have a runtime record, and the live port must match the open
+ * run's port. A stop outside PortPilot leaves a run open, so an open run alone
+ * does not prove its server is the one on screen.
+ */
+export function previewFor(
+  byApp: Record<string, RowThumbRef | undefined>,
+  appId: string,
+  hasRuntimeRecord: boolean,
+  livePort: number | null | undefined
+): RowThumbRef | null {
+  const cur = byApp[appId];
+  if (!cur || !hasRuntimeRecord || livePort == null) return null;
+  return cur.port == null || cur.port === livePort ? cur : null;
+}
+
 export interface CrashStamp {
   exitCode: number | null;
   at: number;
