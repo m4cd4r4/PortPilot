@@ -92,7 +92,7 @@
       </button>
       <div class="nav-links" id="nav-menu">
         <a href="#claude" class="nav-link">Claude Code</a>
-        <a href="#new" class="nav-link">New in 3.4</a>
+        <a href="#new" class="nav-link">New in 3.6</a>
         <a href="#mcp" class="nav-link">MCP</a>
         <a href="#features" class="nav-link">Features</a>
         <a href="#security" class="nav-link">Security</a>
@@ -168,17 +168,24 @@
       </div>
     </section>
 
-    <!-- New in 3.4 desktop -->
+    <!-- New in 3.6 desktop -->
     <section class="section section-alt" id="new" aria-labelledby="new-heading">
       <div class="container">
         <div class="section-head">
           <h2 id="new-heading">New in the desktop app</h2>
-          <p>Each row now tells you what is happening and who did it.</p>
+          <p>A history of every run, a page preview on each running row, and rows that say who started them.</p>
         </div>
         <div class="feature-row reveal">
           <div class="feature-copy">
-            <h3>Row state, and who started it</h3>
-            <p>Every app shows its state, how long it has been in it and who started it: you, or a Claude Code session. A crashed app reads <code>&#10005; Crashed &middot; exit 1</code>. The VS Code tree uses the same states.</p>
+            <h3>Run history</h3>
+            <p>Every start, stop and crash is recorded locally, with the branch, commit and any uncommitted files. Search by app, branch or file, then re-run an old version in a sibling worktree. Claude can look a run up too, with the <code>find_run</code> tool.</p>
+          </div>
+          <img src="screenshots/crop-history.png" class="crop zoomable" tabindex="0" width="1440" height="400" loading="lazy" alt="The History tab: runs of harbor-web and tugboat-api, each with a page thumbnail or a no-preview box, a state word, the branch and commit, and buttons Open URL, Re-run this version, Copy SHA and Pin">
+        </div>
+        <div class="feature-row reveal">
+          <div class="feature-copy">
+            <h3>Row state, page preview, and who started it</h3>
+            <p>Every app shows its state, how long it has been in it and who started it: you, or a Claude Code session. A running app also shows a small preview of its page, so the right server is easy to spot. A crashed app reads <code>&#10005; Crashed &middot; exit 1</code>. The VS Code tree uses the same states.</p>
           </div>
           <div class="crop-scroll" tabindex="-1"><img src="screenshots/crop-row-state.png" class="crop zoomable" tabindex="0" width="779" height="114" loading="lazy" alt="Four app rows, the two running harbor-web rows with a small page preview: harbor-web running 2h started by you, a branch running 18m started by claude a3f2, another branch not responding for 41m, and tugboat-api running 52m"></div>
         </div>
