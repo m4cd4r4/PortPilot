@@ -30,7 +30,7 @@ Four surfaces, one config file and one run record. An app you add in one shows u
 
 ![Desktop app, Apps tab, with grouped apps, two port conflicts and a crashed app](docs/demo/screenshots/desktop-apps-1440.png)
 
-**Web portal.** The same Apps view in your browser, from `npm run agent` or from VS Code. It binds `127.0.0.1` only and needs a per-session token. Pick it on a machine where you cannot install the desktop app. The History tab and crash toasts are not in the portal yet.
+**Web portal.** The same Apps view in your browser, from `npm run agent` or from VS Code. It binds `127.0.0.1` only and needs a per-session token. Pick it on a machine where you cannot install the desktop app. The History tab, row previews and crash toasts are not in the portal yet.
 
 ![Web portal in a browser showing the same Apps view](docs/demo/screenshots/web-apps-1440.png)
 
