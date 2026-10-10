@@ -962,6 +962,7 @@ function setupIpcHandlers(ipcMain, configStore) {
   });
 
   require('./historyIpc').setupHistoryIpc(ipcMain, configStore);
+  require('./browserIpc').setupBrowserIpc(ipcMain, configStore);
 }
 
 module.exports = { setupIpcHandlers, matchPortsToApps, getProcessDetails, detectWorktrees, detectStaleWorktrees };

@@ -41,9 +41,12 @@ async function withBrowserSession(port, fn) {
   const ws = new WebSocket(v.webSocketDebuggerUrl);
   let id = 0;
   const pending = new Map();
+  // A hung browser can accept the connection and never finish the handshake; without a limit the
+  // caller (stop, and the desktop's per-profile busy lock) would wait for it indefinitely.
   await new Promise((resolve, reject) => {
-    ws.addEventListener('open', resolve, { once: true });
-    ws.addEventListener('error', () => reject(new Error('CDP socket error')), { once: true });
+    const timer = setTimeout(() => { try { ws.close(); } catch { /* not open */ } reject(new Error('CDP socket timed out')); }, CALL_MS);
+    ws.addEventListener('open', () => { clearTimeout(timer); resolve(); }, { once: true });
+    ws.addEventListener('error', () => { clearTimeout(timer); reject(new Error('CDP socket error')); }, { once: true });
   });
   ws.addEventListener('message', (ev) => {
     const msg = JSON.parse(ev.data);

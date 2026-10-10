@@ -1,5 +1,6 @@
 // ============ History view ============
-// Runs recorded by PortPilot (history/runs.json), newest first: filter, open the
+// Also owns the view tabs (Apps / History / Browsers): setView announces the change
+// with a 'portpilot:view' event. Runs recorded by PortPilot (history/runs.json), newest first: filter, open the
 // page, copy the SHA, pin, and "Re-run this version". Pure logic (filtering,
 // state words, formatting) is in ../core/runView.js. Loaded after renderer.js,
 // which provides state, escapeHtml, showToast and loadApps.
@@ -155,21 +156,25 @@
     }
   }
 
+  const VIEWS = ['apps', 'history', 'browsers'];
+
   function setView(view) {
-    const history = view === 'history';
-    document.querySelector('main.content').dataset.view = history ? 'history' : 'apps';
+    const active = VIEWS.includes(view) ? view : 'apps';
+    document.querySelector('main.content').dataset.view = active;
     for (const tab of document.querySelectorAll('.view-tab')) {
-      const on = tab.dataset.view === (history ? 'history' : 'apps');
+      const on = tab.dataset.view === active;
       tab.classList.toggle('active', on);
       tab.setAttribute('aria-selected', String(on));
     }
     clearInterval(h.timer);
     h.timer = null;
-    if (history) {
+    if (active === 'history') {
       h.limit = PAGE;
       load();
       h.timer = setInterval(() => { if (!document.hidden) load(); }, POLL_MS);
     }
+    // Other tabs (Browsers) start and stop their own polling from this.
+    document.dispatchEvent(new CustomEvent('portpilot:view', { detail: { view: active } }));
   }
 
   async function rerun(runId) {
