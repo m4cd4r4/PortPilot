@@ -1364,10 +1364,10 @@ var publicClaim = (c) => {
   return out;
 };
 function callerOf(args, ctx) {
-  const clean = (s) => String(s || "").replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, 100);
-  const sessionId = clean(args.sessionId).slice(0, 200);
+  const clean = (s, max) => String(typeof s === "string" ? s : "").replace(/[^A-Za-z0-9 ._-]/g, "").trim().slice(0, max);
+  const sessionId = clean(args.sessionId, 100);
   const short = sessionId.replace(/[^A-Za-z0-9]/g, "").slice(0, 4).toLowerCase();
-  const by = clean(args.agent) || (short ? `claude ${short}` : `unnamed ${ctx.surface} caller`);
+  const by = clean(args.agent, 40) || (short ? `claude ${short}` : `unnamed ${ctx.surface} caller`);
   const out = { by, surface: ctx.surface, at: (/* @__PURE__ */ new Date()).toISOString() };
   if (sessionId) out.sessionId = sessionId;
   return out;
@@ -1391,7 +1391,7 @@ function view(st, claim) {
 }
 var NEXT = {
   NOT_FOUND: "Call list_browser_profiles and use one of the names it returns.",
-  BAD_ARGS: 'Send the profile name as "name".',
+  BAD_ARGS: "Send the missing argument named in the error.",
   PORT_HELD: "Do not kill it and do not pick another port. Tell the user which process holds the port and ask them to free it.",
   NOT_OURS: "Leave it running: this profile did not start that process. Ask the user.",
   NOT_VERIFIED: "Leave it alone and ask the user to close that browser by hand.",
@@ -1464,9 +1464,11 @@ var TOOLS = {
     const name = nameOf(args);
     const profile = profiles.getProfile(configPath, name);
     const caller = callerOf(args, ctx);
-    const before = liveClaim(configPath, await run.profileStatus(configPath, profile, ctx.deps));
+    const st0 = await run.profileStatus(configPath, profile, ctx.deps);
+    const before = liveClaim(configPath, st0);
     const r = await run.stopProfile(configPath, name, runOpts(ctx), ctx.deps);
-    writeClaim(configPath, profile.name, null);
+    const stored = readClaims(configPath)[lower(profile.name)];
+    if (stored && (st0.state === "down" || stored.pid == null || stored.pid === st0.pid)) writeClaim(configPath, profile.name, null);
     const out = { ...view(r, null), already: !!r.already };
     if (before && before.by !== caller.by) {
       out.claimNote = `Was claimed by "${before.by}" (${ago(before.at)}). Stopped anyway: claims are advisory.`;
@@ -1475,6 +1477,9 @@ var TOOLS = {
   },
   async set_browser_mode(configPath, args, ctx) {
     const name = nameOf(args);
+    if (typeof args.mode !== "string") {
+      throw new ApiError("BAD_ARGS", `mode is required: one of ${profiles.MODES.join(", ")}`);
+    }
     profiles.getProfile(configPath, name);
     const p = profiles.updateProfile(configPath, name, { mode: args.mode });
     const st = await run.profileStatus(configPath, p, ctx.deps);

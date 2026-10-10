@@ -1312,7 +1312,7 @@ function createServer() {
     'Start a named browser profile (or reuse it if already running) and get back its port and cdpUrl. Connect your automation to cdpUrl. Never choose a port yourself: the profile owns its port.',
     { name: nameShape, agent: agentShape, sessionId: sessionIdShape });
   browserTool('stop_browser',
-    'Stop a browser profile that PortPilot started. Logins stay saved in the profile. Refuses to touch any process the profile did not start.',
+    'Stop a named browser profile. Logins stay saved in the profile. Refuses to touch any process other than the browser opened with this profile folder.',
     { name: nameShape, agent: agentShape, sessionId: sessionIdShape });
   browserTool('set_browser_mode',
     'Set how a profile opens next time: headed (visible window), offscreen (a window parked out of sight; use this for sites that block headless browsers) or headless (no window). A running browser keeps its old mode until stopped and started again.',

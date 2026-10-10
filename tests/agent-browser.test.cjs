@@ -139,5 +139,5 @@ function post(port, route, body, headers = {}) {
   await w.cleanup();
   console.log(`\n${passed} passed, ${failed} failed`);
   fs.rmSync(root, { recursive: true, force: true });
-  process.exit(failed ? 1 : 0);
+  process.exitCode = failed ? 1 : 0; // not process.exit: it aborts libuv while sockets are still closing
 })();

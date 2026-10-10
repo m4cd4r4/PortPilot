@@ -24775,7 +24775,7 @@ function createServer2() {
   );
   browserTool(
     "stop_browser",
-    "Stop a browser profile that PortPilot started. Logins stay saved in the profile. Refuses to touch any process the profile did not start.",
+    "Stop a named browser profile. Logins stay saved in the profile. Refuses to touch any process other than the browser opened with this profile folder.",
     { name: nameShape, agent: agentShape, sessionId: sessionIdShape }
   );
   browserTool(
