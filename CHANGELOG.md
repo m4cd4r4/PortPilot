@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.6.0] - 2026-10-10
+
 ### Added
 - **Page previews on the Apps tab.** A running app's row (parent and worktree rows) shows a 32 x 18 px thumbnail of its page, taken from the thumbnail PortPilot already captured for its open run. It reuses the History tab's capture and IPC, opens no extra window and does not make rows taller. Stopped apps show none, and rows without a thumbnail look as before. Hidden at phone width. **Settings > Show page previews on running apps** turns it off.
 
