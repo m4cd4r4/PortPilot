@@ -27,6 +27,16 @@ the session ends, and collides with the one they already have open. Use the
 5. **Stopping:** `stop_app` for an app you started. Stop an app the user started only
    when they ask.
 
+## Browsers for automation
+
+Never launch a browser with a debug port yourself, and never pick a port for one. Ask for a
+named profile: `list_browser_profiles` (names, state, who is using each), then
+`start_browser` with the name. It returns `cdpUrl`; connect your automation there. If a
+profile is claimed by someone else you may still use it; leave their tabs alone. If the
+port is held by another process the error names it: tell the user, do not kill it. Stop
+with `stop_browser` only a browser you started. `set_browser_mode` changes how a profile
+opens next time.
+
 ## Destructive tools need the user's say-so in this conversation
 
 `kill_port`, `delete_app` and `delete_all_apps` end processes or remove the user's

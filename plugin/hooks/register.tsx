@@ -265,14 +265,15 @@ export const register: Register = (on) => {
   })
 
   // Stamp this session on every PortPilot start, however Claude called it, so
-  // a later crash finds its way back here. Overwrite any sessionId Claude
+  // a later crash finds its way back here. start_browser/stop_browser carry it too: it labels
+  // the browser profile's advisory claim when no agent name is given. Overwrite any sessionId Claude
   // passed: the model cannot see its session id and guesses one.
   // An observed registration names the session it came from, which Claude cannot see either.
   // After every tool call: a Bash call may have brought a noted start's port
   // up; hand Claude any notice with the result (as a PostToolUse hook would).
   on('tool.call', async ($, e, next) => {
     let call = e
-    if (/portpilot/i.test(e.tool) && /__start_(app|group)$/.test(e.tool)) call = { ...e, sessionId: await $.session.id() } as typeof e
+    if (/portpilot/i.test(e.tool) && /__(start_(app|group)|start_browser|stop_browser)$/.test(e.tool)) call = { ...e, sessionId: await $.session.id() } as typeof e
     else if (/portpilot/i.test(e.tool) && /__add_app$/.test(e.tool) && (e as { registeredBy?: unknown }).registeredBy === 'observed') {
       call = { ...e, observedSession: await $.session.id() } as typeof e
     }

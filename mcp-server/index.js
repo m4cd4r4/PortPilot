@@ -58,6 +58,7 @@ function loadCore(name) {
 const configFile = loadCore('configFile');
 const status = loadCore('status');
 const runHistory = loadCore('runHistory');
+const browserApi = loadCore('browserApi');
 const emptyConfig = () => ({ apps: [], settings: {}, groups: [] });
 
 function readConfig() {
@@ -1290,6 +1291,32 @@ function createServer() {
       return { content: [{ type: 'text', text: JSON.stringify({ count: runs.length, total: found.total, runs }, null, 2) }] };
     }
   );
+
+  // --- Browser profiles (plan row 26): named debug browsers. The caller never picks a port. ---
+
+  const sessionIdShape = z.string().max(200).optional()
+    .describe('Leave unset. The PortPilot plugin fills in the real session id');
+  const agentShape = z.string().max(100).optional()
+    .describe('Optional: your agent name, shown to anyone else using this browser');
+  const nameShape = z.string().describe('Profile name, exactly as list_browser_profiles shows it');
+  const browserTool = (name, description, shape) => server.tool(name, description, shape, async (args) => {
+    const result = await browserApi.call(getConfigPath(), name, args, { surface: 'mcp' });
+    return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }], isError: !result.success };
+  });
+
+  browserTool('list_browser_profiles',
+    'List the named browser profiles PortPilot manages: port, cdpUrl, state (up, down or blocked), who is using each running one, and its open tabs. Call this first to find the profile name you need.',
+    {});
+  browserTool('list_browsers', 'List the browsers installed on this machine that a profile can use.', {});
+  browserTool('start_browser',
+    'Start a named browser profile (or reuse it if already running) and get back its port and cdpUrl. Connect your automation to cdpUrl. Never choose a port yourself: the profile owns its port.',
+    { name: nameShape, agent: agentShape, sessionId: sessionIdShape });
+  browserTool('stop_browser',
+    'Stop a named browser profile. Logins stay saved in the profile. Refuses to touch any process other than the browser opened with this profile folder.',
+    { name: nameShape, agent: agentShape, sessionId: sessionIdShape });
+  browserTool('set_browser_mode',
+    'Set how a profile opens next time: headed (visible window), offscreen (a window parked out of sight; use this for sites that block headless browsers) or headless (no window). A running browser keeps its old mode until stopped and started again.',
+    { name: nameShape, mode: z.string().describe('headed, offscreen or headless: the mode to use from the next start') });
   return server;
 }
 
