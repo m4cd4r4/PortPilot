@@ -1,12 +1,17 @@
 /**
  * Auto-tracks every localhost dev server on this machine, whoever started it.
  *
- * Every 10 s: scan the listening ports, drop the ones a registered app owns,
- * keep the ones localhostDetect.classify calls a developer's server, and require
+ * Every 10 s: scan the listening ports, keep the ones localhostDetect.classify calls
+ * a developer's server, and require
  * an HTTP answer on two scans in a row before opening a run (a server that is
  * still starting, or a port that flickers, never makes one). A run closes when
  * its port has been gone for two scans. Runs live in history/runs.json, so the
  * thumbnail watcher and the History tab treat them like any other run.
+ *
+ * A port a registered app owns is left to that app while PortPilot started it (an open run
+ * or a runtime-sidecar start exists). A server for a registered app that was started
+ * outside PortPilot (an agent, a terminal) gets a run under the REGISTERED appId, so the
+ * app's row, the History tab and the thumbnails line up.
  *
  * On the first scan, open detected runs left by a previous session are adopted
  * if their server is still up and closed (endedBy 'unknown') if not.
@@ -52,13 +57,19 @@ const hostFor = (info) => (detect.hostOf(info.address) === '::1' ? '::1' : '127.
  * @param {Function} o.getSettings       () => settings
  * @param {Function} o.getApps           () => registered apps
  * @param {Function} o.scan              () => Promise<portInfo[]>
- * @param {Function} o.registeredPorts   (ports, apps) => Promise<Set<number>> ports a registered app owns
+ * @param {Function} o.registeredPorts   (ports, apps) => Promise<Map<number, string|null>> ports a registered app
+ *                                       owns, with the app's id (null for a conflict: a stranger on the app's port).
+ *                                       A Set of ports is read as all-conflicts.
+ * @param {Function} [o.startedByPortPilot] (appId) => boolean, a runtime-sidecar start exists for the app
  * @param {Function} o.probe             (port, path, timeoutMs, host) => Promise<'healthy'|'unhealthy'|'down'>
  * @param {number[]|Function} [o.ownPorts]  ports PortPilot serves on (or a function returning them)
  * @param {number[]} [o.onlyPorts]       test seam: look at these ports and no others
  */
 function createLocalhostWatcher(o) {
   const history = o.history || runHistory;
+  const startedByPortPilot = o.startedByPortPilot || ((id) => {
+    try { return !!require('../core/configFile').readRuntime(o.configPath).apps[id]?.startedBy; } catch { return false; }
+  });
   const log = o.log || ((...a) => console.error('[localhostWatcher]', ...a));
   const startFor = o.startCommandFor || startCommandFor;
   const open = new Map();     // appId -> { runId, port, absent }
@@ -76,13 +87,17 @@ function createLocalhostWatcher(o) {
 
   // Candidates this scan: dev servers no registered app owns, each with its project and id.
   async function candidates(ports) {
-    const owned = await o.registeredPorts(ports, o.getApps());
+    const reg = await o.registeredPorts(ports, o.getApps());
+    const owned = reg instanceof Map ? reg : new Map([...reg].map((p) => [p, null]));
     const only = o.onlyPorts && o.onlyPorts.length ? new Set(o.onlyPorts) : null;
     const ownPorts = typeof o.ownPorts === 'function' ? o.ownPorts() : o.ownPorts;
     const out = [];
     for (const info of ports) {
-      if (owned.has(info.port) || (only && !only.has(info.port))) continue;
+      const appId = owned.get(info.port);
+      if (owned.has(info.port) && !appId) continue; // a stranger on a registered app's port is a conflict, not a server to track
+      if (only && !only.has(info.port)) continue;
       if (!detect.classify(info, { ownPorts }).dev) continue;
+      if (appId) { out.push({ info, proj: null, id: appId, registered: true }); continue; }
       const proj = detect.deriveProject(info.commandLine);
       out.push({ info, proj, id: detect.detectedAppId(proj.cwd, proj.name, info.port) });
     }
@@ -109,7 +124,24 @@ function createLocalhostWatcher(o) {
     return count >= CONFIRM_SCANS;
   }
 
+  // A registered app's server is ours to record only when PortPilot did not start it.
+  function eligible(found) {
+    const runs = found.some((c) => c.registered) ? history.readRuns(o.configPath) : [];
+    return found.filter((c) => {
+      if (!c.registered) return true;
+      if (startedByPortPilot(c.id)) { open.delete(c.id); pending.delete(c.info.port); return false; }
+      if (!open.has(c.id) && runs.some((r) => r.appId === c.id && !r.stoppedAt)) { pending.delete(c.info.port); return false; }
+      return true;
+    });
+  }
+
   async function openFor(c) {
+    if (c.registered) {
+      const { id: runId } = history.openRun(o.configPath, c.id, startedBy(), { port: c.info.port });
+      open.set(c.id, { runId, port: c.info.port, absent: 0 });
+      pending.delete(c.info.port);
+      return;
+    }
     const startCommand = c.proj.cwd ? await startFor(c.proj.cwd) : null;
     const meta = { name: c.proj.name, cwd: c.proj.cwd, command: startCommand || c.info.commandLine || null, startCommand };
     const { id: runId } = history.openRun(o.configPath, c.id, startedBy(), { port: c.info.port, meta });
@@ -130,8 +162,9 @@ function createLocalhostWatcher(o) {
       // A machine always listens on something; an empty scan is a failed scan, and
       // reading it as "every server stopped" would close every run.
       if (!Array.isArray(ports) || !ports.length) return;
-      const found = await candidates(ports);
-      if (!reconciled) reconcile(found);
+      const seen = await candidates(ports);
+      if (!reconciled) reconcile(seen);
+      const found = eligible(seen);
 
       const present = new Set(found.map((c) => c.id));
       for (const [id, entry] of [...open]) {
@@ -182,7 +215,9 @@ function startLocalhostWatcher(configStore, extra = {}) {
     registeredPorts: async (ports, apps) => {
       // The same matching the Apps tab uses, so "owned by a registered app" means one thing.
       const { matches, unknownConflicts } = await matchPortsWithOwnership(ports, apps);
-      return new Set([...Object.values(matches).map((m) => m.port), ...unknownConflicts.map((c) => c.port)]);
+      const owned = new Map(unknownConflicts.map((c) => [c.port, null]));
+      for (const [appId, m] of Object.entries(matches)) owned.set(m.port, appId);
+      return owned;
     },
     probe,
     ...extra,

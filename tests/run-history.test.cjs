@@ -389,6 +389,23 @@ const startedBy = { kind: 'claude', surface: 'mcp', sessionId: 's1', at: '2026-1
     assert.equal('detected' in run, false);
   });
 
+  await t('a detected start for a registered app uses the app, is marked detected, and never doubles a PortPilot-started run', async () => {
+    const s = setup();
+    const a = runHistory.openRun(s.configPath, 'app1', detectedBy, { port: 3005 });
+    const run = runsOf(s.configPath).find((r) => r.id === a.id);
+    assert.equal(run.appId, 'app1');
+    assert.equal(run.appName, 'shop-web');
+    assert.equal(run.detected, true);
+    assert.equal(run.startCommand, 'npm run dev');
+    runHistory.closeRun(s.configPath, 'app1', { endedBy: 'stop' });
+
+    const own = runHistory.openRun(s.configPath, 'app1', startedBy, { port: 3005 });
+    const again = runHistory.openRun(s.configPath, 'app1', detectedBy, { port: 3005 });
+    assert.equal(again.id, own.id);
+    assert.equal(again.reused, true);
+    assert.equal(runsOf(s.configPath).filter((r) => !r.stoppedAt).length, 1);
+  });
+
   await t('a detected start never duplicates an open run for the same server', async () => {
     const s = setup();
     const a = runHistory.openRun(s.configPath, 'det_0123456789', detectedBy, { port: 3111, meta: metaFor(s.dir) });

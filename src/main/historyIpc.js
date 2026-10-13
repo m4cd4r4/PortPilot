@@ -81,8 +81,11 @@ function setupHistoryIpc(ipcMain, configStore) {
   ipcMain.handle('history:rowThumbs', async () => {
     try {
       const runtime = readRuntime(configPath()).apps || {};
-      const byApp = rowThumbs(runHistory.readRuns(configPath()));
-      for (const appId of Object.keys(byApp)) if (!runtime[appId]) delete byApp[appId];
+      const runs = runHistory.readRuns(configPath());
+      const byApp = rowThumbs(runs);
+      // A detected run (a registered app's server started outside PortPilot) has no runtime record, only its open run.
+      const detected = new Set(runs.filter((r) => r.detected).map((r) => r.id));
+      for (const appId of Object.keys(byApp)) if (!runtime[appId] && !detected.has(byApp[appId].id)) delete byApp[appId];
       return { success: true, byApp };
     } catch (err) {
       return { success: false, error: err.message };

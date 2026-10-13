@@ -30,8 +30,9 @@ function setup(over = {}) {
   const dir = path.join(root, `case${++n}`);
   fs.mkdirSync(dir, { recursive: true });
   const configPath = path.join(dir, 'portpilot-config.json');
-  fs.writeFileSync(configPath, JSON.stringify({ apps: [], settings: {}, groups: [] }));
-  const world = { ports: [SYSTEM, NODE(3111)], owned: new Set(), answers: {}, settings: {}, scanFails: false, probed: [] };
+  const apps = [{ id: 'app_shop', name: 'shop-web', command: 'npm run dev', cwd: dir, preferredPort: 3111 }];
+  fs.writeFileSync(configPath, JSON.stringify({ apps, settings: {}, groups: [] }));
+  const world = { ports: [SYSTEM, NODE(3111)], owned: new Set(), answers: {}, settings: {}, scanFails: false, probed: [], started: new Set() };
   const watcher = createLocalhostWatcher({
     configPath,
     getSettings: () => world.settings,
@@ -40,6 +41,7 @@ function setup(over = {}) {
     registeredPorts: async () => world.owned,
     probe: async (port, p, ms, host) => { world.probed.push([port, host]); return world.answers[port] || 'healthy'; },
     startCommandFor: async () => 'npm run dev',
+    startedByPortPilot: (id) => world.started.has(id),
     log: () => {},
     ...over,
   });
@@ -215,6 +217,85 @@ function setup(over = {}) {
   await t('ownPorts are never tracked', async () => {
     const s = setup({ ownPorts: [3111] });
     await s.ticks(3);
+    assert.equal(s.runs().length, 0);
+  });
+
+  // ---- a registered app whose server was started outside PortPilot ----
+  const BY_HUMAN = { kind: 'human', surface: 'desktop', at: new Date().toISOString() };
+
+  await t('a registered app\'s server started outside PortPilot gets a run under the app\'s id, after two scans', async () => {
+    const s = setup();
+    s.world.owned = new Map([[3111, 'app_shop']]);
+    await s.ticks(1);
+    assert.equal(s.runs().length, 0);
+    await s.ticks(1);
+    const [run] = s.runs();
+    assert.equal(s.runs().length, 1);
+    assert.equal(run.appId, 'app_shop');
+    assert.equal(run.appName, 'shop-web');
+    assert.equal(run.detected, true);
+    assert.equal(run.startedBy.kind, 'detected');
+    assert.equal(run.port, 3111);
+    await s.ticks(3);
+    assert.equal(s.runs().length, 1, 'no second run while it stays up');
+  });
+
+  await t('that run closes after two absent scans and a quick restart reuses it', async () => {
+    const s = setup();
+    s.world.owned = new Map([[3111, 'app_shop']]);
+    await s.ticks(2);
+    const first = s.runs()[0].id;
+    s.world.ports = [SYSTEM];
+    await s.ticks(1);
+    assert.equal(s.runs()[0].stoppedAt, null);
+    await s.ticks(1);
+    assert.equal(s.runs()[0].endedBy, 'stop');
+    s.world.ports = [SYSTEM, NODE(3111)];
+    await s.ticks(2);
+    assert.equal(s.runs().length, 1);
+    assert.equal(s.runs()[0].id, first);
+    assert.equal(s.runs()[0].stoppedAt, null);
+  });
+
+  await t('an app PortPilot started (runtime entry) never gets a detected run', async () => {
+    const s = setup();
+    s.world.owned = new Map([[3111, 'app_shop']]);
+    s.world.started.add('app_shop');
+    await s.ticks(4);
+    assert.equal(s.runs().length, 0);
+  });
+
+  await t('an app with an open run of its own never gets a second one', async () => {
+    const s = setup();
+    s.world.owned = new Map([[3111, 'app_shop']]);
+    const own = runHistory.openRun(s.configPath, 'app_shop', BY_HUMAN, { port: 3111 });
+    await s.ticks(4);
+    assert.equal(s.runs().length, 1);
+    assert.equal(s.runs()[0].id, own.id);
+    assert.equal(s.runs()[0].stoppedAt, null);
+    s.world.ports = [SYSTEM];
+    await s.ticks(3);
+    assert.equal(s.runs()[0].stoppedAt, null, 'the watcher never closes a run it did not open');
+  });
+
+  await t('PortPilot taking over a tracked app leaves its run alone and records no duplicate', async () => {
+    const s = setup();
+    s.world.owned = new Map([[3111, 'app_shop']]);
+    await s.ticks(2);
+    assert.ok(s.watcher.state().open.app_shop);
+    s.world.started.add('app_shop');
+    await s.ticks(1);
+    assert.equal(s.watcher.state().open.app_shop, undefined);
+    s.world.ports = [SYSTEM];
+    await s.ticks(3);
+    assert.equal(s.runs().length, 1);
+    assert.equal(s.runs()[0].stoppedAt, null, 'the stop belongs to PortPilot now');
+  });
+
+  await t('a stranger on a registered app\'s port (a conflict) is not tracked', async () => {
+    const s = setup();
+    s.world.owned = new Map([[3111, null]]);
+    await s.ticks(4);
     assert.equal(s.runs().length, 0);
   });
 

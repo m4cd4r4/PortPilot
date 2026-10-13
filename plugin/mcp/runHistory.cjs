@@ -205,15 +205,17 @@ const REOPEN_WINDOW_MS = 60 * 1000;
  * Record a start. The record is written synchronously; git state is patched in
  * afterwards. Returns { id, done } where done resolves when the patch is in.
  *
- * `meta` ({ name, cwd, command, startCommand }) describes a server no registered
- * app owns (a detected one, keyed by a det_ appId): the record takes its name,
- * folder and command from it and is marked `detected`. Such a start never
- * duplicates: an open run for the same appId is returned as it is, and one that
- * closed under REOPEN_WINDOW_MS ago is reopened. Both return `reused: true`.
+ * A start with startedBy.kind 'detected' is a server found running, not started here:
+ * the record is marked `detected` and never duplicates. An open run for the same appId
+ * (detected or not: PortPilot's own start wins) is returned as it is, and a detected one
+ * that closed under REOPEN_WINDOW_MS ago is reopened. Both return `reused: true`.
+ * The appId is the registered app's when one owns the server, else a det_ id; for the
+ * latter `meta` ({ name, cwd, command, startCommand }) supplies name, folder and command.
  */
 function openRun(configPath, appId, startedBy, { port = null, rerunOf = null, meta = null } = {}) {
   const { app, settings } = readApp(configPath, appId);
   const detectedMeta = !app && meta && typeof meta === 'object' ? meta : null;
+  const isDetected = !!(startedBy && startedBy.kind === 'detected');
   const now = new Date();
   const id = newId(now);
   const runPort = port || (app && app.preferredPort) || null;
@@ -237,17 +239,17 @@ function openRun(configPath, appId, startedBy, { port = null, rerunOf = null, me
     pinned: false,
   };
   if (rerunOf) record.rerunOf = String(rerunOf);
-  if (detectedMeta) {
+  if (isDetected) {
     record.detected = true;
-    record.startCommand = detectedMeta.startCommand ? String(detectedMeta.startCommand).slice(0, 300) : null;
+    const start = detectedMeta ? detectedMeta.startCommand : (app && app.command);
+    record.startCommand = start ? String(start).slice(0, 300) : null;
   }
   let reusedId = null;
   const { result: dropped } = configFile.updateJson(runsPathFor(configPath), (data) => {
     if (!Array.isArray(data.runs)) data.runs = [];
-    if (detectedMeta) {
-      const same = data.runs.filter((r) => r.appId === appId && r.detected);
-      const open = same.find((r) => !r.stoppedAt);
-      const last = same.filter((r) => r.stoppedAt).sort((a, b) => Date.parse(b.stoppedAt) - Date.parse(a.stoppedAt))[0];
+    if (isDetected) {
+      const open = data.runs.find((r) => r.appId === appId && !r.stoppedAt);
+      const last = data.runs.filter((r) => r.appId === appId && r.detected && r.stoppedAt).sort((a, b) => Date.parse(b.stoppedAt) - Date.parse(a.stoppedAt))[0];
       if (open) { reusedId = open.id; return []; }
       if (last && now - Date.parse(last.stoppedAt) < REOPEN_WINDOW_MS) {
         last.stoppedAt = null;

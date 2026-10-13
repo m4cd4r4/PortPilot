@@ -104,14 +104,38 @@ async function main() {
     await win.evaluate((id) => window.portpilot.process.stop(id), reg[0].id);
     await until(async () => !(await answers(pShop)), 15000, 'restarted server stopped');
 
+    // 4b. The folder is a registered app now (Start again did that). A server started outside PortPilot in it
+    // is still recorded, under that app's id, so the app row, History and the thumbnail line up.
+    const ext = spawnServer(process.execPath, [path.join(proj, 'server.js'), '--port', String(pShop)], world.tmp);
+    await until(() => answers(pShop), 15000, 'externally started server answering');
+    const own = await until(() => runsOn(pShop).find((r) => r.appId === reg[0].id && r.detected && !r.stoppedAt), 40000, 'a detected run under the registered app id');
+    check('a registered app\'s server started outside PortPilot gets a run under the app\'s id', own.appName === 'shop-web' && own.startedBy.kind === 'detected', own.appId);
+    const ownThumb = await until(() => runsOn(pShop).find((r) => r.id === own.id && r.page && r.page.thumb), 40000, 'its thumbnail');
+    check('that run has a thumbnail and a page title', ownThumb.page.title === 'Shop demo');
+    check('only one run is open for the app (never a second)', runsOn(pShop).filter((r) => r.appId === reg[0].id && !r.stoppedAt).length === 1);
+    const ownRow = `.hrow[data-run="${own.id}"]`;
+    await win.waitForSelector(ownRow);
+    await until(() => win.$(`${ownRow} .hthumb img`), 15000, 'thumbnail in the registered run row');
+    check('the History row shows its thumbnail and the detected tag', !!(await win.$(`${ownRow} .hdetected`)));
+    await until(async () => !(await win.$eval(`${ownRow} [data-hact="open"]`, (e) => e.disabled)), 15000, 'Open URL enabled');
+    check('Open URL is enabled on it while it is up', true);
+    ext.kill();
+    await until(async () => !(await answers(pShop)), 10000, 'externally started server stopped');
+    const extClosed = await until(() => runsOn(pShop).find((r) => r.id === own.id && r.stoppedAt), 40000, 'that run closing');
+    check('that run closes when the server is gone', extClosed.endedBy === 'stop');
+
     // 5. A browser-like process holding a port is not recorded (a normal server beside it is, so the check can see a pass).
     const fakeBrave = path.join(world.tmp, process.platform === 'win32' ? 'brave.exe' : 'brave');
     fs.copyFileSync(process.execPath, fakeBrave);
     spawnServer(fakeBrave, inline(pBrave), world.tmp);
     spawnServer(process.execPath, inline(pControl), world.tmp);
     await until(async () => (await answers(pBrave)) && (await answers(pControl)), 15000, 'both servers answering');
-    await until(() => runsOn(pControl).find((r) => r.detected), 40000, 'the control server recorded');
+    const control = await until(() => runsOn(pControl).find((r) => r.detected), 40000, 'the control server recorded');
     check('a normal server beside it is recorded (control)', true);
+    // No folder on its command line, so it is named after the command; its page title becomes the label.
+    await until(() => runsOn(pControl).find((r) => r.page && r.page.title === 'inline'), 40000, 'the control page title');
+    const labelled = await until(async () => (await win.$eval(`.hrow[data-run="${control.id}"] .happ`, (e) => e.textContent).catch(() => '')) === 'inline', 20000, 'the row label');
+    check('a detected run with no folder is labelled by its page title', labelled && control.appName === 'node', control.appName);
     await sleep(9000);
     check('a server held by a browser-named process is NOT recorded', runsOn(pBrave).length === 0, String(runsOn(pBrave).length));
 
