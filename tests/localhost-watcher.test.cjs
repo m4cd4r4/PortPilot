@@ -299,6 +299,109 @@ function setup(over = {}) {
     assert.equal(s.runs().length, 0);
   });
 
+  // ---- a relative script ("node server.js"): the folder is found, never guessed ----
+  const SCRIPT_CMD = '"C:\\Program Files\\nodejs\\node.exe" server.js --port 3111';
+  const projectWith = (name, ageSeconds = 0) => {
+    const d = path.join(root, `proj-${++n}-${name}`);
+    fs.mkdirSync(d, { recursive: true });
+    const f = path.join(d, 'server.js');
+    fs.writeFileSync(f, '// server');
+    const at = new Date(Date.now() - ageSeconds * 1000);
+    fs.utimesSync(f, at, at);
+    return d;
+  };
+
+  await t('a relative script is resolved through a live session: cwd, folder name, start command, folder-keyed id', async () => {
+    const dir = projectWith('shop-api');
+    const sessions = [{ sessionId: 's1', cwd: dir, at: Date.now() }];
+    const s = setup({ liveSessions: () => sessions, startCommandFor: async () => null });
+    s.world.ports = [SYSTEM, NODE(3111, { commandLine: SCRIPT_CMD })];
+    await s.ticks(2);
+    const [run] = s.runs();
+    assert.equal(s.runs().length, 1);
+    assert.equal(run.cwd, dir);
+    assert.equal(run.appName, path.basename(dir));
+    assert.equal(run.startCommand, SCRIPT_CMD, 'no package.json script: the command line, now runnable from the known folder');
+    assert.equal(run.appId, detectedAppId(dir, path.basename(dir), 3111));
+    assert.equal(run.detected, true);
+  });
+
+  await t('a package.json start command wins over the raw command line', async () => {
+    const dir = projectWith('with-pkg');
+    const s = setup({ liveSessions: () => [{ sessionId: 's1', cwd: dir, at: Date.now() }], startCommandFor: async () => 'npm run dev' });
+    s.world.ports = [SYSTEM, NODE(3111, { commandLine: SCRIPT_CMD })];
+    await s.ticks(2);
+    assert.equal(s.runs()[0].startCommand, 'npm run dev');
+  });
+
+  await t('the folder sticks to the process: the session going away does not split the run', async () => {
+    const dir = projectWith('sticky');
+    let sessions = [{ sessionId: 's1', cwd: dir, at: Date.now() }];
+    const s = setup({ liveSessions: () => sessions, startCommandFor: async () => null });
+    s.world.ports = [SYSTEM, NODE(3111, { commandLine: SCRIPT_CMD })];
+    await s.ticks(2);
+    const id = s.runs()[0].id;
+    sessions = [];
+    await s.ticks(4);
+    assert.equal(s.runs().length, 1);
+    assert.equal(s.runs()[0].id, id);
+    assert.equal(s.runs()[0].stoppedAt, null);
+  });
+
+  await t('with no session, a registered app\'s folder, then a recent run\'s folder, is tried', async () => {
+    const appDir = projectWith('registered-dir');
+    const a = setup({ getApps: () => [{ id: 'app_other', cwd: appDir, preferredPort: 4000 }], liveSessions: () => [], startCommandFor: async () => null });
+    a.world.ports = [SYSTEM, NODE(3111, { commandLine: SCRIPT_CMD })];
+    await a.ticks(2);
+    assert.equal(a.runs().length, 1);
+    assert.equal(a.runs()[0].cwd, appDir);
+
+    const runDir = projectWith('earlier-run');
+    const r = setup({ liveSessions: () => [], startCommandFor: async () => null });
+    runHistory.openRun(r.configPath, 'det_earlier', { kind: 'detected', surface: 'desktop' }, { port: 9999, meta: { name: 'earlier-run', cwd: runDir, command: 'x', startCommand: null } });
+    r.world.ports = [SYSTEM, NODE(3111, { commandLine: SCRIPT_CMD })];
+    await r.ticks(2);
+    assert.equal(r.runs().find((x) => x.port === 3111).cwd, runDir);
+  });
+
+  await t('two folders that both hold the script and cannot be told apart leave the folder unknown', async () => {
+    const one = projectWith('twin-a');
+    const two = projectWith('twin-b', 20);
+    const s = setup({ liveSessions: () => [{ cwd: one }, { cwd: two }], startCommandFor: async () => null });
+    s.world.ports = [SYSTEM, NODE(3111, { commandLine: SCRIPT_CMD })];
+    await s.ticks(2);
+    const [run] = s.runs();
+    assert.equal(run.cwd, null);
+    assert.equal(run.appName, 'node server.js');
+    assert.equal(run.startCommand, null);
+  });
+
+  await t('the newer script wins when the two folders are over a minute apart', async () => {
+    const stale = projectWith('stale', 900);
+    const fresh = projectWith('fresh', 0);
+    const s = setup({ liveSessions: () => [{ cwd: stale }, { cwd: fresh }], startCommandFor: async () => null });
+    s.world.ports = [SYSTEM, NODE(3111, { commandLine: SCRIPT_CMD })];
+    await s.ticks(2);
+    assert.equal(s.runs()[0].cwd, fresh);
+  });
+
+  await t('a script that exists in no candidate folder stays unresolved, and an absolute one is untouched', async () => {
+    const dir = path.join(root, `empty-${++n}`);
+    fs.mkdirSync(dir);
+    const s = setup({ liveSessions: () => [{ cwd: dir }], startCommandFor: async () => null });
+    s.world.ports = [SYSTEM, NODE(3111, { commandLine: SCRIPT_CMD })];
+    await s.ticks(2);
+    assert.equal(s.runs()[0].cwd, null);
+    assert.equal(s.runs()[0].appName, 'node server.js');
+
+    const abs = projectWith('absolute');
+    const decoy = projectWith('decoy');
+    const b = setup({ liveSessions: () => [{ cwd: decoy }], startCommandFor: async () => null });
+    b.world.ports = [SYSTEM, NODE(3111, { commandLine: `node ${path.join(abs, 'server.js')}` })];
+    await b.ticks(2);
+    assert.equal(b.runs()[0].cwd, abs);
+  });
+
   await t('a project folder is named and given its start command', async () => {
     const proj = path.join(root, 'shop-web');
     fs.mkdirSync(path.join(proj, 'node_modules', 'next', 'bin'), { recursive: true });

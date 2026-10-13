@@ -13,6 +13,12 @@
  * outside PortPilot (an agent, a terminal) gets a run under the REGISTERED appId, so the
  * app's row, the History tab and the thumbnails line up.
  *
+ * A server started as "node server.js" (a relative script) has no folder on its command line.
+ * Its folder is the first of: a live Claude session's folder (and its git root / parents), a
+ * registered app's folder, a recent run's folder, that actually holds the script
+ * (localhostDetect.resolveRelative); two folders that cannot be told apart leave it unknown.
+ * Once found, the folder sticks to that process for as long as it runs.
+ *
  * On the first scan, open detected runs left by a previous session are adopted
  * if their server is still up and closed (endedBy 'unknown') if not.
  *
@@ -29,6 +35,7 @@ const runHistory = require('../core/runHistory');
 const INTERVAL_MS = 10000;
 const CONFIRM_SCANS = 2; // answers in a row before a run opens
 const ABSENT_SCANS = 2;  // scans without the port before a run closes
+const RECENT_RUNS = 20;  // runs whose folders may hold a relative script
 
 const startedBy = () => ({ kind: 'detected', surface: 'desktop', at: new Date().toISOString() });
 
@@ -60,6 +67,7 @@ const hostFor = (info) => (detect.hostOf(info.address) === '::1' ? '::1' : '127.
  * @param {Function} o.registeredPorts   (ports, apps) => Promise<Map<number, string|null>> ports a registered app
  *                                       owns, with the app's id (null for a conflict: a stranger on the app's port).
  *                                       A Set of ports is read as all-conflicts.
+ * @param {Function} [o.liveSessions]  () => [{ cwd }] live Claude sessions (default: configFile.liveSessions)
  * @param {Function} [o.startedByPortPilot] (appId) => boolean, a runtime-sidecar start exists for the app
  * @param {Function} o.probe             (port, path, timeoutMs, host) => Promise<'healthy'|'unhealthy'|'down'>
  * @param {number[]|Function} [o.ownPorts]  ports PortPilot serves on (or a function returning them)
@@ -72,6 +80,7 @@ function createLocalhostWatcher(o) {
   });
   const log = o.log || ((...a) => console.error('[localhostWatcher]', ...a));
   const startFor = o.startCommandFor || startCommandFor;
+  const resolved = new Map(); // port|pid|commandLine -> folder found for a relative script
   const open = new Map();     // appId -> { runId, port, absent }
   const pending = new Map();  // port -> { id, count }
   let reconciled = false;
@@ -85,8 +94,43 @@ function createLocalhostWatcher(o) {
     pending.clear();
   };
 
+  /** Folders a relative script may have been started from, in the order they are trusted. */
+  function candidateGroups() {
+    let sessions = [];
+    try { sessions = (o.liveSessions || (() => require('../core/configFile').liveSessions(o.configPath)))(); } catch { /* none */ }
+    let apps = [];
+    try { apps = o.getApps() || []; } catch { /* none */ }
+    let runs = [];
+    try { runs = history.readRuns(o.configPath); } catch { /* none */ }
+    const recent = runs.filter((r) => r && r.cwd).sort((a, b) => Date.parse(b.startedAt) - Date.parse(a.startedAt)).slice(0, RECENT_RUNS);
+    return detect.candidateFolders({
+      sessionCwds: sessions.map((x) => x.cwd),
+      appCwds: apps.map((a) => a.cwd),
+      runCwds: recent.map((r) => r.cwd),
+    });
+  }
+
+  // The project behind a command line; a relative script is looked for in the candidate folders.
+  function projectFor(info, groups) {
+    const proj = detect.deriveProject(info.commandLine);
+    if (proj.cwd || !detect.relativeTargets(info.commandLine)) return proj;
+    const key = `${info.port}|${info.pid}|${info.commandLine}`;
+    let cwd = resolved.get(key);
+    if (!cwd) {
+      const hit = detect.resolveRelative(info.commandLine, groups.get());
+      if (!hit) return proj;
+      cwd = hit.cwd;
+      resolved.set(key, cwd);
+    }
+    return { name: path.basename(cwd) || cwd, cwd, startCommand: null, relative: true };
+  }
+
   // Candidates this scan: dev servers no registered app owns, each with its project and id.
   async function candidates(ports) {
+    let cache = null;
+    const groups = { get: () => cache || (cache = candidateGroups()) };
+    const live = new Set(ports.map((p) => `${p.port}|${p.pid}|${p.commandLine}`));
+    for (const key of resolved.keys()) if (!live.has(key)) resolved.delete(key);
     const reg = await o.registeredPorts(ports, o.getApps());
     const owned = reg instanceof Map ? reg : new Map([...reg].map((p) => [p, null]));
     const only = o.onlyPorts && o.onlyPorts.length ? new Set(o.onlyPorts) : null;
@@ -98,7 +142,7 @@ function createLocalhostWatcher(o) {
       if (only && !only.has(info.port)) continue;
       if (!detect.classify(info, { ownPorts }).dev) continue;
       if (appId) { out.push({ info, proj: null, id: appId, registered: true }); continue; }
-      const proj = detect.deriveProject(info.commandLine);
+      const proj = projectFor(info, groups);
       out.push({ info, proj, id: detect.detectedAppId(proj.cwd, proj.name, info.port) });
     }
     return out;
@@ -142,7 +186,9 @@ function createLocalhostWatcher(o) {
       pending.delete(c.info.port);
       return;
     }
-    const startCommand = c.proj.cwd ? await startFor(c.proj.cwd) : null;
+    let startCommand = c.proj.cwd ? await startFor(c.proj.cwd) : null;
+    // A script found by its relative name was started from this folder, so the command line runs from it.
+    if (!startCommand && c.proj.relative) startCommand = c.info.commandLine || null;
     const meta = { name: c.proj.name, cwd: c.proj.cwd, command: startCommand || c.info.commandLine || null, startCommand };
     const { id: runId } = history.openRun(o.configPath, c.id, startedBy(), { port: c.info.port, meta });
     open.set(c.id, { runId, port: c.info.port, absent: 0 });
