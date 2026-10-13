@@ -24115,7 +24115,10 @@ function getCommandLines(pids) {
 function computeRunning(apps, activePorts) {
   const pids = [...new Set(activePorts.map((p) => p.pid).filter(Boolean))];
   const cmds = getCommandLines(pids);
-  const ports = activePorts.map((p) => ({ ...p, commandLine: cmds.get(p.pid) || "" }));
+  return matchRunning(apps, activePorts.map((p) => ({ ...p, commandLine: cmds.get(p.pid) || "" })));
+}
+var NOT_A_SERVER = /^(brave|chrome|chromium|msedge|firefox|opera|vivaldi|code|cursor|windsurf|claude)\b/i;
+function matchRunning(apps, ports) {
   const matched = /* @__PURE__ */ new Set();
   const result = /* @__PURE__ */ new Map();
   for (const app of apps) {
@@ -24123,7 +24126,7 @@ function computeRunning(apps, activePorts) {
     const cwd = app.cwd.toLowerCase();
     const cwdAlt = cwd.replace(/\\/g, "/");
     for (const p of ports) {
-      if (matched.has(p.port)) continue;
+      if (matched.has(p.port) || NOT_A_SERVER.test(p.processName || "")) continue;
       const cl = p.commandLine.toLowerCase();
       if (cl && (cl.includes(cwd) || cl.includes(cwdAlt))) {
         result.set(app.id, p);
@@ -24135,7 +24138,7 @@ function computeRunning(apps, activePorts) {
     const folder = cwd.split(/[\\/]/).filter(Boolean).pop() || "";
     const keywords = [folder, ...app.name.toLowerCase().split(/[^a-z0-9]+/)].filter((k) => k.length > 3);
     for (const p of ports) {
-      if (matched.has(p.port)) continue;
+      if (matched.has(p.port) || NOT_A_SERVER.test(p.processName || "")) continue;
       const cl = p.commandLine.toLowerCase();
       if (cl && keywords.some((k) => cl.includes(k))) {
         result.set(app.id, p);
@@ -24905,6 +24908,7 @@ export {
   cmdSafe,
   detachedCommand,
   findRuns,
+  matchRunning,
   normPath,
   observedDuplicate,
   pickColor,
