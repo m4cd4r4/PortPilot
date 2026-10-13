@@ -32,10 +32,13 @@ the session ends, and collides with the one they already have open. Use the
 Never launch a browser with a debug port yourself, and never pick a port for one. Ask for a
 named profile: `list_browser_profiles` (names, state, who is using each), then
 `start_browser` with the name. It returns `cdpUrl`; connect your automation there. If a
-profile is claimed by someone else you may still use it; leave their tabs alone. If the
-port is held by another process the error names it: tell the user, do not kill it. Stop
-with `stop_browser` only a browser you started. `set_browser_mode` changes how a profile
-opens next time.
+profile shows `leasedTo` another session, do not use it: `start_browser` answers `IN_USE`.
+Pick a profile with `free: true`, or call `start_browser` with `name: "any"` to be given one
+(you get the one you already hold first). Pass `takeover:true` only after telling the user
+that you are taking a profile another session is using. If the port is held by another
+process the error names it: tell the user, do not kill it. Stop with `stop_browser` only a
+browser you started. `set_browser_mode` changes how a profile opens next time.
+`browser_history` lists what a profile had open in past sessions.
 
 ## Destructive tools need the user's say-so in this conversation
 

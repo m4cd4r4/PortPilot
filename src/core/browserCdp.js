@@ -31,6 +31,22 @@ async function pageTabs(port) {
 }
 
 /**
+ * Open `url` in a new tab of the browser on `port` (CDP's HTTP /json/new, which needs PUT). Only
+ * an http(s) URL is sent; nothing is evaluated in any page. True when the browser accepted it.
+ */
+async function openTab(port, url) {
+  let u;
+  try { u = new URL(String(url)); } catch { return false; }
+  if (u.protocol !== 'http:' && u.protocol !== 'https:') return false;
+  try {
+    const r = await fetch(`http://127.0.0.1:${port}/json/new?${encodeURIComponent(u.href)}`, { method: 'PUT', signal: AbortSignal.timeout(PROBE_MS * 2) });
+    return r.ok;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Run fn(send) against the browser-level CDP endpoint; null when unavailable.
  * `send(method, params)` resolves with the CDP result or rejects with its error.
  */
@@ -105,4 +121,4 @@ async function parkOffscreen(port, left) {
   }
 }
 
-module.exports = { version, pageTabs, withBrowserSession, closeBrowser, parkOffscreen };
+module.exports = { version, pageTabs, openTab, withBrowserSession, closeBrowser, parkOffscreen };

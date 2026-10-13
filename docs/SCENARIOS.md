@@ -46,6 +46,11 @@ Unit checks (`npm run test:unit`, `npm run test:mcp`) cover the logic; these sce
 | A profile's port is changed to one a stranger holds | Edit the port, read the row | `Port held`, `:port is held by <process> (PID n)`; the stranger is not touched | `browsers-ui.e2e.js` |
 | Stop a running profile | Click Stop, then ask the port again | The port stops answering | `browsers-ui.e2e.js` |
 | Remove a stopped profile | Remove, confirm | The row goes; its folder stays on disk | `browsers-ui.e2e.js` |
+| Start a profile, open a page whose address carries `?token=...`, stop | Read `history/browser-runs.json` | One entry: stopped, ended by the desktop, the tab stored as `...?token=***&view=1` with its title; the secret is nowhere in the file | `tests/browsers-history.e2e.js` |
+| A page on a dev server's port is open in a profile | Wait for a sample, read the run in `history/runs.json` and the History tab | `testedIn` names the profile; the row reads `tested in hist-qa` | `browsers-history.e2e.js` |
+| Expand History under a profile | Read the expander at 1440 and 390 px | Each session shows when, who, tab count, how it ended, its tab titles and redacted URLs, and Open again; no horizontal scroll | `browsers-history.e2e.js` |
+| Click Open again on a past session | Ask the profile's debug port for `/json` | A fresh browser is up and the page is open in a new tab; the hidden secret is not restored; a second session is recorded | `browsers-history.e2e.js` |
+| Two Claude sessions want the same profile | `start_browser` from both, with live heartbeats | The first wins; the second gets `IN_USE` naming the owner, and no second browser starts. A dead owner or `takeover:true` lets it through; `name: "any"` finds a free one | `tests/browser-api-lease.test.cjs`, `tests/mcp-browser.test.mjs` |
 | Duplicate a profile that holds a saved password | Duplicate in a real, signed-in install | The new profile asks for the password-manager sign-in once; no password was copied | Manual: needs a Web Store install |
 
 ## Not yet automated
@@ -59,8 +64,9 @@ Unit checks (`npm run test:unit`, `npm run test:mcp`) cover the logic; these sce
 ## Running them
 
 ```
-npm run test:e2e            # all three, about 2 minutes
+npm run test:e2e            # all of them, about 4 minutes
 node tests/browsers-ui.e2e.js   # one; skips without Brave
+node tests/browsers-history.e2e.js   # browser history and Open again; skips without Brave
 ```
 
 Re-run needs the MCP server's dependencies: `npm ci --prefix mcp-server` once per checkout. In a git worktree with a junctioned `node_modules`, run the specs from the worktree; Electron comes from the junction.

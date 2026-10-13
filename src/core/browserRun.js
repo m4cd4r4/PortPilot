@@ -88,7 +88,7 @@ function killPid(pid) {
 
 const defaultDeps = () => ({
   spawn, inspectPort, kill: killPid, sleep, detect: () => detectBrowsers(),
-  version: cdp.version, pageTabs: cdp.pageTabs, closeBrowser: cdp.closeBrowser, park: cdp.parkOffscreen,
+  version: cdp.version, pageTabs: cdp.pageTabs, openTab: cdp.openTab, closeBrowser: cdp.closeBrowser, park: cdp.parkOffscreen,
 });
 
 const norm = (s) => String(s).replace(/\\/g, '/').replace(/\/+$/, '').toLowerCase();

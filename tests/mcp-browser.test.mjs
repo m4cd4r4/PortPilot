@@ -69,12 +69,18 @@ try {
   await rpc('initialize', { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'browser-test', version: '0' } });
   child.stdin.write(JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' }) + '\n');
 
-  await t('tools/list carries the five browser tools', async () => {
+  await t('tools/list carries the six browser tools, and 26 tools in all', async () => {
     const m = await rpc('tools/list', {});
     const names = m.result.tools.map((x) => x.name);
-    for (const n of ['list_browser_profiles', 'list_browsers', 'start_browser', 'stop_browser', 'set_browser_mode']) {
+    for (const n of ['list_browser_profiles', 'list_browsers', 'start_browser', 'stop_browser', 'set_browser_mode', 'browser_history']) {
       assert.ok(names.includes(n), `${n} missing`);
     }
+    assert.strictEqual(names.length, 26, `tool count is ${names.length}: update README, docs/index.html and the plugin skill when it changes`);
+    const start = m.result.tools.find((x) => x.name === 'start_browser');
+    assert.ok(start.inputSchema.properties.takeover && start.inputSchema.properties.sessionId && start.inputSchema.properties.free);
+    assert.ok(!(start.inputSchema.required || []).includes('name'), 'name is optional: "any" or free:true picks one');
+    const hist = m.result.tools.find((x) => x.name === 'browser_history');
+    assert.strictEqual(hist.inputSchema.properties.limit.maximum, 50);
   });
 
   await t('list_browser_profiles returns the profile with its port and cdpUrl', async () => {
@@ -120,6 +126,45 @@ try {
     const bad = await tool('set_browser_mode', { name: 'shop-a', mode: 'invisible' });
     assert.strictEqual(bad.isError, true);
     assert.strictEqual(bad.body.code, 'BAD_MODE');
+  });
+
+  await t('browser_history answers over stdio, empty at first, and rejects a bad since', async () => {
+    const { isError, body } = await tool('browser_history', {});
+    assert.strictEqual(isError, false);
+    assert.strictEqual(body.success, true);
+    assert.deepStrictEqual(body.sessions, []);
+    const bad = await tool('browser_history', { since: 'a while ago' });
+    assert.strictEqual(bad.isError, true);
+    assert.strictEqual(bad.body.code, 'BAD_ARGS');
+  });
+
+  await t('a profile another live session is launching is IN_USE over stdio; list shows leasedTo and free; "any" finds nothing free', async () => {
+    const sessionsDir = path.join(dir, 'sessions');
+    fs.mkdirSync(sessionsDir, { recursive: true });
+    for (const id of ['aaaa1111-owner', 'bbbb2222-other']) {
+      fs.writeFileSync(path.join(sessionsDir, `${id}.json`), JSON.stringify({ sessionId: id, cwd: 'C:/x', at: Date.now() }));
+    }
+    // A launch under way by session aaaa: the claim a start_browser from it writes before spawning.
+    fs.writeFileSync(path.join(dir, 'portpilot-browser-claims.json'), JSON.stringify({ profiles: { 'shop-a': {
+      by: 'claude aaaa', surface: 'mcp', at: new Date().toISOString(), sessionId: 'aaaa1111-owner', pid: null, starting: true,
+    } } }));
+    // The earlier test left a foreign listener on the profile port; free it so the profile reads as stopped.
+    await new Promise((resolve) => blocker.close(resolve));
+    blocker = null;
+    const refused = await tool('start_browser', { name: 'shop-a', sessionId: 'bbbb2222-other' });
+    assert.strictEqual(refused.isError, true);
+    assert.strictEqual(refused.body.code, 'IN_USE');
+    assert.match(refused.body.error, /in use by claude aaaa/);
+    assert.match(refused.body.action, /takeover:true/);
+    assert.strictEqual(refused.body.leasedTo.session, 'aaaa');
+    const stopRefused = await tool('stop_browser', { name: 'shop-a', sessionId: 'bbbb2222-other' });
+    assert.strictEqual(stopRefused.body.code, 'IN_USE');
+    const listed = await tool('list_browser_profiles', { sessionId: 'bbbb2222-other' });
+    assert.strictEqual(listed.body.profiles[0].free, false);
+    assert.strictEqual(listed.body.profiles[0].leasedTo.by, 'claude aaaa');
+    const any = await tool('start_browser', { name: 'any', sessionId: 'bbbb2222-other' });
+    assert.strictEqual(any.isError, true);
+    assert.strictEqual(any.body.code, 'NO_FREE_PROFILE');
   });
 
   await t('list_browsers answers', async () => {

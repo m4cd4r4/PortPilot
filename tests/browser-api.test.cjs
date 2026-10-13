@@ -34,9 +34,9 @@ async function setup(fields = {}) {
 (async () => {
   console.log('\n=== browser api: tools ===\n');
 
-  await t('exposes exactly the five tools', () => {
+  await t('exposes exactly the six tools', () => {
     assert.deepStrictEqual([...api.TOOL_NAMES].sort(),
-      ['list_browser_profiles', 'list_browsers', 'set_browser_mode', 'start_browser', 'stop_browser']);
+      ['browser_history', 'list_browser_profiles', 'list_browsers', 'set_browser_mode', 'start_browser', 'stop_browser']);
   });
 
   await t('start_browser returns the port and CDP URL; the caller never picks a port', async () => {

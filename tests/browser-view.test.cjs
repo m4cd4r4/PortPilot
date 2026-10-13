@@ -96,5 +96,33 @@ t('extensionsText lists name and version, or says there are none', () => {
   assert.strictEqual(v.extensionsText([{ name: 'Vault Pass', version: '1.2' }, { name: 'uBlock', version: '1.5' }]), 'Vault Pass 1.2, uBlock 1.5');
 });
 
+t('history rows: who, how it ended, tab count, and the tabs to show', () => {
+  const e = { startedAt: '2026-10-13T06:02:00.000Z', stoppedAt: '2026-10-13T06:40:00.000Z', startedBy: { kind: 'claude', surface: 'mcp', sessionId: 'B71C-4d2e', label: 'claude b71c' }, endedBy: { kind: 'human', surface: 'desktop', label: 'PortPilot desktop' }, tabs: Array.from({ length: 9 }, (_, i) => ({ url: `https://t.test/${i}`, title: i ? '' : 'Home' })) };
+  assert.strictEqual(v.startedByWord({ kind: 'human', surface: 'desktop' }), 'you');
+  assert.strictEqual(v.startedByWord(e.startedBy), 'claude b71c');
+  assert.strictEqual(v.startedByWord({ kind: 'claude', surface: 'mcp', sessionId: 'B71C-4d2e' }), 'claude b71c');
+  assert.strictEqual(v.startedByWord(null), 'unknown');
+  assert.strictEqual(v.endedWord(e), 'stopped by you');
+  assert.strictEqual(v.endedWord({ ...e, endedBy: { kind: 'external', reason: 'closed' } }), 'closed outside PortPilot');
+  assert.strictEqual(v.endedWord({ ...e, endedBy: { kind: 'external', reason: 'unknown' } }), 'end not seen');
+  assert.strictEqual(v.endedWord({ ...e, stoppedAt: null }), '');
+  const line = v.sessionLine(e);
+  assert.match(line, /^\w{3} \d+ \w{3}, \d\d:\d\d - \d\d:\d\d · started by claude b71c · 9 tabs · stopped by you$/);
+  assert.match(v.sessionLine({ ...e, stoppedAt: null, tabs: [e.tabs[0]] }), /^\w{3} \d+ \w{3}, \d\d:\d\d · started by claude b71c · 1 tab · running now$/);
+  assert.strictEqual(v.shownTabs(e).shown.length, 6);
+  assert.strictEqual(v.shownTabs(e).more, 3);
+  assert.deepStrictEqual(v.shownTabs({ tabs: [] }), { shown: [], more: 0 });
+  assert.strictEqual(v.tabLabel(e.tabs[0]), 'Home');
+  assert.strictEqual(v.tabLabel(e.tabs[1]), 't.test/1');
+});
+
+t('reopenText says what opened, what failed and that hidden secrets may need a sign-in', () => {
+  assert.strictEqual(v.reopenText({ name: 'shop', opened: 2 }), 'Opened 2 tabs in shop');
+  assert.strictEqual(v.reopenText({ name: 'shop', opened: 1 }), 'Opened 1 tab in shop');
+  assert.strictEqual(v.reopenText({ name: 'shop', opened: 0 }), 'Started shop; no tabs to add');
+  assert.match(v.reopenText({ name: 'shop', opened: 1, failed: 2, hidden: 1 }), /2 could not be opened\. Addresses had secrets hidden/);
+  assert.match(v.failureText({ code: 'IN_USE', error: 'x is in use' }), /Another Claude session/);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);
