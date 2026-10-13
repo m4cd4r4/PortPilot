@@ -64,7 +64,7 @@
   function thumbHtml(run) {
     const url = h.thumbs.get(run.id);
     return url
-      ? `<img src="${url}" alt="Preview of ${esc(run.appName || 'the app')}" loading="lazy" width="96" height="60">`
+      ? `<img src="${url}" alt="Preview of ${esc(RV.labelOf(run) || 'the app')}" loading="lazy" width="96" height="60">`
       : '<span class="hthumb-empty">no preview</span>';
   }
 
@@ -92,6 +92,7 @@
   function rowHtml(run) {
     const live = h.live.has(run.id);
     const st = RV.runStateOf(run, live);
+    const label = RV.labelOf(run);
     const title = (run.page && run.page.title) || '';
     const prog = h.progress.get(run.id);
     const err = h.errors.get(run.id);
@@ -99,11 +100,11 @@
   <div class="hthumb${h.thumbs.has(run.id) ? '' : ' empty'}">${thumbHtml(run)}</div>
   <div class="hmain">
     <div class="hline">
-      <span class="happ">${esc(run.appName || run.appId)}</span>${run.port ? `<span class="hport">:${esc(run.port)}</span>` : ''}${run.detected ? '<span class="hdetected" title="Found running on this machine; PortPilot did not start it">detected</span>' : ''}${run.pinned ? '<span class="hpin" title="Pinned" aria-label="Pinned">&#9733;</span>' : ''}
+      <span class="happ">${esc(label)}</span>${run.port ? `<span class="hport">:${esc(run.port)}</span>` : ''}${run.detected ? '<span class="hdetected" title="Found running on this machine; PortPilot did not start it">detected</span>' : ''}${run.pinned ? '<span class="hpin" title="Pinned" aria-label="Pinned">&#9733;</span>' : ''}
       <span class="hwhen" title="${esc(run.startedAt)}">${esc(RV.formatWhen(run))}</span>
     </div>
     <div class="hline hline-sub">
-      ${title ? `<span class="htitle">${esc(title)}</span>` : `<span class="hcmd">${esc(run.command || '')}</span>`}
+      ${title && title !== label ? `<span class="htitle">${esc(title)}</span>` : `<span class="hcmd">${esc(run.command || '')}</span>`}
       <span class="hgit">${esc(RV.gitLine(run))}</span>
     </div>
     <div class="hline hline-sub">

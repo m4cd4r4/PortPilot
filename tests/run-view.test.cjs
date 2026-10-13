@@ -221,6 +221,34 @@ const run = (over = {}) => ({
     fs.rmSync(root, { recursive: true, force: true });
   });
 
+  // ---- labelOf: a detected run with no folder is named after its command until its page has a title ----
+  const bare = (over = {}) => run({
+    appId: 'det_0123456789', appName: 'node server.js', command: '"C:\\Program Files\\nodejs\\node.exe" server.js --port 3117',
+    cwd: null, detected: true, startedBy: { kind: 'detected', surface: 'desktop' }, page: { title: 'Shop demo', thumb: 'thumbs/x.jpg' }, ...over,
+  });
+
+  await t('labelOf uses the page title for a detected run with no folder', async () => {
+    assert.strictEqual(view.labelOf(bare()), 'Shop demo');
+  });
+
+  await t('labelOf keeps the command-derived name until a title exists', async () => {
+    assert.strictEqual(view.labelOf(bare({ page: null })), 'node server.js');
+    assert.strictEqual(view.labelOf(bare({ page: { title: '' } })), 'node server.js');
+  });
+
+  await t('labelOf never replaces a real name: folder-named, registered or hand-named runs', async () => {
+    assert.strictEqual(view.labelOf(bare({ cwd: 'D:/work/shop-web', appName: 'shop-web' })), 'shop-web');
+    assert.strictEqual(view.labelOf(bare({ appId: 'app_1', appName: 'Shop' })), 'Shop');
+    assert.strictEqual(view.labelOf(bare({ appName: 'my api', command: 'node server.js' })), 'my api');
+    assert.strictEqual(view.labelOf(run()), 'shop-web');
+    assert.strictEqual(view.labelOf(run({ detected: true, appName: 'shop-web' })), 'shop-web');
+  });
+
+  await t('labelOf feeds the app filter, and a detected run reads "detected" as who started it', async () => {
+    assert.deepStrictEqual(view.facets([bare()]).apps, [{ id: 'det_0123456789', name: 'Shop demo' }]);
+    assert.strictEqual(view.startedByWord(bare()), 'detected');
+  });
+
   console.log(`\n${passed} passed, ${failed} failed`);
   process.exit(failed ? 1 : 0);
 })();
