@@ -97,25 +97,36 @@ async function checkPortReady(port) {
   }
 }
 
+// Stop an app's start countdown. Returns true when one was running.
+function endStartCountdown(appId) {
+  const starting = state.startingApps[appId];
+  if (!starting) return false;
+  clearInterval(starting.interval);
+  delete state.startingApps[appId];
+  return true;
+}
+
 function startPortReadinessCheck(appId, port, maxDelay) {
+  endStartCountdown(appId); // a restart replaces the old run's countdown, never stacks on it
   let elapsed = 0;
-  state.startingApps[appId] = {
+  const entry = {
     countdown: maxDelay,
     port,
     interval: setInterval(async () => {
       elapsed++;
       const remaining = maxDelay - elapsed;
       const ready = await checkPortReady(port);
+      if (state.startingApps[appId] !== entry) return; // ended (crash) or replaced while the check ran
       if (ready || remaining <= 0) {
-        clearInterval(state.startingApps[appId].interval);
-        delete state.startingApps[appId];
+        endStartCountdown(appId);
         await loadApps();
       } else {
-        state.startingApps[appId].countdown = remaining;
+        entry.countdown = remaining;
         renderApps();
       }
     }, 1000)
   };
+  state.startingApps[appId] = entry;
 }
 
 // ============ Auto-Scan ============
@@ -215,7 +226,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
   window.portpilot.on('crash-toast', (payload) => {
     showCrashToast(payload);
-    loadApps();
+    refreshRunningNow().then(loadApps);
   });
   window.portpilot.on('config-changed', async (data) => {
     console.log('[Renderer] Config changed externally, refreshing apps list...');
@@ -801,6 +812,27 @@ async function openInBrowser(appId) {
 }
 
 // ============ App Operations ============
+function applyRunningResult(runningResult) {
+  if (!runningResult || !runningResult.success) return;
+  state.runningApps = runningResult.apps;
+  state.runtime = runningResult.runtime || {};
+  // A start countdown only describes a live process. One that already died
+  // (the crash toast triggers a reload) ends here so the row reads Crashed,
+  // not Starting, for the rest of the countdown.
+  for (const r of state.runningApps) {
+    if (r.crashed && state.startingApps[r.id]) endStartCountdown(r.id);
+  }
+}
+
+// The full reload scans every port and takes ~2 s; a crash only needs the
+// managed-process list to redraw the row, so show that first.
+async function refreshRunningNow() {
+  try {
+    applyRunningResult(await window.portpilot.process.list());
+    renderApps();
+  } catch { /* the full reload that follows reports any real failure */ }
+}
+
 async function loadApps() {
   try {
     const [configResult, groupsResult, runningResult, scanResult, staleResult] = await Promise.all([
@@ -814,10 +846,7 @@ async function loadApps() {
     if (configResult.success) state.apps = configResult.apps;
     if (staleResult && staleResult.success) state.staleApps = new Set(staleResult.ids);
     if (groupsResult.success) state.groups = groupsResult.groups;
-    if (runningResult.success) {
-      state.runningApps = runningResult.apps;
-      state.runtime = runningResult.runtime || {};
-    }
+    applyRunningResult(runningResult);
     if (scanResult.success) {
       state.ports = scanResult.ports;
       state.detectedApps = scanResult.matches || {};
