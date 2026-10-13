@@ -36,6 +36,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.rowStateOf = void 0;
 exports.getConfigPath = getConfigPath;
 exports.readConfig = readConfig;
+exports.readBrowserProfilesCached = readBrowserProfilesCached;
+exports.browserCall = browserCall;
 exports.recordHumanStart = recordHumanStart;
 exports.recordAppStop = recordAppStop;
 exports.readRuntimeApps = readRuntimeApps;
@@ -89,6 +91,34 @@ const status = require(path.join(__dirname, '..', 'runtime', 'core', 'status.js'
 const runHistory = require(path.join(__dirname, '..', 'runtime', 'core', 'runHistory.js'));
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const runView = require(path.join(__dirname, '..', 'runtime', 'core', 'runView.js'));
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const browserProfiles = require(path.join(__dirname, '..', 'runtime', 'core', 'browserProfiles.js'));
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const browserApi = require(path.join(__dirname, '..', 'runtime', 'core', 'browserApi.js'));
+let profilesCache = null;
+/** The raw `browserProfiles` list, re-read only when the config file's mtime or size moves. Empty on any read failure. */
+function readBrowserProfilesCached() {
+    try {
+        const configPath = getConfigPath();
+        const st = fs.statSync(configPath);
+        const key = `${configPath}|${st.mtimeMs}|${st.size}`;
+        if (profilesCache?.key !== key)
+            profilesCache = { key, profiles: browserProfiles.listProfiles(configPath) };
+        return profilesCache;
+    }
+    catch {
+        return { key: 'none', profiles: [] };
+    }
+}
+/** One browser tool (list_browser_profiles, start_browser, stop_browser, set_browser_mode). Resolves always; a throw becomes a failure result. */
+async function browserCall(tool, args = {}) {
+    try {
+        return await browserApi.call(getConfigPath(), tool, { agent: 'VS Code', ...args }, { surface: 'vscode' });
+    }
+    catch (err) {
+        return { success: false, code: 'INTERNAL', error: err.message || 'The browser tool failed.', action: 'Try again, or report this.' };
+    }
+}
 /** Record that the user started an app from VS Code (best-effort, never throws). */
 function recordHumanStart(app) {
     return configFile.recordStart(getConfigPath(), app.id, status.makeStartedBy({ kind: 'human', surface: 'vscode' }), { port: app.preferredPort });

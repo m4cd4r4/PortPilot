@@ -28,6 +28,14 @@ PortPilot lists your registered apps and every listening port in the VS Code sid
 
 The view reads `history/runs.json` beside your PortPilot config and re-reads it only when it changes. Thumbnails are read from that folder and never leave your machine.
 
+**Browsers: manage your debug-port browsers without leaving the editor.** The `Browsers` view lists the named browser profiles from the PortPilot app's Browsers tab (or created by Claude with `start_browser`): one row each with `:port · mode · browser`, running first, then port held, then stopped. A running profile expands to its open tabs (title and URL, the first 30). Hover for the note, start URL, profile folder and, when a Claude session has leased the profile, who has it.
+
+- **Row buttons and menu:** Start, Stop, Set mode (headed, offscreen or headless; it applies the next time the profile starts), Open URL in this profile, Copy CDP URL (`http://127.0.0.1:<port>`), Copy port.
+- **Click a tab** to bring it to the front inside its browser.
+- Stop only ends a browser PortPilot started for that profile. If something else holds the port, or the owner cannot be confirmed, PortPilot says so and leaves it running.
+
+The view looks only while it is on screen, once per 10 seconds, and only at the profile's own debug port on `127.0.0.1`: it reads tab titles and URLs, never page content, and navigates only when you use Open URL (http and https only). The profile list is re-read only when the config changes. Where the editor's Node has no built-in WebSocket (older VS Code), Stop cannot ask the browser to quit cleanly and ends it after a short wait instead.
+
 **Everything else from the tree.** Start and stop apps, kill a port, open in the browser, change a port, toggle favourites, and add, edit or delete apps. Running detection is two-phase: an app on a dynamic or non-preferred port is still found, with its live port shown.
 
 ## Web portal, hosted from VS Code
@@ -56,7 +64,7 @@ The ✦ marks and the "Claude Code started it" line come from the PortPilot plug
 
 ## Commands
 
-Start, stop and open the web portal; fold or unfold stopped apps; search, refresh and reopen runs in History; add, edit and delete apps; change ports, kill ports and scan ports. All are in the Command Palette under `PortPilot:` and on the sidebar.
+Start, stop and open the web portal; fold or unfold stopped apps; search, refresh and reopen runs in History; start, stop, set the mode of and open pages in browser profiles; add, edit and delete apps; change ports, kill ports and scan ports. All are in the Command Palette under `PortPilot:` and on the sidebar.
 
 ## Links
 

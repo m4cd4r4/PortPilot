@@ -42,6 +42,10 @@
         {
           "id": "portpilot.history",
           "name": "History"
+        },
+        {
+          "id": "portpilot.browsers",
+          "name": "Browsers"
         }
       ]
     },
@@ -201,6 +205,54 @@
         "title": "Refresh History",
         "icon": "$(refresh)",
         "category": "PortPilot"
+      },
+      {
+        "command": "portpilot.startBrowser",
+        "title": "Start Browser",
+        "icon": "$(play)",
+        "category": "PortPilot"
+      },
+      {
+        "command": "portpilot.stopBrowser",
+        "title": "Stop Browser",
+        "icon": "$(debug-stop)",
+        "category": "PortPilot"
+      },
+      {
+        "command": "portpilot.setBrowserMode",
+        "title": "Set Browser Mode",
+        "icon": "$(window)",
+        "category": "PortPilot"
+      },
+      {
+        "command": "portpilot.openBrowserUrl",
+        "title": "Open URL in This Browser",
+        "icon": "$(link-external)",
+        "category": "PortPilot"
+      },
+      {
+        "command": "portpilot.copyBrowserCdp",
+        "title": "Copy CDP URL",
+        "icon": "$(copy)",
+        "category": "PortPilot"
+      },
+      {
+        "command": "portpilot.copyBrowserPort",
+        "title": "Copy Port",
+        "icon": "$(symbol-number)",
+        "category": "PortPilot"
+      },
+      {
+        "command": "portpilot.focusBrowserTab",
+        "title": "Focus Tab",
+        "icon": "$(browser)",
+        "category": "PortPilot"
+      },
+      {
+        "command": "portpilot.refreshBrowsers",
+        "title": "Refresh Browsers",
+        "icon": "$(refresh)",
+        "category": "PortPilot"
       }
     ],
     "configuration": {
@@ -269,6 +321,11 @@
           "command": "portpilot.refreshHistory",
           "when": "view == portpilot.history",
           "group": "navigation@2"
+        },
+        {
+          "command": "portpilot.refreshBrowsers",
+          "when": "view == portpilot.browsers",
+          "group": "navigation"
         }
       ],
       "view/item/context": [
@@ -376,6 +433,51 @@
           "command": "portpilot.unpinHistoryRun",
           "when": "view == portpilot.history && viewItem =~ /hrun/ && viewItem =~ /hpinned/",
           "group": "2_pin"
+        },
+        {
+          "command": "portpilot.startBrowser",
+          "when": "view == portpilot.browsers && viewItem =~ /bprofile/ && viewItem =~ /bdown/",
+          "group": "inline@1"
+        },
+        {
+          "command": "portpilot.stopBrowser",
+          "when": "view == portpilot.browsers && viewItem =~ /bprofile/ && viewItem =~ /bup/",
+          "group": "inline@1"
+        },
+        {
+          "command": "portpilot.openBrowserUrl",
+          "when": "view == portpilot.browsers && viewItem =~ /bprofile/ && viewItem =~ /bup/",
+          "group": "inline@2"
+        },
+        {
+          "command": "portpilot.startBrowser",
+          "when": "view == portpilot.browsers && viewItem =~ /bprofile/ && viewItem =~ /bdown|bheld/",
+          "group": "1_run@1"
+        },
+        {
+          "command": "portpilot.stopBrowser",
+          "when": "view == portpilot.browsers && viewItem =~ /bprofile/ && viewItem =~ /bup/",
+          "group": "1_run@2"
+        },
+        {
+          "command": "portpilot.setBrowserMode",
+          "when": "view == portpilot.browsers && viewItem =~ /bprofile/",
+          "group": "1_run@3"
+        },
+        {
+          "command": "portpilot.openBrowserUrl",
+          "when": "view == portpilot.browsers && viewItem =~ /bprofile/ && viewItem =~ /bup/",
+          "group": "2_open@1"
+        },
+        {
+          "command": "portpilot.copyBrowserCdp",
+          "when": "view == portpilot.browsers && viewItem =~ /bprofile/",
+          "group": "3_copy@1"
+        },
+        {
+          "command": "portpilot.copyBrowserPort",
+          "when": "view == portpilot.browsers && viewItem =~ /bprofile/",
+          "group": "3_copy@2"
         }
       ],
       "commandPalette": [
@@ -410,6 +512,34 @@
         {
           "command": "portpilot.openHistoryFolder",
           "when": "false"
+        },
+        {
+          "command": "portpilot.startBrowser",
+          "when": "false"
+        },
+        {
+          "command": "portpilot.stopBrowser",
+          "when": "false"
+        },
+        {
+          "command": "portpilot.setBrowserMode",
+          "when": "false"
+        },
+        {
+          "command": "portpilot.openBrowserUrl",
+          "when": "false"
+        },
+        {
+          "command": "portpilot.copyBrowserCdp",
+          "when": "false"
+        },
+        {
+          "command": "portpilot.copyBrowserPort",
+          "when": "false"
+        },
+        {
+          "command": "portpilot.focusBrowserTab",
+          "when": "false"
         }
       ]
     },
@@ -417,6 +547,10 @@
       {
         "view": "portpilot.history",
         "contents": "No localhost pages recorded yet. Start a dev server and it will appear here."
+      },
+      {
+        "view": "portpilot.browsers",
+        "contents": "No browser profiles yet. Create one in the PortPilot app (Browsers tab) or ask Claude to start_browser."
       }
     ]
   },

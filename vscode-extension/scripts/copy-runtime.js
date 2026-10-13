@@ -25,6 +25,7 @@ const FILES = [
   'core/browserCdp.js',
   'core/browserDetect.js',
   'core/browserProfiles.js',
+  'core/browserView.js',
   'core/browserRun.js',
   'core/conflict.js',
   'core/configPath.js',
