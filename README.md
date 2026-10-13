@@ -98,6 +98,8 @@ Each row now tells you what is happening and who did it.
 
 **History tab.** Every run is recorded with the git state it ran from, including uncommitted changes. Search by app, branch, file or SHA, open the page a run served while it is still up, copy its SHA, or pin it so it is never pruned. **Re-run this version** puts that exact commit and its uncommitted files in a new sibling worktree, installs from the lockfile and starts it on a free port. Claude finds the same runs with `find_run`.
 
+The History tab also records dev servers PortPilot did not start: any localhost server on this machine (from a terminal, Claude or an editor) gets a run marked `detected`, with a preview, once it answers HTTP on two scans in a row, and its project folder and start command are kept so **Start again** can bring it back later. Switch it off under Settings > Run history > Track every localhost server.
+
 Running apps on the Apps tab show a small preview of the page they serve, beside the state. It is the thumbnail the History tab already holds, so no extra capture runs. Hover it, or tab to it, for a larger preview; switch it off under Settings.
 
 ![History tab listing runs with thumbnails, state words and Re-run this version](docs/demo/screenshots/history-1440.png)

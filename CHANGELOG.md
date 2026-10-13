@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Every localhost dev server is tracked.** The desktop app scans every 10 s and records any server on this machine, whoever started it (a terminal, Claude, an editor), in the History tab with a page preview, as a run marked `detected`. A server must answer HTTP on two scans in a row to count and its port must be gone for two scans to close it; a server that restarts within 60 s keeps its run. Browsers, editors, agents, MCP servers, language servers, Node inspector ports, databases and PortPilot itself are never recorded. Servers a registered app owns are left to that app. Turn it off under **Settings > Run history > Track every localhost server**.
+- **Start again.** A closed detected run with a known start command and a project folder that still exists gets a **Start again** button: it registers (or reuses) an app for the folder on the same port, starts it like any other app and opens the page once it answers. The registration step is `src/core/runApp.js`, shared with the VS Code extension.
+
+### Changed
+- Run history keeps 1000 runs by default (was 500) so a week of auto-tracked dev servers stays browsable. The 150 MB cap is unchanged; thumbnails are about 20-40 KB each.
+
 ## [3.7.0] - 2026-10-13
 
 ### Added
