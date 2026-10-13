@@ -35,6 +35,7 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.scanPorts = scanPorts;
 exports.computeRunning = computeRunning;
+exports.matchRunning = matchRunning;
 exports.killPort = killPort;
 const child_process_1 = require("child_process");
 const util_1 = require("util");
@@ -220,7 +221,14 @@ async function getCommandLines(pids) {
 async function computeRunning(apps, activePorts) {
     const pids = [...new Set(activePorts.map(p => p.pid).filter(Boolean))];
     const cmds = await getCommandLines(pids);
-    const ports = activePorts.map(p => ({ ...p, commandLine: cmds.get(p.pid) || '' }));
+    return matchRunning(apps, activePorts.map(p => ({ ...p, commandLine: cmds.get(p.pid) || '' })));
+}
+// Browsers, editors and AI agents hold ports for debugging, and their command lines carry paths
+// from other projects (a Brave profile under a scratchpad, a VS Code extension host). They are
+// never the app's own server, so command-line evidence from them proves nothing.
+const NOT_A_SERVER = /^(brave|chrome|chromium|msedge|firefox|opera|vivaldi|code|cursor|windsurf|claude)\b/i;
+/** The pure matcher: `ports` already carry their `commandLine`. */
+function matchRunning(apps, ports) {
     const matched = new Set();
     const result = new Map();
     // Phase 1: high-confidence CWD match in the command line, then folder/name
@@ -231,7 +239,7 @@ async function computeRunning(apps, activePorts) {
         const cwd = app.cwd.toLowerCase();
         const cwdAlt = cwd.replace(/\\/g, '/');
         for (const p of ports) {
-            if (matched.has(p.port))
+            if (matched.has(p.port) || NOT_A_SERVER.test(p.processName))
                 continue;
             const cl = p.commandLine.toLowerCase();
             if (cl && (cl.includes(cwd) || cl.includes(cwdAlt))) {
@@ -245,7 +253,7 @@ async function computeRunning(apps, activePorts) {
         const folder = cwd.split(/[\\/]/).filter(Boolean).pop() || '';
         const keywords = [folder, ...app.name.toLowerCase().split(/[^a-z0-9]+/)].filter(k => k.length > 3);
         for (const p of ports) {
-            if (matched.has(p.port))
+            if (matched.has(p.port) || NOT_A_SERVER.test(p.processName))
                 continue;
             const cl = p.commandLine.toLowerCase();
             if (cl && keywords.some(k => cl.includes(k))) {

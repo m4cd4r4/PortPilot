@@ -511,7 +511,16 @@ function getCommandLines(pids) {
 function computeRunning(apps, activePorts) {
   const pids = [...new Set(activePorts.map(p => p.pid).filter(Boolean))];
   const cmds = getCommandLines(pids);
-  const ports = activePorts.map(p => ({ ...p, commandLine: cmds.get(p.pid) || '' }));
+  return matchRunning(apps, activePorts.map(p => ({ ...p, commandLine: cmds.get(p.pid) || '' })));
+}
+
+// Browsers, editors and AI agents hold ports for debugging, and their command lines carry paths
+// from other projects (a Brave profile under a scratchpad, a VS Code extension host). They are
+// never the app's own server, so command-line evidence from them proves nothing.
+const NOT_A_SERVER = /^(brave|chrome|chromium|msedge|firefox|opera|vivaldi|code|cursor|windsurf|claude)\b/i;
+
+/** The pure matcher: `ports` already carry their `commandLine`. */
+function matchRunning(apps, ports) {
   const matched = new Set();
   const result = new Map();
 
@@ -521,7 +530,7 @@ function computeRunning(apps, activePorts) {
     const cwd = app.cwd.toLowerCase();
     const cwdAlt = cwd.replace(/\\/g, '/');
     for (const p of ports) {
-      if (matched.has(p.port)) continue;
+      if (matched.has(p.port) || NOT_A_SERVER.test(p.processName || '')) continue;
       const cl = p.commandLine.toLowerCase();
       if (cl && (cl.includes(cwd) || cl.includes(cwdAlt))) {
         result.set(app.id, p);
@@ -534,7 +543,7 @@ function computeRunning(apps, activePorts) {
     const folder = cwd.split(/[\\/]/).filter(Boolean).pop() || '';
     const keywords = [folder, ...app.name.toLowerCase().split(/[^a-z0-9]+/)].filter(k => k.length > 3);
     for (const p of ports) {
-      if (matched.has(p.port)) continue;
+      if (matched.has(p.port) || NOT_A_SERVER.test(p.processName || '')) continue;
       const cl = p.commandLine.toLowerCase();
       if (cl && keywords.some(k => cl.includes(k))) {
         result.set(app.id, p);
@@ -1458,4 +1467,4 @@ async function main() {
 const isMain = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
 if (isMain) main().catch(console.error);
 
-export { findRuns, rerunSteps, alreadyRunning,normPath, appAtCwd, cmdSafe, startRefusal, observedDuplicate,pickColor, resolveWorktreeGit, registerWorktree, stampStart, detachedCommand, prepareLog };
+export { matchRunning, findRuns, rerunSteps, alreadyRunning,normPath, appAtCwd, cmdSafe, startRefusal, observedDuplicate,pickColor, resolveWorktreeGit, registerWorktree, stampStart, detachedCommand, prepareLog };

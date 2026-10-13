@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **No more false "Running".** A browser, an editor or Claude holding a port is no longer shown as your app running just because its command line mentions the project (a Brave debug port read as "Solaisoft Running", Code.exe as "SSF Site").
 - **Page previews on running apps.** Hover a running app to see a thumbnail of its page above the usual details. The thumbnail is the one PortPilot captured when the app started, read from the local run history; nothing leaves your machine. Turn this off with `portpilot.rowPreviews`.
 
 ## 3.4.0

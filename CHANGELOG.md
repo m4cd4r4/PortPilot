@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- The VS Code extension and the MCP server no longer show an app as Running because a browser, an editor or Claude holds a port and its command line mentions the project. Found on a real machine: a Brave debug port read as "Solaisoft Running", `Code.exe` as "SSF Site".
+
 ## [3.6.0] - 2026-10-10
 
 ### Added
