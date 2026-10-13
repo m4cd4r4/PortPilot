@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [3.8.1] - 2026-10-14
+
 ## [3.8.0] - 2026-10-13
 
 - **Browsers view.** A new `Browsers` view under History lists your named browser profiles (the debug-port Brave, Chrome or Edge windows from the PortPilot app's Browsers tab, or started by Claude). Each row shows `:port · mode · browser` with a running, stopped or port-held icon. A running profile expands to its open tabs, and hovering shows its note, start URL, profile folder and who has it leased when a Claude session does.
