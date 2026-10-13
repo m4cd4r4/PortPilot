@@ -12,14 +12,17 @@ const http = require('http');
  * @param {number} port
  * @param {string} [healthPath='/']
  * @param {number} [timeoutMs=2000]
+ * @param {string} [host='127.0.0.1'] '127.0.0.1' or '::1'
  * @returns {Promise<'healthy'|'unhealthy'|'down'>}
  *   healthy   - responded 2xx/3xx
  *   unhealthy - responded, but 4xx/5xx
  *   down      - nothing listening / connection refused / timed out
  */
-function probe(port, healthPath = '/', timeoutMs = 2000) {
+function probe(port, healthPath = '/', timeoutMs = 2000, host = '127.0.0.1') {
   const p = parseInt(port, 10);
   if (!Number.isInteger(p) || p < 1 || p > 65535) return Promise.resolve('down');
+  // Loopback only: a probe never reaches another machine.
+  if (host !== '127.0.0.1' && host !== '::1') return Promise.resolve('down');
   const reqPath = healthPath && healthPath.startsWith('/') ? healthPath : `/${healthPath || ''}`;
 
   return new Promise((resolve) => {
@@ -27,7 +30,7 @@ function probe(port, healthPath = '/', timeoutMs = 2000) {
     const done = (result) => { if (!settled) { settled = true; resolve(result); } };
 
     const req = http.get(
-      { host: '127.0.0.1', port: p, path: reqPath, timeout: timeoutMs },
+      { host, port: p, path: reqPath, timeout: timeoutMs },
       (res) => {
         const code = res.statusCode || 0;
         res.resume(); // drain so the socket can close

@@ -201,13 +201,17 @@
         </div>
         <div class="settings-section">
           <h3>Run history</h3>
+          <label class="setting-row" title="Any dev server running on this machine is recorded with a page preview, whoever started it">
+            <span>Track every localhost server (not only apps started here)</span>
+            <input type="checkbox" id="setting-auto-track" checked>
+          </label>
           <label class="setting-row">
             <span>Snapshot uncommitted files at each start</span>
             <input type="checkbox" id="setting-history-snapshots" checked>
           </label>
           <label class="setting-row">
             <span>Keep at most (runs)</span>
-            <input type="number" id="setting-history-max-runs" value="500" min="10" max="5000" class="input-small">
+            <input type="number" id="setting-history-max-runs" value="1000" min="10" max="5000" class="input-small">
           </label>
           <label class="setting-row">
             <span>Keep at most (MB)</span>

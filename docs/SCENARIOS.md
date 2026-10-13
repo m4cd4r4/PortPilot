@@ -21,6 +21,19 @@ Unit checks (`npm run test:unit`, `npm run test:mcp`) cover the logic; these sce
 | A past run had git state | History tab, Re-run this version | A new run for that app, marked `re-run`, on a free port in a new worktree | `desktop-apps.e2e.js` |
 | History has stopped, crashed and no-git runs | Open the History tab, filter, pin | Rows labelled by state, crashed run pinned, no-git run cannot be re-run or copied | `tests/history-ui.e2e.js` |
 
+## Localhost auto-tracking
+
+| Situation | Check from outside | Pass looks like | Run by |
+|---|---|---|---|
+| A dev server nobody registered is started from a terminal (absolute script path in a folder with a `package.json`) | Wait on `history/runs.json` | Within ~40 s a run for the folder's name, folder, port, `startCommand` and `startedBy.kind: detected`; no app was registered | `tests/desktop-detect.e2e.js` |
+| That server answers a page with a `<title>` | Wait for the run's `page` | A thumbnail file under `history/thumbs/` and `page.title` set | `desktop-detect.e2e.js` |
+| You open the History tab | Read the row | A `detected` tag, the thumbnail, state `Running`, Open URL enabled, no Start again | `desktop-detect.e2e.js` |
+| A registered app's server is started outside PortPilot (a terminal, an agent) | Wait on `runs.json`, read the History row | A `detected` run under the registered app's id (never a second open run for an app PortPilot started), with a thumbnail and Open URL; it closes when the server stops | `desktop-detect.e2e.js` |
+| A detected server has no project folder on its command line | Read the History row label | The page title is the label, not `node`; with a folder the folder name stays | `desktop-detect.e2e.js` |
+| The server is killed | Wait for the run and press Start again | The run closes (`endedBy: stop`); Start again is enabled; pressing it registers one app for the folder, the port answers again and the URL is opened | `desktop-detect.e2e.js` |
+| A browser-named process holds a port (a control server beside it is recorded) | Wait several scans | No run for the browser-named one | `desktop-detect.e2e.js` |
+| Settings > Track every localhost server is turned off | Start a new server, wait several scans, turn it back on | Open runs close, nothing new is recorded while off, the same server is recorded once on | `desktop-detect.e2e.js` |
+
 ## Browsers tab
 
 | Situation | Check from outside | Pass looks like | Run by |

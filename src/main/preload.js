@@ -54,7 +54,8 @@ contextBridge.exposeInMainWorld('portpilot', {
     thumbs: (ids) => ipcRenderer.invoke('history:thumbs', ids),
     rowThumbs: () => ipcRenderer.invoke('history:rowThumbs'),
     pin: (runId, pinned) => ipcRenderer.invoke('history:pin', runId, pinned),
-    rerun: (runId) => ipcRenderer.invoke('history:rerun', runId)
+    rerun: (runId) => ipcRenderer.invoke('history:rerun', runId),
+    startAgain: (runId) => ipcRenderer.invoke('history:startAgain', runId)
   },
 
   // Browser profiles (Browsers tab)

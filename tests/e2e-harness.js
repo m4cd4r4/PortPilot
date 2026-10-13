@@ -70,6 +70,9 @@ async function launch(world, { width = 1440, height = 900 } = {}) {
     env: {
       ...Object.fromEntries(Object.entries(process.env).filter(([k]) => !/^(ELECTRON_|VSCODE_)/.test(k))),
       PORTPILOT_MCP_PORT: String(mcpPort),
+      // The localhost watcher must not record (or thumbnail) the developer's real servers: port 1 is
+      // below anything it tracks, so a spec that is not about detection sees none. desktop-detect sets its own.
+      PORTPILOT_DETECT_ONLY_PORTS: process.env.PORTPILOT_DETECT_ONLY_PORTS || '1',
     },
   });
   const win = await app.firstWindow();

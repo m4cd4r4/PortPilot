@@ -110,6 +110,7 @@ class ConfigStore {
         openAtLogin: true,  // Start PortPilot (and the shared MCP server) at login
         autoResizeWindow: false,  // Auto-grow/shrink window height to app count (off by default - it fights manual resizing)
         notifyOnCrash: true,  // OS notification + toast when a running app exits unexpectedly
+        autoTrackLocalhost: true,  // Record every localhost dev server (whoever started it) in the History tab
 
         // Favorites system
         favoritesExpanded: true,

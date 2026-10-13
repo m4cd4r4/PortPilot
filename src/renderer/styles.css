@@ -2528,6 +2528,7 @@ body {
 .happ { font-weight: 600; color: var(--text-primary); white-space: nowrap; }
 .hport, .hgit, .hcmd, .hby { font-family: 'SF Mono', 'Cascadia Code', 'Consolas', monospace; font-size: 0.68rem; color: var(--text-muted); white-space: nowrap; }
 .hpin { color: var(--accent-yellow); font-size: 0.7rem; }
+.hdetected { color: var(--accent-cyan); border: 1px solid var(--accent-cyan); border-radius: 999px; padding: 0 6px; font-size: 0.62rem; line-height: 1.5; letter-spacing: 0.02em; white-space: nowrap; }
 .hwhen { margin-left: auto; color: var(--text-secondary); font-size: 0.7rem; white-space: nowrap; }
 .htitle, .hcmd { flex: 0 1 auto; min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .htitle { color: var(--text-primary); }

@@ -22,6 +22,20 @@
     return day.getTime() - (endOfDay ? 1 : 0);
   }
 
+  /**
+   * A run's main label. A detected server with no project folder is named after its
+   * command ("node server.js", "python http.server"), which says little; once its page
+   * has a title, that is the better label. Only for a det_ run whose name is that
+   * command-derived fallback; a registered app or a named folder keeps its own name.
+   */
+  function labelOf(run) {
+    const name = run.appName || run.appId || '';
+    const title = run.page && run.page.title;
+    if (!title || !run.detected || run.cwd || !/^det_/.test(String(run.appId))) return name;
+    const first = lower(name).split(' ')[0];
+    return first && lower(run.command).includes(first) ? title : name;
+  }
+
   const textOf = (r) => lower([
     r.appName, r.command, r.git && r.git.branch, r.git && r.git.subject,
     r.page && r.page.title, ...((r.git && r.git.files) || []),
@@ -58,7 +72,7 @@
     const apps = new Map();
     const branches = new Set();
     for (const r of runs || []) {
-      if (r.appId && !apps.has(r.appId)) apps.set(r.appId, r.appName || r.appId);
+      if (r.appId && !apps.has(r.appId)) apps.set(r.appId, labelOf(r));
       if (r.git && r.git.branch) branches.add(r.git.branch);
     }
     const byName = (a, b) => a.name.localeCompare(b.name);
@@ -82,6 +96,8 @@
 
   /** "claude b71c" / "you" for who started the run (the app rows' wording). */
   function startedByWord(run) {
+    // Found running by the localhost watcher (startedBy.kind 'detected'): provenanceOf has no word for it.
+    if (run.startedBy && run.startedBy.kind === 'detected') return 'detected';
     const p = Status.provenanceOf(run.startedBy);
     return p.kind === 'external' ? 'external' : p.word;
   }
@@ -145,5 +161,5 @@
     return out;
   }
 
-  return { filterRuns, facets, runStateOf, startedByWord, formatWhen, formatBytes, footerText, gitLine, rowThumbs };
+  return { filterRuns, facets, labelOf, runStateOf, startedByWord, formatWhen, formatBytes, footerText, gitLine, rowThumbs };
 });
