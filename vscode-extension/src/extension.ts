@@ -12,6 +12,8 @@ import { killPort } from './portScanner';
 import { appIdByPort, newCrashes, CrashStamp } from './treeModel';
 import { HistoryTreeProvider } from './historyTreeProvider';
 import { registerHistoryCommands } from './historyCommands';
+import { BrowsersTreeProvider } from './browsersTreeProvider';
+import { registerBrowserCommands } from './browserCommands';
 import { WebPortal } from './webPortal';
 
 let webPortal: WebPortal | undefined;
@@ -30,6 +32,11 @@ export function activate(context: vscode.ExtensionContext) {
   const historyProvider = new HistoryTreeProvider();
   const historyView = vscode.window.createTreeView('portpilot.history', { treeDataProvider: historyProvider });
   context.subscriptions.push(historyView);
+  // Browsers polls only while its view is on screen: a hidden or collapsed view does no work.
+  const browsersProvider = new BrowsersTreeProvider();
+  const browsersView = vscode.window.createTreeView('portpilot.browsers', { treeDataProvider: browsersProvider });
+  context.subscriptions.push(browsersView, browsersProvider, browsersView.onDidChangeVisibility(e => browsersProvider.setVisible(e.visible)));
+  browsersProvider.setVisible(browsersView.visible);
 
   // "Stopped (N)" folding: setting-backed, with a view-title toggle whose icon
   // follows the portpilot.foldStopped context key.
@@ -105,6 +112,7 @@ export function activate(context: vscode.ExtensionContext) {
     await appsProvider.setActivePorts(portsProvider.getCachedPorts());
     portsProvider.setAppIdByPort(appIdByPort(appsProvider.getRunningByAppId()));
     historyProvider.update(portsProvider.getCachedPorts().map(p => p.port));
+    void browsersProvider.update();
     updateStatusBar();
     updateBadge();
     alertNewCrashes();
@@ -198,6 +206,7 @@ export function activate(context: vscode.ExtensionContext) {
   );
 
   registerHistoryCommands(context, { provider: historyProvider, view: historyView, startApp });
+  registerBrowserCommands(context, { provider: browsersProvider });
 
   // Commands
   context.subscriptions.push(

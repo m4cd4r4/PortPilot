@@ -46,6 +46,8 @@ const portScanner_1 = require("./portScanner");
 const treeModel_1 = require("./treeModel");
 const historyTreeProvider_1 = require("./historyTreeProvider");
 const historyCommands_1 = require("./historyCommands");
+const browsersTreeProvider_1 = require("./browsersTreeProvider");
+const browserCommands_1 = require("./browserCommands");
 const webPortal_1 = require("./webPortal");
 let webPortal;
 function activate(context) {
@@ -61,6 +63,11 @@ function activate(context) {
     const historyProvider = new historyTreeProvider_1.HistoryTreeProvider();
     const historyView = vscode.window.createTreeView('portpilot.history', { treeDataProvider: historyProvider });
     context.subscriptions.push(historyView);
+    // Browsers polls only while its view is on screen: a hidden or collapsed view does no work.
+    const browsersProvider = new browsersTreeProvider_1.BrowsersTreeProvider();
+    const browsersView = vscode.window.createTreeView('portpilot.browsers', { treeDataProvider: browsersProvider });
+    context.subscriptions.push(browsersView, browsersProvider, browsersView.onDidChangeVisibility(e => browsersProvider.setVisible(e.visible)));
+    browsersProvider.setVisible(browsersView.visible);
     // "Stopped (N)" folding: setting-backed, with a view-title toggle whose icon
     // follows the portpilot.foldStopped context key.
     const readFold = () => vscode.workspace.getConfiguration('portpilot').get('foldStoppedApps', true);
@@ -125,6 +132,7 @@ function activate(context) {
         await appsProvider.setActivePorts(portsProvider.getCachedPorts());
         portsProvider.setAppIdByPort((0, treeModel_1.appIdByPort)(appsProvider.getRunningByAppId()));
         historyProvider.update(portsProvider.getCachedPorts().map(p => p.port));
+        void browsersProvider.update();
         updateStatusBar();
         updateBadge();
         alertNewCrashes();
@@ -212,6 +220,7 @@ function activate(context) {
         }
     }));
     (0, historyCommands_1.registerHistoryCommands)(context, { provider: historyProvider, view: historyView, startApp });
+    (0, browserCommands_1.registerBrowserCommands)(context, { provider: browsersProvider });
     // Commands
     context.subscriptions.push(vscode.commands.registerCommand('portpilot.refresh', () => {
         refreshAll();

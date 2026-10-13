@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+- **Browsers view.** A new `Browsers` view under History lists your named browser profiles (the debug-port Brave, Chrome or Edge windows from the PortPilot app's Browsers tab, or started by Claude). Each row shows `:port · mode · browser` with a running, stopped or port-held icon. A running profile expands to its open tabs, and hovering shows its note, start URL, profile folder and who has it leased when a Claude session does.
+- **Manage them from the sidebar.** Start, Stop, Set mode (headed, offscreen, headless), Open URL in this profile (http and https), Copy CDP URL and Copy port are on each row; clicking a tab brings it to the front. Stop will not end a browser PortPilot did not start, and says why. Errors come from PortPilot's own browser API as plain messages.
+- **Quiet by design.** The view looks only while it is visible, every 10 seconds, at each profile's own debug port on `127.0.0.1`. It reads tab titles and URLs only, never page content, and re-reads the profile list only when the config changes.
 - **History view.** A new `History` view under Apps lists past localhost pages from PortPilot's run history, newest first, grouped Today, Yesterday, then by day for a week, then a collapsed `Earlier`. Each row shows the app, start time and port, with an icon for running, stopped, crashed or ended-unseen. Hover for the page title, URL, git branch and commit, and the page thumbnail.
 - **Reopen a past page.** Click a run to open it in your browser while its server is up. A closed run with a recorded folder and start command shows `Start Again`: PortPilot starts it in a terminal, waits for the port to answer, then opens the page. Rows also copy the URL, open the folder, and pin or unpin the run (pinned runs are never pruned).
 - **Search.** The search icon in the History title bar filters by name, port, page title or branch.

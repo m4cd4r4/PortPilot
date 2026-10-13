@@ -134,6 +134,51 @@ const runHistory: RunHistoryApi = require(path.join(__dirname, '..', 'runtime', 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const runView: RunViewApi = require(path.join(__dirname, '..', 'runtime', 'core', 'runView.js'));
 
+// Browser profiles: the same `browserProfiles` list and the same start/stop API the MCP tools use.
+interface BrowserProfilesApi { listProfiles(configPath: string): unknown[]; }
+export interface BrowserResult {
+  success: boolean;
+  code?: string;
+  error?: string;
+  action?: string;
+  note?: string;
+  already?: boolean;
+  port?: number;
+  name?: string;
+  mode?: string;
+  profiles?: unknown[];
+  [k: string]: unknown;
+}
+interface BrowserApi {
+  call(configPath: string, tool: string, args: Record<string, unknown>, ctx: { surface: string }): Promise<BrowserResult>;
+}
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const browserProfiles: BrowserProfilesApi = require(path.join(__dirname, '..', 'runtime', 'core', 'browserProfiles.js'));
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const browserApi: BrowserApi = require(path.join(__dirname, '..', 'runtime', 'core', 'browserApi.js'));
+
+let profilesCache: { key: string; profiles: unknown[] } | null = null;
+
+/** The raw `browserProfiles` list, re-read only when the config file's mtime or size moves. Empty on any read failure. */
+export function readBrowserProfilesCached(): { key: string; profiles: unknown[] } {
+  try {
+    const configPath = getConfigPath();
+    const st = fs.statSync(configPath);
+    const key = `${configPath}|${st.mtimeMs}|${st.size}`;
+    if (profilesCache?.key !== key) profilesCache = { key, profiles: browserProfiles.listProfiles(configPath) };
+    return profilesCache;
+  } catch { return { key: 'none', profiles: [] }; }
+}
+
+/** One browser tool (list_browser_profiles, start_browser, stop_browser, set_browser_mode). Resolves always; a throw becomes a failure result. */
+export async function browserCall(tool: string, args: Record<string, unknown> = {}): Promise<BrowserResult> {
+  try {
+    return await browserApi.call(getConfigPath(), tool, { agent: 'VS Code', ...args }, { surface: 'vscode' });
+  } catch (err) {
+    return { success: false, code: 'INTERNAL', error: (err as Error).message || 'The browser tool failed.', action: 'Try again, or report this.' };
+  }
+}
+
 /** Record that the user started an app from VS Code (best-effort, never throws). */
 export function recordHumanStart(app: PortPilotApp): boolean {
   return configFile.recordStart(getConfigPath(), app.id,
