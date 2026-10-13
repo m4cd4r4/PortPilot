@@ -75,6 +75,9 @@ function createAgent({ configStore, port = DEFAULT_PORT, token = crypto.randomBy
   // ---- Static UI: reuse the desktop renderer verbatim, inject token + shim ----
   const serveIndex = (res) => {
     let html = fs.readFileSync(path.join(RENDERER_DIR, 'index.html'), 'utf8');
+    // The portal serves only the Apps view for now: drop the tabs it cannot back.
+    html = html.replace(/[ \t]*<button[^>]*data-view="(?:history|browsers)"[^>]*>[^<]*<\/button>\r?\n/g, '');
+    html = html.replace(/[ \t]*<script src="(?:\.\.\/core\/runView|\.\.\/core\/browserView|history|browsers|rowThumbs)\.js"><\/script>\r?\n/g, '');
     html = html.replace('</head>', `  <meta name="pp-token" content="${token}">\n</head>`);
     html = html.replace('<script src="renderer.js"></script>',
       '<script src="portpilot-web.js"></script>\n  <script src="renderer.js"></script>');
@@ -163,6 +166,8 @@ function createAgent({ configStore, port = DEFAULT_PORT, token = crypto.randomBy
       if (req.url === '/portpilot-web.js') return serveStatic(res, 'portpilot-web.js', PUBLIC_DIR);
       if (req.url === '/renderer.js') return serveStatic(res, 'renderer.js', RENDERER_DIR);
       if (req.url === '/styles.css') return serveStatic(res, 'styles.css', RENDERER_DIR);
+      // There is no icon to serve; 204 stops the browser logging a 404 console error on every load.
+      if (req.url === '/favicon.ico') return send(res, 204, '');
       // The renderer loads the shared status/classification model as a browser
       // global (it can't require under CSP). Without this route it 404s and
       // window.PortPilotStatus is undefined -> classify() throws on scan.
