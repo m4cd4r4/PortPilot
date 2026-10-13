@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- A detected server started as `node server.js`, `python app.py`, `python -m pkg` or `php -S` (a relative script, so no folder on its command line) now gets its project folder: the first of a live Claude session's folder (and its git root / parents), a registered app's folder, or a recent run's folder that actually holds the file. Two folders that cannot be told apart leave it unknown. The run is named after the folder and can be started again.
+
 ## [3.8.0] - 2026-10-13
 
 ### Added

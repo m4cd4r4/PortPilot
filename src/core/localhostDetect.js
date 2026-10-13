@@ -4,7 +4,9 @@
  * watcher (src/main/localhostWatcher.js): no scanning, no probing, no Electron.
  *
  *   classify(portInfo, opts)  -> { dev, reason }
- *   deriveProject(commandLine) -> { name, cwd, startCommand }
+ *   deriveProject(commandLine, opts?) -> { name, cwd, startCommand, relative? }
+ *   candidateFolders(sources, opts?) -> string[][]  (ordered groups for deriveProject's opts.candidates)
+ *   resolveRelative(commandLine, groups, opts?) -> { cwd, file } | null
  *   detectedAppId(cwd, name, port) -> 'det_<10 hex>'
  *
  * portInfo is one portScanner.scanPorts() item:
@@ -192,12 +194,130 @@ function fallbackName(tokens) {
   return runtime;
 }
 
+// ---- A relative script: "node server.js", "python app.py", "php -S localhost:8000" ----
+//
+// A scanner sees the command line but not the working directory, so a relative script says
+// nothing about where it lives. The folder is found by asking where that file exists among
+// folders this machine's work is known to happen in. Never a guess: a file that exists in no
+// candidate, or in two candidates that cannot be told apart, leaves the folder unknown.
+
+const AMBIGUOUS_MS = 60 * 1000; // two candidates whose file differs by less than this are a tie
+
+const isFileDefault = (p) => { try { return fs.statSync(p).isFile(); } catch { return false; } };
+const mtimeDefault = (p) => { try { return fs.statSync(p).mtimeMs; } catch { return 0; } };
+const keyOf = (p) => {
+  const k = path.resolve(String(p)).replace(/[\\/]+$/, '');
+  return process.platform === 'win32' || process.platform === 'darwin' ? k.toLowerCase() : k;
+};
+
+/**
+ * The relative file(s) a command line asks its runtime to run, as alternatives (any one
+ * existing in a folder counts), or null when it names none we can look for.
+ *   node server.js / python app.py / ruby app.rb   -> ['server.js']
+ *   python -m pkg.mod                              -> ['pkg/mod.py', 'pkg/mod/__main__.py']
+ *   php -S host:port [-t docroot] [router.php]     -> ['router.php'] or the docroot's index files
+ */
+function relativeTargets(commandLine) {
+  const tokens = tokenize(commandLine);
+  const runtime = procName(tokens[0]);
+  const rest = tokens.slice(1);
+  const relative = (t) => t && !isAbsolute(t) && !t.startsWith('-') && !/^[a-z][a-z0-9+.-]*:\/\//i.test(t);
+  if (runtime === 'php') {
+    const s = rest.indexOf('-S');
+    if (s < 0) { const script = rest.find((t) => relative(t) && SCRIPT_EXT.test(t)); return script ? [script] : null; }
+    const router = rest.slice(s + 2).find((t) => relative(t) && /\.php$/i.test(t));
+    if (router) return [router];
+    const t = rest.indexOf('-t');
+    const root = t > -1 && relative(rest[t + 1]) ? rest[t + 1].replace(/[\\/]+$/, '') : '';
+    return ['index.php', 'index.html', 'index.htm'].map((f) => (root ? `${root}/${f}` : f));
+  }
+  const dash = rest.indexOf('-m');
+  if (/^(python|py|pypy)/.test(runtime) && dash > -1 && /^[A-Za-z_][\w.]*$/.test(rest[dash + 1] || '')) {
+    const base = rest[dash + 1].replace(/\./g, '/');
+    return [`${base}.py`, `${base}/__main__.py`];
+  }
+  const script = rest.find((t) => relative(t) && SCRIPT_EXT.test(t));
+  return script ? [script] : null;
+}
+
+/**
+ * Which candidate folder a command line's relative script lives in.
+ * `groups` is an ordered list of folder lists (most trustworthy first). The first group
+ * with a folder holding the file decides; inside a group, two different folders holding it
+ * are told apart by the file's mtime only when it differs by over a minute, else the answer
+ * is null (and later groups are not consulted: a tie is not a miss).
+ * opts.isFile / opts.mtimeMs are test seams.
+ * @returns {{ cwd: string, file: string } | null}
+ */
+function resolveRelative(commandLine, groups, opts = {}) {
+  const targets = relativeTargets(commandLine);
+  if (!targets || !Array.isArray(groups)) return null;
+  const isFile = opts.isFile || isFileDefault;
+  const mtimeMs = opts.mtimeMs || mtimeDefault;
+  const done = new Set();
+  for (const group of groups) {
+    const hits = [];
+    for (const folder of Array.isArray(group) ? group : []) {
+      if (!folder || typeof folder !== 'string') continue;
+      const k = keyOf(folder);
+      if (done.has(k)) continue;
+      done.add(k);
+      const found = targets.map((t) => path.join(folder, t)).filter((p) => isFile(p));
+      if (found.length) hits.push({ cwd: folder.replace(/[\\/]+$/, ''), file: found[0], at: Math.max(...found.map(mtimeMs)) });
+    }
+    if (!hits.length) continue;
+    if (hits.length === 1) return { cwd: hits[0].cwd, file: hits[0].file };
+    hits.sort((a, b) => b.at - a.at);
+    return hits[0].at - hits[1].at > AMBIGUOUS_MS ? { cwd: hits[0].cwd, file: hits[0].file } : null;
+  }
+  return null;
+}
+
+/**
+ * Where a relative script could have been started from, as ordered groups for resolveRelative:
+ *  1. live Claude sessions' folders (newest first), each with its git root and parents up to 2 levels
+ *  2. registered apps' folders
+ *  3. the folders of the most recent runs
+ * sources: { sessionCwds: string[], appCwds: string[], runCwds: string[] }; a missing folder is dropped.
+ * opts.isDir / opts.hasGit are test seams.
+ */
+function candidateFolders(sources = {}, opts = {}) {
+  const isDir = opts.isDir || exists;
+  const hasGit = opts.hasGit || ((d) => fs.existsSync(path.join(d, '.git')));
+  const clean = (list) => (Array.isArray(list) ? list : []).filter((d) => typeof d === 'string' && d.trim()).map((d) => d.trim());
+  const around = (cwd) => {
+    const out = [cwd];
+    let cur = cwd;
+    for (let i = 0; i < 8 && !hasGit(cur); i++) { // the git root, if there is one near
+      const up = path.dirname(cur);
+      if (up === cur) break;
+      cur = up;
+      if (hasGit(cur)) out.push(cur);
+    }
+    cur = cwd;
+    for (let i = 0; i < 2; i++) {
+      const up = path.dirname(cur);
+      if (up === cur) break;
+      out.push(up);
+      cur = up;
+    }
+    return out;
+  };
+  const groups = [clean(sources.sessionCwds).flatMap(around), clean(sources.appCwds), clean(sources.runCwds)];
+  return groups.map((g) => g.filter((d) => isDir(d)));
+}
+
 /**
  * The project a server was started from, read off its command line.
  * startCommand is always null here: it comes from the folder's own scripts, which the
  * watcher reads through projectScanner (the one place that knows package managers).
+ *
+ * A command line with only a RELATIVE script has no folder in it. opts.candidates (the
+ * groups from candidateFolders) lets it be found by where that file exists; `relative: true`
+ * on the result says the folder came from there, so the caller knows the original command
+ * line, which names the script relatively, is runnable from it.
  */
-function deriveProject(commandLine) {
+function deriveProject(commandLine, opts = {}) {
   const tokens = tokenize(commandLine);
   for (const t of tokens.slice(1)) {
     if (!isAbsolute(t)) continue;
@@ -205,6 +325,10 @@ function deriveProject(commandLine) {
     if (!folder || GLOBAL_FOLDER.test(folder + path.sep) || !exists(folder)) continue;
     const cwd = folder.replace(/[\\/]+$/, '');
     return { name: path.basename(cwd) || cwd, cwd, startCommand: null };
+  }
+  if (opts.candidates) {
+    const hit = resolveRelative(commandLine, opts.candidates, opts);
+    if (hit) return { name: path.basename(hit.cwd) || hit.cwd, cwd: hit.cwd, startCommand: null, relative: true };
   }
   return { name: fallbackName(tokens), cwd: null, startCommand: null };
 }
@@ -217,7 +341,7 @@ function detectedAppId(cwd, name, port, platform = process.platform) {
 }
 
 module.exports = {
-  classify, deriveProject, detectedAppId,
+  classify, deriveProject, detectedAppId, resolveRelative, relativeTargets, candidateFolders,
   isLocalBinding, hostOf, procName, inspectorPorts, tokenize,
   OWN_PORTS, INSPECTOR_PORT,
 };

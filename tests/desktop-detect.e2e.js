@@ -31,8 +31,8 @@ const runsOn = (port) => runHistory.readRuns(world.configPath).filter((r) => r.p
 
 async function main() {
   check('the default scan interval is 10 s', INTERVAL_MS === 10000, String(INTERVAL_MS));
-  const [pShop, pBrave, pControl, pOff] = await h.freePorts(4);
-  process.env.PORTPILOT_DETECT_ONLY_PORTS = [pShop, pBrave, pControl, pOff].join(',');
+  const [pShop, pBrave, pControl, pOff, pPlain] = await h.freePorts(5);
+  process.env.PORTPILOT_DETECT_ONLY_PORTS = [pShop, pBrave, pControl, pOff, pPlain].join(',');
   process.env.PORTPILOT_DETECT_INTERVAL_MS = '3000';
 
   // The project: a package.json with a dev script, started by absolute path the way an agent or terminal would.
@@ -123,6 +123,46 @@ async function main() {
     await until(async () => !(await answers(pShop)), 10000, 'externally started server stopped');
     const extClosed = await until(() => runsOn(pShop).find((r) => r.id === own.id && r.stoppedAt), 40000, 'that run closing');
     check('that run closes when the server is gone', extClosed.endedBy === 'stop');
+
+    // 4c. "node server.js" from a folder: the command line names a relative script, so only the folder of a
+    // live Claude session (a fake heartbeat in the throwaway config dir) says where it lives.
+    const plain = world.mkdir('plain-script');
+    fs.writeFileSync(path.join(plain, 'server.js'), h.SERVER);
+    const sessionsDir = path.join(world.configDir, 'sessions');
+    fs.mkdirSync(sessionsDir, { recursive: true });
+    const beat = () => fs.writeFileSync(path.join(sessionsDir, 'fake-session.json'), JSON.stringify({ sessionId: 'fake-session', cwd: plain, at: Date.now() }));
+    beat();
+    const beatTimer = setInterval(beat, 5000);
+    let plainSrv;
+    try {
+      plainSrv = spawnServer(process.execPath, ['server.js', '--port', String(pPlain)], plain);
+      await until(() => answers(pPlain), 15000, 'plain script server answering');
+      const prun = await until(() => runsOn(pPlain).find((r) => r.detected), 40000, 'a detected run for the plain script server');
+      check('a relative-script server gets the live session folder as its cwd', norm(prun.cwd) === norm(plain), String(prun.cwd));
+      check('and the folder name as its name', prun.appName === 'plain-script', prun.appName);
+      check('and its command line as the start command', /server\.js --port/.test(prun.startCommand || ''), String(prun.startCommand));
+      const prow = `.hrow[data-run="${prun.id}"] `;
+      await win.waitForSelector(prow.trim());
+      await until(async () => (await win.$eval(`${prow}.happ`, (e) => e.textContent).catch(() => '')) === 'plain-script', 15000, 'the row label');
+      check('History labels it by the folder, not by the page title', true);
+      plainSrv.kill();
+      await until(async () => !(await answers(pPlain)), 10000, 'plain script server stopped');
+      await until(() => runsOn(pPlain).find((r) => r.id === prun.id && r.stoppedAt), 40000, 'the plain script run closing');
+      await until(async () => !(await win.$eval(`${prow}[data-hact="startagain"]`, (e) => e.disabled).catch(() => true)), 15000, 'Start again enabled');
+      check('Start again is enabled after the server is killed', true);
+      await win.click(`${prow}[data-hact="startagain"]`);
+      await until(() => answers(pPlain), 40000, 'plain script server back through Start again');
+      check('Start again brings it back', true);
+      const reg2 = JSON.parse(fs.readFileSync(world.configPath, 'utf8')).apps.filter((a) => norm(a.cwd) === norm(plain));
+      check('exactly one app was registered for that folder', reg2.length === 1, String(reg2.length));
+      if (reg2[0]) {
+        await win.evaluate((id) => window.portpilot.process.stop(id), reg2[0].id);
+        await until(async () => !(await answers(pPlain)), 15000, 'restarted plain script server stopped');
+      }
+    } finally {
+      clearInterval(beatTimer);
+      try { fs.rmSync(path.join(sessionsDir, 'fake-session.json'), { force: true }); } catch { /* gone */ }
+    }
 
     // 5. A browser-like process holding a port is not recorded (a normal server beside it is, so the check can see a pass).
     const fakeBrave = path.join(world.tmp, process.platform === 'win32' ? 'brave.exe' : 'brave');
