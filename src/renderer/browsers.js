@@ -18,6 +18,8 @@
     lastHtml: '',
     loadSeq: 0,          // bumps on every load: an older response never repaints over a newer one
     dialog: null,       // { kind, name }
+    expanded: new Set(), // lowercased names whose History is open
+    hist: new Map(),     // lowercased name -> { sessions } | { error }
   };
   const $ = (id) => document.getElementById(id);
   const esc = (s) => escapeHtml(s);
@@ -31,6 +33,45 @@
     const locked = b.busy.has(key(row.name));
     return `<div class="bmodes" role="group" aria-label="Mode for ${esc(row.name)}">${BV.MODES.map((m) =>
       `<button type="button" class="bmode" data-bact="mode" data-name="${esc(row.name)}" data-mode="${esc(m.id)}" aria-pressed="${row.mode === m.id}" title="${esc(m.hint)}"${locked ? ' disabled' : ''}>${esc(m.label)}</button>`).join('')}</div>`;
+  }
+
+  // ---- History expander ----------------------------------------------------------
+
+  function sessionHtml(row, e) {
+    const { shown, more } = BV.shownTabs(e);
+    const busy = b.busy.has(key(row.name));
+    const can = (e.tabs || []).length > 0;
+    return `<li class="bhist-item" data-hist-id="${esc(e.id)}">
+      <div class="bhist-line">${esc(BV.sessionLine(e))}</div>
+      ${shown.length ? `<ul class="bhist-tabs">${shown.map((t) => `<li><span class="bhist-title">${esc(BV.tabLabel(t))}</span><span class="bhist-url" title="${esc(t.url)}">${esc(t.url)}</span></li>`).join('')}${more ? `<li class="bhist-more">+${more} more</li>` : ''}</ul>` : '<div class="bhint">No pages were open.</div>'}
+      <button type="button" class="btn btn-small btn-secondary" data-bact="reopen" data-name="${esc(row.name)}" data-id="${esc(e.id)}"${busy || !can ? ' disabled' : ''} title="${can ? 'Start this profile and open these pages again' : 'Nothing to open'}">Open again</button>
+    </li>`;
+  }
+
+  function historyHtml(row) {
+    if (!b.expanded.has(key(row.name))) return '';
+    const h = b.hist.get(key(row.name));
+    let body;
+    if (!h) body = '<div class="bhint">Reading the history...</div>';
+    else if (h.error) body = `<div class="herr" role="alert">${esc(h.error)}</div>`;
+    else if (!h.sessions.length) body = '<div class="bhint">No sessions recorded yet. Each start and stop is kept here, with the pages that were open.</div>';
+    else body = `<ul class="bhist-list">${h.sessions.map((e) => sessionHtml(row, e)).join('')}</ul>`;
+    return `<div class="bhist" aria-live="polite">${body}</div>`;
+  }
+
+  async function loadHistory(name) {
+    let res;
+    try { res = await window.portpilot.browsers.history(name); } catch (err) { res = { success: false, error: err.message }; }
+    b.hist.set(key(name), res.success ? { sessions: res.sessions } : { error: BV.failureText(res) });
+  }
+
+  async function toggleHistory(name) {
+    const k = key(name);
+    if (b.expanded.has(k)) { b.expanded.delete(k); render(); return; }
+    b.expanded.add(k);
+    render();
+    await loadHistory(name);
+    render();
   }
 
   function rowHtml(row) {
@@ -58,9 +99,11 @@
     ${btn('edit', 'Edit')}
     ${btn('duplicate', 'Duplicate', up ? ' disabled' : '', up ? 'Stop the profile first' : 'Copy its extensions into a new profile')}
     ${btn('extensions', 'Extensions')}
+    <button type="button" class="btn btn-small btn-secondary" data-bact="history" data-name="${esc(row.name)}" aria-expanded="${b.expanded.has(key(row.name))}">History</button>
     ${btn('cdp', 'Copy CDP URL', '', row.cdpUrl)}
     ${btn('remove', 'Remove', up ? ' disabled' : '', up ? 'Stop the profile first' : 'Remove from PortPilot. The folder stays on disk.')}
   </div>
+  ${historyHtml(row)}
 </article>`;
   }
 
@@ -82,6 +125,8 @@
       b.rows = res.profiles;
       b.browsers = res.browsers || [];
       b.warnings = res.warnings || [];
+      await Promise.all([...b.expanded].filter((k) => rowOf(k)).map((k) => loadHistory(rowOf(k).name)));
+      if (mine !== b.loadSeq) return;
       render();
     } catch (err) {
       if (mine !== b.loadSeq) return;
@@ -120,6 +165,11 @@
         showToast('The window could not be moved off screen on this system, so it may be visible.', 'warning');
       }
     }
+  }
+
+  async function reopen(name, id) {
+    const res = await runAction(name, 'Opening tabs', () => window.portpilot.browsers.reopen(id));
+    if (res && res.success) showToast(BV.reopenText(res), res.failed ? 'warning' : 'success');
   }
 
   async function setMode(name, mode) {
@@ -277,6 +327,8 @@
       case 'edit': openDialog('edit', name); break;
       case 'duplicate': openDialog('duplicate', name); break;
       case 'extensions': openDialog('extensions', name); break;
+      case 'history': toggleHistory(name); break;
+      case 'reopen': reopen(name, btn.dataset.id); break;
       case 'remove': openDialog('remove', name); break;
       case 'cdp': {
         const row = rowOf(name);

@@ -35,11 +35,11 @@ async function setup() {
 (async () => {
   console.log('\n=== browser ipc ===\n');
 
-  await t('registers exactly the eight channels', async () => {
+  await t('registers exactly the ten channels', async () => {
     const { handlers } = await setup();
     assert.deepStrictEqual([...handlers.keys()].sort(), [
-      'browser:duplicate', 'browser:extensions', 'browser:list', 'browser:remove',
-      'browser:save', 'browser:setMode', 'browser:start', 'browser:stop',
+      'browser:duplicate', 'browser:extensions', 'browser:history', 'browser:list', 'browser:remove',
+      'browser:reopen', 'browser:save', 'browser:setMode', 'browser:start', 'browser:stop',
     ]);
   });
 
@@ -281,6 +281,38 @@ async function setup() {
   });
 
   fs.rmSync(root, { recursive: true, force: true });
+  await t('history lists the past sessions of a profile with their tabs, after a desktop start and stop', async () => {
+    const { call, w } = await setup();
+    await call('browser:start', 'shop');
+    await call('browser:stop', 'shop');
+    const r = await call('browser:history', 'shop');
+    assert.strictEqual(r.success, true);
+    assert.strictEqual(r.sessions.length, 1);
+    assert.strictEqual(r.sessions[0].startedBy.kind, 'human');
+    assert.ok(r.sessions[0].stoppedAt);
+    assert.deepStrictEqual(r.sessions[0].tabs.map((t) => t.url), ['https://example.test/']);
+    assert.strictEqual((await call('browser:history', '')).code, 'BAD_ARGS');
+    assert.strictEqual((await call('browser:history', 'other')).sessions.length, 0);
+    await w.cleanup();
+  });
+
+  await t('reopen starts the profile and opens the past tabs; an unknown id is NOT_FOUND; a double click is BUSY', async () => {
+    const { call, w } = await setup();
+    const opened = [];
+    w.deps.openTab = async (port, url) => { opened.push(url); return true; };
+    const hist = require('../src/core/browserHistory');
+    const cfgPath = path.join(root, `case${n}`, 'portpilot-config.json');
+    const id = hist.openSession(cfgPath, { profile: 'shop', port: 1, browser: 'brave', mode: 'headless', tabs: [{ url: 'https://one.test/', title: '1' }, { url: 'https://two.test/', title: '2' }] });
+    hist.closeSession(cfgPath, 'shop', { endedBy: { kind: 'human', surface: 'desktop' } });
+    const [a, b] = await Promise.all([call('browser:reopen', id), call('browser:reopen', id)]);
+    const codes = [a, b].map((r) => (r.success ? 'ok' : r.code)).sort();
+    assert.deepStrictEqual(codes, ['BUSY', 'ok']);
+    assert.deepStrictEqual(opened, ['https://one.test/', 'https://two.test/']);
+    assert.strictEqual((await call('browser:reopen', 'b_missing')).code, 'NOT_FOUND');
+    assert.strictEqual((await call('browser:reopen', 42)).code, 'BAD_ARGS');
+    await w.cleanup();
+  });
+
   console.log(`\n${passed} passed, ${failed} failed`);
   process.exit(failed ? 1 : 0);
 })();

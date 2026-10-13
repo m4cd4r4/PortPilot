@@ -24,6 +24,8 @@ const FILES = [
   'core/browserApi.js',
   'core/browserCdp.js',
   'core/browserDetect.js',
+  'core/browserHistory.js',
+  'core/browserLease.js',
   'core/browserProfiles.js',
   'core/browserView.js',
   'core/browserRun.js',

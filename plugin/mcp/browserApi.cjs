@@ -148,7 +148,7 @@ var require_configFile = __commonJS({
       return path2.join(path2.dirname(configPath), "portpilot-runtime.json");
     }
     var emptyRuntime = () => ({ apps: {} });
-    function history(call2) {
+    function history2(call2) {
       try {
         let mod = null;
         for (const p of ["./runHistory", "./runHistory.cjs"]) {
@@ -181,12 +181,12 @@ var require_configFile = __commonJS({
       } catch (err) {
         console.error("[configFile] Failed to record app start:", err.message);
       }
-      history((h) => h.openRun(configPath, appId, startedBy, { port, rerunOf }));
+      history2((h) => h.openRun(configPath, appId, startedBy, { port, rerunOf }));
       return stamped;
     }
     function recordStop(configPath, appId) {
       if (!appId) return false;
-      history((h) => h.closeRun(configPath, appId, { endedBy: "stop" }));
+      history2((h) => h.closeRun(configPath, appId, { endedBy: "stop" }));
       try {
         updateJson(runtimePathFor(configPath), (runtime) => {
           if (runtime.apps && runtime.apps[appId]) delete runtime.apps[appId];
@@ -200,7 +200,7 @@ var require_configFile = __commonJS({
     var CRASH_TAIL_CHARS = 2e3;
     function recordCrash(configPath, appId, exitCode, { errorTail = null, port = null } = {}) {
       if (!appId) return false;
-      history((h) => h.closeRun(configPath, appId, { endedBy: "crash", exitCode }));
+      history2((h) => h.closeRun(configPath, appId, { endedBy: "crash", exitCode }));
       try {
         updateJson(runtimePathFor(configPath), (runtime) => {
           if (!runtime.apps || typeof runtime.apps !== "object") runtime.apps = {};
@@ -606,6 +606,21 @@ var require_browserCdp = __commonJS({
       const list = await getJson(port, "/json");
       return (Array.isArray(list) ? list : []).filter((t) => t.type === "page").map((t) => ({ id: t.id, title: t.title || "", url: t.url || "" }));
     }
+    async function openTab(port, url) {
+      let u;
+      try {
+        u = new URL(String(url));
+      } catch {
+        return false;
+      }
+      if (u.protocol !== "http:" && u.protocol !== "https:") return false;
+      try {
+        const r = await fetch(`http://127.0.0.1:${port}/json/new?${encodeURIComponent(u.href)}`, { method: "PUT", signal: AbortSignal.timeout(PROBE_MS * 2) });
+        return r.ok;
+      } catch {
+        return false;
+      }
+    }
     async function withBrowserSession(port, fn) {
       if (typeof WebSocket !== "function") return null;
       const v = await version(port);
@@ -682,7 +697,7 @@ var require_browserCdp = __commonJS({
         return { parked: false, left: null };
       }
     }
-    module2.exports = { version, pageTabs, withBrowserSession, closeBrowser, parkOffscreen };
+    module2.exports = { version, pageTabs, openTab, withBrowserSession, closeBrowser, parkOffscreen };
   }
 });
 
@@ -1139,6 +1154,7 @@ var require_browserRun = __commonJS({
       detect: () => detectBrowsers(),
       version: cdp.version,
       pageTabs: cdp.pageTabs,
+      openTab: cdp.openTab,
       closeBrowser: cdp.closeBrowser,
       park: cdp.parkOffscreen
     });
@@ -1333,19 +1349,352 @@ var require_browserRun = __commonJS({
   }
 });
 
+// src/core/browserHistory.js
+var require_browserHistory = __commonJS({
+  "src/core/browserHistory.js"(exports2, module2) {
+    var crypto = require("crypto");
+    var path2 = require("path");
+    var configFile2 = require_configFile();
+    var DEFAULT_MAX_ENTRIES = 500;
+    var MAX_TABS = 50;
+    var MAX_TITLE = 200;
+    var MAX_URL = 1e3;
+    var MAX_TESTED_IN = 5;
+    var SAMPLE_MS = Math.max(500, Number(process.env.PORTPILOT_BROWSER_SAMPLE_MS) || 3e4);
+    var MISSES_TO_CLOSE = 2;
+    var SHOWN_PROTOCOLS = /* @__PURE__ */ new Set(["http:", "https:", "file:"]);
+    var SECRET_NAME_RE = /token|key|code|auth|secret|session|pass|pwd|jwt|bearer|signature|credential|otp/i;
+    var SECRET_EXACT_RE = /^(sid|sig)$/i;
+    var looksSecret = (name) => SECRET_NAME_RE.test(name) || SECRET_EXACT_RE.test(name);
+    var historyPathFor = (configPath) => path2.join(path2.dirname(configPath), "history", "browser-runs.json");
+    var runsPathFor = (configPath) => path2.join(path2.dirname(configPath), "history", "runs.json");
+    var emptyHistory = () => ({ v: 1, runs: [] });
+    var emptyRuns = () => ({ v: 1, runs: [] });
+    var lower2 = (s) => String(s).toLowerCase();
+    function redactPairs(str) {
+      return str.split("&").map((pair) => {
+        const eq = pair.indexOf("=");
+        if (eq < 1) return pair;
+        let name = pair.slice(0, eq);
+        try {
+          name = decodeURIComponent(name.replace(/\+/g, " "));
+        } catch {
+        }
+        return looksSecret(name) ? `${pair.slice(0, eq)}=***` : pair;
+      }).join("&");
+    }
+    function redactFragment(hash) {
+      const frag = hash.replace(/^#/, "");
+      if (!frag) return "";
+      const q = frag.indexOf("?");
+      if (q >= 0) return `${frag.slice(0, q)}?${redactPairs(frag.slice(q + 1))}`;
+      if (frag.includes("=")) return redactPairs(frag);
+      if (frag.length >= 32 && !frag.includes("/") && /^[A-Za-z0-9._~+-]+$/.test(frag)) return "***";
+      return frag;
+    }
+    function redactUrl(raw) {
+      let u;
+      try {
+        u = new URL(String(raw));
+      } catch {
+        return null;
+      }
+      if (!SHOWN_PROTOCOLS.has(u.protocol)) return null;
+      u.username = "";
+      u.password = "";
+      if (u.search) u.search = `?${redactPairs(u.search.slice(1))}`;
+      if (u.hash) {
+        const frag = redactFragment(u.hash);
+        u.hash = frag ? `#${frag}` : "";
+      }
+      let out = u.toString();
+      if (out.length > MAX_URL) out = `${u.origin === "null" ? `${u.protocol}//` : u.origin}${u.pathname}`.slice(0, MAX_URL);
+      return out;
+    }
+    var cleanTitle = (t) => String(t == null ? "" : t).replace(/[\u0000-\u001f\u007f]+/g, " ").replace(/\s+/g, " ").trim().slice(0, MAX_TITLE);
+    function cleanTabs(tabs) {
+      const out = [];
+      const seen = /* @__PURE__ */ new Set();
+      for (const t of Array.isArray(tabs) ? tabs : []) {
+        const url = redactUrl(t && t.url);
+        if (!url || seen.has(url)) continue;
+        seen.add(url);
+        out.push({ url, title: cleanTitle(t.title) });
+        if (out.length >= MAX_TABS) break;
+      }
+      return out;
+    }
+    function readAll(configPath) {
+      const data = configFile2.readJson(historyPathFor(configPath), emptyHistory);
+      return Array.isArray(data.runs) ? data.runs : [];
+    }
+    function newId(now) {
+      const stamp = new Date(now).toISOString().replace(/[-:]/g, "").replace(/\.\d+Z$/, "");
+      return `b_${stamp}_${crypto.randomBytes(4).toString("hex")}`;
+    }
+    function maxEntriesFor(configPath) {
+      const settings = (configFile2.readJson(configPath, () => ({})) || {}).settings || {};
+      const n = Math.floor(Number(settings.browserHistoryMaxRuns));
+      return Number.isFinite(n) && n >= 10 ? n : DEFAULT_MAX_ENTRIES;
+    }
+    function trim(runs, max) {
+      for (let i = 0; i < runs.length && runs.length > max; ) {
+        if (runs[i].stoppedAt) runs.splice(i, 1);
+        else i++;
+      }
+    }
+    var who = (v) => {
+      if (!v || typeof v !== "object") return null;
+      const out = {};
+      for (const k of ["kind", "surface", "sessionId", "label", "reason", "at"]) if (v[k]) out[k] = String(v[k]).slice(0, 200);
+      return Object.keys(out).length ? out : null;
+    };
+    function openSession(configPath, o) {
+      const now = o.now || Date.now();
+      const startedAtIso = new Date(now).toISOString();
+      const max = maxEntriesFor(configPath);
+      const entry = {
+        id: newId(now),
+        profile: String(o.profile),
+        port: Number(o.port) || null,
+        browser: o.browser || null,
+        mode: o.mode || null,
+        startedBy: who(o.startedBy),
+        startedAt: startedAtIso,
+        stoppedAt: null,
+        endedBy: null,
+        tabs: cleanTabs(o.tabs),
+        sampledAt: startedAtIso
+      };
+      configFile2.updateJson(historyPathFor(configPath), (data) => {
+        if (!Array.isArray(data.runs)) data.runs = [];
+        for (const r of data.runs) {
+          if (!r.stoppedAt && lower2(r.profile) === lower2(entry.profile)) {
+            r.stoppedAt = startedAtIso;
+            r.endedBy = { kind: "external", reason: "unknown" };
+          }
+        }
+        data.runs.push(entry);
+        trim(data.runs, max);
+      }, emptyHistory);
+      return entry.id;
+    }
+    function openEntryFor(configPath, profile) {
+      return readAll(configPath).find((r) => !r.stoppedAt && lower2(r.profile) === lower2(profile)) || null;
+    }
+    function sampleSession(configPath, profile, tabs, now = Date.now()) {
+      const clean = cleanTabs(tabs);
+      if (!clean.length) return false;
+      const { result } = configFile2.updateJson(historyPathFor(configPath), (data) => {
+        const open = (data.runs || []).find((r) => !r.stoppedAt && lower2(r.profile) === lower2(profile));
+        if (!open || JSON.stringify(open.tabs) === JSON.stringify(clean)) return false;
+        open.tabs = clean;
+        open.sampledAt = new Date(now).toISOString();
+        return true;
+      }, emptyHistory);
+      return !!result;
+    }
+    function closeSession(configPath, profile, o = {}) {
+      const now = o.now || Date.now();
+      const clean = cleanTabs(o.tabs);
+      const { result } = configFile2.updateJson(historyPathFor(configPath), (data) => {
+        const open = (data.runs || []).find((r) => !r.stoppedAt && lower2(r.profile) === lower2(profile));
+        if (!open) return null;
+        open.stoppedAt = new Date(now).toISOString();
+        open.endedBy = who(o.endedBy) || { kind: "external", reason: "unknown" };
+        if (clean.length) {
+          open.tabs = clean;
+          open.sampledAt = open.stoppedAt;
+        }
+        return open.id;
+      }, emptyHistory);
+      return result;
+    }
+    function parseSince(since, now = Date.now()) {
+      if (since == null || since === "") return void 0;
+      const m = /^(\d+)\s*([mhd])$/i.exec(String(since).trim());
+      if (m) return now - Number(m[1]) * { m: 6e4, h: 36e5, d: 864e5 }[m[2].toLowerCase()];
+      const t = Date.parse(String(since));
+      return Number.isNaN(t) ? null : t;
+    }
+    function listSessions(configPath, { profile, since, limit = 10 } = {}) {
+      let list = readAll(configPath);
+      if (profile) list = list.filter((r) => lower2(r.profile) === lower2(profile));
+      if (typeof since === "number") list = list.filter((r) => !r.stoppedAt || Date.parse(r.startedAt) >= since);
+      list = [...list].sort((a, b) => Date.parse(b.startedAt) - Date.parse(a.startedAt));
+      return { total: list.length, entries: list.slice(0, Math.max(1, limit)) };
+    }
+    function getSession(configPath, id) {
+      return readAll(configPath).find((r) => r.id === id) || null;
+    }
+    function localhostPort(url) {
+      let u;
+      try {
+        u = new URL(String(url));
+      } catch {
+        return null;
+      }
+      if (u.protocol !== "http:" && u.protocol !== "https:") return null;
+      if (!/^(localhost|127\.0\.0\.1|\[::1\])$/i.test(u.hostname)) return null;
+      const port = Number(u.port) || (u.protocol === "https:" ? 443 : 80);
+      return port;
+    }
+    function linkTestedRuns(configPath, profile, tabs, now = Date.now()) {
+      const ports = new Set((Array.isArray(tabs) ? tabs : []).map((t) => localhostPort(t && t.url)).filter((p) => p));
+      if (!ports.size) return [];
+      const wants = (data) => (Array.isArray(data.runs) ? data.runs : []).filter((r) => !r.stoppedAt && ports.has(Number(r.port)) && !(Array.isArray(r.testedIn) && r.testedIn.some((x) => lower2(x.profile) === lower2(profile))));
+      if (!wants(configFile2.readJson(runsPathFor(configPath), emptyRuns)).length) return [];
+      const { result } = configFile2.updateJson(runsPathFor(configPath), (data) => {
+        const stamped = [];
+        for (const r of wants(data)) {
+          r.testedIn = [...Array.isArray(r.testedIn) ? r.testedIn : [], { profile: String(profile), at: new Date(now).toISOString() }].slice(-MAX_TESTED_IN);
+          stamped.push(r.id);
+        }
+        return stamped;
+      }, emptyRuns);
+      return result;
+    }
+    async function sampleOnce(configPath, d, { misses = /* @__PURE__ */ new Map(), now = Date.now() } = {}) {
+      const out = { sampled: 0, closed: 0 };
+      for (const e of readAll(configPath).filter((r) => !r.stoppedAt)) {
+        let v = null;
+        try {
+          v = await d.version(e.port);
+        } catch {
+        }
+        if (!v) {
+          const n = (misses.get(e.id) || 0) + 1;
+          misses.set(e.id, n);
+          if (n >= MISSES_TO_CLOSE) {
+            closeSession(configPath, e.profile, { endedBy: { kind: "external", reason: "closed" }, now });
+            misses.delete(e.id);
+            out.closed += 1;
+          }
+          continue;
+        }
+        misses.delete(e.id);
+        let tabs = [];
+        try {
+          tabs = await d.pageTabs(e.port);
+        } catch {
+        }
+        sampleSession(configPath, e.profile, tabs, now);
+        linkTestedRuns(configPath, e.profile, tabs, now);
+        out.sampled += 1;
+      }
+      return out;
+    }
+    function startSampler(configPath, d, { intervalMs = SAMPLE_MS } = {}) {
+      const misses = /* @__PURE__ */ new Map();
+      let running = false;
+      const timer = setInterval(async () => {
+        if (running) return;
+        running = true;
+        try {
+          await sampleOnce(configPath, d, { misses });
+        } catch (err) {
+          console.error("[browserHistory] sample failed:", err.message);
+        } finally {
+          running = false;
+        }
+      }, intervalMs);
+      if (timer.unref) timer.unref();
+      return () => clearInterval(timer);
+    }
+    module2.exports = {
+      DEFAULT_MAX_ENTRIES,
+      MAX_TABS,
+      SAMPLE_MS,
+      MISSES_TO_CLOSE,
+      historyPathFor,
+      redactUrl,
+      cleanTabs,
+      localhostPort,
+      parseSince,
+      trim,
+      openSession,
+      openEntryFor,
+      sampleSession,
+      closeSession,
+      listSessions,
+      getSession,
+      linkTestedRuns,
+      sampleOnce,
+      startSampler
+    };
+  }
+});
+
+// src/core/browserLease.js
+var require_browserLease = __commonJS({
+  "src/core/browserLease.js"(exports2, module2) {
+    var configFile2 = require_configFile();
+    var STARTING_MS = 45e3;
+    var cleanId = (s) => String(typeof s === "string" ? s : "").replace(/[^A-Za-z0-9 ._-]/g, "").trim().slice(0, 100);
+    var shortId = (s) => cleanId(s).replace(/[^A-Za-z0-9]/g, "").slice(0, 4).toLowerCase();
+    function liveSessionIds(configPath, now = Date.now()) {
+      return new Set(configFile2.liveSessions(configPath, now).map((s) => cleanId(s.sessionId)).filter(Boolean));
+    }
+    function leaseOf(claim, state, live, now = Date.now()) {
+      if (!claim || typeof claim.sessionId !== "string" || !claim.sessionId) return null;
+      const id = cleanId(claim.sessionId);
+      if (!id || !live.has(id)) return null;
+      const starting = claim.starting === true;
+      if (state === "up") return { by: claim.by, sessionId: id, short: shortId(id), since: claim.at, starting: false };
+      const age = now - Date.parse(claim.at);
+      if (state === "down" && starting && Number.isFinite(age) && age < STARTING_MS) {
+        return { by: claim.by, sessionId: id, short: shortId(id), since: claim.at, starting: true };
+      }
+      return null;
+    }
+    function decide(lease2, callerSessionId, takeover) {
+      if (!lease2) return "free";
+      const me = cleanId(callerSessionId);
+      if (me && me === lease2.sessionId) return "mine";
+      if (!me) return "ignored";
+      return takeover ? "takeover" : "refused";
+    }
+    function isFree(st, claim, lease2) {
+      if (lease2 || st.state === "blocked") return false;
+      if (st.state === "down") return true;
+      return st.state === "up" && st.owner === "profile" && !!claim && typeof claim.sessionId === "string" && !!claim.sessionId;
+    }
+    function pickOrder(rows) {
+      const rank = (r) => r.mine ? 0 : r.free && r.state === "down" ? 1 : r.free ? 2 : 9;
+      return rows.map((r, i) => ({ r, i })).filter((x) => rank(x.r) < 9).sort((a, b) => rank(a.r) - rank(b.r) || a.i - b.i).map((x) => x.r);
+    }
+    function ago2(iso, now = Date.now()) {
+      const s = Math.max(0, Math.round((now - Date.parse(iso)) / 1e3));
+      if (!Number.isFinite(s)) return "earlier";
+      if (s < 90) return `${s}s ago`;
+      if (s < 5400) return `${Math.round(s / 60)}m ago`;
+      return `${Math.round(s / 3600)}h ago`;
+    }
+    function inUseSentence(profileName, lease2, now = Date.now()) {
+      const who = lease2.short && !String(lease2.by).includes(lease2.short) ? `${lease2.by} (session ${lease2.short})` : lease2.by;
+      const when = lease2.starting ? "is starting it now" : `started it ${ago2(lease2.since, now)}${Number.isFinite(Date.parse(lease2.since)) ? ` (${new Date(lease2.since).toISOString()})` : ""}`;
+      return `browser profile "${profileName}" is in use by ${who}, who ${when}`;
+    }
+    module2.exports = { STARTING_MS, cleanId, shortId, liveSessionIds, leaseOf, decide, isFree, pickOrder, inUseSentence, ago: ago2 };
+  }
+});
+
 // src/core/browserApi.js
 var path = require("path");
 var configFile = require_configFile();
 var profiles = require_browserProfiles();
 var run = require_browserRun();
+var history = require_browserHistory();
+var lease = require_browserLease();
 var CLAIMS_FILE = "portpilot-browser-claims.json";
 var emptyClaims = () => ({ profiles: {} });
 var lower = (s) => String(s).toLowerCase();
 var ApiError = class extends Error {
-  constructor(code, message) {
+  constructor(code, message, extra = {}) {
     super(message);
     this.name = "ApiError";
     this.code = code;
+    Object.assign(this, extra);
   }
 };
 var claimsPathFor = (configPath) => path.join(path.dirname(configPath), CLAIMS_FILE);
@@ -1385,13 +1734,7 @@ function callerOf(args, ctx) {
   if (sessionId) out.sessionId = sessionId;
   return out;
 }
-function ago(iso) {
-  const s = Math.max(0, Math.round((Date.now() - Date.parse(iso)) / 1e3));
-  if (!Number.isFinite(s)) return "earlier";
-  if (s < 90) return `${s}s ago`;
-  if (s < 5400) return `${Math.round(s / 60)}m ago`;
-  return `${Math.round(s / 3600)}h ago`;
-}
+var ago = (iso) => lease.ago(iso);
 var cdpUrlFor = (port) => `http://127.0.0.1:${port}`;
 function view(st, claim) {
   const out = { name: st.name, port: st.port, cdpUrl: cdpUrlFor(st.port), state: st.state, mode: st.mode, browser: st.browser };
@@ -1413,7 +1756,9 @@ var NEXT = {
   LAUNCH_FAILED: "Ask the user to check that the browser starts normally.",
   STOP_FAILED: "Ask the user to close that browser window by hand.",
   BAD_MODE: `Use one of: ${profiles.MODES.join(", ")}.`,
-  UNKNOWN_TOOL: "Use one of: list_browser_profiles, list_browsers, start_browser, stop_browser, set_browser_mode."
+  IN_USE: 'Do not use it. Call list_browser_profiles and pick a profile that shows free: true, or call start_browser with name "any" to be given one. Only if the user agrees to share this one, call again with takeover:true.',
+  NO_FREE_PROFILE: "Every profile is in use or blocked. Ask the user to add a profile in the PortPilot Browsers tab, or to say which one you may take over (then call start_browser with its name and takeover:true).",
+  UNKNOWN_TOOL: "Use one of: list_browser_profiles, list_browsers, start_browser, stop_browser, set_browser_mode, browser_history."
 };
 function failure(err, configPath) {
   const code = typeof err.code === "string" && /^[A-Z_]+$/.test(err.code) ? err.code : "INTERNAL";
@@ -1421,9 +1766,10 @@ function failure(err, configPath) {
     success: false,
     code,
     error: String(err.message || err).replace(/\s+/g, " ").trim(),
-    action: NEXT[code] || "Report this error to the user."
+    action: typeof err.action === "string" && err.action || NEXT[code] || "Report this error to the user."
   };
   if (err.holder) out.holder = err.holder;
+  if (err.leasedTo) out.leasedTo = err.leasedTo;
   if (code === "NOT_FOUND") {
     try {
       out.known = profiles.listProfiles(configPath).map((p) => p.name);
@@ -1434,17 +1780,173 @@ function failure(err, configPath) {
 }
 var nameOf = (args) => {
   if (typeof args.name !== "string" || !args.name.trim()) {
-    throw new ApiError("BAD_ARGS", "name is required: the profile name, as returned by list_browser_profiles");
+    throw new ApiError("BAD_ARGS", 'name is required: the profile name, as returned by list_browser_profiles (or "any" for start_browser)');
   }
   return args.name.trim();
 };
-var runOpts = (ctx) => ctx.pollMs ? { pollMs: ctx.pollMs } : {};
+var runOpts = (ctx) => ({ ...ctx.pollMs ? { pollMs: ctx.pollMs } : {}, ...ctx.timeoutMs ? { timeoutMs: ctx.timeoutMs } : {} });
+function startedByOf(caller) {
+  const out = { kind: caller.surface === "desktop" ? "human" : "claude", surface: caller.surface, label: caller.by, at: caller.at };
+  if (caller.sessionId) out.sessionId = caller.sessionId;
+  return out;
+}
+function safely(what, fn) {
+  try {
+    return fn();
+  } catch (err) {
+    console.error(`[browserApi] ${what} failed:`, err.message);
+    return null;
+  }
+}
+var samplers = /* @__PURE__ */ new Map();
+function startHistorySampler(configPath, deps, o = {}) {
+  const key = path.resolve(configPath);
+  if (samplers.has(key)) return samplers.get(key);
+  const stop = history.startSampler(configPath, deps, o);
+  samplers.set(key, stop);
+  return stop;
+}
+var ensureSampler = (configPath, ctx) => {
+  if (ctx.sampler !== false) startHistorySampler(configPath, ctx.deps);
+};
+function claimFor(configPath, st) {
+  if (st.state === "up") return liveClaim(configPath, st);
+  if (st.state === "down") return readClaims(configPath)[lower(st.name)] || null;
+  return null;
+}
+var leaseView = (l) => l ? { by: l.by, session: l.short, since: l.since, ...l.starting ? { starting: true } : {} } : null;
+var STOP_IN_USE = "Leave it running: another session is using it. Only if the user agrees you should stop it, call stop_browser again with takeover:true.";
+function inUse(profileName, l, extra = {}) {
+  return new ApiError("IN_USE", lease.inUseSentence(profileName, l), { leasedTo: leaseView(l), ...extra });
+}
+function reserve(configPath, name, caller, live, takeover) {
+  let conflict = null;
+  try {
+    configFile.updateJson(claimsPathFor(configPath), (file) => {
+      if (!file.profiles || typeof file.profiles !== "object") file.profiles = {};
+      const l = lease.leaseOf(file.profiles[lower(name)], "down", live);
+      if (l && lease.decide(l, caller.sessionId, takeover) === "refused") {
+        conflict = l;
+        return;
+      }
+      file.profiles[lower(name)] = { ...caller, pid: null, starting: true };
+    }, emptyClaims);
+  } catch (err) {
+    console.error("[browserApi] Failed to reserve profile:", err.message);
+  }
+  return conflict;
+}
+function release(configPath, name, caller) {
+  try {
+    configFile.updateJson(claimsPathFor(configPath), (file) => {
+      const c = file.profiles && file.profiles[lower(name)];
+      if (c && c.starting && c.sessionId === caller.sessionId) delete file.profiles[lower(name)];
+    }, emptyClaims);
+  } catch (err) {
+    console.error("[browserApi] Failed to release reservation:", err.message);
+  }
+}
+async function startNamed(configPath, profile, caller, args, ctx) {
+  const name = profile.name;
+  const takeover = args.takeover === true;
+  const sessioned = !!caller.sessionId;
+  const live = sessioned ? lease.liveSessionIds(configPath) : /* @__PURE__ */ new Set();
+  let held = null;
+  let reserved = false;
+  if (sessioned) {
+    const st0 = await run.profileStatus(configPath, profile, ctx.deps);
+    const l = lease.leaseOf(claimFor(configPath, st0), st0.state, live);
+    const verdict = lease.decide(l, caller.sessionId, takeover);
+    if (verdict === "refused") throw inUse(name, l);
+    if (verdict === "takeover") held = l;
+    if (st0.state === "down") {
+      const conflict = reserve(configPath, name, caller, live, takeover);
+      if (conflict) throw inUse(name, conflict);
+      reserved = true;
+    }
+  }
+  let r;
+  try {
+    r = await run.startProfile(configPath, name, runOpts(ctx), ctx.deps);
+  } catch (err) {
+    if (reserved) release(configPath, name, caller);
+    throw err;
+  }
+  let claim = r.already ? liveClaim(configPath, r) : null;
+  const ownerGone = !!(claim && sessioned && claim.sessionId && lease.cleanId(claim.sessionId) !== lease.cleanId(caller.sessionId) && !live.has(lease.cleanId(claim.sessionId)));
+  if (!claim || held || ownerGone) {
+    claim = { ...caller, pid: r.pid ?? null };
+    writeClaim(configPath, r.name, claim);
+  }
+  safely("history", () => {
+    if (!r.already) {
+      history.openSession(configPath, { profile: r.name, port: r.port, browser: r.browser, mode: r.mode, startedBy: startedByOf(caller), tabs: r.tabs });
+    } else if (!history.openEntryFor(configPath, r.name)) {
+      history.openSession(configPath, {
+        profile: r.name,
+        port: r.port,
+        browser: r.browser,
+        mode: r.mode,
+        tabs: r.tabs,
+        startedBy: { kind: claim.surface === "desktop" ? "human" : "claude", surface: claim.surface, sessionId: claim.sessionId, label: claim.by, at: claim.at }
+      });
+    }
+  });
+  ensureSampler(configPath, ctx);
+  const out = { ...view(r, claim), already: !!r.already };
+  if (r.offscreen) out.offscreen = r.offscreen;
+  if (held) {
+    out.takeoverNote = `Took "${r.name}" over from ${held.by}${held.short && !String(held.by).includes(held.short) ? ` (session ${held.short})` : ""}. They may still be using it: leave tabs you did not open alone, and tell the user.`;
+  } else if (claim.by !== caller.by) {
+    out.claimNote = `Claimed by "${claim.by}" (${ago(claim.at)}). Not blocked: you may use it, but leave tabs you did not open alone.`;
+  }
+  return out;
+}
+var isAnyRequest = (args, stored) => {
+  const n = typeof args.name === "string" ? args.name.trim() : "";
+  if (!n) return args.free === true;
+  return lower(n) === "any" && !stored.some((p) => lower(p.name) === "any");
+};
+async function startAny(configPath, args, caller, ctx) {
+  const stored = profiles.listProfiles(configPath);
+  if (!stored.length) {
+    throw new ApiError("NO_FREE_PROFILE", "there are no browser profiles yet", { action: "Ask the user to add a profile in the PortPilot Browsers tab." });
+  }
+  const { rows } = await run.allStatus(configPath, stored, ctx.deps);
+  const live = lease.liveSessionIds(configPath);
+  const me = lease.cleanId(caller.sessionId);
+  const info = rows.map((st) => {
+    const claim = claimFor(configPath, st);
+    const l = lease.leaseOf(claim, st.state, live);
+    return { name: st.name, state: st.state, mine: !!(l && me && l.sessionId === me && st.state === "up"), free: lease.isFree(st, claim, l) };
+  });
+  let first = null;
+  for (const c of lease.pickOrder(info)) {
+    try {
+      const out = await startNamed(configPath, profiles.getProfile(configPath, c.name), caller, { ...args, takeover: false }, ctx);
+      return { ...out, picked: true };
+    } catch (err) {
+      first = first || err;
+    }
+  }
+  if (first && first.code !== "IN_USE") throw first;
+  throw new ApiError("NO_FREE_PROFILE", `all ${rows.length} browser profile${rows.length === 1 ? " is" : "s are"} in use, held by another program, or running with an owner that cannot be identified`);
+}
+var HISTORY_DEFAULT = 10;
+var HISTORY_MAX = 50;
 var TOOLS = {
   async list_browser_profiles(configPath, args, ctx) {
     const stored = profiles.listProfiles(configPath);
     const { rows, warnings } = await run.allStatus(configPath, stored, ctx.deps);
+    const live = lease.liveSessionIds(configPath);
+    const me = lease.cleanId(args.sessionId);
     const out = rows.map((st) => {
-      const row = view(st, liveClaim(configPath, st));
+      const claim = claimFor(configPath, st);
+      const l = lease.leaseOf(claim, st.state, live);
+      const row = view(st, st.state === "up" ? claim : null);
+      row.free = lease.isFree(st, claim, l);
+      row.leasedTo = leaseView(l);
+      if (l && me && l.sessionId === me) row.mine = true;
       const p = stored.find((x) => x.name === st.name) || {};
       if (p.url) row.url = p.url;
       if (p.note) row.note = p.note;
@@ -1457,21 +1959,12 @@ var TOOLS = {
     return { success: true, browsers: ctx.deps.detect().map((b) => ({ id: b.id, label: b.label })) };
   },
   async start_browser(configPath, args, ctx) {
-    const name = nameOf(args);
-    profiles.getProfile(configPath, name);
+    const stored = profiles.listProfiles(configPath);
     const caller = callerOf(args, ctx);
-    const r = await run.startProfile(configPath, name, runOpts(ctx), ctx.deps);
-    let claim = r.already ? liveClaim(configPath, r) : null;
-    if (!claim) {
-      claim = { ...caller, pid: r.pid ?? null };
-      writeClaim(configPath, r.name, claim);
-    }
-    const out = { ...view(r, claim), already: !!r.already };
-    if (r.offscreen) out.offscreen = r.offscreen;
-    if (claim.by !== caller.by) {
-      out.claimNote = `Claimed by "${claim.by}" (${ago(claim.at)}). Not blocked: you may use it, but leave tabs you did not open alone.`;
-    }
-    return { success: true, ...out };
+    if (isAnyRequest(args, stored)) return { success: true, ...await startAny(configPath, args, caller, ctx) };
+    const name = nameOf(args);
+    const profile = profiles.getProfile(configPath, name);
+    return { success: true, ...await startNamed(configPath, profile, caller, args, ctx) };
   },
   async stop_browser(configPath, args, ctx) {
     const name = nameOf(args);
@@ -1479,11 +1972,24 @@ var TOOLS = {
     const caller = callerOf(args, ctx);
     const st0 = await run.profileStatus(configPath, profile, ctx.deps);
     const before = liveClaim(configPath, st0);
+    let held = null;
+    if (caller.sessionId) {
+      const l = lease.leaseOf(claimFor(configPath, st0), st0.state, lease.liveSessionIds(configPath));
+      const verdict = lease.decide(l, caller.sessionId, args.takeover === true);
+      if (verdict === "refused") throw inUse(profile.name, l, { action: STOP_IN_USE });
+      if (verdict === "takeover") held = l;
+    }
     const r = await run.stopProfile(configPath, name, runOpts(ctx), ctx.deps);
     const stored = readClaims(configPath)[lower(profile.name)];
     if (stored && (st0.state === "down" || stored.pid == null || stored.pid === st0.pid)) writeClaim(configPath, profile.name, null);
+    safely("history", () => history.closeSession(configPath, profile.name, {
+      endedBy: r.already ? { kind: "external", reason: "unknown" } : startedByOf(caller),
+      tabs: st0.state === "up" ? st0.tabs : []
+    }));
     const out = { ...view(r, null), already: !!r.already };
-    if (before && before.by !== caller.by) {
+    if (held) {
+      out.takeoverNote = `Stopped "${profile.name}", which ${held.by} was using. Tell the user.`;
+    } else if (before && before.by !== caller.by) {
       out.claimNote = `Was claimed by "${before.by}" (${ago(before.at)}). Stopped anyway: claims are advisory.`;
     }
     return { success: true, ...out };
@@ -1501,9 +2007,77 @@ var TOOLS = {
       out.note = "The running browser keeps its old mode. Call stop_browser, then start_browser, to apply it.";
     }
     return { success: true, ...out };
+  },
+  async browser_history(configPath, args) {
+    let limit = HISTORY_DEFAULT;
+    if (args.limit != null) {
+      limit = Number(args.limit);
+      if (!Number.isInteger(limit) || limit < 1) throw new ApiError("BAD_ARGS", `limit must be a whole number from 1 to ${HISTORY_MAX}`);
+      limit = Math.min(limit, HISTORY_MAX);
+    }
+    const since = history.parseSince(args.since);
+    if (since === null) throw new ApiError("BAD_ARGS", "since must look like 30m, 24h, 7d, or be a date such as 2026-10-13");
+    if (args.profile != null && typeof args.profile !== "string") throw new ApiError("BAD_ARGS", "profile must be a profile name");
+    const { total, entries } = history.listSessions(configPath, { profile: args.profile ? args.profile.trim() : void 0, since, limit });
+    return {
+      success: true,
+      total,
+      count: entries.length,
+      sessions: entries.map((e) => ({
+        id: e.id,
+        profile: e.profile,
+        port: e.port,
+        browser: e.browser,
+        mode: e.mode,
+        running: !e.stoppedAt,
+        startedBy: e.startedBy,
+        startedAt: e.startedAt,
+        stoppedAt: e.stoppedAt,
+        endedBy: e.endedBy,
+        tabs: (e.tabs || []).map((t) => ({ title: t.title, url: t.url }))
+      }))
+    };
   }
 };
 var TOOL_NAMES = Object.keys(TOOLS);
+var REOPEN_MAX_TABS = 20;
+async function reopen(configPath, historyId, ctx = {}) {
+  try {
+    const entry = history.getSession(configPath, String(historyId || ""));
+    if (!entry) throw new ApiError("NOT_FOUND", "that history entry no longer exists");
+    const profile = profiles.getProfile(configPath, entry.profile);
+    const full = { surface: "desktop", ...ctx, deps: ctx.deps || run.defaultDeps() };
+    const started = await TOOLS.start_browser(configPath, { name: profile.name, agent: ctx.agent, sessionId: ctx.sessionId }, full);
+    const wanted = [];
+    for (const t of entry.tabs || []) {
+      let u;
+      try {
+        u = new URL(t.url);
+      } catch {
+        continue;
+      }
+      if (u.protocol === "http:" || u.protocol === "https:") wanted.push(u.href);
+      if (wanted.length >= REOPEN_MAX_TABS) break;
+    }
+    const open = new Set((await full.deps.pageTabs(profile.port)).map((t) => history.redactUrl(t.url)).filter(Boolean));
+    let opened = 0;
+    let failed = 0;
+    for (const url of wanted) {
+      if (open.has(history.redactUrl(url))) continue;
+      if (await full.deps.openTab(profile.port, url)) opened += 1;
+      else failed += 1;
+    }
+    return {
+      ...started,
+      opened,
+      failed,
+      skipped: wanted.length - opened - failed,
+      hidden: wanted.filter((u) => u.includes("***")).length
+    };
+  } catch (err) {
+    return failure(err, configPath);
+  }
+}
 async function call(configPath, tool, args, ctx = {}) {
   try {
     if (!Object.prototype.hasOwnProperty.call(TOOLS, tool)) {
@@ -1515,4 +2089,4 @@ async function call(configPath, tool, args, ctx = {}) {
     return failure(err, configPath);
   }
 }
-module.exports = { TOOL_NAMES, call, claimsPathFor, cdpUrlFor };
+module.exports = { TOOL_NAMES, call, reopen, startHistorySampler, claimsPathFor, cdpUrlFor };

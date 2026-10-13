@@ -81,6 +81,68 @@
     return `${tabs.length} tab${tabs.length === 1 ? '' : 's'}: ${names.join(', ')}${more}`;
   }
 
+  // ---- History expander ----------------------------------------------------------
+
+  const DAY = new Intl.DateTimeFormat('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+  const CLOCK = new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
+  const MAX_SHOWN_TABS = 6;
+
+  /** "Mon 13 Oct, 14:02 - 14:40" in local time; an open session has no end: "Mon 13 Oct, 14:02". */
+  function sessionWhen(e) {
+    const a = new Date(e && e.startedAt);
+    if (Number.isNaN(a.getTime())) return '';
+    const head = `${DAY.format(a).replace(/,/g, '')}, ${CLOCK.format(a)}`;
+    const b = e.stoppedAt ? new Date(e.stoppedAt) : null;
+    if (!b || Number.isNaN(b.getTime())) return head;
+    return `${head} - ${a.toDateString() === b.toDateString() ? '' : `${DAY.format(b).replace(/,/g, '')}, `}${CLOCK.format(b)}`;
+  }
+
+  /** Who started a session: "you" for the desktop, "claude b71c" (or the agent's name) otherwise. */
+  function startedByWord(by) {
+    if (!by) return 'unknown';
+    if (by.kind === 'human') return 'you';
+    if (by.label) return String(by.label);
+    return by.sessionId ? `claude ${String(by.sessionId).replace(/[^A-Za-z0-9]/g, '').slice(0, 4).toLowerCase()}` : (by.kind || 'unknown');
+  }
+
+  /** How a session ended: "stopped by you", "closed outside PortPilot", or '' while it runs. */
+  function endedWord(e) {
+    if (!e || !e.stoppedAt) return '';
+    const by = e.endedBy;
+    if (!by) return 'ended';
+    if (by.reason === 'closed') return 'closed outside PortPilot';
+    if (by.reason === 'unknown') return 'end not seen';
+    return `stopped by ${startedByWord(by)}`;
+  }
+
+  /** One line for a past session: when, who, tab count, how it ended. */
+  function sessionLine(e) {
+    const n = (e.tabs || []).length;
+    return [sessionWhen(e), `started by ${startedByWord(e.startedBy)}`, `${n} tab${n === 1 ? '' : 's'}`, e.stoppedAt ? endedWord(e) : 'running now'].filter(Boolean).join(' · ');
+  }
+
+  /** A tab's label: its title, else the address without the scheme. */
+  function tabLabel(t) {
+    const title = String((t && t.title) || '').trim();
+    if (title) return title.slice(0, 80);
+    return String((t && t.url) || '').replace(/^[a-z]+:\/\//i, '').slice(0, 80);
+  }
+
+  /** The tabs to list for a session and how many were left out. */
+  function shownTabs(e) {
+    const tabs = (e && e.tabs) || [];
+    return { shown: tabs.slice(0, MAX_SHOWN_TABS), more: Math.max(0, tabs.length - MAX_SHOWN_TABS) };
+  }
+
+  /** The toast after Open again. */
+  function reopenText(res) {
+    const n = res.opened || 0;
+    const parts = [n ? `Opened ${n} tab${n === 1 ? '' : 's'} in ${res.name}` : `Started ${res.name}; no tabs to add`];
+    if (res.failed) parts.push(`${res.failed} could not be opened`);
+    if (res.hidden) parts.push('Addresses had secrets hidden when saved, so some pages may ask you to sign in again');
+    return parts.join('. ');
+  }
+
   // The API's `action` text is written for a model ("Call list_browser_profiles ..."). A person
   // gets the same advice in their own terms.
   const NEXT = {
@@ -102,6 +164,7 @@
     BAD_PORT: 'Use a port from 1024 to 65535.',
     BAD_URL: 'Start with http://, https:// or file://, or leave it blank.',
     BUSY: 'Wait for the current action to finish.',
+    IN_USE: 'Another Claude session is using this profile. Pick another profile or ask that session to stop it.',
   };
 
   /** One sentence for the panel: the error as written, then the next step in plain words. */
@@ -118,5 +181,6 @@
     return list.map((e) => `${e.name} ${e.version}`).join(', ');
   }
 
-  return { STATES, MODES, modeInfo, stateOf, sortRows, summary, ago, claimLine, suggestPort, defaultBrowser, tabsLine, failureText, extensionsText };
+  return { STATES, MODES, modeInfo, stateOf, sortRows, summary, ago, claimLine, suggestPort, defaultBrowser, tabsLine, failureText, extensionsText,
+    sessionWhen, startedByWord, endedWord, sessionLine, tabLabel, shownTabs, reopenText };
 });

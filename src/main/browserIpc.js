@@ -1,5 +1,5 @@
 /**
- * IPC for the Browsers tab: list, start, stop, mode, save, remove, duplicate, extensions.
+ * IPC for the Browsers tab: list, start, stop, mode, save, remove, duplicate, extensions, history, reopen.
  * Kept out of ipcHandlers.js (already 960+ lines).
  *
  * Start, stop and mode go through browserApi, the same code the MCP tools and the HTTP routes use,
@@ -16,6 +16,7 @@ const run = require('../core/browserRun');
 const api = require('../core/browserApi');
 const { duplicateProfile } = require('../core/browserDuplicate');
 const { listExtensions } = require('../core/browserExtensions');
+const history = require('../core/browserHistory');
 
 const SURFACE = 'desktop';
 const AGENT = 'PortPilot desktop';
@@ -32,7 +33,7 @@ const isPlainName = (v) => typeof v === 'string' && v.trim().length > 0 && v.len
 // Codes the panel may show as they are. Anything else (a Node errno such as EPERM, say) becomes INTERNAL.
 const KNOWN_CODES = new Set([
   'BAD_ARGS', 'BAD_BROWSER', 'BAD_DIR', 'BAD_MODE', 'BAD_NAME', 'BAD_POOL', 'BAD_PORT', 'BAD_URL', 'BROWSER_NOT_FOUND',
-  'BUSY', 'COPY_FAILED', 'DUPLICATE_DIR', 'DUPLICATE_NAME', 'DUPLICATE_PORT', 'LAUNCH_FAILED', 'NOT_FOUND', 'NOT_OURS', 'NOT_VERIFIED',
+  'BUSY', 'COPY_FAILED', 'DUPLICATE_DIR', 'DUPLICATE_NAME', 'DUPLICATE_PORT', 'IN_USE', 'LAUNCH_FAILED', 'NOT_FOUND', 'NOT_OURS', 'NOT_VERIFIED',
   'PORT_HELD', 'PROFILE_RUNNING', 'SOURCE_RUNNING', 'START_TIMEOUT', 'STOP_FAILED',
 ]);
 const GENERIC = 'Something went wrong. The details are in the PortPilot log.';
@@ -119,6 +120,23 @@ function setupBrowserIpc(ipcMain, configStore, injected = {}) {
   }
 
   ipcMain.handle('browser:list', guarded(() => listOnce()));
+
+  // The desktop is a long-lived process, so it keeps each running browser's tabs fresh for History.
+  if (!injected.noSampler) api.startHistorySampler(configPath(), runDeps());
+
+  /** Past sessions of one profile (newest first), with the tabs each had open. */
+  ipcMain.handle('browser:history', guarded((name) => {
+    if (!isPlainName(name)) return { success: false, code: 'BAD_ARGS', error: 'name is required.' };
+    return call('browser_history', { profile: name, limit: 10 });
+  }));
+
+  /** Open a past session again: start its profile and open its tabs. Same lock as start and stop. */
+  ipcMain.handle('browser:reopen', guarded(async (id) => {
+    if (!isPlainName(id)) return { success: false, code: 'BAD_ARGS', error: 'id is required.' };
+    const entry = history.getSession(configPath(), id);
+    if (!entry) return { success: false, code: 'NOT_FOUND', error: 'That history entry no longer exists.' };
+    return exclusive([entry.profile], async () => clean(await api.reopen(configPath(), id, { ...ctx(), agent: AGENT })));
+  }));
 
   ipcMain.handle('browser:start', guarded((name) => {
     if (!isPlainName(name)) return { success: false, code: 'BAD_ARGS', error: 'name is required.' };

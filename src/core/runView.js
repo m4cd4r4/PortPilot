@@ -141,6 +141,17 @@
   }
 
   /**
+   * "tested in shop-tests" for a run a browser profile had a tab on (run.testedIn, written by the
+   * browser history sampler), "tested in a, b +1" past two. '' when none.
+   */
+  function testedInLine(run) {
+    const names = [];
+    for (const t of (run && run.testedIn) || []) if (t && t.profile && !names.includes(String(t.profile))) names.push(String(t.profile));
+    if (!names.length) return '';
+    return `tested in ${names.slice(0, 2).join(', ')}${names.length > 2 ? ` +${names.length - 2}` : ''}`;
+  }
+
+  /**
    * The thumbnail each Apps row may show: per app, its newest OPEN run, and only
    * when that run already has a page.thumb. A newer run still waiting for its
    * capture hides the older run's page rather than showing the wrong one.
@@ -161,5 +172,5 @@
     return out;
   }
 
-  return { filterRuns, facets, labelOf, runStateOf, startedByWord, formatWhen, formatBytes, footerText, gitLine, rowThumbs };
+  return { filterRuns, facets, labelOf, runStateOf, startedByWord, formatWhen, formatBytes, footerText, gitLine, testedInLine, rowThumbs };
 });

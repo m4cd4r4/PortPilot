@@ -249,6 +249,15 @@ const run = (over = {}) => ({
     assert.strictEqual(view.startedByWord(bare()), 'detected');
   });
 
+  await t('testedInLine names the browser profiles a run was tested in, once each, and is empty with none', async () => {
+    assert.strictEqual(view.testedInLine(run()), '');
+    assert.strictEqual(view.testedInLine(run({ testedIn: [] })), '');
+    assert.strictEqual(view.testedInLine(run({ testedIn: [{ profile: 'shop-tests', at: 'x' }] })), 'tested in shop-tests');
+    assert.strictEqual(view.testedInLine(run({ testedIn: [{ profile: 'a' }, { profile: 'b' }, { profile: 'a' }] })), 'tested in a, b');
+    assert.strictEqual(view.testedInLine(run({ testedIn: [{ profile: 'a' }, { profile: 'b' }, { profile: 'c' }, { profile: 'd' }] })), 'tested in a, b +2');
+    assert.strictEqual(view.testedInLine(run({ testedIn: 'junk' })), '');
+  });
+
   console.log(`\n${passed} passed, ${failed} failed`);
   process.exit(failed ? 1 : 0);
 })();
