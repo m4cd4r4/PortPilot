@@ -1,4 +1,5 @@
 const { scanPorts, checkPort, findAvailablePort, parseTasklistCsv } = require('./portScanner');
+const { ownedPidsByApp } = require('./processTree');
 const { startApp, stopApp, killProcess, killByPort, getRunningApps, getAppLogs } = require('./processManager');
 const path = require('path');
 const fs = require('fs');
@@ -234,16 +235,42 @@ function getProcessDetailsUnix(pid, port) {
  * Match scanned ports to registered apps by analyzing command line and working directory
  * @param {Array} ports - Scanned port info
  * @param {Array} apps - Registered apps from config
+ * @param {Object} [ownedPids] - appId -> Set of pids PortPilot started for that app (the shell and its descendants)
  * @returns {Object} { matches: Map of appId -> detected port info, unknownConflicts: Array of port conflicts }
  */
-function matchPortsToApps(ports, apps) {
+function matchPortsToApps(ports, apps, ownedPids = {}) {
   const matches = {};
   const matchedPorts = new Set(); // Track which ports have been matched to prevent duplicates
   const unknownConflicts = []; // Track ports with unknown processes blocking registered apps
 
+  // Phase 0: the app's own preferred port, held by a process PortPilot started for it. The
+  // command line proves nothing here (a relative `node server.js` names neither cwd nor app),
+  // but we know who we spawned.
+  for (const app of apps) {
+    const owned = ownedPids[app.id];
+    if (!owned || !owned.size || !app.preferredPort) continue;
+    const portInfo = ports.find(p => p.port === app.preferredPort);
+    if (!portInfo || matchedPorts.has(portInfo.port)) continue;
+    const bindings = portInfo.bindings || [portInfo];
+    const binding = bindings.find(b => owned.has(b.pid));
+    if (!binding) continue; // held by someone else: Phase 2 decides whether that is a conflict
+    matches[app.id] = {
+      port: portInfo.port,
+      pid: binding.pid,
+      address: binding.address,
+      processName: binding.processName,
+      commandLine: binding.commandLine,
+      conflict: portInfo.conflict,
+      matchType: 'managed-pid',
+      confidence: 'high'
+    };
+    matchedPorts.add(portInfo.port);
+  }
+
   // Phase 1: High-confidence CWD matches (priority)
   for (const app of apps) {
     if (!app.cwd) continue;
+    if (matches[app.id]) continue; // already matched to a process we started (Phase 0)
 
     // Normalize paths for comparison
     const normalizedCwd = path.normalize(app.cwd).toLowerCase();
@@ -357,6 +384,18 @@ function matchPortsToApps(ports, apps) {
 }
 
 /**
+ * matchPortsToApps, plus ownership: when a registered app that PortPilot is running looks
+ * blocked, check whether the "stranger" is a process PortPilot spawned for it (the process tree
+ * is only read in that case, so the common scan pays nothing).
+ */
+async function matchPortsWithOwnership(ports, apps) {
+  const first = matchPortsToApps(ports, apps);
+  const suspects = getRunningApps().filter(r => r.running && first.unknownConflicts.some(c => c.appId === r.id));
+  if (!suspects.length) return first;
+  return matchPortsToApps(ports, apps, await ownedPidsByApp(suspects));
+}
+
+/**
  * Setup all IPC handlers for communication with renderer
  * @param {Electron.IpcMain} ipcMain
  * @param {ConfigStore} configStore
@@ -380,7 +419,7 @@ function setupIpcHandlers(ipcMain, configStore) {
     try {
       const ports = await scanPorts();
       const apps = configStore.getApps();
-      const { matches, unknownConflicts } = matchPortsToApps(ports, apps);
+      const { matches, unknownConflicts } = await matchPortsWithOwnership(ports, apps);
       return { success: true, ports, matches, unknownConflicts };
     } catch (error) {
       return { success: false, error: error.message };
@@ -965,4 +1004,4 @@ function setupIpcHandlers(ipcMain, configStore) {
   require('./browserIpc').setupBrowserIpc(ipcMain, configStore);
 }
 
-module.exports = { setupIpcHandlers, matchPortsToApps, getProcessDetails, detectWorktrees, detectStaleWorktrees };
+module.exports = { setupIpcHandlers, matchPortsToApps, matchPortsWithOwnership, getProcessDetails, detectWorktrees, detectStaleWorktrees };
