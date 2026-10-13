@@ -2,7 +2,7 @@
   "name": "portpilot",
   "displayName": "PortPilot",
   "description": "See every dev server and port from the sidebar, with crash alerts and the servers Claude Code started marked.",
-  "version": "3.8.0",
+  "version": "3.8.1",
   "publisher": "macdara",
   "engines": {
     "vscode": "^1.85.0"
