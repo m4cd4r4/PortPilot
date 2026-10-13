@@ -359,6 +359,70 @@ const startedBy = { kind: 'claude', surface: 'mcp', sessionId: 's1', at: '2026-1
     assert.deepEqual(configFile.readRuntime(s.configPath).apps, {});
   });
 
+  // ---- detected runs: a server no registered app owns ----
+  const detectedBy = { kind: 'detected', surface: 'desktop', at: new Date().toISOString() };
+  const metaFor = (cwd) => ({ name: 'shop-web', cwd, command: 'node D:\\x\\node_modules\\next\\dist\\bin\\next dev', startCommand: 'npm run dev' });
+
+  await t('a detected run takes its name, folder and command from meta, and git from meta.cwd', async () => {
+    const repo = makeRepo();
+    const s = setup();
+    const { id, done } = runHistory.openRun(s.configPath, 'det_0123456789', detectedBy, { port: 3111, meta: metaFor(repo) });
+    await done;
+    const run = runsOf(s.configPath).find((r) => r.id === id);
+    assert.equal(run.appName, 'shop-web');
+    assert.equal(run.cwd, repo);
+    assert.equal(run.command, metaFor(repo).command);
+    assert.equal(run.detected, true);
+    assert.equal(run.startCommand, 'npm run dev');
+    assert.equal(run.url, 'http://localhost:3111/');
+    assert.equal(run.git.branch, 'main');
+    assert.equal(run.git.subject, 'first');
+    assert.equal(run.startedBy.kind, 'detected');
+  });
+
+  await t('a registered app wins over meta, and an ordinary run is not marked detected', async () => {
+    const s = setup();
+    const { id } = runHistory.openRun(s.configPath, 'app1', startedBy, { port: 3005, meta: metaFor(s.dir) });
+    const run = runsOf(s.configPath).find((r) => r.id === id);
+    assert.equal(run.appName, 'shop-web');
+    assert.equal(run.command, 'npm run dev');
+    assert.equal('detected' in run, false);
+  });
+
+  await t('a detected start never duplicates an open run for the same server', async () => {
+    const s = setup();
+    const a = runHistory.openRun(s.configPath, 'det_0123456789', detectedBy, { port: 3111, meta: metaFor(s.dir) });
+    const b = runHistory.openRun(s.configPath, 'det_0123456789', detectedBy, { port: 3111, meta: metaFor(s.dir) });
+    assert.equal(b.id, a.id);
+    assert.equal(b.reused, true);
+    assert.equal(runsOf(s.configPath).length, 1);
+  });
+
+  await t('a detected server back within 60 s of closing reuses its run; later it gets a new one', async () => {
+    const s = setup();
+    const a = runHistory.openRun(s.configPath, 'det_0123456789', detectedBy, { port: 3111, meta: metaFor(s.dir) });
+    runHistory.closeRun(s.configPath, 'det_0123456789', { endedBy: 'stop' });
+    const again = runHistory.openRun(s.configPath, 'det_0123456789', detectedBy, { port: 3111, meta: metaFor(s.dir) });
+    assert.equal(again.id, a.id);
+    const [reopened] = runsOf(s.configPath);
+    assert.equal(reopened.stoppedAt, null);
+    assert.equal(reopened.endedBy, null);
+
+    runHistory.closeRun(s.configPath, 'det_0123456789', { endedBy: 'stop' });
+    const file = runHistory.runsPathFor(s.configPath);
+    const data = JSON.parse(fs.readFileSync(file, 'utf8'));
+    data.runs[0].stoppedAt = new Date(Date.now() - runHistory.REOPEN_WINDOW_MS - 5000).toISOString();
+    fs.writeFileSync(file, JSON.stringify(data));
+    const later = runHistory.openRun(s.configPath, 'det_0123456789', detectedBy, { port: 3111, meta: metaFor(s.dir) });
+    assert.notEqual(later.id, a.id);
+    assert.equal(runsOf(s.configPath).length, 2);
+    await runHistory.whenIdle();
+  });
+
+  await t('the default caps keep a week of detected runs', async () => {
+    assert.equal(runHistory.DEFAULT_MAX_RUNS, 1000);
+  });
+
   console.log(`\n${passed} passed, ${failed} failed`);
   await runHistory.whenIdle();
   try { fs.rmSync(root, { recursive: true, force: true }); } catch { /* temp dir, swept by the OS */ }

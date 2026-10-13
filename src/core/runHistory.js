@@ -197,23 +197,34 @@ function patchRun(configPath, runId, captured) {
   if (!kept && gitState.snapshot && repoRoot) dropRefs([{ repoRoot, ref: gitState.snapshot.ref }]);
 }
 
+// A detected server that comes back within this long of its run closing is the
+// same run (a dev server restarting on a file change), not a new one.
+const REOPEN_WINDOW_MS = 60 * 1000;
+
 /**
  * Record a start. The record is written synchronously; git state is patched in
  * afterwards. Returns { id, done } where done resolves when the patch is in.
+ *
+ * `meta` ({ name, cwd, command, startCommand }) describes a server no registered
+ * app owns (a detected one, keyed by a det_ appId): the record takes its name,
+ * folder and command from it and is marked `detected`. Such a start never
+ * duplicates: an open run for the same appId is returned as it is, and one that
+ * closed under REOPEN_WINDOW_MS ago is reopened. Both return `reused: true`.
  */
-function openRun(configPath, appId, startedBy, { port = null, rerunOf = null } = {}) {
+function openRun(configPath, appId, startedBy, { port = null, rerunOf = null, meta = null } = {}) {
   const { app, settings } = readApp(configPath, appId);
+  const detectedMeta = !app && meta && typeof meta === 'object' ? meta : null;
   const now = new Date();
   const id = newId(now);
   const runPort = port || (app && app.preferredPort) || null;
   const record = {
     id,
     appId,
-    appName: app ? app.name : null,
-    cwd: app ? app.cwd || null : null,
+    appName: app ? app.name : (detectedMeta ? String(detectedMeta.name || '').slice(0, 200) || null : null),
+    cwd: app ? app.cwd || null : (detectedMeta ? detectedMeta.cwd || null : null),
     repoRoot: null,
     relCwd: null,
-    command: app ? app.command || null : null,
+    command: app ? app.command || null : (detectedMeta ? String(detectedMeta.command || '').slice(0, 500) || null : null),
     port: runPort,
     url: runPort ? `http://localhost:${runPort}/` : null,
     startedBy,
@@ -226,8 +237,26 @@ function openRun(configPath, appId, startedBy, { port = null, rerunOf = null } =
     pinned: false,
   };
   if (rerunOf) record.rerunOf = String(rerunOf);
+  if (detectedMeta) {
+    record.detected = true;
+    record.startCommand = detectedMeta.startCommand ? String(detectedMeta.startCommand).slice(0, 300) : null;
+  }
+  let reusedId = null;
   const { result: dropped } = configFile.updateJson(runsPathFor(configPath), (data) => {
     if (!Array.isArray(data.runs)) data.runs = [];
+    if (detectedMeta) {
+      const same = data.runs.filter((r) => r.appId === appId && r.detected);
+      const open = same.find((r) => !r.stoppedAt);
+      const last = same.filter((r) => r.stoppedAt).sort((a, b) => Date.parse(b.stoppedAt) - Date.parse(a.stoppedAt))[0];
+      if (open) { reusedId = open.id; return []; }
+      if (last && now - Date.parse(last.stoppedAt) < REOPEN_WINDOW_MS) {
+        last.stoppedAt = null;
+        last.endedBy = null;
+        last.exitCode = null;
+        reusedId = last.id;
+        return [];
+      }
+    }
     // The app is being started again, so any run still open for it was lost
     // without a stop or crash being seen.
     for (const run of data.runs) {
@@ -239,6 +268,7 @@ function openRun(configPath, appId, startedBy, { port = null, rerunOf = null } =
     data.runs.push(record);
     return prune(data, historyDirFor(configPath), capsFrom(settings));
   }, emptyRuns);
+  if (reusedId) return { id: reusedId, done: Promise.resolve(), reused: true };
   dropRefs(dropped);
   const done = captureGit(record.cwd, id, { snapshots: settings.historySnapshots !== false })
     .then((captured) => patchRun(configPath, id, captured))
@@ -290,7 +320,8 @@ function dropRefs(refs) {
 // and neither does a run that is still open. Called inside the same
 // updateJson that appends, so the file never sits over a cap.
 
-const DEFAULT_MAX_RUNS = 500;
+// 1000 so a week of auto-detected dev servers (about 140 runs a day) stays browsable.
+const DEFAULT_MAX_RUNS = 1000;
 const DEFAULT_MAX_MB = 150;
 const MAX_PINS = 50;
 
@@ -376,5 +407,5 @@ function closeRun(configPath, appId, { endedBy, exitCode = null }) {
 
 module.exports = {
   historyDirFor, runsPathFor, readRuns, openRun, closeRun, pinRun, setThumb, whenIdle, deleteRefs, REF_RE,
-  MAX_PINS, DEFAULT_MAX_RUNS, DEFAULT_MAX_MB,
+  MAX_PINS, DEFAULT_MAX_RUNS, DEFAULT_MAX_MB, REOPEN_WINDOW_MS,
 };
