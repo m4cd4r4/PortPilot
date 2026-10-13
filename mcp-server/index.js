@@ -821,7 +821,7 @@ function rerunSteps(run, exists = fs.existsSync) {
 function createServer() {
   const server = new McpServer({
     name: 'portpilot',
-    version: '3.7.0',
+    version: '3.8.0',
   });
 
   // --- Status ---
