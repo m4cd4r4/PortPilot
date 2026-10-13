@@ -47,7 +47,9 @@ t('adds an app for a closed detected run', () => {
 t('reuses an app already registered for the same folder (slash and case insensitive)', () => {
   const s = setup([{ id: 'app_x', name: 'Mine', command: 'pnpm dev', cwd: '', preferredPort: 4000 }]);
   const cfg = configFile.readJson(s.configPath, () => ({}));
-  cfg.apps[0].cwd = s.project.replace(/\\/g, '/').toUpperCase();
+  // Folder names are case-sensitive on Linux, so only the slash form is varied there.
+  const slashed = s.project.replace(/\\/g, '/');
+  cfg.apps[0].cwd = process.platform === 'linux' ? slashed : slashed.toUpperCase();
   fs.writeFileSync(s.configPath, JSON.stringify(cfg));
   const r = appForRun(s.configPath, { appName: 'shop-web', cwd: s.project, startCommand: 'npm run dev', port: 3111 });
   assert.deepStrictEqual({ ok: r.ok, appId: r.appId, port: r.port }, { ok: true, appId: 'app_x', port: 4000 });
