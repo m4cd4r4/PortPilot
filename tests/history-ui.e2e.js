@@ -83,6 +83,7 @@ async function main() {
     env: {
       ...Object.fromEntries(Object.entries(process.env).filter(([k]) => !/^(ELECTRON_|VSCODE_)/.test(k))),
       PORTPILOT_MCP_PORT: String(mcpPort),
+      PORTPILOT_DETECT_ONLY_PORTS: '1', // the localhost watcher must not record the developer's real servers
     },
   });
   try {
