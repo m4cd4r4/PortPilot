@@ -82,6 +82,8 @@
 
   /** "claude b71c" / "you" for who started the run (the app rows' wording). */
   function startedByWord(run) {
+    // Found running by the localhost watcher (startedBy.kind 'detected'): provenanceOf has no word for it.
+    if (run.startedBy && run.startedBy.kind === 'detected') return 'detected';
     const p = Status.provenanceOf(run.startedBy);
     return p.kind === 'external' ? 'external' : p.word;
   }

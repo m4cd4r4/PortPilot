@@ -20,11 +20,12 @@
   const h = {
     runs: [],
     live: new Set(),
+    startable: new Set(),   // closed runs with a start command and a folder that still exists
     stats: null,
     thumbs: new Map(),      // runId -> data URL
     asked: new Set(),       // `${runId}:${thumb}` already requested
     limit: PAGE,
-    progress: new Map(),    // runId -> text while a Re-run is in flight
+    progress: new Map(),    // runId -> text while a Re-run or Start again is in flight
     errors: new Map(),      // runId -> last Re-run / pin failure
     timer: null,
     lastHtml: '',
@@ -73,8 +74,14 @@
     const hasGit = !!(run.git && run.git.sha && run.repoRoot);
     const btn = (act, label, extra = '', title = '') =>
       `<button type="button" class="btn btn-small btn-secondary" data-hact="${act}" data-run="${esc(run.id)}"${title ? ` title="${esc(title)}"` : ''}${extra}>${label}</button>`;
+    // Only a run that was recorded with a start command (a detected server) offers it.
+    const again = run.stoppedAt && run.startCommand
+      ? btn('startagain', busy ? 'Starting' : 'Start again', busy || !h.startable.has(run.id) ? ' disabled' : '',
+        h.startable.has(run.id) ? `Run ${run.startCommand} in ${run.cwd}` : 'The project folder is gone')
+      : '';
     return [
       btn('open', 'Open URL', live ? '' : ' disabled', live ? run.url : 'Only while this run is up'),
+      again,
       btn('rerun', busy ? 'Re-running' : 'Re-run this version', busy || !hasGit ? ' disabled' : '',
         hasGit ? 'Bring this version back in a new worktree' : 'No git state was recorded for this run'),
       btn('sha', 'Copy SHA', hasGit ? '' : ' disabled'),
@@ -92,7 +99,7 @@
   <div class="hthumb${h.thumbs.has(run.id) ? '' : ' empty'}">${thumbHtml(run)}</div>
   <div class="hmain">
     <div class="hline">
-      <span class="happ">${esc(run.appName || run.appId)}</span>${run.port ? `<span class="hport">:${esc(run.port)}</span>` : ''}${run.pinned ? '<span class="hpin" title="Pinned" aria-label="Pinned">&#9733;</span>' : ''}
+      <span class="happ">${esc(run.appName || run.appId)}</span>${run.port ? `<span class="hport">:${esc(run.port)}</span>` : ''}${run.detected ? '<span class="hdetected" title="Found running on this machine; PortPilot did not start it">detected</span>' : ''}${run.pinned ? '<span class="hpin" title="Pinned" aria-label="Pinned">&#9733;</span>' : ''}
       <span class="hwhen" title="${esc(run.startedAt)}">${esc(RV.formatWhen(run))}</span>
     </div>
     <div class="hline hline-sub">
@@ -101,7 +108,7 @@
     </div>
     <div class="hline hline-sub">
       <span class="state-cell state-${esc(st.state)}" style="--state-color: var(${esc(st.token)})"><span class="state-glyph" aria-hidden="true">${esc(st.glyph)}</span><span class="state-word">${esc(st.word)}</span>${st.reason ? `<span class="state-meta">${esc(st.reason)}</span>` : ''}</span>
-      <span class="hby">${esc(RV.startedByWord(run))}</span>${run.rerunOf ? '<span class="hby">re-run</span>' : ''}
+      ${run.detected ? '' : `<span class="hby">${esc(RV.startedByWord(run))}</span>`}${run.rerunOf ? '<span class="hby">re-run</span>' : ''}
     </div>
     ${prog ? `<div class="hprog" role="status">${esc(prog)}</div>` : ''}
     ${err ? `<div class="herr" role="alert">${esc(err)}</div>` : ''}
@@ -148,6 +155,7 @@
       if (!res.success) throw new Error(res.error);
       h.runs = res.runs;
       h.live = new Set(res.live);
+      h.startable = new Set(res.startable || []);
       h.stats = res.stats;
       render();
     } catch (err) {
@@ -199,6 +207,28 @@
     await load();
   }
 
+  async function startAgain(runId) {
+    const run = h.runs.find((r) => r.id === runId);
+    if (!run || h.progress.has(runId)) return;
+    h.errors.delete(runId);
+    h.progress.set(runId, 'Starting');
+    render();
+    try {
+      const res = await window.portpilot.history.startAgain(runId);
+      if (res.success) {
+        showToast(`Started ${run.appName || 'app'}${res.port ? ` on :${res.port}` : ''}`, 'success');
+        if (res.up && res.url) window.portpilot.openExternal(res.url);
+        if (typeof loadApps === 'function') loadApps();
+      } else {
+        h.errors.set(runId, res.error || 'Could not start it again.');
+      }
+    } catch (err) {
+      h.errors.set(runId, err.message);
+    }
+    h.progress.delete(runId);
+    await load();
+  }
+
   async function onAction(btn) {
     const runId = btn.dataset.run;
     const run = h.runs.find((r) => r.id === runId);
@@ -218,6 +248,9 @@
       }
       case 'rerun':
         rerun(runId);
+        break;
+      case 'startagain':
+        startAgain(runId);
         break;
       default:
     }
