@@ -7,9 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Fixed
+## [3.7.0] - 2026-10-13
 
+### Added
+- **Browsers tab.** Named browser profiles for automated sessions (Chromium family: Chrome, Edge, Brave, Chromium, Opera, Vivaldi). A profile is a name, a debug port, a browser, a mode (headed, offscreen, headless), a start URL and a note. Start, stop, change mode, edit, Duplicate (settings and extensions only; cookies and passwords are never copied), Extensions list, Remove (the folder stays on disk). A port held by another process reads "Port held" and names the holder; PortPilot never kills it. Each profile keeps its own folder, so sign-ins stay separate.
+- **Five MCP tools for browser profiles**, 25 tools in all: `list_browser_profiles`, `list_browsers`, `start_browser`, `stop_browser`, `set_browser_mode`. The same tools are served as `POST /api/browser/<tool>` on the web agent, with an advisory marker for who holds a profile (it never blocks).
+- **Hover a row preview to enlarge it.** The 32 x 18 px page preview on running Apps rows now opens a 256 x 144 px popover on hover or keyboard focus. Row height never changes; Escape closes it; **Show page previews on running apps** turns both off.
+- **End-to-end checks and a scenarios list.** `npm run test:e2e` drives the real desktop app against a throwaway config; `docs/SCENARIOS.md` lists what each recurring check proves.
+
+### Fixed
 - The VS Code extension and the MCP server no longer show an app as Running because a browser, an editor or Claude holds a port and its command line mentions the project. Found on a real machine: a Brave debug port read as "Solaisoft Running", `Code.exe` as "SSF Site".
+- A crash ends the "Starting" countdown. An app that exits before opening its port read "Starting" for about 13 s after the crash toast; it now reads "Crashed exit N" at once, and a Restart shows "Starting" for the new run.
+- The web portal no longer shows History and Browsers tabs it cannot serve, and its console is clean on load.
+- At 390 px wide the header search box is on its own row and its placeholder is readable.
+- An app PortPilot started with a relative command (`node server.js --port N`, `npm start`) is no longer reported as blocked by its own server.
 
 ## [3.6.0] - 2026-10-10
 
