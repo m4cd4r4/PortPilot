@@ -22,6 +22,8 @@ export function activate(context: vscode.ExtensionContext) {
   // crash-count badge on the activity bar icon.
   const appsView = vscode.window.createTreeView('portpilot.apps', { treeDataProvider: appsProvider });
   context.subscriptions.push(appsView);
+  // The sidebar never said which build is installed; the header now does.
+  appsView.description = `v${context.extension.packageJSON.version}`;
   vscode.window.registerTreeDataProvider('portpilot.activePorts', portsProvider);
 
   // "Stopped (N)" folding: setting-backed, with a view-title toggle whose icon
