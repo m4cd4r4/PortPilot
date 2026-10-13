@@ -44,6 +44,8 @@ const appsTreeProvider_1 = require("./appsTreeProvider");
 const portsTreeProvider_1 = require("./portsTreeProvider");
 const portScanner_1 = require("./portScanner");
 const treeModel_1 = require("./treeModel");
+const historyTreeProvider_1 = require("./historyTreeProvider");
+const historyCommands_1 = require("./historyCommands");
 const webPortal_1 = require("./webPortal");
 let webPortal;
 function activate(context) {
@@ -56,6 +58,9 @@ function activate(context) {
     // The sidebar never said which build is installed; the header now does.
     appsView.description = `v${context.extension.packageJSON.version}`;
     vscode.window.registerTreeDataProvider('portpilot.activePorts', portsProvider);
+    const historyProvider = new historyTreeProvider_1.HistoryTreeProvider();
+    const historyView = vscode.window.createTreeView('portpilot.history', { treeDataProvider: historyProvider });
+    context.subscriptions.push(historyView);
     // "Stopped (N)" folding: setting-backed, with a view-title toggle whose icon
     // follows the portpilot.foldStopped context key.
     const readFold = () => vscode.workspace.getConfiguration('portpilot').get('foldStoppedApps', true);
@@ -119,6 +124,7 @@ function activate(context) {
         await portsProvider.refresh();
         await appsProvider.setActivePorts(portsProvider.getCachedPorts());
         portsProvider.setAppIdByPort((0, treeModel_1.appIdByPort)(appsProvider.getRunningByAppId()));
+        historyProvider.update(portsProvider.getCachedPorts().map(p => p.port));
         updateStatusBar();
         updateBadge();
         alertNewCrashes();
@@ -205,6 +211,7 @@ function activate(context) {
             }
         }
     }));
+    (0, historyCommands_1.registerHistoryCommands)(context, { provider: historyProvider, view: historyView, startApp });
     // Commands
     context.subscriptions.push(vscode.commands.registerCommand('portpilot.refresh', () => {
         refreshAll();

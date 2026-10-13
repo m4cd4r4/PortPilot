@@ -1,5 +1,12 @@
 # Changelog
 
+## [Unreleased]
+
+- **History view.** A new `History` view under Apps lists past localhost pages from PortPilot's run history, newest first, grouped Today, Yesterday, then by day for a week, then a collapsed `Earlier`. Each row shows the app, start time and port, with an icon for running, stopped, crashed or ended-unseen. Hover for the page title, URL, git branch and commit, and the page thumbnail.
+- **Reopen a past page.** Click a run to open it in your browser while its server is up. A closed run with a recorded folder and start command shows `Start Again`: PortPilot starts it in a terminal, waits for the port to answer, then opens the page. Rows also copy the URL, open the folder, and pin or unpin the run (pinned runs are never pruned).
+- **Search.** The search icon in the History title bar filters by name, port, page title or branch.
+- Servers PortPilot found without you registering them show a `detected` marker once the desktop app records them.
+
 ## 3.7.0
 
 - **No more false "Running".** A browser, an editor or Claude holding a port is no longer shown as your app running just because its command line mentions the project (a Brave debug port read as "Solaisoft Running", Code.exe as "SSF Site").

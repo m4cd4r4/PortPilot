@@ -38,6 +38,10 @@
         {
           "id": "portpilot.activePorts",
           "name": "Active Ports"
+        },
+        {
+          "id": "portpilot.history",
+          "name": "History"
         }
       ]
     },
@@ -149,6 +153,54 @@
         "title": "Show Stopped Apps Inline",
         "icon": "$(unfold)",
         "category": "PortPilot"
+      },
+      {
+        "command": "portpilot.openHistoryRun",
+        "title": "Open Page",
+        "icon": "$(globe)",
+        "category": "PortPilot"
+      },
+      {
+        "command": "portpilot.startHistoryRun",
+        "title": "Start Again",
+        "icon": "$(play)",
+        "category": "PortPilot"
+      },
+      {
+        "command": "portpilot.copyHistoryUrl",
+        "title": "Copy URL",
+        "icon": "$(copy)",
+        "category": "PortPilot"
+      },
+      {
+        "command": "portpilot.pinHistoryRun",
+        "title": "Pin Run",
+        "icon": "$(pin)",
+        "category": "PortPilot"
+      },
+      {
+        "command": "portpilot.unpinHistoryRun",
+        "title": "Unpin Run",
+        "icon": "$(pinned)",
+        "category": "PortPilot"
+      },
+      {
+        "command": "portpilot.openHistoryFolder",
+        "title": "Open Folder",
+        "icon": "$(folder-opened)",
+        "category": "PortPilot"
+      },
+      {
+        "command": "portpilot.searchHistory",
+        "title": "Search History",
+        "icon": "$(search)",
+        "category": "PortPilot"
+      },
+      {
+        "command": "portpilot.refreshHistory",
+        "title": "Refresh History",
+        "icon": "$(refresh)",
+        "category": "PortPilot"
       }
     ],
     "configuration": {
@@ -207,6 +259,16 @@
           "command": "portpilot.scanPorts",
           "when": "view == portpilot.activePorts",
           "group": "navigation"
+        },
+        {
+          "command": "portpilot.searchHistory",
+          "when": "view == portpilot.history",
+          "group": "navigation@1"
+        },
+        {
+          "command": "portpilot.refreshHistory",
+          "when": "view == portpilot.history",
+          "group": "navigation@2"
         }
       ],
       "view/item/context": [
@@ -259,6 +321,61 @@
           "command": "portpilot.openInBrowser",
           "when": "view == portpilot.activePorts && viewItem == active-port",
           "group": "inline"
+        },
+        {
+          "command": "portpilot.openHistoryRun",
+          "when": "view == portpilot.history && viewItem =~ /hrun/ && viewItem =~ /hlive/",
+          "group": "inline@1"
+        },
+        {
+          "command": "portpilot.startHistoryRun",
+          "when": "view == portpilot.history && viewItem =~ /hrun/ && viewItem =~ /hstart/",
+          "group": "inline@1"
+        },
+        {
+          "command": "portpilot.copyHistoryUrl",
+          "when": "view == portpilot.history && viewItem =~ /hrun/ && viewItem =~ /hurl/",
+          "group": "inline@2"
+        },
+        {
+          "command": "portpilot.pinHistoryRun",
+          "when": "view == portpilot.history && viewItem =~ /hrun/ && viewItem =~ /hunpinned/",
+          "group": "inline@3"
+        },
+        {
+          "command": "portpilot.unpinHistoryRun",
+          "when": "view == portpilot.history && viewItem =~ /hrun/ && viewItem =~ /hpinned/",
+          "group": "inline@3"
+        },
+        {
+          "command": "portpilot.openHistoryRun",
+          "when": "view == portpilot.history && viewItem =~ /hrun/ && viewItem =~ /hlive/",
+          "group": "1_open@1"
+        },
+        {
+          "command": "portpilot.startHistoryRun",
+          "when": "view == portpilot.history && viewItem =~ /hrun/ && viewItem =~ /hstart/",
+          "group": "1_open@1"
+        },
+        {
+          "command": "portpilot.copyHistoryUrl",
+          "when": "view == portpilot.history && viewItem =~ /hrun/ && viewItem =~ /hurl/",
+          "group": "1_open@2"
+        },
+        {
+          "command": "portpilot.openHistoryFolder",
+          "when": "view == portpilot.history && viewItem =~ /hrun/ && viewItem =~ /hfolder/",
+          "group": "1_open@3"
+        },
+        {
+          "command": "portpilot.pinHistoryRun",
+          "when": "view == portpilot.history && viewItem =~ /hrun/ && viewItem =~ /hunpinned/",
+          "group": "2_pin"
+        },
+        {
+          "command": "portpilot.unpinHistoryRun",
+          "when": "view == portpilot.history && viewItem =~ /hrun/ && viewItem =~ /hpinned/",
+          "group": "2_pin"
         }
       ],
       "commandPalette": [
@@ -269,9 +386,39 @@
         {
           "command": "portpilot.unfoldStopped",
           "when": "portpilot.foldStopped"
+        },
+        {
+          "command": "portpilot.openHistoryRun",
+          "when": "false"
+        },
+        {
+          "command": "portpilot.startHistoryRun",
+          "when": "false"
+        },
+        {
+          "command": "portpilot.copyHistoryUrl",
+          "when": "false"
+        },
+        {
+          "command": "portpilot.pinHistoryRun",
+          "when": "false"
+        },
+        {
+          "command": "portpilot.unpinHistoryRun",
+          "when": "false"
+        },
+        {
+          "command": "portpilot.openHistoryFolder",
+          "when": "false"
         }
       ]
-    }
+    },
+    "viewsWelcome": [
+      {
+        "view": "portpilot.history",
+        "contents": "No localhost pages recorded yet. Start a dev server and it will appear here."
+      }
+    ]
   },
   "scripts": {
     "copy-runtime": "node scripts/copy-runtime.js",

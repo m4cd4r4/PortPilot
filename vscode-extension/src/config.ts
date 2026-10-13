@@ -124,6 +124,7 @@ const status: StatusApi = require(path.join(__dirname, '..', 'runtime', 'core', 
 interface RunHistoryApi {
   readRuns(configPath: string): unknown[];
   historyDirFor(configPath: string): string;
+  pinRun(configPath: string, runId: string, pinned: boolean): { ok: boolean; reason?: string };
 }
 interface RunViewApi {
   rowThumbs(runs: unknown[]): Record<string, RowThumbRef>;
@@ -150,19 +151,52 @@ export function readRuntimeApps(): Record<string, RuntimeEntry> {
 }
 
 // runs.json is the biggest file the 10s refresh touches: re-parse it only when it changes.
+let runsCache: { key: string; runs: unknown[] } | null = null;
 let thumbCache: { key: string; thumbs: Record<string, RowThumbRef> } | null = null;
+
+/** The parsed runs plus a key that changes whenever the file does. Empty on any read failure. */
+export function readRunsCached(): { key: string; runs: unknown[] } {
+  try {
+    const configPath = getConfigPath();
+    const runsFile = path.join(runHistory.historyDirFor(configPath), 'runs.json');
+    const st = fs.statSync(runsFile);
+    const key = `${runsFile}|${st.mtimeMs}|${st.size}`;
+    if (runsCache?.key !== key) runsCache = { key, runs: runHistory.readRuns(configPath) };
+    return runsCache;
+  } catch { return { key: 'none', runs: [] }; }
+}
 
 /** Newest open run with a page thumbnail, per app. Empty on any read failure. */
 export function readRowThumbs(): Record<string, RowThumbRef> {
   try {
-    const configPath = getConfigPath();
-    const runsFile = path.join(runHistory.historyDirFor(configPath), 'runs.json');
-    const key = `${runsFile}|${fs.statSync(runsFile).mtimeMs}`;
-    if (thumbCache?.key !== key) {
-      thumbCache = { key, thumbs: runView.rowThumbs(runHistory.readRuns(configPath)) };
-    }
+    const { key, runs } = readRunsCached();
+    if (thumbCache?.key !== key) thumbCache = { key, thumbs: runView.rowThumbs(runs) };
     return thumbCache.thumbs;
   } catch { return {}; }
+}
+
+/** Pin or unpin a run in the shared history (a 51st pin is refused). Never throws. */
+export function pinHistoryRun(runId: string, pinned: boolean): { ok: boolean; reason?: string } {
+  try { return runHistory.pinRun(getConfigPath(), runId, pinned); } catch { return { ok: false, reason: 'error' }; }
+}
+
+/**
+ * Find or register the app a history run belongs to, so it can be started again.
+ * runApp.js ships with the desktop's localhost detection; until it is bundled
+ * (missing module) a registered run falls back to its own app, a detected one fails.
+ */
+export function appForRun(run: { appId?: string | null }): { ok: true; appId: string; port: number | null } | { ok: false; error: string } {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const runApp: { appForRun(configPath: string, run: unknown): { ok: boolean; appId?: string; port?: number | null; error?: string } } =
+      require(path.join(__dirname, '..', 'runtime', 'core', 'runApp.js'));
+    const res = runApp.appForRun(getConfigPath(), run);
+    return res.ok && res.appId ? { ok: true, appId: res.appId, port: res.port ?? null } : { ok: false, error: res.error || 'unknown' };
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== 'MODULE_NOT_FOUND') return { ok: false, error: (err as Error).message };
+    const app = readConfig().apps.find(a => a.id === run.appId);
+    return app ? { ok: true, appId: app.id, port: app.preferredPort } : { ok: false, error: 'This PortPilot build cannot start a detected server again yet.' };
+  }
 }
 
 const THUMB_MAX_BYTES = 512 * 1024;

@@ -20,6 +20,14 @@ PortPilot lists your registered apps and every listening port in the VS Code sid
 
 <img src="https://raw.githubusercontent.com/m4cd4r4/PortPilot/master/docs/screenshots/vscode-crash-toast.png" alt="Crash toast: beacon-gateway crashed (exit 1). Claude Code started it. With Restart and Logs buttons" width="560">
 
+**History: go back to a page from last week.** The `History` view lists past localhost pages from PortPilot's local run history, newest first: Today, Yesterday, then one group per day for a week, then a collapsed `Earlier`. Each row shows the app, start time and port, with an icon for running, stopped, crashed or ended-unseen. Hover for the page title, URL, git branch and commit, and the page thumbnail. Servers PortPilot found without you registering them carry a `detected` marker once the desktop app records them.
+
+- **Click** a running page to open it in your browser. Click a closed one to start it again: it needs a recorded folder and start command, and PortPilot waits for the port to answer before opening the page. Without those it says why.
+- **Row buttons and menu:** open or start again, copy URL, pin or unpin (pinned runs are never pruned), open folder.
+- **Search** (title-bar icon) filters by name, port, page title or branch. The list shows the newest 200 runs.
+
+The view reads `history/runs.json` beside your PortPilot config and re-reads it only when it changes. Thumbnails are read from that folder and never leave your machine.
+
 **Everything else from the tree.** Start and stop apps, kill a port, open in the browser, change a port, toggle favourites, and add, edit or delete apps. Running detection is two-phase: an app on a dynamic or non-preferred port is still found, with its live port shown.
 
 ## Web portal, hosted from VS Code
@@ -48,7 +56,7 @@ The ✦ marks and the "Claude Code started it" line come from the PortPilot plug
 
 ## Commands
 
-Start, stop and open the web portal; fold or unfold stopped apps; add, edit and delete apps; change ports, kill ports and scan ports. All are in the Command Palette under `PortPilot:` and on the sidebar.
+Start, stop and open the web portal; fold or unfold stopped apps; search, refresh and reopen runs in History; add, edit and delete apps; change ports, kill ports and scan ports. All are in the Command Palette under `PortPilot:` and on the sidebar.
 
 ## Links
 
