@@ -96,9 +96,12 @@ async function main() {
     check('crash toast shows the app\'s last output', (await text(win, '.crash-toast-lines')).includes('database is down'));
     const buttons = await win.$$eval('.crash-toast-btn', (bs) => bs.map((b) => b.textContent.trim()));
     check('toast offers Restart, Logs, Ask Claude, Dismiss', buttons[0] === 'Restart' && buttons[1] === 'Logs' && /^Ask Claude \(a3f2\)$/.test(buttons[2]) && buttons[3] === 'Dismiss', buttons.join(' | '));
+    // The row must follow the toast on its own (no forced reload here): the start countdown
+    // is ~10 s, and a dead process must not keep the row on Starting until it ends.
     const t0 = Date.now();
-    const crashedRow = await until(async () => { await win.evaluate(() => window.loadApps()); return /crashed.*exit 3/i.test(await text(win, `${card('app_boom')} .state-cell`)); }, 60000, 'crashed row').then(() => true, () => false);
-    check('row says Crashed with the exit code', crashedRow, `${await text(win, `${card('app_boom')} .state-cell`)} after +${Math.round((Date.now() - t0) / 1000)}s`);
+    const crashedRow = await until(async () => /crashed.*exit 3/i.test(await text(win, `${card('app_boom')} .state-cell`)), 4000, 'crashed row').then(() => true, () => false);
+    const crashedAfter = Date.now() - t0;
+    check('row says Crashed with the exit code within 4s of the toast', crashedRow, `${await text(win, `${card('app_boom')} .state-cell`)} after +${(crashedAfter / 1000).toFixed(1)}s`);
     await win.click('.crash-toast-btn:has-text("Ask Claude")');
     await until(async () => /^Sent to/.test(await text(win, '.crash-toast-btn.primary')), 10000, 'Ask Claude sent');
     const inbox = JSON.parse(fs.readFileSync(configFile.inboxPathFor(world.configPath, 'a3f2-session'), 'utf8'));
@@ -111,6 +114,23 @@ async function main() {
     await win.click('.crash-toast-btn:has-text("Restart")');
     await win.waitForSelector('.crash-toast', { state: 'detached', timeout: 8000 });
     check('Restart dismisses the toast and starts the app again', true);
+    // The new run gets its own countdown: Starting, never the old run's Crashed, until it
+    // dies again (boom exits ~0.6 s after every start, so a second toast follows).
+    const wordOf = () => text(win, `${card('app_boom')} .state-word`);
+    const seen = [];
+    const second = Date.now() + 20000;
+    let sawStarting = false;
+    while (Date.now() < second && !/crashed 2x/.test(await win.$$eval('.crash-toast-title', (ts) => ts.map((t) => t.textContent).join(' ')))) {
+      const w = await wordOf();
+      if (/starting/i.test(w)) sawStarting = true;
+      if (sawStarting) seen.push(w);
+      await h.sleep(100);
+    }
+    check('Restart shows Starting for the new run', sawStarting);
+    check('no stale Crashed while the new run is starting', sawStarting && !seen.some((w) => /crashed/i.test(w)), [...new Set(seen)].join(' | '));
+    const t1 = Date.now();
+    const crashedAgain = await until(async () => /crashed.*exit 3/i.test(await text(win, `${card('app_boom')} .state-cell`)), 4000, 'crashed again').then(() => true, () => false);
+    check('the second crash ends the new countdown too', crashedAgain, `after +${((Date.now() - t1) / 1000).toFixed(1)}s`);
 
     // ---- History: Re-run this version ----------------------------------------
     console.log('step: history re-run');
