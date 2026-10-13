@@ -16,7 +16,7 @@ const { scanPorts, checkPort, findAvailablePort } = require('../main/portScanner
 const {
   startApp, stopApp, killProcess, killByPort, getRunningApps, getAppLogs
 } = require('../main/processManager');
-const { matchPortsToApps, getProcessDetails, detectWorktrees, detectStaleWorktrees } = require('../main/ipcHandlers');
+const { matchPortsWithOwnership, getProcessDetails, detectWorktrees, detectStaleWorktrees } = require('../main/ipcHandlers');
 const { probe } = require('../main/healthCheck');
 const { shareInfo } = require('../main/shareInfo');
 const reserver = require('../main/portReserver');
@@ -34,7 +34,7 @@ function createDispatcher(configStore, { surface = 'web' } = {}) {
     'ports:scan': async () => ({ success: true, ports: await scanPorts() }),
     'ports:scanWithApps': async () => {
       const ports = await scanPorts();
-      const { matches, unknownConflicts } = matchPortsToApps(ports, configStore.getApps());
+      const { matches, unknownConflicts } = await matchPortsWithOwnership(ports, configStore.getApps());
       return { success: true, ports, matches, unknownConflicts };
     },
     'ports:check': async (port) => {
