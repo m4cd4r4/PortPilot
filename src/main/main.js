@@ -7,6 +7,7 @@ let mainWindow = null;
 let tray = null;
 let webAgent = null;  // opt-in loopback web agent (Option C), shares this process's configStore
 let mcpServer = null; // shared HTTP MCP server: one process for every Claude session, vs one stdio child per session
+let localhostWatcher = null; // records every localhost dev server into the run history (setting autoTrackLocalhost)
 
 /** Create the main application window */
 function createWindow(configStore) {
@@ -117,6 +118,21 @@ function createTray() {
   });
 }
 
+/**
+ * Auto-track localhost dev servers. Two test-only environment seams: a scan interval and a
+ * port list the watcher is limited to (so a test never records the developer's real servers).
+ */
+function startLocalhostTracking() {
+  const interval = Number(process.env.PORTPILOT_DETECT_INTERVAL_MS);
+  const only = String(process.env.PORTPILOT_DETECT_ONLY_PORTS || '').split(',').map(Number).filter((p) => p > 0);
+  const mcpPort = Number(process.env.PORTPILOT_MCP_PORT) || 8788;
+  localhostWatcher = require('./localhostWatcher').startLocalhostWatcher(configStore, {
+    intervalMs: interval >= 1000 ? interval : undefined,
+    onlyPorts: only,
+    ownPorts: () => [mcpPort, webAgent ? webAgent.getInfo().port : null].filter(Boolean),
+  });
+}
+
 // App lifecycle
 let configStore;
 
@@ -196,6 +212,7 @@ if (!gotTheLock) {
     // launch, then hourly; the sweep itself only runs when a week has passed).
     try {
       require('./thumbnails').startThumbnailWatcher(configStore.configPath);
+      startLocalhostTracking();
       const { sweepIfDue } = require('../core/runSweep');
       const sweepTimer = setTimeout(function again() {
         sweepIfDue(configStore.configPath).finally(() => setTimeout(again, 60 * 60 * 1000).unref());
@@ -320,6 +337,8 @@ app.on('before-quit', async (event) => {
 
   // Drop all port reservations so we don't leave sockets held after exit.
   try { await require('./portReserver').releaseAll(); } catch (err) { console.error('Error releasing reservations:', err); }
+
+  if (localhostWatcher) { localhostWatcher.stop(); localhostWatcher = null; }
 
   // Stop the web agent if it was enabled
   if (webAgent) {

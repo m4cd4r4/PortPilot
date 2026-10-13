@@ -418,6 +418,7 @@ function setupEventListeners() {
   document.getElementById('setting-notify-crash').addEventListener('change', saveSettings);
   document.getElementById('setting-auto-register').addEventListener('change', saveSettings);
   document.getElementById('setting-row-previews').addEventListener('change', saveSettings);
+  document.getElementById('setting-auto-track').addEventListener('change', saveSettings);
   document.getElementById('btn-export').addEventListener('click', exportConfig);
   document.getElementById('btn-import').addEventListener('click', importConfig);
 
@@ -2521,6 +2522,7 @@ async function loadSettings() {
     document.getElementById('setting-open-at-login').checked = state.settings.openAtLogin !== false;
     document.getElementById('setting-auto-register').checked = state.settings.autoRegister !== false;
     document.getElementById('setting-history-snapshots').checked = state.settings.historySnapshots !== false;
+    document.getElementById('setting-auto-track').checked = state.settings.autoTrackLocalhost !== false;
     document.getElementById('setting-history-max-runs').value = state.settings.historyMaxRuns || 1000;
     document.getElementById('setting-history-max-mb').value = state.settings.historyMaxMB || 150;
     document.getElementById('setting-row-previews').checked = state.settings.rowPreviews !== false;
@@ -2550,6 +2552,7 @@ async function saveSettings() {
     openAtLogin: document.getElementById('setting-open-at-login').checked,
     autoRegister: document.getElementById('setting-auto-register').checked,
     historySnapshots: document.getElementById('setting-history-snapshots').checked,
+    autoTrackLocalhost: document.getElementById('setting-auto-track').checked,
     historyMaxRuns: Math.max(10, parseInt(document.getElementById('setting-history-max-runs').value) || 1000),
     historyMaxMB: Math.max(10, parseInt(document.getElementById('setting-history-max-mb').value) || 150),
     rowPreviews: document.getElementById('setting-row-previews').checked
