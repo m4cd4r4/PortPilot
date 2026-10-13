@@ -12,7 +12,7 @@ Unit checks (`npm run test:unit`, `npm run test:mcp`) cover the logic; these sce
 |---|---|---|---|
 | An app is stopped, then started from its row | Read the row's state cell before and after clicking Start | `Stopped`, then `Running` with an uptime and `you` | `tests/desktop-apps.e2e.js` |
 | Claude started an app (MCP stamps the runtime sidecar) | Reload the list after a `claude` / `mcp` start is recorded for the live pid | The state cell reads `claude a3f2`, the short session id | `desktop-apps.e2e.js` |
-| A running app has served a page | Wait for the row after the first thumbnail capture | One 32 x 18 preview on the running row, none on stopped rows | `desktop-apps.e2e.js` |
+| A running app has served a page | Wait for the row after the first thumbnail capture | One 32 x 18 preview on the running row, none on stopped rows; hovering or focusing it opens a 256 x 144 popover without changing the row height | `desktop-apps.e2e.js`, `desktop-preview.e2e.js` |
 | A stranger process holds an app's port | Start a node server on the port, rescan | `Port blocked` row, a strip naming `:port`, the holder and its PID, and the actions Use free port, Kill & start, Show process in that order | `desktop-apps.e2e.js` |
 | You press Kill & start | Click twice (the first only arms it), check the stranger's pid | The stranger is gone and the app is `Running` on its own port | `desktop-apps.e2e.js` |
 | An app exits non-zero seconds after starting | Watch for the toast, then the row | A sticky toast: `<app> crashed`, `:port · exit N`, the last output lines, Restart / Logs / Ask Claude / Dismiss; the row later reads `Crashed exit N` | `desktop-apps.e2e.js` |

@@ -32,12 +32,81 @@
     const cur = byApp[app.id];
     const url = cur && portMatches(app.id, cur) && cache.get(cur.id);
     if (!url) return '';
-    const label = `Page preview of ${escapeHtml(app.name)}`;
-    return `<span class="row-thumb" title="${label}"><img src="${url}" alt="${label}" width="${W}" height="${H}" decoding="sync"></span>`;
+    // role=img + aria-label names the whole control; tabindex lets the keyboard open the large preview.
+    const label = `Page preview of ${escapeHtml(app.name)}, hover or focus to enlarge`;
+    return `<span class="row-thumb" role="img" tabindex="0" aria-label="${label}" data-app="${escapeHtml(app.id)}"><img src="${url}" alt="" width="${W}" height="${H}" decoding="sync"></span>`;
   }
+
+  // ---- Large preview (hover / keyboard focus) ----
+  // One shared popover on <body>, position:fixed, so it cannot change a row's height or
+  // be clipped by the list. It shows the very pixels already in the thumbnail's <img>
+  // (the stored 480 px history thumbnail), so no second capture or fetch exists.
+  const PW = 256;
+  const PH = 144;
+  const GAP = 6;
+  const MARGIN = 8;
+  let pop = null;
+  let shownId = null;
+
+  function popover() {
+    if (pop) return pop;
+    pop = document.createElement('div');
+    pop.id = 'row-preview';
+    pop.setAttribute('aria-hidden', 'true'); // the thumbnail carries the accessible name
+    pop.innerHTML = '<img alt="" width="' + PW + '" height="' + PH + '">';
+    document.body.appendChild(pop);
+    return pop;
+  }
+
+  function place(anchor) {
+    const p = popover();
+    const r = anchor.getBoundingClientRect();
+    const vw = document.documentElement.clientWidth;
+    const vh = document.documentElement.clientHeight;
+    // Below the thumbnail when it fits, else above; then clamped on screen.
+    let top = r.bottom + GAP;
+    if (top + PH > vh - MARGIN) top = r.top - GAP - PH;
+    top = Math.max(MARGIN, Math.min(top, vh - PH - MARGIN));
+    const left = Math.max(MARGIN, Math.min(r.left, vw - PW - MARGIN));
+    p.style.top = `${Math.round(top)}px`;
+    p.style.left = `${Math.round(left)}px`;
+  }
+
+  function show(anchor) {
+    const img = anchor.querySelector('img');
+    if (!enabled() || !img || !img.src) return hide();
+    const p = popover();
+    const big = p.firstChild;
+    if (big.src !== img.src) big.src = img.src;
+    shownId = anchor.dataset.app || null;
+    place(anchor);
+    p.classList.add('open');
+  }
+
+  function hide() {
+    shownId = null;
+    if (pop) pop.classList.remove('open');
+  }
+
+  /** Rows are rebuilt on every refresh: follow the same app's new thumbnail, or hide. */
+  function reanchor() {
+    if (!shownId) return;
+    const t = enabled() && document.querySelector(`.row-thumb[data-app="${CSS.escape(shownId)}"]`);
+    if (t && (t.matches(':hover') || t === document.activeElement)) show(t); else hide();
+  }
+
+  const thumbOf = (e) => (e.target && e.target.closest ? e.target.closest('.row-thumb') : null);
+  document.addEventListener('mouseover', (e) => { const t = thumbOf(e); if (t) show(t); });
+  document.addEventListener('mouseout', (e) => { const t = thumbOf(e); if (t && !t.contains(e.relatedTarget)) hide(); });
+  document.addEventListener('focusin', (e) => { const t = thumbOf(e); if (t) show(t); });
+  document.addEventListener('focusout', (e) => { if (thumbOf(e)) hide(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') hide(); });
+  window.addEventListener('scroll', hide, true);
+  window.addEventListener('resize', hide);
 
   /** Fetch pixels for visible running rows that lack them; re-render once they land. */
   async function sync() {
+    reanchor(); // renderApps just rebuilt the rows
     if (!enabled()) return;
     const need = Object.entries(byApp).filter(([id, cur]) =>
       !cache.has(cur.id) && !asked.has(`${cur.id}:${cur.thumb}`) && isRunning(id) && visibleCard(id)).slice(0, BATCH);
@@ -76,7 +145,7 @@
 
   /** The Settings toggle changed: redraw now, fetch if it was just turned on. */
   function settingChanged() {
-    if (!enabled()) { byApp = {}; cache.clear(); asked.clear(); renderApps(); return; }
+    if (!enabled()) { hide(); byApp = {}; cache.clear(); asked.clear(); renderApps(); return; }
     refresh().then(renderApps);
   }
 

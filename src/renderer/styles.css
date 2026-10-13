@@ -226,6 +226,15 @@ body {
   align-items: center;
 }
 
+/* Phone width: title and buttons already fill the row (the search box was left
+   about 30px of text, "Searc"), so the search field takes its own full-width row. */
+@media (max-width: 600px) {
+  .header { flex-wrap: wrap; row-gap: 8px; }
+  .header-right { margin-left: auto; }
+  .header-center { order: 3; flex: 1 0 100%; }
+  .search-wrapper { max-width: none; }
+}
+
 /* ============ Buttons ============ */
 .btn {
   display: inline-flex;
@@ -1394,6 +1403,38 @@ body {
    the port matters more than a picture. */
 @media (max-width: 600px) {
   .row-thumb { display: none; }
+  #row-preview { display: none; }
+}
+.row-thumb:focus-visible { outline: 2px solid var(--accent-cyan); outline-offset: 1px; }
+
+/* Large preview of the same image, shown on hover or keyboard focus of the thumbnail.
+   Fixed on <body> (rowThumbs.js sets top/left), so it never changes a row's height.
+   256 x 144 is 16:9 like the 32 x 18 thumbnail. */
+#row-preview {
+  position: fixed;
+  z-index: 120;
+  box-sizing: border-box;
+  width: 256px;
+  height: 144px;
+  overflow: hidden;
+  line-height: 0;
+  border-radius: var(--radius);
+  background: var(--bg-tertiary);
+  border: var(--border-width) solid var(--border-color);
+  box-shadow: var(--shadow), 0 8px 24px rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 0.12s ease, visibility 0s linear 0.12s;
+}
+#row-preview.open {
+  visibility: visible;
+  opacity: 1;
+  transition: opacity 0.12s ease;
+}
+#row-preview img { width: 100%; height: 100%; object-fit: cover; object-position: top; display: block; }
+@media (prefers-reduced-motion: reduce) {
+  #row-preview, #row-preview.open { transition: none; }
 }
 
 /* Row state cell (UX A1): shape + word, then uptime / reason / provenance.
