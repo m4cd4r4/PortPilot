@@ -31,6 +31,7 @@ const FILES = [
   'core/configFile.js',
   'core/runHistory.js',
   'core/runApp.js',
+  'core/localhostDetect.js',
   'core/runView.js',
   'core/status.js',
   'main/configStore.js',
