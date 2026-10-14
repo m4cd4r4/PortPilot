@@ -667,6 +667,9 @@ function renderPortRow(p, group) {
   // Adopt promotes an unregistered running port into a managed app. System
   // ports (svchost et al) are never adoption candidates.
   const canAdopt = group !== 'system';
+  // A missing action leaves an empty slot, so every row has the same five columns
+  // and Kill sits at the same x on every row.
+  const slot = '<span class="btn-slot" aria-hidden="true"></span>';
 
   return `
     <div class="port-row" data-port="${p.port}">
@@ -675,13 +678,13 @@ function renderPortRow(p, group) {
         <a class="port-link" data-act="openPortInBrowser" data-port="${p.port}" title="Open localhost:${p.port}">:${p.port}</a>
         ${exposed ? `<span class="port-exposed" title="Listening on all interfaces - network accessible">${icon('globe', 10)}</span>` : ''}
       </span>
-      <span class="port-proc" title="${escapeHtml(proc)}">${escapeHtml(proc)}</span>
+      <span class="port-proc" title="${escapeHtml(proc)}${p.pid ? ` (PID ${p.pid})` : ''}${cmdLine ? `\n${escapeHtml(cmdLine)}` : ''}">${escapeHtml(proc)}</span>
       <span class="port-cmd" title="${escapeHtml(cmdLine)}">${escapeHtml(cmdLine)}</span>
       <span class="port-pid" title="PID ${p.pid || ''}">${p.pid || ''}</span>
       <span class="port-row-actions">
-        ${canAdopt ? `<button class="btn btn-small btn-secondary" data-act="adoptPort" data-port="${p.port}" title="Adopt as app">${icon('plus', 12)}</button>` : ''}
+        ${canAdopt ? `<button class="btn btn-small btn-secondary" data-act="adoptPort" data-port="${p.port}" title="Adopt as app">${icon('plus', 12)}</button>` : slot}
         <button class="btn btn-small btn-secondary" data-act="openPortInBrowser" data-port="${p.port}" title="Open in browser">${icon('browser', 12)}</button>
-        ${exePath ? `<button class="btn btn-small btn-secondary" data-act="openProcessFolder" data-path="${escapeHtml(exePath)}" title="Open folder">${icon('folder', 12)}</button>` : ''}
+        ${exePath ? `<button class="btn btn-small btn-secondary" data-act="openProcessFolder" data-path="${escapeHtml(exePath)}" title="Open folder">${icon('folder', 12)}</button>` : slot}
         <button class="btn btn-small btn-secondary" data-act="copyPort" data-port="${p.port}" title="Copy localhost:${p.port}">${icon('copy', 12)}</button>
         <button class="btn btn-small btn-danger" data-act="killPort" data-port="${p.port}" data-confirm-key="kill-port:${p.port}" title="Kill process">${icon('kill', 12)}</button>
       </span>
