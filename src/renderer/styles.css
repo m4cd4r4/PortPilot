@@ -817,14 +817,69 @@ body {
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
+/* Row actions follow the app rows: hidden at rest, shown on hover or keyboard focus. Five fixed slots (an absent action is an empty .btn-slot) so Kill
+   sits at the same x on every row. Ghost buttons, semantic colour only under the pointer. */
 .port-row-actions {
   display: flex;
-  gap: 3px;
-  opacity: 0.55;
+  gap: 2px;
+  flex-shrink: 0;
+  opacity: 0;
   transition: opacity 0.12s ease;
 }
-.port-row:hover .port-row-actions {
+.port-row:hover .port-row-actions,
+.port-row:focus-within .port-row-actions {
   opacity: 1;
+}
+.port-row-actions .btn,
+.port-row-actions .btn-slot {
+  box-sizing: border-box;
+  width: 26px;
+  height: 19px;
+  justify-content: center;
+}
+.port-row-actions .btn {
+  padding: 0;
+  background: transparent;
+  border-color: transparent;
+  color: var(--text-secondary);
+}
+.port-row-actions .btn:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+.port-row-actions .btn-danger:hover {
+  color: var(--accent-red);
+}
+.port-row-actions .btn:focus-visible {
+  outline: 2px solid var(--accent-cyan);
+  outline-offset: -1px;
+}
+
+/* Narrow width: the command and PID columns go (both are in the row's tooltips and the drawer),
+   and the action group floats over the right edge on hover or focus instead of reserving
+   ~140px while invisible. Same pattern as .app-actions-visible above. */
+@media (max-width: 600px) {
+  .port-row {
+    position: relative;
+    grid-template-columns: 14px auto minmax(0, 1fr);
+  }
+  .port-cmd,
+  .port-pid {
+    display: none;
+  }
+  .port-row-actions {
+    position: absolute;
+    right: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: var(--card-bg);
+    box-shadow: -10px 0 8px var(--card-bg);
+    pointer-events: none;
+  }
+  .port-row:hover .port-row-actions,
+  .port-row:focus-within .port-row-actions {
+    pointer-events: auto;
+  }
 }
 
 /* ============ Apps List ============ */
