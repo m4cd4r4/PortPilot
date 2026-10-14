@@ -61,10 +61,13 @@ async function launch(world, { width = 1440, height = 900 } = {}) {
   process.env.APPDATA = world.tmp; // HOME/USERPROFILE stay real: Chromium crashes at launch without a profile dir
   const { _electron: electron } = require('playwright');
   const [mcpPort] = await freePorts(1);
+  // PORTPILOT_E2E_EXE=<path to an installed PortPilot.exe> runs the spec against the packaged build
+  // (asar contents, bundled modules) instead of the source tree.
+  const packaged = process.env.PORTPILOT_E2E_EXE || '';
   const app = await electron.launch({
-    executablePath: require('electron'),
+    executablePath: packaged || require('electron'),
     // Electron resolves userData from the OS, not APPDATA, so point it at the throwaway dir explicitly.
-    args: [root, `--user-data-dir=${world.configDir}`],
+    args: [...(packaged ? [] : [root]), `--user-data-dir=${world.configDir}`],
     cwd: root,
     // A shell started from VS Code carries ELECTRON_RUN_AS_NODE; an empty value does not clear it.
     env: {
@@ -75,7 +78,11 @@ async function launch(world, { width = 1440, height = 900 } = {}) {
       PORTPILOT_DETECT_ONLY_PORTS: process.env.PORTPILOT_DETECT_ONLY_PORTS || '1',
     },
   });
-  const win = await app.firstWindow();
+  // firstWindow() can return the hidden offscreen window the thumbnail watcher opens at startup when a
+  // run is already open; it is destroyed after one capture, so wait for the real UI window instead.
+  await app.firstWindow();
+  const isUi = (w) => /index\.html/.test(w.url());
+  const win = await until(() => app.windows().find(isUi), 20000, 'the PortPilot window').then(() => app.windows().find(isUi));
   await win.waitForLoadState('domcontentloaded');
   await win.setViewportSize({ width, height });
   const userData = await app.evaluate(({ app: a }) => a.getPath('userData'));
