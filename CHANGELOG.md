@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.9.0] - 2026-10-15
+
+### Added
+- **Now running strip.** The home screen opens on a strip of cards, one per running or detected server: a 16:9 page preview, name, port, branch, a Claude mark when a Claude session owns it, uptime, and Open, Details and Stop. A server with no preview says "No preview yet", "IPv6 only" or "Previews are off". At 390 px the strip is a swipe row.
+- **Home hierarchy.** The strip comes first, then an "Other apps" list, then one collapsed "Everything listening" row.
+- **Home layout setting.** **Settings > Home layout** chooses Preview strip (the default) or Classic list. A saved choice always wins, so only fresh settings move to the strip.
+- **Ctrl+K command palette** (desktop app only; the web portal omits it). Start, stop or open an app, show History for an app, free a port (a second Enter confirms), start or stop a browser profile, go to a tab, scan, or add an app.
+- **The header is the title bar on Windows.** No menu band and no OS title bar. F12, Ctrl+Shift+I, F11 and Ctrl+=, Ctrl+-, Ctrl+0 still work; Ctrl+R stays Scan.
+
+### Changed
+- History and Browsers rows use the card radius and elevation of the active theme.
+- Detected and claimed chips match the chip on the strip cards.
+- Port rows have five fixed action slots; the ghost buttons show on hover or keyboard focus.
+
+### Fixed
+- Copy and Kill on a port row were cut off at 390 px.
+- The web portal returned 404 for `core/nowStrip.js`.
+
 ## [3.8.2] - 2026-10-14
 
 ### Added

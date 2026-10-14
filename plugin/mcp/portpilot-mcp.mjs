@@ -34,9 +34,9 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
   mod
 ));
 
-// mcp-server/node_modules/ajv/dist/compile/codegen/code.js
+// ../PortPilot-2026/mcp-server/node_modules/ajv/dist/compile/codegen/code.js
 var require_code = __commonJS({
-  "mcp-server/node_modules/ajv/dist/compile/codegen/code.js"(exports) {
+  "../PortPilot-2026/mcp-server/node_modules/ajv/dist/compile/codegen/code.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.regexpCode = exports.getEsmExportName = exports.getProperty = exports.safeStringify = exports.stringify = exports.strConcat = exports.addCodeArg = exports.str = exports._ = exports.nil = exports._Code = exports.Name = exports.IDENTIFIER = exports._CodeOrName = void 0;
@@ -188,9 +188,9 @@ var require_code = __commonJS({
   }
 });
 
-// mcp-server/node_modules/ajv/dist/compile/codegen/scope.js
+// ../PortPilot-2026/mcp-server/node_modules/ajv/dist/compile/codegen/scope.js
 var require_scope = __commonJS({
-  "mcp-server/node_modules/ajv/dist/compile/codegen/scope.js"(exports) {
+  "../PortPilot-2026/mcp-server/node_modules/ajv/dist/compile/codegen/scope.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.ValueScope = exports.ValueScopeName = exports.Scope = exports.varKinds = exports.UsedValueState = void 0;
@@ -333,9 +333,9 @@ var require_scope = __commonJS({
   }
 });
 
-// mcp-server/node_modules/ajv/dist/compile/codegen/index.js
+// ../PortPilot-2026/mcp-server/node_modules/ajv/dist/compile/codegen/index.js
 var require_codegen = __commonJS({
-  "mcp-server/node_modules/ajv/dist/compile/codegen/index.js"(exports) {
+  "../PortPilot-2026/mcp-server/node_modules/ajv/dist/compile/codegen/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.or = exports.and = exports.not = exports.CodeGen = exports.operators = exports.varKinds = exports.ValueScopeName = exports.ValueScope = exports.Scope = exports.Name = exports.regexpCode = exports.stringify = exports.getProperty = exports.nil = exports.strConcat = exports.str = exports._ = void 0;
@@ -411,11 +411,11 @@ var require_codegen = __commonJS({
         const rhs = this.rhs === void 0 ? "" : ` = ${this.rhs}`;
         return `${varKind} ${this.name}${rhs};` + _n;
       }
-      optimizeNames(names, constants2) {
+      optimizeNames(names, constants) {
         if (!names[this.name.str])
           return;
         if (this.rhs)
-          this.rhs = optimizeExpr(this.rhs, names, constants2);
+          this.rhs = optimizeExpr(this.rhs, names, constants);
         return this;
       }
       get names() {
@@ -432,10 +432,10 @@ var require_codegen = __commonJS({
       render({ _n }) {
         return `${this.lhs} = ${this.rhs};` + _n;
       }
-      optimizeNames(names, constants2) {
+      optimizeNames(names, constants) {
         if (this.lhs instanceof code_1.Name && !names[this.lhs.str] && !this.sideEffects)
           return;
-        this.rhs = optimizeExpr(this.rhs, names, constants2);
+        this.rhs = optimizeExpr(this.rhs, names, constants);
         return this;
       }
       get names() {
@@ -496,8 +496,8 @@ var require_codegen = __commonJS({
       optimizeNodes() {
         return `${this.code}` ? this : void 0;
       }
-      optimizeNames(names, constants2) {
-        this.code = optimizeExpr(this.code, names, constants2);
+      optimizeNames(names, constants) {
+        this.code = optimizeExpr(this.code, names, constants);
         return this;
       }
       get names() {
@@ -526,12 +526,12 @@ var require_codegen = __commonJS({
         }
         return nodes.length > 0 ? this : void 0;
       }
-      optimizeNames(names, constants2) {
+      optimizeNames(names, constants) {
         const { nodes } = this;
         let i = nodes.length;
         while (i--) {
           const n = nodes[i];
-          if (n.optimizeNames(names, constants2))
+          if (n.optimizeNames(names, constants))
             continue;
           subtractNames(names, n.names);
           nodes.splice(i, 1);
@@ -584,12 +584,12 @@ var require_codegen = __commonJS({
           return void 0;
         return this;
       }
-      optimizeNames(names, constants2) {
+      optimizeNames(names, constants) {
         var _a;
-        this.else = (_a = this.else) === null || _a === void 0 ? void 0 : _a.optimizeNames(names, constants2);
-        if (!(super.optimizeNames(names, constants2) || this.else))
+        this.else = (_a = this.else) === null || _a === void 0 ? void 0 : _a.optimizeNames(names, constants);
+        if (!(super.optimizeNames(names, constants) || this.else))
           return;
-        this.condition = optimizeExpr(this.condition, names, constants2);
+        this.condition = optimizeExpr(this.condition, names, constants);
         return this;
       }
       get names() {
@@ -612,10 +612,10 @@ var require_codegen = __commonJS({
       render(opts) {
         return `for(${this.iteration})` + super.render(opts);
       }
-      optimizeNames(names, constants2) {
-        if (!super.optimizeNames(names, constants2))
+      optimizeNames(names, constants) {
+        if (!super.optimizeNames(names, constants))
           return;
-        this.iteration = optimizeExpr(this.iteration, names, constants2);
+        this.iteration = optimizeExpr(this.iteration, names, constants);
         return this;
       }
       get names() {
@@ -651,10 +651,10 @@ var require_codegen = __commonJS({
       render(opts) {
         return `for(${this.varKind} ${this.name} ${this.loop} ${this.iterable})` + super.render(opts);
       }
-      optimizeNames(names, constants2) {
-        if (!super.optimizeNames(names, constants2))
+      optimizeNames(names, constants) {
+        if (!super.optimizeNames(names, constants))
           return;
-        this.iterable = optimizeExpr(this.iterable, names, constants2);
+        this.iterable = optimizeExpr(this.iterable, names, constants);
         return this;
       }
       get names() {
@@ -696,11 +696,11 @@ var require_codegen = __commonJS({
         (_b = this.finally) === null || _b === void 0 ? void 0 : _b.optimizeNodes();
         return this;
       }
-      optimizeNames(names, constants2) {
+      optimizeNames(names, constants) {
         var _a, _b;
-        super.optimizeNames(names, constants2);
-        (_a = this.catch) === null || _a === void 0 ? void 0 : _a.optimizeNames(names, constants2);
-        (_b = this.finally) === null || _b === void 0 ? void 0 : _b.optimizeNames(names, constants2);
+        super.optimizeNames(names, constants);
+        (_a = this.catch) === null || _a === void 0 ? void 0 : _a.optimizeNames(names, constants);
+        (_b = this.finally) === null || _b === void 0 ? void 0 : _b.optimizeNames(names, constants);
         return this;
       }
       get names() {
@@ -1001,7 +1001,7 @@ var require_codegen = __commonJS({
     function addExprNames(names, from) {
       return from instanceof code_1._CodeOrName ? addNames(names, from.names) : names;
     }
-    function optimizeExpr(expr, names, constants2) {
+    function optimizeExpr(expr, names, constants) {
       if (expr instanceof code_1.Name)
         return replaceName(expr);
       if (!canOptimize(expr))
@@ -1016,14 +1016,14 @@ var require_codegen = __commonJS({
         return items;
       }, []));
       function replaceName(n) {
-        const c = constants2[n.str];
+        const c = constants[n.str];
         if (c === void 0 || names[n.str] !== 1)
           return n;
         delete names[n.str];
         return c;
       }
       function canOptimize(e) {
-        return e instanceof code_1._Code && e._items.some((c) => c instanceof code_1.Name && names[c.str] === 1 && constants2[c.str] !== void 0);
+        return e instanceof code_1._Code && e._items.some((c) => c instanceof code_1.Name && names[c.str] === 1 && constants[c.str] !== void 0);
       }
     }
     function subtractNames(names, from) {
@@ -1053,9 +1053,9 @@ var require_codegen = __commonJS({
   }
 });
 
-// mcp-server/node_modules/ajv/dist/compile/util.js
+// ../PortPilot-2026/mcp-server/node_modules/ajv/dist/compile/util.js
 var require_util = __commonJS({
-  "mcp-server/node_modules/ajv/dist/compile/util.js"(exports) {
+  "../PortPilot-2026/mcp-server/node_modules/ajv/dist/compile/util.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.checkStrictMode = exports.getErrorPath = exports.Type = exports.useFunc = exports.setEvaluated = exports.evaluatedPropsToName = exports.mergeEvaluated = exports.eachItem = exports.unescapeJsonPointer = exports.escapeJsonPointer = exports.escapeFragment = exports.unescapeFragment = exports.schemaRefOrVal = exports.schemaHasRulesButRef = exports.schemaHasRules = exports.checkUnknownRules = exports.alwaysValidSchema = exports.toHash = void 0;
@@ -1220,9 +1220,9 @@ var require_util = __commonJS({
   }
 });
 
-// mcp-server/node_modules/ajv/dist/compile/names.js
+// ../PortPilot-2026/mcp-server/node_modules/ajv/dist/compile/names.js
 var require_names = __commonJS({
-  "mcp-server/node_modules/ajv/dist/compile/names.js"(exports) {
+  "../PortPilot-2026/mcp-server/node_modules/ajv/dist/compile/names.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -1259,9 +1259,9 @@ var require_names = __commonJS({
   }
 });
 
-// mcp-server/node_modules/ajv/dist/compile/errors.js
+// ../PortPilot-2026/mcp-server/node_modules/ajv/dist/compile/errors.js
 var require_errors = __commonJS({
-  "mcp-server/node_modules/ajv/dist/compile/errors.js"(exports) {
+  "../PortPilot-2026/mcp-server/node_modules/ajv/dist/compile/errors.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.extendErrors = exports.resetErrorsCount = exports.reportExtraError = exports.reportError = exports.keyword$DataError = exports.keywordError = void 0;
@@ -1381,9 +1381,9 @@ var require_errors = __commonJS({
   }
 });
 
-// mcp-server/node_modules/ajv/dist/compile/validate/boolSchema.js
+// ../PortPilot-2026/mcp-server/node_modules/ajv/dist/compile/validate/boolSchema.js
 var require_boolSchema = __commonJS({
-  "mcp-server/node_modules/ajv/dist/compile/validate/boolSchema.js"(exports) {
+  "../PortPilot-2026/mcp-server/node_modules/ajv/dist/compile/validate/boolSchema.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.boolOrEmptySchema = exports.topBoolOrEmptySchema = void 0;
@@ -1432,9 +1432,9 @@ var require_boolSchema = __commonJS({
   }
 });
 
-// mcp-server/node_modules/ajv/dist/compile/rules.js
+// ../PortPilot-2026/mcp-server/node_modules/ajv/dist/compile/rules.js
 var require_rules = __commonJS({
-  "mcp-server/node_modules/ajv/dist/compile/rules.js"(exports) {
+  "../PortPilot-2026/mcp-server/node_modules/ajv/dist/compile/rules.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.getRules = exports.isJSONType = void 0;
@@ -1463,9 +1463,9 @@ var require_rules = __commonJS({
   }
 });
 
-// mcp-server/node_modules/ajv/dist/compile/validate/applicability.js
+// ../PortPilot-2026/mcp-server/node_modules/ajv/dist/compile/validate/applicability.js
 var require_applicability = __commonJS({
-  "mcp-server/node_modules/ajv/dist/compile/validate/applicability.js"(exports) {
+  "../PortPilot-2026/mcp-server/node_modules/ajv/dist/compile/validate/applicability.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.shouldUseRule = exports.shouldUseGroup = exports.schemaHasRulesForType = void 0;
@@ -1486,9 +1486,9 @@ var require_applicability = __commonJS({
   }
 });
 
-// mcp-server/node_modules/ajv/dist/compile/validate/dataType.js
+// ../PortPilot-2026/mcp-server/node_modules/ajv/dist/compile/validate/dataType.js
 var require_dataType = __commonJS({
-  "mcp-server/node_modules/ajv/dist/compile/validate/dataType.js"(exports) {
+  "../PortPilot-2026/mcp-server/node_modules/ajv/dist/compile/validate/dataType.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.reportTypeError = exports.checkDataTypes = exports.checkDataType = exports.coerceAndCheckDataType = exports.getJSONTypes = exports.getSchemaTypes = exports.DataType = void 0;
@@ -1670,9 +1670,9 @@ var require_dataType = __commonJS({
   }
 });
 
-// mcp-server/node_modules/ajv/dist/compile/validate/defaults.js
+// ../PortPilot-2026/mcp-server/node_modules/ajv/dist/compile/validate/defaults.js
 var require_defaults = __commonJS({
-  "mcp-server/node_modules/ajv/dist/compile/validate/defaults.js"(exports) {
+  "../PortPilot-2026/mcp-server/node_modules/ajv/dist/compile/validate/defaults.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.assignDefaults = void 0;
@@ -1707,9 +1707,9 @@ var require_defaults = __commonJS({
   }
 });
 
-// mcp-server/node_modules/ajv/dist/vocabularies/code.js
+// ../PortPilot-2026/mcp-server/node_modules/ajv/dist/vocabularies/code.js
 var require_code2 = __commonJS({
-  "mcp-server/node_modules/ajv/dist/vocabularies/code.js"(exports) {
+  "../PortPilot-2026/mcp-server/node_modules/ajv/dist/vocabularies/code.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.validateUnion = exports.validateArray = exports.usePattern = exports.callValidateCode = exports.schemaProperties = exports.allSchemaProperties = exports.noPropertyInData = exports.propertyInData = exports.isOwnProperty = exports.hasPropFunc = exports.reportMissingProp = exports.checkMissingProp = exports.checkReportMissingProp = void 0;
@@ -1840,9 +1840,9 @@ var require_code2 = __commonJS({
   }
 });
 
-// mcp-server/node_modules/ajv/dist/compile/validate/keyword.js
+// ../PortPilot-2026/mcp-server/node_modules/ajv/dist/compile/validate/keyword.js
 var require_keyword = __commonJS({
-  "mcp-server/node_modules/ajv/dist/compile/validate/keyword.js"(exports) {
+  "../PortPilot-2026/mcp-server/node_modules/ajv/dist/compile/validate/keyword.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.validateKeywordUsage = exports.validSchemaType = exports.funcKeywordCode = exports.macroKeywordCode = void 0;
@@ -1958,9 +1958,9 @@ var require_keyword = __commonJS({
   }
 });
 
-// mcp-server/node_modules/ajv/dist/compile/validate/subschema.js
+// ../PortPilot-2026/mcp-server/node_modules/ajv/dist/compile/validate/subschema.js
 var require_subschema = __commonJS({
-  "mcp-server/node_modules/ajv/dist/compile/validate/subschema.js"(exports) {
+  "../PortPilot-2026/mcp-server/node_modules/ajv/dist/compile/validate/subschema.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.extendSubschemaMode = exports.extendSubschemaData = exports.getSubschema = void 0;
@@ -2041,9 +2041,9 @@ var require_subschema = __commonJS({
   }
 });
 
-// mcp-server/node_modules/fast-deep-equal/index.js
+// ../PortPilot-2026/mcp-server/node_modules/fast-deep-equal/index.js
 var require_fast_deep_equal = __commonJS({
-  "mcp-server/node_modules/fast-deep-equal/index.js"(exports, module) {
+  "../PortPilot-2026/mcp-server/node_modules/fast-deep-equal/index.js"(exports, module) {
     "use strict";
     module.exports = function equal(a, b) {
       if (a === b) return true;
@@ -2076,9 +2076,9 @@ var require_fast_deep_equal = __commonJS({
   }
 });
 
-// mcp-server/node_modules/json-schema-traverse/index.js
+// ../PortPilot-2026/mcp-server/node_modules/json-schema-traverse/index.js
 var require_json_schema_traverse = __commonJS({
-  "mcp-server/node_modules/json-schema-traverse/index.js"(exports, module) {
+  "../PortPilot-2026/mcp-server/node_modules/json-schema-traverse/index.js"(exports, module) {
     "use strict";
     var traverse = module.exports = function(schema, opts, cb) {
       if (typeof opts == "function") {
@@ -2164,9 +2164,9 @@ var require_json_schema_traverse = __commonJS({
   }
 });
 
-// mcp-server/node_modules/ajv/dist/compile/resolve.js
+// ../PortPilot-2026/mcp-server/node_modules/ajv/dist/compile/resolve.js
 var require_resolve = __commonJS({
-  "mcp-server/node_modules/ajv/dist/compile/resolve.js"(exports) {
+  "../PortPilot-2026/mcp-server/node_modules/ajv/dist/compile/resolve.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.getSchemaRefs = exports.resolveUrl = exports.normalizeId = exports._getFullPath = exports.getFullPath = exports.inlineRef = void 0;
@@ -2320,9 +2320,9 @@ var require_resolve = __commonJS({
   }
 });
 
-// mcp-server/node_modules/ajv/dist/compile/validate/index.js
+// ../PortPilot-2026/mcp-server/node_modules/ajv/dist/compile/validate/index.js
 var require_validate = __commonJS({
-  "mcp-server/node_modules/ajv/dist/compile/validate/index.js"(exports) {
+  "../PortPilot-2026/mcp-server/node_modules/ajv/dist/compile/validate/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.getData = exports.KeywordCxt = exports.validateFunctionCode = void 0;
@@ -2828,9 +2828,9 @@ var require_validate = __commonJS({
   }
 });
 
-// mcp-server/node_modules/ajv/dist/runtime/validation_error.js
+// ../PortPilot-2026/mcp-server/node_modules/ajv/dist/runtime/validation_error.js
 var require_validation_error = __commonJS({
-  "mcp-server/node_modules/ajv/dist/runtime/validation_error.js"(exports) {
+  "../PortPilot-2026/mcp-server/node_modules/ajv/dist/runtime/validation_error.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var ValidationError = class extends Error {
@@ -2844,9 +2844,9 @@ var require_validation_error = __commonJS({
   }
 });
 
-// mcp-server/node_modules/ajv/dist/compile/ref_error.js
+// ../PortPilot-2026/mcp-server/node_modules/ajv/dist/compile/ref_error.js
 var require_ref_error = __commonJS({
-  "mcp-server/node_modules/ajv/dist/compile/ref_error.js"(exports) {
+  "../PortPilot-2026/mcp-server/node_modules/ajv/dist/compile/ref_error.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var resolve_1 = require_resolve();
@@ -2861,9 +2861,9 @@ var require_ref_error = __commonJS({
   }
 });
 
-// mcp-server/node_modules/ajv/dist/compile/index.js
+// ../PortPilot-2026/mcp-server/node_modules/ajv/dist/compile/index.js
 var require_compile = __commonJS({
-  "mcp-server/node_modules/ajv/dist/compile/index.js"(exports) {
+  "../PortPilot-2026/mcp-server/node_modules/ajv/dist/compile/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.resolveSchema = exports.getCompilingSchema = exports.resolveRef = exports.compileSchema = exports.SchemaEnv = void 0;
@@ -3085,9 +3085,9 @@ var require_compile = __commonJS({
   }
 });
 
-// mcp-server/node_modules/ajv/dist/refs/data.json
+// ../PortPilot-2026/mcp-server/node_modules/ajv/dist/refs/data.json
 var require_data = __commonJS({
-  "mcp-server/node_modules/ajv/dist/refs/data.json"(exports, module) {
+  "../PortPilot-2026/mcp-server/node_modules/ajv/dist/refs/data.json"(exports, module) {
     module.exports = {
       $id: "https://raw.githubusercontent.com/ajv-validator/ajv/master/lib/refs/data.json#",
       description: "Meta-schema for $data reference (JSON AnySchema extension proposal)",
@@ -3104,34 +3104,12 @@ var require_data = __commonJS({
   }
 });
 
-// mcp-server/node_modules/fast-uri/lib/utils.js
+// ../PortPilot-2026/mcp-server/node_modules/fast-uri/lib/utils.js
 var require_utils = __commonJS({
-  "mcp-server/node_modules/fast-uri/lib/utils.js"(exports, module) {
+  "../PortPilot-2026/mcp-server/node_modules/fast-uri/lib/utils.js"(exports, module) {
     "use strict";
     var isUUID = RegExp.prototype.test.bind(/^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/iu);
     var isIPv4 = RegExp.prototype.test.bind(/^(?:(?:25[0-5]|2[0-4]\d|1\d{2}|[1-9]\d|\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d{2}|[1-9]\d|\d)$/u);
-    var isPort = RegExp.prototype.test.bind(/^\d*$/u);
-    var isHexPair = RegExp.prototype.test.bind(/^[\da-f]{2}$/iu);
-    var isUnreserved = RegExp.prototype.test.bind(/^[\da-z\-._~]$/iu);
-    var isPathCharacter = RegExp.prototype.test.bind(/^[A-Za-z0-9\-._~!$&'()*+,;=:@/]$/u);
-    var isQueryFragmentCharacter = RegExp.prototype.test.bind(/^[A-Za-z0-9\-._~!$&'()*+,;=:@/?]$/u);
-    var isUserinfoCharacter = RegExp.prototype.test.bind(/^[A-Za-z0-9\-._~!$&'()*+,;=:]$/u);
-    var BYTE_HEX = new Array(256);
-    {
-      const HEX_DIGITS = "0123456789ABCDEF";
-      for (let i = 0; i < 256; i++) {
-        BYTE_HEX[i] = "%" + HEX_DIGITS[i >> 4] + HEX_DIGITS[i & 15];
-      }
-    }
-    function percentEncodeNonAscii(cp) {
-      if (cp < 2048) {
-        return BYTE_HEX[192 | cp >> 6] + BYTE_HEX[128 | cp & 63];
-      }
-      if (cp < 65536) {
-        return BYTE_HEX[224 | cp >> 12] + BYTE_HEX[128 | cp >> 6 & 63] + BYTE_HEX[128 | cp & 63];
-      }
-      return BYTE_HEX[240 | cp >> 18] + BYTE_HEX[128 | cp >> 12 & 63] + BYTE_HEX[128 | cp >> 6 & 63] + BYTE_HEX[128 | cp & 63];
-    }
     function stringArrayToHexStripped(input) {
       let acc = "";
       let code = 0;
@@ -3156,105 +3134,91 @@ var require_utils = __commonJS({
       }
       return acc;
     }
-    var isHextet = RegExp.prototype.test.bind(/^[\dA-Fa-f]{1,4}$/);
-    var isIPvFuture = RegExp.prototype.test.bind(/^[vV][\dA-Fa-f]+\.[A-Za-z\d\-._~!$&'()*+,;=:]+$/);
-    var isZoneCharacter = RegExp.prototype.test.bind(/^[A-Za-z\d\-._~]$/);
     var nonSimpleDomain = RegExp.prototype.test.bind(/[^!"$&'()*+,\-.;=_`a-z{}~]/u);
-    function isZoneIdentifier(zone) {
-      if (zone.length === 0) return false;
-      for (let i = 0; i < zone.length; i++) {
-        if (isZoneCharacter(zone[i])) continue;
-        if (zone[i] === "%" && i + 2 < zone.length && isHexPair(zone.slice(i + 1, i + 3))) {
-          i += 2;
-          continue;
+    function consumeIsZone(buffer) {
+      buffer.length = 0;
+      return true;
+    }
+    function consumeHextets(buffer, address, output) {
+      if (buffer.length) {
+        const hex = stringArrayToHexStripped(buffer);
+        if (hex !== "") {
+          address.push(hex);
+        } else {
+          output.error = true;
+          return false;
         }
-        return false;
+        buffer.length = 0;
       }
       return true;
     }
-    function compressIPv6ZeroRun(hextets) {
-      let bestStart = -1;
-      let bestLength = 0;
-      let runStart = -1;
-      let runLength = 0;
-      for (let i = 0; i < hextets.length; i++) {
-        if (hextets[i] === "0") {
-          if (runStart === -1) runStart = i;
-          runLength++;
-          if (runLength > bestLength) {
-            bestLength = runLength;
-            bestStart = runStart;
-          }
-        } else {
-          runStart = -1;
-          runLength = 0;
-        }
-      }
-      if (bestLength < 2) return hextets.join(":");
-      const head = hextets.slice(0, bestStart).join(":");
-      const tail = hextets.slice(bestStart + bestLength).join(":");
-      return head + "::" + tail;
-    }
-    function normalizeIPv6Address(input) {
-      const compression = input.indexOf("::");
-      if (compression !== -1 && input.indexOf("::", compression + 1) !== -1) return void 0;
-      const left = compression === -1 ? input.split(":") : input.slice(0, compression).split(":");
-      const right = compression === -1 ? [] : input.slice(compression + 2).split(":");
-      if (compression !== -1) {
-        if (left.length === 1 && left[0] === "") left.length = 0;
-        if (right.length === 1 && right[0] === "") right.length = 0;
-      }
-      const parts = left.concat(right);
-      let hextetCount = 0;
-      for (let i = 0; i < parts.length; i++) {
-        const part = parts[i];
-        if (part === "") return void 0;
-        if (part.indexOf(".") !== -1) {
-          if (i !== parts.length - 1 || compression !== -1 && right.length === 0 || !isIPv4(part)) return void 0;
-          hextetCount += 2;
+    function getIPV6(input) {
+      let tokenCount = 0;
+      const output = { error: false, address: "", zone: "" };
+      const address = [];
+      const buffer = [];
+      let endipv6Encountered = false;
+      let endIpv6 = false;
+      let consume = consumeHextets;
+      for (let i = 0; i < input.length; i++) {
+        const cursor = input[i];
+        if (cursor === "[" || cursor === "]") {
           continue;
         }
-        if (!isHextet(part)) return void 0;
-        parts[i] = parseInt(part, 16).toString(16);
-        hextetCount++;
+        if (cursor === ":") {
+          if (endipv6Encountered === true) {
+            endIpv6 = true;
+          }
+          if (!consume(buffer, address, output)) {
+            break;
+          }
+          if (++tokenCount > 7) {
+            output.error = true;
+            break;
+          }
+          if (i > 0 && input[i - 1] === ":") {
+            endipv6Encountered = true;
+          }
+          address.push(":");
+          continue;
+        } else if (cursor === "%") {
+          if (!consume(buffer, address, output)) {
+            break;
+          }
+          consume = consumeIsZone;
+        } else {
+          buffer.push(cursor);
+          continue;
+        }
       }
-      if (compression === -1) {
-        if (hextetCount !== 8) return void 0;
-        return compressIPv6ZeroRun(parts);
+      if (buffer.length) {
+        if (consume === consumeIsZone) {
+          output.zone = buffer.join("");
+        } else if (endIpv6) {
+          address.push(buffer.join(""));
+        } else {
+          address.push(stringArrayToHexStripped(buffer));
+        }
       }
-      if (hextetCount >= 8) return void 0;
-      const expanded = parts.slice(0, left.length);
-      for (let i = hextetCount; i < 8; i++) expanded.push("0");
-      for (let i = left.length; i < parts.length; i++) expanded.push(parts[i]);
-      return compressIPv6ZeroRun(expanded);
+      output.address = address.join("");
+      return output;
     }
     function normalizeIPv6(host) {
-      const bracketed = host[0] === "[" && host[host.length - 1] === "]";
-      const hasBracket = host[0] === "[" || host[host.length - 1] === "]";
-      if (hasBracket && !bracketed) return { host, isIPV6: false, error: true };
-      let input = bracketed ? host.slice(1, -1) : host;
-      if (bracketed && isIPvFuture(input)) {
-        input = input.toLowerCase();
-        return { host: `[${input}]`, escapedHost: input, isIPV6: false, isIPVFuture: true };
+      if (findToken(host, ":") < 2) {
+        return { host, isIPV6: false };
       }
-      if (findToken(input, ":") < 2) {
-        return { host, isIPV6: false, error: bracketed };
+      const ipv62 = getIPV6(host);
+      if (!ipv62.error) {
+        let newHost = ipv62.address;
+        let escapedHost = ipv62.address;
+        if (ipv62.zone) {
+          newHost += "%" + ipv62.zone;
+          escapedHost += "%25" + ipv62.zone;
+        }
+        return { host: newHost, isIPV6: true, escapedHost };
+      } else {
+        return { host, isIPV6: false };
       }
-      let zoneIdentifier = "";
-      const zoneSeparator = input.indexOf("%");
-      if (zoneSeparator !== -1) {
-        const separatorLength = input.slice(zoneSeparator, zoneSeparator + 3).toLowerCase() === "%25" ? 3 : 1;
-        zoneIdentifier = input.slice(zoneSeparator + separatorLength);
-        if (!isZoneIdentifier(zoneIdentifier)) return { host, isIPV6: false, error: true };
-        input = input.slice(0, zoneSeparator);
-      }
-      const address = normalizeIPv6Address(input);
-      if (address === void 0) return { host, isIPV6: false, error: true };
-      return {
-        host: address + (zoneIdentifier ? "%" + zoneIdentifier : ""),
-        escapedHost: address + (zoneIdentifier ? "%25" + zoneIdentifier : ""),
-        isIPV6: true
-      };
     }
     function findToken(str, token) {
       let ind = 0;
@@ -3338,265 +3302,56 @@ var require_utils = __commonJS({
       }
       return output.join("");
     }
-    var HOST_DELIMS = { "@": "%40", "/": "%2F", "?": "%3F", "#": "%23", ":": "%3A" };
-    var HOST_DELIM_RE = /[@/?#:]/g;
-    var HOST_DELIM_NO_COLON_RE = /[@/?#]/g;
-    function reescapeHostDelimiters(host, isIP) {
-      const re = isIP ? HOST_DELIM_NO_COLON_RE : HOST_DELIM_RE;
-      re.lastIndex = 0;
-      return host.replace(re, (ch) => HOST_DELIMS[ch]);
-    }
-    function normalizePercentEncoding(input, decodeUnreserved = false) {
-      if (input.indexOf("%") === -1) {
-        return input;
+    function normalizeComponentEncoding(component, esc2) {
+      const func = esc2 !== true ? escape : unescape;
+      if (component.scheme !== void 0) {
+        component.scheme = func(component.scheme);
       }
-      let output = "";
-      for (let i = 0; i < input.length; i++) {
-        if (input[i] === "%" && i + 2 < input.length) {
-          const hex = input.slice(i + 1, i + 3);
-          if (isHexPair(hex)) {
-            const normalizedHex = hex.toUpperCase();
-            const decoded = String.fromCharCode(parseInt(normalizedHex, 16));
-            if (decodeUnreserved && isUnreserved(decoded)) {
-              output += decoded;
-            } else {
-              output += "%" + normalizedHex;
-            }
-            i += 2;
-            continue;
-          }
-        }
-        output += input[i];
+      if (component.userinfo !== void 0) {
+        component.userinfo = func(component.userinfo);
       }
-      return output;
-    }
-    function normalizePathEncoding(input) {
-      let output = "";
-      for (let i = 0; i < input.length; i++) {
-        const ch = input[i];
-        if (ch === "%" && i + 2 < input.length) {
-          const hex = input.slice(i + 1, i + 3);
-          if (isHexPair(hex)) {
-            const normalizedHex = hex.toUpperCase();
-            const decoded = String.fromCharCode(parseInt(normalizedHex, 16));
-            if (decoded !== "." && isUnreserved(decoded)) {
-              output += decoded;
-            } else {
-              output += "%" + normalizedHex;
-            }
-            i += 2;
-            continue;
-          }
-        }
-        if (isPathCharacter(ch)) {
-          output += ch;
-        } else {
-          const code = input.charCodeAt(i);
-          if (code < 128) {
-            output += isEscapeSafe(code) ? ch : BYTE_HEX[code];
-          } else if (code < 55296 || code > 57343) {
-            output += percentEncodeNonAscii(code);
-          } else if (code <= 56319 && i + 1 < input.length) {
-            const low = input.charCodeAt(i + 1);
-            if (low >= 56320 && low <= 57343) {
-              output += percentEncodeNonAscii(65536 + (code - 55296 << 10) + (low - 56320));
-              i++;
-            } else {
-              output += percentEncodeNonAscii(65533);
-            }
-          } else {
-            output += percentEncodeNonAscii(65533);
-          }
-        }
+      if (component.host !== void 0) {
+        component.host = func(component.host);
       }
-      return output;
-    }
-    function serializePathEncoding(input, pathNoScheme = false) {
-      let output = "";
-      let firstSegment = pathNoScheme && input[0] !== "/";
-      for (let i = 0; i < input.length; i++) {
-        const ch = input[i];
-        if (ch === "%" && i + 2 < input.length) {
-          const hex = input.slice(i + 1, i + 3);
-          if (isHexPair(hex)) {
-            output += "%" + hex.toUpperCase();
-            i += 2;
-            continue;
-          }
-        }
-        if (ch === "/") {
-          firstSegment = false;
-        }
-        if (isPathCharacter(ch) && (ch !== ":" || !firstSegment)) {
-          output += ch;
-        } else {
-          const code = input.charCodeAt(i);
-          if (code < 128) {
-            output += BYTE_HEX[code];
-          } else if (code < 55296 || code > 57343) {
-            output += percentEncodeNonAscii(code);
-          } else if (code <= 56319 && i + 1 < input.length) {
-            const low = input.charCodeAt(i + 1);
-            if (low >= 56320 && low <= 57343) {
-              output += percentEncodeNonAscii(65536 + (code - 55296 << 10) + (low - 56320));
-              i++;
-            } else {
-              output += percentEncodeNonAscii(65533);
-            }
-          } else {
-            output += percentEncodeNonAscii(65533);
-          }
-        }
+      if (component.path !== void 0) {
+        component.path = func(component.path);
       }
-      return output;
-    }
-    function encodeComponent(input, isAllowed) {
-      let output = "";
-      for (let i = 0; i < input.length; i++) {
-        const ch = input[i];
-        if (ch === "%" && i + 2 < input.length) {
-          const hex = input.slice(i + 1, i + 3);
-          if (isHexPair(hex)) {
-            output += "%" + hex.toUpperCase();
-            i += 2;
-            continue;
-          }
-        }
-        if (isAllowed(ch)) {
-          output += ch;
-        } else {
-          const code = input.charCodeAt(i);
-          if (code < 128) {
-            output += BYTE_HEX[code];
-          } else if (code < 55296 || code > 57343) {
-            output += percentEncodeNonAscii(code);
-          } else if (code <= 56319 && i + 1 < input.length) {
-            const low = input.charCodeAt(i + 1);
-            if (low >= 56320 && low <= 57343) {
-              output += percentEncodeNonAscii(65536 + (code - 55296 << 10) + (low - 56320));
-              i++;
-            } else {
-              output += percentEncodeNonAscii(65533);
-            }
-          } else {
-            output += percentEncodeNonAscii(65533);
-          }
-        }
+      if (component.query !== void 0) {
+        component.query = func(component.query);
       }
-      return output;
-    }
-    function encodeUserinfo(input) {
-      return encodeComponent(input, isUserinfoCharacter);
-    }
-    function encodeQuery(input) {
-      return encodeComponent(input, isQueryFragmentCharacter);
-    }
-    function encodeFragment(input) {
-      return encodeComponent(input, isQueryFragmentCharacter);
-    }
-    function isEscapeSafe(cp) {
-      return cp >= 48 && cp <= 57 || cp >= 65 && cp <= 90 || cp >= 97 && cp <= 122 || cp === 42 || cp === 43 || cp === 45 || cp === 46 || cp === 47 || cp === 64 || cp === 95;
-    }
-    function normalizeQueryFragmentEncoding(input) {
-      let output = "";
-      for (let i = 0; i < input.length; i++) {
-        const ch = input[i];
-        if (ch === "%" && i + 2 < input.length) {
-          const hex = input.slice(i + 1, i + 3);
-          if (isHexPair(hex)) {
-            const normalizedHex = hex.toUpperCase();
-            const decoded = String.fromCharCode(parseInt(normalizedHex, 16));
-            if (isUnreserved(decoded)) {
-              output += decoded;
-            } else {
-              output += "%" + normalizedHex;
-            }
-            i += 2;
-            continue;
-          }
-        }
-        if (isQueryFragmentCharacter(ch)) {
-          output += ch;
-        } else {
-          const code = input.charCodeAt(i);
-          if (code < 128) {
-            output += isEscapeSafe(code) ? ch : BYTE_HEX[code];
-          } else if (code < 55296 || code > 57343) {
-            output += percentEncodeNonAscii(code);
-          } else if (code <= 56319 && i + 1 < input.length) {
-            const low = input.charCodeAt(i + 1);
-            if (low >= 56320 && low <= 57343) {
-              output += percentEncodeNonAscii(65536 + (code - 55296 << 10) + (low - 56320));
-              i++;
-            } else {
-              output += percentEncodeNonAscii(65533);
-            }
-          } else {
-            output += percentEncodeNonAscii(65533);
-          }
-        }
+      if (component.fragment !== void 0) {
+        component.fragment = func(component.fragment);
       }
-      return output;
-    }
-    function escapePreservingEscapes(input) {
-      let output = "";
-      for (let i = 0; i < input.length; i++) {
-        if (input[i] === "%" && i + 2 < input.length) {
-          const hex = input.slice(i + 1, i + 3);
-          if (isHexPair(hex)) {
-            output += "%" + hex.toUpperCase();
-            i += 2;
-            continue;
-          }
-        }
-        output += escape(input[i]);
-      }
-      return output;
+      return component;
     }
     function recomposeAuthority(component) {
       const uriTokens = [];
       if (component.userinfo !== void 0) {
-        uriTokens.push(encodeUserinfo(component.userinfo));
+        uriTokens.push(component.userinfo);
         uriTokens.push("@");
       }
       if (component.host !== void 0) {
-        let host = component.host;
+        let host = unescape(component.host);
         if (!isIPv4(host)) {
-          let ipV6res = normalizeIPv6(host);
-          if (ipV6res.isIPV6 !== true && ipV6res.isIPVFuture !== true) {
-            host = normalizePercentEncoding(host, true);
-            ipV6res = normalizeIPv6(host);
-          }
-          if (ipV6res.isIPV6 === true || ipV6res.isIPVFuture === true) {
+          const ipV6res = normalizeIPv6(host);
+          if (ipV6res.isIPV6 === true) {
             host = `[${ipV6res.escapedHost}]`;
           } else {
-            host = reescapeHostDelimiters(host, false);
+            host = component.host;
           }
         }
         uriTokens.push(host);
       }
       if (typeof component.port === "number" || typeof component.port === "string") {
-        const port = String(component.port);
-        if (!isPort(port)) {
-          throw new TypeError("URI port is malformed.");
-        }
         uriTokens.push(":");
-        uriTokens.push(port);
+        uriTokens.push(String(component.port));
       }
       return uriTokens.length ? uriTokens.join("") : void 0;
     }
     module.exports = {
       nonSimpleDomain,
       recomposeAuthority,
-      reescapeHostDelimiters,
-      normalizePercentEncoding,
-      normalizePathEncoding,
-      serializePathEncoding,
-      normalizeQueryFragmentEncoding,
-      encodeUserinfo,
-      encodeQuery,
-      encodeFragment,
-      escapePreservingEscapes,
+      normalizeComponentEncoding,
       removeDotSegments,
       isIPv4,
       isUUID,
@@ -3606,12 +3361,12 @@ var require_utils = __commonJS({
   }
 });
 
-// mcp-server/node_modules/fast-uri/lib/schemes.js
+// ../PortPilot-2026/mcp-server/node_modules/fast-uri/lib/schemes.js
 var require_schemes = __commonJS({
-  "mcp-server/node_modules/fast-uri/lib/schemes.js"(exports, module) {
+  "../PortPilot-2026/mcp-server/node_modules/fast-uri/lib/schemes.js"(exports, module) {
     "use strict";
     var { isUUID } = require_utils();
-    var URN_REG = /^([\da-z][\d\-a-z]{0,31}):((?:[\w!$'()*+,\-./:;=@]|%[\da-f]{2})+)$/iu;
+    var URN_REG = /([\da-z][\d\-a-z]{0,31}):((?:[\w!$'()*+,\-.:;=@]|%[\da-f]{2})+)/iu;
     var supportedSchemeNames = (
       /** @type {const} */
       [
@@ -3672,10 +3427,9 @@ var require_schemes = __commonJS({
         wsComponent.secure = void 0;
       }
       if (wsComponent.resourceName) {
-        const queryIndex = wsComponent.resourceName.indexOf("?");
-        const path2 = queryIndex === -1 ? wsComponent.resourceName : wsComponent.resourceName.slice(0, queryIndex);
+        const [path2, query] = wsComponent.resourceName.split("?");
         wsComponent.path = path2 && path2 !== "/" ? path2 : void 0;
-        wsComponent.query = queryIndex === -1 ? void 0 : wsComponent.resourceName.slice(queryIndex + 1);
+        wsComponent.query = query;
         wsComponent.resourceName = void 0;
       }
       wsComponent.fragment = void 0;
@@ -3687,7 +3441,7 @@ var require_schemes = __commonJS({
         return urnComponent;
       }
       const matches = urnComponent.path.match(URN_REG);
-      if (matches && matches[0] === urnComponent.path) {
+      if (matches) {
         const scheme = options.scheme || urnComponent.scheme || "urn";
         urnComponent.nid = matches[1].toLowerCase();
         urnComponent.nss = matches[2];
@@ -3817,25 +3571,16 @@ var require_schemes = __commonJS({
   }
 });
 
-// mcp-server/node_modules/fast-uri/index.js
+// ../PortPilot-2026/mcp-server/node_modules/fast-uri/index.js
 var require_fast_uri = __commonJS({
-  "mcp-server/node_modules/fast-uri/index.js"(exports, module) {
+  "../PortPilot-2026/mcp-server/node_modules/fast-uri/index.js"(exports, module) {
     "use strict";
-    var { normalizeIPv6, removeDotSegments, recomposeAuthority, normalizePercentEncoding, normalizePathEncoding, serializePathEncoding, normalizeQueryFragmentEncoding, encodeQuery, encodeFragment, reescapeHostDelimiters, isIPv4, nonSimpleDomain } = require_utils();
+    var { normalizeIPv6, removeDotSegments, recomposeAuthority, normalizeComponentEncoding, isIPv4, nonSimpleDomain } = require_utils();
     var { SCHEMES, getSchemeHandler } = require_schemes();
-    var VALID_SCHEME = /^[A-Za-z][A-Za-z0-9+.-]*$/u;
-    var MALFORMED_SCHEME_ERROR = "URI scheme is malformed.";
-    function decodeValidScheme(scheme) {
-      const decodedScheme = unescape(String(scheme));
-      if (!VALID_SCHEME.test(decodedScheme)) {
-        throw new TypeError(MALFORMED_SCHEME_ERROR);
-      }
-      return decodedScheme;
-    }
     function normalize(uri, options) {
       if (typeof uri === "string") {
         uri = /** @type {T} */
-        normalizeString(uri, options);
+        serialize(parse3(uri, options), options);
       } else if (typeof uri === "object") {
         uri = /** @type {T} */
         parse3(serialize(uri, options), options);
@@ -3844,34 +3589,7 @@ var require_fast_uri = __commonJS({
     }
     function resolve(baseURI, relativeURI, options) {
       const schemelessOptions = options ? Object.assign({ scheme: "null" }, options) : { scheme: "null" };
-      const {
-        parsed: baseParsed,
-        malformedAuthorityOrPort: baseMalformed,
-        malformedPercentEncoding: baseMalformedPercentEncoding,
-        malformedSchemeSpecific: baseMalformedSchemeSpecific,
-        malformedHost: baseMalformedHost,
-        malformedScheme: baseMalformedScheme
-      } = parseWithStatus(baseURI, schemelessOptions);
-      const {
-        parsed: relativeParsed,
-        malformedAuthorityOrPort: relativeMalformed,
-        malformedPercentEncoding: relativeMalformedPercentEncoding,
-        malformedSchemeSpecific: relativeMalformedSchemeSpecific,
-        malformedHost: relativeMalformedHost,
-        malformedScheme: relativeMalformedScheme
-      } = parseWithStatus(relativeURI, schemelessOptions);
-      if (baseMalformed || relativeMalformed || baseMalformedPercentEncoding || relativeMalformedPercentEncoding || baseMalformedSchemeSpecific || relativeMalformedSchemeSpecific || baseMalformedHost || relativeMalformedHost || baseMalformedScheme || relativeMalformedScheme) {
-        throw new Error(baseParsed.error || relativeParsed.error || "URI is malformed.");
-      }
-      const resolved = resolveComponent(baseParsed, relativeParsed, schemelessOptions, true);
-      const resolvedSchemeHandler = getSchemeHandler(options && options.scheme || resolved.scheme);
-      const resolvedHost = resolved.host;
-      const resolvedHostIsIP = resolvedHost !== void 0 && resolvedHost !== "" && (isIPv4(resolvedHost) || normalizeIPv6(resolvedHost).isIPV6);
-      canonicalizeHost(resolved, options || {}, resolvedSchemeHandler, resolvedHostIsIP);
-      const encodedASCIIHost = resolvedHost && resolvedHost.indexOf("%") !== -1 && !new RegExp("\\P{ASCII}", "u").test(resolvedHost);
-      if (resolved.error && !encodedASCIIHost) {
-        throw new Error(resolved.error);
-      }
+      const resolved = resolveComponent(parse3(baseURI, schemelessOptions), parse3(relativeURI, schemelessOptions), schemelessOptions, true);
       schemelessOptions.skipEscape = true;
       return serialize(resolved, schemelessOptions);
     }
@@ -3929,9 +3647,19 @@ var require_fast_uri = __commonJS({
       return target;
     }
     function equal(uriA, uriB, options) {
-      const normalizedA = normalizeComparableURI(uriA, options);
-      const normalizedB = normalizeComparableURI(uriB, options);
-      return normalizedA !== void 0 && normalizedB !== void 0 && normalizedA === normalizedB;
+      if (typeof uriA === "string") {
+        uriA = unescape(uriA);
+        uriA = serialize(normalizeComponentEncoding(parse3(uriA, options), true), { ...options, skipEscape: true });
+      } else if (typeof uriA === "object") {
+        uriA = serialize(normalizeComponentEncoding(uriA, true), { ...options, skipEscape: true });
+      }
+      if (typeof uriB === "string") {
+        uriB = unescape(uriB);
+        uriB = serialize(normalizeComponentEncoding(parse3(uriB, options), true), { ...options, skipEscape: true });
+      } else if (typeof uriB === "object") {
+        uriB = serialize(normalizeComponentEncoding(uriB, true), { ...options, skipEscape: true });
+      }
+      return uriA.toLowerCase() === uriB.toLowerCase();
     }
     function serialize(cmpts, opts) {
       const component = {
@@ -3952,22 +3680,19 @@ var require_fast_uri = __commonJS({
       };
       const options = Object.assign({}, opts);
       const uriTokens = [];
-      if (component.scheme) {
-        component.scheme = decodeValidScheme(component.scheme);
-      }
       const schemeHandler = getSchemeHandler(options.scheme || component.scheme);
       if (schemeHandler && schemeHandler.serialize) schemeHandler.serialize(component, options);
-      const hasAuthority = component.userinfo !== void 0 || component.host !== void 0 || component.port !== void 0;
-      const pathNoScheme = !options.skipEscape && component.scheme === void 0 && !hasAuthority;
       if (component.path !== void 0) {
         if (!options.skipEscape) {
-          component.path = serializePathEncoding(component.path, pathNoScheme);
+          component.path = escape(component.path);
+          if (component.scheme !== void 0) {
+            component.path = component.path.split("%3A").join(":");
+          }
         } else {
-          component.path = normalizePercentEncoding(component.path);
+          component.path = unescape(component.path);
         }
       }
       if (options.reference !== "suffix" && component.scheme) {
-        component.scheme = decodeValidScheme(component.scheme);
         uriTokens.push(component.scheme, ":");
       }
       const authority = recomposeAuthority(component);
@@ -3985,64 +3710,21 @@ var require_fast_uri = __commonJS({
         if (!options.absolutePath && (!schemeHandler || !schemeHandler.absolutePath)) {
           s = removeDotSegments(s);
         }
-        if (pathNoScheme) {
-          s = serializePathEncoding(s, true);
-        }
         if (authority === void 0 && s[0] === "/" && s[1] === "/") {
           s = "/%2F" + s.slice(2);
         }
         uriTokens.push(s);
       }
       if (component.query !== void 0) {
-        uriTokens.push("?", encodeQuery(component.query));
+        uriTokens.push("?", component.query);
       }
       if (component.fragment !== void 0) {
-        uriTokens.push("#", encodeFragment(component.fragment));
+        uriTokens.push("#", component.fragment);
       }
       return uriTokens.join("");
     }
     var URI_PARSE = /^(?:([^#/:?]+):)?(?:\/\/((?:([^#/?@]*)@)?(\[[^#/?\]]+\]|[^#/:?]*)(?::(\d*))?))?([^#?]*)(?:\?([^#]*))?(?:#((?:.|[\n\r])*))?/u;
-    var AUTHORITY_PREFIX = /^(?:[^#/:?]+:)?\/\/([^/?#]*)/;
-    var AUTHORITY_INTRODUCER_REGION = /^(?:[^#/:?]+:)?([/\\\t\n\r]*)/;
-    function getParseError(parsed, matches) {
-      if (matches[2] !== void 0 && parsed.path && parsed.path[0] !== "/") {
-        return 'URI path must start with "/" when authority is present.';
-      }
-      if (typeof parsed.port === "number" && (parsed.port < 0 || parsed.port > 65535)) {
-        return "URI port is malformed.";
-      }
-      return void 0;
-    }
-    function hasMalformedPercentEncoding(component) {
-      if (component === void 0) return false;
-      let percent = component.indexOf("%");
-      while (percent !== -1) {
-        if (percent + 2 >= component.length || !/^[\da-f]{2}$/iu.test(component.slice(percent + 1, percent + 3))) {
-          return true;
-        }
-        percent = component.indexOf("%", percent + 3);
-      }
-      return false;
-    }
-    function isIPLiteral(host) {
-      return host[0] === "[" && host[host.length - 1] === "]";
-    }
-    function hasMalformedComponentPercentEncoding(matches) {
-      const host = matches[4];
-      return hasMalformedPercentEncoding(matches[3]) || host !== void 0 && !isIPLiteral(host) && hasMalformedPercentEncoding(host) || hasMalformedPercentEncoding(matches[6]) || hasMalformedPercentEncoding(matches[7]) || hasMalformedPercentEncoding(matches[8]);
-    }
-    function canonicalizeHost(parsed, options, schemeHandler, isIP) {
-      if (!options.unicodeSupport && (!schemeHandler || !schemeHandler.unicodeSupport) && parsed.host && !isIPLiteral(parsed.host) && (options.domainHost || schemeHandler && schemeHandler.domainHost) && isIP === false && nonSimpleDomain(parsed.host)) {
-        try {
-          parsed.host = new URL("http://" + parsed.host).hostname;
-        } catch (e) {
-          parsed.error = parsed.error || "Host's domain name can not be converted to ASCII: " + e;
-          return true;
-        }
-      }
-      return false;
-    }
-    function parseWithStatus(uri, opts) {
+    function parse3(uri, opts) {
       const options = Object.assign({}, opts);
       const parsed = {
         scheme: void 0,
@@ -4053,37 +3735,12 @@ var require_fast_uri = __commonJS({
         query: void 0,
         fragment: void 0
       };
-      let malformedAuthorityOrPort = false;
-      let malformedPercentEncoding = false;
-      let malformedSchemeSpecific = false;
-      let malformedHost = false;
-      let malformedIPLiteral = false;
-      let malformedScheme = false;
       let isIP = false;
       if (options.reference === "suffix") {
         if (options.scheme) {
           uri = options.scheme + ":" + uri;
         } else {
           uri = "//" + uri;
-        }
-      }
-      const authorityMatch = uri.match(AUTHORITY_PREFIX);
-      if (authorityMatch !== null && authorityMatch[1].indexOf("\\") !== -1) {
-        parsed.error = "URI authority must not contain a literal backslash.";
-        malformedAuthorityOrPort = true;
-      }
-      const introducerMatch = uri.match(AUTHORITY_INTRODUCER_REGION);
-      if (introducerMatch !== null) {
-        const region = introducerMatch[1];
-        const normalizedRegion = region.replace(/[\t\n\r]/g, "");
-        if (normalizedRegion.length >= 2) {
-          if (normalizedRegion.slice(0, 2) !== "//") {
-            parsed.error = parsed.error || "URI authority must not contain a literal backslash.";
-            malformedAuthorityOrPort = true;
-          } else if (region.length !== normalizedRegion.length) {
-            parsed.error = parsed.error || "URI authority introducer must not contain whitespace.";
-            malformedAuthorityOrPort = true;
-          }
         }
       }
       const matches = uri.match(URI_PARSE);
@@ -4095,40 +3752,15 @@ var require_fast_uri = __commonJS({
         parsed.path = matches[6] || "";
         parsed.query = matches[7];
         parsed.fragment = matches[8];
-        if (parsed.scheme !== void 0) {
-          const decodedScheme = unescape(parsed.scheme);
-          if (VALID_SCHEME.test(decodedScheme)) {
-            parsed.scheme = decodedScheme.toLowerCase();
-          } else {
-            parsed.error = parsed.error || MALFORMED_SCHEME_ERROR;
-            malformedScheme = true;
-          }
-        }
-        malformedPercentEncoding = hasMalformedComponentPercentEncoding(matches);
-        if (malformedPercentEncoding) {
-          parsed.error = parsed.error || "URI contains malformed percent-encoding.";
-        }
         if (isNaN(parsed.port)) {
           parsed.port = matches[5];
-        }
-        const parseError = getParseError(parsed, matches);
-        if (parseError !== void 0) {
-          parsed.error = parsed.error || parseError;
-          malformedAuthorityOrPort = true;
         }
         if (parsed.host) {
           const ipv4result = isIPv4(parsed.host);
           if (ipv4result === false) {
-            const bracketedIPLiteral = isIPLiteral(parsed.host);
-            const hasIPLiteralBracket = parsed.host.indexOf("[") !== -1 || parsed.host.indexOf("]") !== -1;
             const ipv6result = normalizeIPv6(parsed.host);
-            isIP = ipv6result.isIPV6 || ipv6result.isIPVFuture === true;
-            malformedIPLiteral = hasIPLiteralBracket && (!bracketedIPLiteral || ipv6result.error === true);
-            parsed.host = isIP ? ipv6result.host : ipv6result.host.toLowerCase();
-            if (malformedIPLiteral) {
-              parsed.error = parsed.error || "URI host is malformed.";
-              malformedAuthorityOrPort = true;
-            }
+            parsed.host = ipv6result.host.toLowerCase();
+            isIP = ipv6result.isIPV6;
           } else {
             isIP = true;
           }
@@ -4146,67 +3778,38 @@ var require_fast_uri = __commonJS({
           parsed.error = parsed.error || "URI is not a " + options.reference + " reference.";
         }
         const schemeHandler = getSchemeHandler(options.scheme || parsed.scheme);
-        if (!malformedIPLiteral) {
-          malformedHost = canonicalizeHost(parsed, options, schemeHandler, isIP);
-        }
-        if (uri.indexOf("%") !== -1 && parsed.host !== void 0 && !malformedIPLiteral) {
-          let host = isIP ? parsed.host : normalizePercentEncoding(parsed.host, true);
-          if (!isIP) {
-            host = normalizePercentEncoding(host.toLowerCase());
+        if (!options.unicodeSupport && (!schemeHandler || !schemeHandler.unicodeSupport)) {
+          if (parsed.host && (options.domainHost || schemeHandler && schemeHandler.domainHost) && isIP === false && nonSimpleDomain(parsed.host)) {
+            try {
+              parsed.host = URL.domainToASCII(parsed.host.toLowerCase());
+            } catch (e) {
+              parsed.error = parsed.error || "Host's domain name can not be converted to ASCII: " + e;
+            }
           }
-          parsed.host = reescapeHostDelimiters(host, isIP);
         }
         if (!schemeHandler || schemeHandler && !schemeHandler.skipNormalize) {
-          if (parsed.path) {
-            parsed.path = normalizePathEncoding(parsed.path);
+          if (uri.indexOf("%") !== -1) {
+            if (parsed.scheme !== void 0) {
+              parsed.scheme = unescape(parsed.scheme);
+            }
+            if (parsed.host !== void 0) {
+              parsed.host = unescape(parsed.host);
+            }
           }
-          if (parsed.query) {
-            parsed.query = normalizeQueryFragmentEncoding(parsed.query);
+          if (parsed.path) {
+            parsed.path = escape(unescape(parsed.path));
           }
           if (parsed.fragment) {
-            parsed.fragment = normalizeQueryFragmentEncoding(parsed.fragment);
+            parsed.fragment = encodeURI(decodeURIComponent(parsed.fragment));
           }
         }
         if (schemeHandler && schemeHandler.parse) {
           schemeHandler.parse(parsed, options);
-          if (schemeHandler === SCHEMES.urn && parsed.nid === void 0) {
-            malformedSchemeSpecific = true;
-          }
         }
       } else {
         parsed.error = parsed.error || "URI can not be parsed.";
       }
-      return { parsed, malformedAuthorityOrPort, malformedPercentEncoding, malformedSchemeSpecific, malformedHost, malformedScheme };
-    }
-    function parse3(uri, opts) {
-      return parseWithStatus(uri, opts).parsed;
-    }
-    function normalizeString(uri, opts) {
-      return normalizeStringWithStatus(uri, opts).normalized;
-    }
-    function normalizeStringWithStatus(uri, opts) {
-      const { parsed, malformedAuthorityOrPort, malformedPercentEncoding, malformedSchemeSpecific, malformedHost, malformedScheme } = parseWithStatus(uri, opts);
-      return {
-        normalized: malformedAuthorityOrPort || malformedPercentEncoding || malformedSchemeSpecific || malformedHost || malformedScheme ? uri : serialize(parsed, opts),
-        malformedAuthorityOrPort,
-        malformedPercentEncoding,
-        malformedSchemeSpecific,
-        malformedHost,
-        malformedScheme
-      };
-    }
-    function normalizeComparableURI(uri, opts) {
-      if (typeof uri !== "string" && typeof uri !== "object") {
-        return void 0;
-      }
-      let value;
-      try {
-        value = typeof uri === "string" ? uri : serialize(uri, opts);
-      } catch {
-        return void 0;
-      }
-      const { normalized, malformedAuthorityOrPort, malformedPercentEncoding, malformedSchemeSpecific, malformedHost, malformedScheme } = normalizeStringWithStatus(value, opts);
-      return malformedAuthorityOrPort || malformedPercentEncoding || malformedSchemeSpecific || malformedHost || malformedScheme ? void 0 : normalized;
+      return parsed;
     }
     var fastUri = {
       SCHEMES,
@@ -4223,9 +3826,9 @@ var require_fast_uri = __commonJS({
   }
 });
 
-// mcp-server/node_modules/ajv/dist/runtime/uri.js
+// ../PortPilot-2026/mcp-server/node_modules/ajv/dist/runtime/uri.js
 var require_uri = __commonJS({
-  "mcp-server/node_modules/ajv/dist/runtime/uri.js"(exports) {
+  "../PortPilot-2026/mcp-server/node_modules/ajv/dist/runtime/uri.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var uri = require_fast_uri();
@@ -4234,9 +3837,9 @@ var require_uri = __commonJS({
   }
 });
 
-// mcp-server/node_modules/ajv/dist/core.js
+// ../PortPilot-2026/mcp-server/node_modules/ajv/dist/core.js
 var require_core = __commonJS({
-  "mcp-server/node_modules/ajv/dist/core.js"(exports) {
+  "../PortPilot-2026/mcp-server/node_modules/ajv/dist/core.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.CodeGen = exports.Name = exports.nil = exports.stringify = exports.str = exports._ = exports.KeywordCxt = void 0;
@@ -4845,9 +4448,9 @@ var require_core = __commonJS({
   }
 });
 
-// mcp-server/node_modules/ajv/dist/vocabularies/core/id.js
+// ../PortPilot-2026/mcp-server/node_modules/ajv/dist/vocabularies/core/id.js
 var require_id = __commonJS({
-  "mcp-server/node_modules/ajv/dist/vocabularies/core/id.js"(exports) {
+  "../PortPilot-2026/mcp-server/node_modules/ajv/dist/vocabularies/core/id.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var def = {
@@ -4860,9 +4463,9 @@ var require_id = __commonJS({
   }
 });
 
-// mcp-server/node_modules/ajv/dist/vocabularies/core/ref.js
+// ../PortPilot-2026/mcp-server/node_modules/ajv/dist/vocabularies/core/ref.js
 var require_ref = __commonJS({
-  "mcp-server/node_modules/ajv/dist/vocabularies/core/ref.js"(exports) {
+  "../PortPilot-2026/mcp-server/node_modules/ajv/dist/vocabularies/core/ref.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.callRef = exports.getValidate = void 0;
@@ -4982,9 +4585,9 @@ var require_ref = __commonJS({
   }
 });
 
-// mcp-server/node_modules/ajv/dist/vocabularies/core/index.js
+// ../PortPilot-2026/mcp-server/node_modules/ajv/dist/vocabularies/core/index.js
 var require_core2 = __commonJS({
-  "mcp-server/node_modules/ajv/dist/vocabularies/core/index.js"(exports) {
+  "../PortPilot-2026/mcp-server/node_modules/ajv/dist/vocabularies/core/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var id_1 = require_id();
@@ -5003,9 +4606,9 @@ var require_core2 = __commonJS({
   }
 });
 
-// mcp-server/node_modules/ajv/dist/vocabularies/validation/limitNumber.js
+// ../PortPilot-2026/mcp-server/node_modules/ajv/dist/vocabularies/validation/limitNumber.js
 var require_limitNumber = __commonJS({
-  "mcp-server/node_modules/ajv/dist/vocabularies/validation/limitNumber.js"(exports) {
+  "../PortPilot-2026/mcp-server/node_modules/ajv/dist/vocabularies/validation/limitNumber.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5035,9 +4638,9 @@ var require_limitNumber = __commonJS({
   }
 });
 
-// mcp-server/node_modules/ajv/dist/vocabularies/validation/multipleOf.js
+// ../PortPilot-2026/mcp-server/node_modules/ajv/dist/vocabularies/validation/multipleOf.js
 var require_multipleOf = __commonJS({
-  "mcp-server/node_modules/ajv/dist/vocabularies/validation/multipleOf.js"(exports) {
+  "../PortPilot-2026/mcp-server/node_modules/ajv/dist/vocabularies/validation/multipleOf.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5063,9 +4666,9 @@ var require_multipleOf = __commonJS({
   }
 });
 
-// mcp-server/node_modules/ajv/dist/runtime/ucs2length.js
+// ../PortPilot-2026/mcp-server/node_modules/ajv/dist/runtime/ucs2length.js
 var require_ucs2length = __commonJS({
-  "mcp-server/node_modules/ajv/dist/runtime/ucs2length.js"(exports) {
+  "../PortPilot-2026/mcp-server/node_modules/ajv/dist/runtime/ucs2length.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     function ucs2length(str) {
@@ -5089,9 +4692,9 @@ var require_ucs2length = __commonJS({
   }
 });
 
-// mcp-server/node_modules/ajv/dist/vocabularies/validation/limitLength.js
+// ../PortPilot-2026/mcp-server/node_modules/ajv/dist/vocabularies/validation/limitLength.js
 var require_limitLength = __commonJS({
-  "mcp-server/node_modules/ajv/dist/vocabularies/validation/limitLength.js"(exports) {
+  "../PortPilot-2026/mcp-server/node_modules/ajv/dist/vocabularies/validation/limitLength.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5121,9 +4724,9 @@ var require_limitLength = __commonJS({
   }
 });
 
-// mcp-server/node_modules/ajv/dist/vocabularies/validation/pattern.js
+// ../PortPilot-2026/mcp-server/node_modules/ajv/dist/vocabularies/validation/pattern.js
 var require_pattern = __commonJS({
-  "mcp-server/node_modules/ajv/dist/vocabularies/validation/pattern.js"(exports) {
+  "../PortPilot-2026/mcp-server/node_modules/ajv/dist/vocabularies/validation/pattern.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var code_1 = require_code2();
@@ -5158,9 +4761,9 @@ var require_pattern = __commonJS({
   }
 });
 
-// mcp-server/node_modules/ajv/dist/vocabularies/validation/limitProperties.js
+// ../PortPilot-2026/mcp-server/node_modules/ajv/dist/vocabularies/validation/limitProperties.js
 var require_limitProperties = __commonJS({
-  "mcp-server/node_modules/ajv/dist/vocabularies/validation/limitProperties.js"(exports) {
+  "../PortPilot-2026/mcp-server/node_modules/ajv/dist/vocabularies/validation/limitProperties.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5187,9 +4790,9 @@ var require_limitProperties = __commonJS({
   }
 });
 
-// mcp-server/node_modules/ajv/dist/vocabularies/validation/required.js
+// ../PortPilot-2026/mcp-server/node_modules/ajv/dist/vocabularies/validation/required.js
 var require_required = __commonJS({
-  "mcp-server/node_modules/ajv/dist/vocabularies/validation/required.js"(exports) {
+  "../PortPilot-2026/mcp-server/node_modules/ajv/dist/vocabularies/validation/required.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var code_1 = require_code2();
@@ -5269,9 +4872,9 @@ var require_required = __commonJS({
   }
 });
 
-// mcp-server/node_modules/ajv/dist/vocabularies/validation/limitItems.js
+// ../PortPilot-2026/mcp-server/node_modules/ajv/dist/vocabularies/validation/limitItems.js
 var require_limitItems = __commonJS({
-  "mcp-server/node_modules/ajv/dist/vocabularies/validation/limitItems.js"(exports) {
+  "../PortPilot-2026/mcp-server/node_modules/ajv/dist/vocabularies/validation/limitItems.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5298,9 +4901,9 @@ var require_limitItems = __commonJS({
   }
 });
 
-// mcp-server/node_modules/ajv/dist/runtime/equal.js
+// ../PortPilot-2026/mcp-server/node_modules/ajv/dist/runtime/equal.js
 var require_equal = __commonJS({
-  "mcp-server/node_modules/ajv/dist/runtime/equal.js"(exports) {
+  "../PortPilot-2026/mcp-server/node_modules/ajv/dist/runtime/equal.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var equal = require_fast_deep_equal();
@@ -5309,9 +4912,9 @@ var require_equal = __commonJS({
   }
 });
 
-// mcp-server/node_modules/ajv/dist/vocabularies/validation/uniqueItems.js
+// ../PortPilot-2026/mcp-server/node_modules/ajv/dist/vocabularies/validation/uniqueItems.js
 var require_uniqueItems = __commonJS({
-  "mcp-server/node_modules/ajv/dist/vocabularies/validation/uniqueItems.js"(exports) {
+  "../PortPilot-2026/mcp-server/node_modules/ajv/dist/vocabularies/validation/uniqueItems.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var dataType_1 = require_dataType();
@@ -5376,9 +4979,9 @@ var require_uniqueItems = __commonJS({
   }
 });
 
-// mcp-server/node_modules/ajv/dist/vocabularies/validation/const.js
+// ../PortPilot-2026/mcp-server/node_modules/ajv/dist/vocabularies/validation/const.js
 var require_const = __commonJS({
-  "mcp-server/node_modules/ajv/dist/vocabularies/validation/const.js"(exports) {
+  "../PortPilot-2026/mcp-server/node_modules/ajv/dist/vocabularies/validation/const.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5405,9 +5008,9 @@ var require_const = __commonJS({
   }
 });
 
-// mcp-server/node_modules/ajv/dist/vocabularies/validation/enum.js
+// ../PortPilot-2026/mcp-server/node_modules/ajv/dist/vocabularies/validation/enum.js
 var require_enum = __commonJS({
-  "mcp-server/node_modules/ajv/dist/vocabularies/validation/enum.js"(exports) {
+  "../PortPilot-2026/mcp-server/node_modules/ajv/dist/vocabularies/validation/enum.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5454,9 +5057,9 @@ var require_enum = __commonJS({
   }
 });
 
-// mcp-server/node_modules/ajv/dist/vocabularies/validation/index.js
+// ../PortPilot-2026/mcp-server/node_modules/ajv/dist/vocabularies/validation/index.js
 var require_validation = __commonJS({
-  "mcp-server/node_modules/ajv/dist/vocabularies/validation/index.js"(exports) {
+  "../PortPilot-2026/mcp-server/node_modules/ajv/dist/vocabularies/validation/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var limitNumber_1 = require_limitNumber();
@@ -5492,9 +5095,9 @@ var require_validation = __commonJS({
   }
 });
 
-// mcp-server/node_modules/ajv/dist/vocabularies/applicator/additionalItems.js
+// ../PortPilot-2026/mcp-server/node_modules/ajv/dist/vocabularies/applicator/additionalItems.js
 var require_additionalItems = __commonJS({
-  "mcp-server/node_modules/ajv/dist/vocabularies/applicator/additionalItems.js"(exports) {
+  "../PortPilot-2026/mcp-server/node_modules/ajv/dist/vocabularies/applicator/additionalItems.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.validateAdditionalItems = void 0;
@@ -5545,9 +5148,9 @@ var require_additionalItems = __commonJS({
   }
 });
 
-// mcp-server/node_modules/ajv/dist/vocabularies/applicator/items.js
+// ../PortPilot-2026/mcp-server/node_modules/ajv/dist/vocabularies/applicator/items.js
 var require_items = __commonJS({
-  "mcp-server/node_modules/ajv/dist/vocabularies/applicator/items.js"(exports) {
+  "../PortPilot-2026/mcp-server/node_modules/ajv/dist/vocabularies/applicator/items.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.validateTuple = void 0;
@@ -5602,9 +5205,9 @@ var require_items = __commonJS({
   }
 });
 
-// mcp-server/node_modules/ajv/dist/vocabularies/applicator/prefixItems.js
+// ../PortPilot-2026/mcp-server/node_modules/ajv/dist/vocabularies/applicator/prefixItems.js
 var require_prefixItems = __commonJS({
-  "mcp-server/node_modules/ajv/dist/vocabularies/applicator/prefixItems.js"(exports) {
+  "../PortPilot-2026/mcp-server/node_modules/ajv/dist/vocabularies/applicator/prefixItems.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var items_1 = require_items();
@@ -5619,9 +5222,9 @@ var require_prefixItems = __commonJS({
   }
 });
 
-// mcp-server/node_modules/ajv/dist/vocabularies/applicator/items2020.js
+// ../PortPilot-2026/mcp-server/node_modules/ajv/dist/vocabularies/applicator/items2020.js
 var require_items2020 = __commonJS({
-  "mcp-server/node_modules/ajv/dist/vocabularies/applicator/items2020.js"(exports) {
+  "../PortPilot-2026/mcp-server/node_modules/ajv/dist/vocabularies/applicator/items2020.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5654,9 +5257,9 @@ var require_items2020 = __commonJS({
   }
 });
 
-// mcp-server/node_modules/ajv/dist/vocabularies/applicator/contains.js
+// ../PortPilot-2026/mcp-server/node_modules/ajv/dist/vocabularies/applicator/contains.js
 var require_contains = __commonJS({
-  "mcp-server/node_modules/ajv/dist/vocabularies/applicator/contains.js"(exports) {
+  "../PortPilot-2026/mcp-server/node_modules/ajv/dist/vocabularies/applicator/contains.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5748,9 +5351,9 @@ var require_contains = __commonJS({
   }
 });
 
-// mcp-server/node_modules/ajv/dist/vocabularies/applicator/dependencies.js
+// ../PortPilot-2026/mcp-server/node_modules/ajv/dist/vocabularies/applicator/dependencies.js
 var require_dependencies = __commonJS({
-  "mcp-server/node_modules/ajv/dist/vocabularies/applicator/dependencies.js"(exports) {
+  "../PortPilot-2026/mcp-server/node_modules/ajv/dist/vocabularies/applicator/dependencies.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.validateSchemaDeps = exports.validatePropertyDeps = exports.error = void 0;
@@ -5842,9 +5445,9 @@ var require_dependencies = __commonJS({
   }
 });
 
-// mcp-server/node_modules/ajv/dist/vocabularies/applicator/propertyNames.js
+// ../PortPilot-2026/mcp-server/node_modules/ajv/dist/vocabularies/applicator/propertyNames.js
 var require_propertyNames = __commonJS({
-  "mcp-server/node_modules/ajv/dist/vocabularies/applicator/propertyNames.js"(exports) {
+  "../PortPilot-2026/mcp-server/node_modules/ajv/dist/vocabularies/applicator/propertyNames.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5885,9 +5488,9 @@ var require_propertyNames = __commonJS({
   }
 });
 
-// mcp-server/node_modules/ajv/dist/vocabularies/applicator/additionalProperties.js
+// ../PortPilot-2026/mcp-server/node_modules/ajv/dist/vocabularies/applicator/additionalProperties.js
 var require_additionalProperties = __commonJS({
-  "mcp-server/node_modules/ajv/dist/vocabularies/applicator/additionalProperties.js"(exports) {
+  "../PortPilot-2026/mcp-server/node_modules/ajv/dist/vocabularies/applicator/additionalProperties.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var code_1 = require_code2();
@@ -5991,9 +5594,9 @@ var require_additionalProperties = __commonJS({
   }
 });
 
-// mcp-server/node_modules/ajv/dist/vocabularies/applicator/properties.js
+// ../PortPilot-2026/mcp-server/node_modules/ajv/dist/vocabularies/applicator/properties.js
 var require_properties = __commonJS({
-  "mcp-server/node_modules/ajv/dist/vocabularies/applicator/properties.js"(exports) {
+  "../PortPilot-2026/mcp-server/node_modules/ajv/dist/vocabularies/applicator/properties.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var validate_1 = require_validate();
@@ -6049,9 +5652,9 @@ var require_properties = __commonJS({
   }
 });
 
-// mcp-server/node_modules/ajv/dist/vocabularies/applicator/patternProperties.js
+// ../PortPilot-2026/mcp-server/node_modules/ajv/dist/vocabularies/applicator/patternProperties.js
 var require_patternProperties = __commonJS({
-  "mcp-server/node_modules/ajv/dist/vocabularies/applicator/patternProperties.js"(exports) {
+  "../PortPilot-2026/mcp-server/node_modules/ajv/dist/vocabularies/applicator/patternProperties.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var code_1 = require_code2();
@@ -6123,9 +5726,9 @@ var require_patternProperties = __commonJS({
   }
 });
 
-// mcp-server/node_modules/ajv/dist/vocabularies/applicator/not.js
+// ../PortPilot-2026/mcp-server/node_modules/ajv/dist/vocabularies/applicator/not.js
 var require_not = __commonJS({
-  "mcp-server/node_modules/ajv/dist/vocabularies/applicator/not.js"(exports) {
+  "../PortPilot-2026/mcp-server/node_modules/ajv/dist/vocabularies/applicator/not.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var util_1 = require_util();
@@ -6154,9 +5757,9 @@ var require_not = __commonJS({
   }
 });
 
-// mcp-server/node_modules/ajv/dist/vocabularies/applicator/anyOf.js
+// ../PortPilot-2026/mcp-server/node_modules/ajv/dist/vocabularies/applicator/anyOf.js
 var require_anyOf = __commonJS({
-  "mcp-server/node_modules/ajv/dist/vocabularies/applicator/anyOf.js"(exports) {
+  "../PortPilot-2026/mcp-server/node_modules/ajv/dist/vocabularies/applicator/anyOf.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var code_1 = require_code2();
@@ -6171,9 +5774,9 @@ var require_anyOf = __commonJS({
   }
 });
 
-// mcp-server/node_modules/ajv/dist/vocabularies/applicator/oneOf.js
+// ../PortPilot-2026/mcp-server/node_modules/ajv/dist/vocabularies/applicator/oneOf.js
 var require_oneOf = __commonJS({
-  "mcp-server/node_modules/ajv/dist/vocabularies/applicator/oneOf.js"(exports) {
+  "../PortPilot-2026/mcp-server/node_modules/ajv/dist/vocabularies/applicator/oneOf.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -6229,9 +5832,9 @@ var require_oneOf = __commonJS({
   }
 });
 
-// mcp-server/node_modules/ajv/dist/vocabularies/applicator/allOf.js
+// ../PortPilot-2026/mcp-server/node_modules/ajv/dist/vocabularies/applicator/allOf.js
 var require_allOf = __commonJS({
-  "mcp-server/node_modules/ajv/dist/vocabularies/applicator/allOf.js"(exports) {
+  "../PortPilot-2026/mcp-server/node_modules/ajv/dist/vocabularies/applicator/allOf.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var util_1 = require_util();
@@ -6256,9 +5859,9 @@ var require_allOf = __commonJS({
   }
 });
 
-// mcp-server/node_modules/ajv/dist/vocabularies/applicator/if.js
+// ../PortPilot-2026/mcp-server/node_modules/ajv/dist/vocabularies/applicator/if.js
 var require_if = __commonJS({
-  "mcp-server/node_modules/ajv/dist/vocabularies/applicator/if.js"(exports) {
+  "../PortPilot-2026/mcp-server/node_modules/ajv/dist/vocabularies/applicator/if.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -6325,9 +5928,9 @@ var require_if = __commonJS({
   }
 });
 
-// mcp-server/node_modules/ajv/dist/vocabularies/applicator/thenElse.js
+// ../PortPilot-2026/mcp-server/node_modules/ajv/dist/vocabularies/applicator/thenElse.js
 var require_thenElse = __commonJS({
-  "mcp-server/node_modules/ajv/dist/vocabularies/applicator/thenElse.js"(exports) {
+  "../PortPilot-2026/mcp-server/node_modules/ajv/dist/vocabularies/applicator/thenElse.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var util_1 = require_util();
@@ -6343,9 +5946,9 @@ var require_thenElse = __commonJS({
   }
 });
 
-// mcp-server/node_modules/ajv/dist/vocabularies/applicator/index.js
+// ../PortPilot-2026/mcp-server/node_modules/ajv/dist/vocabularies/applicator/index.js
 var require_applicator = __commonJS({
-  "mcp-server/node_modules/ajv/dist/vocabularies/applicator/index.js"(exports) {
+  "../PortPilot-2026/mcp-server/node_modules/ajv/dist/vocabularies/applicator/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var additionalItems_1 = require_additionalItems();
@@ -6391,9 +5994,9 @@ var require_applicator = __commonJS({
   }
 });
 
-// mcp-server/node_modules/ajv/dist/vocabularies/format/format.js
+// ../PortPilot-2026/mcp-server/node_modules/ajv/dist/vocabularies/format/format.js
 var require_format = __commonJS({
-  "mcp-server/node_modules/ajv/dist/vocabularies/format/format.js"(exports) {
+  "../PortPilot-2026/mcp-server/node_modules/ajv/dist/vocabularies/format/format.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -6481,9 +6084,9 @@ var require_format = __commonJS({
   }
 });
 
-// mcp-server/node_modules/ajv/dist/vocabularies/format/index.js
+// ../PortPilot-2026/mcp-server/node_modules/ajv/dist/vocabularies/format/index.js
 var require_format2 = __commonJS({
-  "mcp-server/node_modules/ajv/dist/vocabularies/format/index.js"(exports) {
+  "../PortPilot-2026/mcp-server/node_modules/ajv/dist/vocabularies/format/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var format_1 = require_format();
@@ -6492,9 +6095,9 @@ var require_format2 = __commonJS({
   }
 });
 
-// mcp-server/node_modules/ajv/dist/vocabularies/metadata.js
+// ../PortPilot-2026/mcp-server/node_modules/ajv/dist/vocabularies/metadata.js
 var require_metadata = __commonJS({
-  "mcp-server/node_modules/ajv/dist/vocabularies/metadata.js"(exports) {
+  "../PortPilot-2026/mcp-server/node_modules/ajv/dist/vocabularies/metadata.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.contentVocabulary = exports.metadataVocabulary = void 0;
@@ -6515,9 +6118,9 @@ var require_metadata = __commonJS({
   }
 });
 
-// mcp-server/node_modules/ajv/dist/vocabularies/draft7.js
+// ../PortPilot-2026/mcp-server/node_modules/ajv/dist/vocabularies/draft7.js
 var require_draft7 = __commonJS({
-  "mcp-server/node_modules/ajv/dist/vocabularies/draft7.js"(exports) {
+  "../PortPilot-2026/mcp-server/node_modules/ajv/dist/vocabularies/draft7.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var core_1 = require_core2();
@@ -6537,9 +6140,9 @@ var require_draft7 = __commonJS({
   }
 });
 
-// mcp-server/node_modules/ajv/dist/vocabularies/discriminator/types.js
+// ../PortPilot-2026/mcp-server/node_modules/ajv/dist/vocabularies/discriminator/types.js
 var require_types = __commonJS({
-  "mcp-server/node_modules/ajv/dist/vocabularies/discriminator/types.js"(exports) {
+  "../PortPilot-2026/mcp-server/node_modules/ajv/dist/vocabularies/discriminator/types.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.DiscrError = void 0;
@@ -6551,9 +6154,9 @@ var require_types = __commonJS({
   }
 });
 
-// mcp-server/node_modules/ajv/dist/vocabularies/discriminator/index.js
+// ../PortPilot-2026/mcp-server/node_modules/ajv/dist/vocabularies/discriminator/index.js
 var require_discriminator = __commonJS({
-  "mcp-server/node_modules/ajv/dist/vocabularies/discriminator/index.js"(exports) {
+  "../PortPilot-2026/mcp-server/node_modules/ajv/dist/vocabularies/discriminator/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -6656,9 +6259,9 @@ var require_discriminator = __commonJS({
   }
 });
 
-// mcp-server/node_modules/ajv/dist/refs/json-schema-draft-07.json
+// ../PortPilot-2026/mcp-server/node_modules/ajv/dist/refs/json-schema-draft-07.json
 var require_json_schema_draft_07 = __commonJS({
-  "mcp-server/node_modules/ajv/dist/refs/json-schema-draft-07.json"(exports, module) {
+  "../PortPilot-2026/mcp-server/node_modules/ajv/dist/refs/json-schema-draft-07.json"(exports, module) {
     module.exports = {
       $schema: "http://json-schema.org/draft-07/schema#",
       $id: "http://json-schema.org/draft-07/schema#",
@@ -6813,9 +6416,9 @@ var require_json_schema_draft_07 = __commonJS({
   }
 });
 
-// mcp-server/node_modules/ajv/dist/ajv.js
+// ../PortPilot-2026/mcp-server/node_modules/ajv/dist/ajv.js
 var require_ajv = __commonJS({
-  "mcp-server/node_modules/ajv/dist/ajv.js"(exports, module) {
+  "../PortPilot-2026/mcp-server/node_modules/ajv/dist/ajv.js"(exports, module) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.MissingRefError = exports.ValidationError = exports.CodeGen = exports.Name = exports.nil = exports.stringify = exports.str = exports._ = exports.KeywordCxt = exports.Ajv = void 0;
@@ -6883,9 +6486,9 @@ var require_ajv = __commonJS({
   }
 });
 
-// mcp-server/node_modules/ajv-formats/dist/formats.js
+// ../PortPilot-2026/mcp-server/node_modules/ajv-formats/dist/formats.js
 var require_formats = __commonJS({
-  "mcp-server/node_modules/ajv-formats/dist/formats.js"(exports) {
+  "../PortPilot-2026/mcp-server/node_modules/ajv-formats/dist/formats.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.formatNames = exports.fastFormats = exports.fullFormats = void 0;
@@ -7086,9 +6689,9 @@ var require_formats = __commonJS({
   }
 });
 
-// mcp-server/node_modules/ajv-formats/dist/limit.js
+// ../PortPilot-2026/mcp-server/node_modules/ajv-formats/dist/limit.js
 var require_limit = __commonJS({
-  "mcp-server/node_modules/ajv-formats/dist/limit.js"(exports) {
+  "../PortPilot-2026/mcp-server/node_modules/ajv-formats/dist/limit.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.formatLimitDefinition = void 0;
@@ -7158,9 +6761,9 @@ var require_limit = __commonJS({
   }
 });
 
-// mcp-server/node_modules/ajv-formats/dist/index.js
+// ../PortPilot-2026/mcp-server/node_modules/ajv-formats/dist/index.js
 var require_dist = __commonJS({
-  "mcp-server/node_modules/ajv-formats/dist/index.js"(exports, module) {
+  "../PortPilot-2026/mcp-server/node_modules/ajv-formats/dist/index.js"(exports, module) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var formats_1 = require_formats();
@@ -7200,111 +6803,7 @@ var require_dist = __commonJS({
   }
 });
 
-// mcp-server/node_modules/content-type/index.js
-var require_content_type = __commonJS({
-  "mcp-server/node_modules/content-type/index.js"(exports) {
-    "use strict";
-    var PARAM_REGEXP = /; *([!#$%&'*+.^_`|~0-9A-Za-z-]+) *= *("(?:[\u000b\u0020\u0021\u0023-\u005b\u005d-\u007e\u0080-\u00ff]|\\[\u000b\u0020-\u00ff])*"|[!#$%&'*+.^_`|~0-9A-Za-z-]+) */g;
-    var TEXT_REGEXP = /^[\u000b\u0020-\u007e\u0080-\u00ff]+$/;
-    var TOKEN_REGEXP = /^[!#$%&'*+.^_`|~0-9A-Za-z-]+$/;
-    var QESC_REGEXP = /\\([\u000b\u0020-\u00ff])/g;
-    var QUOTE_REGEXP = /([\\"])/g;
-    var TYPE_REGEXP = /^[!#$%&'*+.^_`|~0-9A-Za-z-]+\/[!#$%&'*+.^_`|~0-9A-Za-z-]+$/;
-    exports.format = format;
-    exports.parse = parse3;
-    function format(obj) {
-      if (!obj || typeof obj !== "object") {
-        throw new TypeError("argument obj is required");
-      }
-      var parameters = obj.parameters;
-      var type = obj.type;
-      if (!type || !TYPE_REGEXP.test(type)) {
-        throw new TypeError("invalid type");
-      }
-      var string3 = type;
-      if (parameters && typeof parameters === "object") {
-        var param;
-        var params = Object.keys(parameters).sort();
-        for (var i = 0; i < params.length; i++) {
-          param = params[i];
-          if (!TOKEN_REGEXP.test(param)) {
-            throw new TypeError("invalid parameter name");
-          }
-          string3 += "; " + param + "=" + qstring(parameters[param]);
-        }
-      }
-      return string3;
-    }
-    function parse3(string3) {
-      if (!string3) {
-        throw new TypeError("argument string is required");
-      }
-      var header = typeof string3 === "object" ? getcontenttype(string3) : string3;
-      if (typeof header !== "string") {
-        throw new TypeError("argument string is required to be a string");
-      }
-      var index = header.indexOf(";");
-      var type = index !== -1 ? header.slice(0, index).trim() : header.trim();
-      if (!TYPE_REGEXP.test(type)) {
-        throw new TypeError("invalid media type");
-      }
-      var obj = new ContentType(type.toLowerCase());
-      if (index !== -1) {
-        var key;
-        var match;
-        var value;
-        PARAM_REGEXP.lastIndex = index;
-        while (match = PARAM_REGEXP.exec(header)) {
-          if (match.index !== index) {
-            throw new TypeError("invalid parameter format");
-          }
-          index += match[0].length;
-          key = match[1].toLowerCase();
-          value = match[2];
-          if (value.charCodeAt(0) === 34) {
-            value = value.slice(1, -1);
-            if (value.indexOf("\\") !== -1) {
-              value = value.replace(QESC_REGEXP, "$1");
-            }
-          }
-          obj.parameters[key] = value;
-        }
-        if (index !== header.length) {
-          throw new TypeError("invalid parameter format");
-        }
-      }
-      return obj;
-    }
-    function getcontenttype(obj) {
-      var header;
-      if (typeof obj.getHeader === "function") {
-        header = obj.getHeader("content-type");
-      } else if (typeof obj.headers === "object") {
-        header = obj.headers && obj.headers["content-type"];
-      }
-      if (typeof header !== "string") {
-        throw new TypeError("content-type header is missing from object");
-      }
-      return header;
-    }
-    function qstring(val) {
-      var str = String(val);
-      if (TOKEN_REGEXP.test(str)) {
-        return str;
-      }
-      if (str.length > 0 && !TEXT_REGEXP.test(str)) {
-        throw new TypeError("invalid parameter value");
-      }
-      return '"' + str.replace(QUOTE_REGEXP, "\\$1") + '"';
-    }
-    function ContentType(type) {
-      this.parameters = /* @__PURE__ */ Object.create(null);
-      this.type = type;
-    }
-  }
-});
-
-// mcp-server/node_modules/zod/v3/external.js
+// ../PortPilot-2026/mcp-server/node_modules/zod/v3/external.js
 var external_exports = {};
 __export(external_exports, {
   BRAND: () => BRAND,
@@ -7416,7 +6915,7 @@ __export(external_exports, {
   void: () => voidType
 });
 
-// mcp-server/node_modules/zod/v3/helpers/util.js
+// ../PortPilot-2026/mcp-server/node_modules/zod/v3/helpers/util.js
 var util;
 (function(util2) {
   util2.assertEqual = (_) => {
@@ -7550,7 +7049,7 @@ var getParsedType = (data) => {
   }
 };
 
-// mcp-server/node_modules/zod/v3/ZodError.js
+// ../PortPilot-2026/mcp-server/node_modules/zod/v3/ZodError.js
 var ZodIssueCode = util.arrayToEnum([
   "invalid_type",
   "invalid_literal",
@@ -7570,8 +7069,8 @@ var ZodIssueCode = util.arrayToEnum([
   "not_finite"
 ]);
 var quotelessJson = (obj) => {
-  const json2 = JSON.stringify(obj, null, 2);
-  return json2.replace(/"([^"]+)":/g, "$1:");
+  const json = JSON.stringify(obj, null, 2);
+  return json.replace(/"([^"]+)":/g, "$1:");
 };
 var ZodError = class _ZodError extends Error {
   get errors() {
@@ -7668,7 +7167,7 @@ ZodError.create = (issues) => {
   return error2;
 };
 
-// mcp-server/node_modules/zod/v3/locales/en.js
+// ../PortPilot-2026/mcp-server/node_modules/zod/v3/locales/en.js
 var errorMap = (issue2, _ctx) => {
   let message;
   switch (issue2.code) {
@@ -7771,7 +7270,7 @@ var errorMap = (issue2, _ctx) => {
 };
 var en_default = errorMap;
 
-// mcp-server/node_modules/zod/v3/errors.js
+// ../PortPilot-2026/mcp-server/node_modules/zod/v3/errors.js
 var overrideErrorMap = en_default;
 function setErrorMap(map) {
   overrideErrorMap = map;
@@ -7780,7 +7279,7 @@ function getErrorMap() {
   return overrideErrorMap;
 }
 
-// mcp-server/node_modules/zod/v3/helpers/parseUtil.js
+// ../PortPilot-2026/mcp-server/node_modules/zod/v3/helpers/parseUtil.js
 var makeIssue = (params) => {
   const { data, path: path2, errorMaps, issueData } = params;
   const fullPath = [...path2, ...issueData.path || []];
@@ -7890,14 +7389,14 @@ var isDirty = (x) => x.status === "dirty";
 var isValid = (x) => x.status === "valid";
 var isAsync = (x) => typeof Promise !== "undefined" && x instanceof Promise;
 
-// mcp-server/node_modules/zod/v3/helpers/errorUtil.js
+// ../PortPilot-2026/mcp-server/node_modules/zod/v3/helpers/errorUtil.js
 var errorUtil;
 (function(errorUtil2) {
   errorUtil2.errToObj = (message) => typeof message === "string" ? { message } : message || {};
   errorUtil2.toString = (message) => typeof message === "string" ? message : message?.message;
 })(errorUtil || (errorUtil = {}));
 
-// mcp-server/node_modules/zod/v3/types.js
+// ../PortPilot-2026/mcp-server/node_modules/zod/v3/types.js
 var ParseInputLazyPath = class {
   constructor(parent, value, path2, key) {
     this._cachedPath = [];
@@ -11345,7 +10844,7 @@ var coerce = {
 };
 var NEVER = INVALID;
 
-// mcp-server/node_modules/zod/v4/core/core.js
+// ../PortPilot-2026/mcp-server/node_modules/zod/v4/core/core.js
 var NEVER2 = Object.freeze({
   status: "aborted"
 });
@@ -11404,7 +10903,7 @@ function config(newConfig) {
   return globalConfig;
 }
 
-// mcp-server/node_modules/zod/v4/core/util.js
+// ../PortPilot-2026/mcp-server/node_modules/zod/v4/core/util.js
 var util_exports = {};
 __export(util_exports, {
   BIGINT_FORMAT_RANGES: () => BIGINT_FORMAT_RANGES,
@@ -11925,7 +11424,7 @@ var Class = class {
   }
 };
 
-// mcp-server/node_modules/zod/v4/core/errors.js
+// ../PortPilot-2026/mcp-server/node_modules/zod/v4/core/errors.js
 var initializer = (inst, def) => {
   inst.name = "$ZodError";
   Object.defineProperty(inst, "_zod", {
@@ -12000,7 +11499,7 @@ function formatError(error2, _mapper) {
   return fieldErrors;
 }
 
-// mcp-server/node_modules/zod/v4/core/parse.js
+// ../PortPilot-2026/mcp-server/node_modules/zod/v4/core/parse.js
 var _parse = (_Err) => (schema, value, _ctx, _params) => {
   const ctx = _ctx ? Object.assign(_ctx, { async: false }) : { async: false };
   const result = schema._zod.run({ value, issues: [] }, ctx);
@@ -12052,7 +11551,7 @@ var _safeParseAsync = (_Err) => async (schema, value, _ctx) => {
 };
 var safeParseAsync = /* @__PURE__ */ _safeParseAsync($ZodRealError);
 
-// mcp-server/node_modules/zod/v4/core/regexes.js
+// ../PortPilot-2026/mcp-server/node_modules/zod/v4/core/regexes.js
 var cuid = /^[cC][^\s-]{8,}$/;
 var cuid2 = /^[0-9a-z]+$/;
 var ulid = /^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$/;
@@ -12110,7 +11609,7 @@ var _null = /null/i;
 var lowercase = /^[^A-Z]*$/;
 var uppercase = /^[^a-z]*$/;
 
-// mcp-server/node_modules/zod/v4/core/checks.js
+// ../PortPilot-2026/mcp-server/node_modules/zod/v4/core/checks.js
 var $ZodCheck = /* @__PURE__ */ $constructor("$ZodCheck", (inst, def) => {
   var _a;
   inst._zod ?? (inst._zod = {});
@@ -12495,7 +11994,7 @@ var $ZodCheckOverwrite = /* @__PURE__ */ $constructor("$ZodCheckOverwrite", (ins
   };
 });
 
-// mcp-server/node_modules/zod/v4/core/doc.js
+// ../PortPilot-2026/mcp-server/node_modules/zod/v4/core/doc.js
 var Doc = class {
   constructor(args = []) {
     this.content = [];
@@ -12531,14 +12030,14 @@ var Doc = class {
   }
 };
 
-// mcp-server/node_modules/zod/v4/core/versions.js
+// ../PortPilot-2026/mcp-server/node_modules/zod/v4/core/versions.js
 var version = {
   major: 4,
   minor: 0,
   patch: 0
 };
 
-// mcp-server/node_modules/zod/v4/core/schemas.js
+// ../PortPilot-2026/mcp-server/node_modules/zod/v4/core/schemas.js
 var $ZodType = /* @__PURE__ */ $constructor("$ZodType", (inst, def) => {
   var _a;
   inst ?? (inst = {});
@@ -13776,7 +13275,7 @@ function handleRefineResult(result, payload, input, inst) {
   }
 }
 
-// mcp-server/node_modules/zod/v4/locales/en.js
+// ../PortPilot-2026/mcp-server/node_modules/zod/v4/locales/en.js
 var parsedType = (data) => {
   const t = typeof data;
   switch (t) {
@@ -13894,7 +13393,7 @@ function en_default2() {
   };
 }
 
-// mcp-server/node_modules/zod/v4/core/registries.js
+// ../PortPilot-2026/mcp-server/node_modules/zod/v4/core/registries.js
 var $ZodRegistry = class {
   constructor() {
     this._map = /* @__PURE__ */ new Map();
@@ -13942,7 +13441,7 @@ function registry() {
 }
 var globalRegistry = /* @__PURE__ */ registry();
 
-// mcp-server/node_modules/zod/v4/core/api.js
+// ../PortPilot-2026/mcp-server/node_modules/zod/v4/core/api.js
 function _string(Class2, params) {
   return new Class2({
     type: "string",
@@ -14381,7 +13880,7 @@ function _refine(Class2, fn, _params) {
   return schema;
 }
 
-// mcp-server/node_modules/zod/v4/core/to-json-schema.js
+// ../PortPilot-2026/mcp-server/node_modules/zod/v4/core/to-json-schema.js
 var JSONSchemaGenerator = class {
   constructor(params) {
     this.counter = 0;
@@ -14433,24 +13932,24 @@ var JSONSchemaGenerator = class {
         const _json = result.schema;
         switch (def.type) {
           case "string": {
-            const json2 = _json;
-            json2.type = "string";
+            const json = _json;
+            json.type = "string";
             const { minimum, maximum, format, patterns, contentEncoding } = schema._zod.bag;
             if (typeof minimum === "number")
-              json2.minLength = minimum;
+              json.minLength = minimum;
             if (typeof maximum === "number")
-              json2.maxLength = maximum;
+              json.maxLength = maximum;
             if (format) {
-              json2.format = formatMap[format] ?? format;
-              if (json2.format === "")
-                delete json2.format;
+              json.format = formatMap[format] ?? format;
+              if (json.format === "")
+                delete json.format;
             }
             if (contentEncoding)
-              json2.contentEncoding = contentEncoding;
+              json.contentEncoding = contentEncoding;
             if (patterns && patterns.size > 0) {
               const regexes = [...patterns];
               if (regexes.length === 1)
-                json2.pattern = regexes[0].source;
+                json.pattern = regexes[0].source;
               else if (regexes.length > 1) {
                 result.schema.allOf = [
                   ...regexes.map((regex) => ({
@@ -14463,41 +13962,41 @@ var JSONSchemaGenerator = class {
             break;
           }
           case "number": {
-            const json2 = _json;
+            const json = _json;
             const { minimum, maximum, format, multipleOf, exclusiveMaximum, exclusiveMinimum } = schema._zod.bag;
             if (typeof format === "string" && format.includes("int"))
-              json2.type = "integer";
+              json.type = "integer";
             else
-              json2.type = "number";
+              json.type = "number";
             if (typeof exclusiveMinimum === "number")
-              json2.exclusiveMinimum = exclusiveMinimum;
+              json.exclusiveMinimum = exclusiveMinimum;
             if (typeof minimum === "number") {
-              json2.minimum = minimum;
+              json.minimum = minimum;
               if (typeof exclusiveMinimum === "number") {
                 if (exclusiveMinimum >= minimum)
-                  delete json2.minimum;
+                  delete json.minimum;
                 else
-                  delete json2.exclusiveMinimum;
+                  delete json.exclusiveMinimum;
               }
             }
             if (typeof exclusiveMaximum === "number")
-              json2.exclusiveMaximum = exclusiveMaximum;
+              json.exclusiveMaximum = exclusiveMaximum;
             if (typeof maximum === "number") {
-              json2.maximum = maximum;
+              json.maximum = maximum;
               if (typeof exclusiveMaximum === "number") {
                 if (exclusiveMaximum <= maximum)
-                  delete json2.maximum;
+                  delete json.maximum;
                 else
-                  delete json2.exclusiveMaximum;
+                  delete json.exclusiveMaximum;
               }
             }
             if (typeof multipleOf === "number")
-              json2.multipleOf = multipleOf;
+              json.multipleOf = multipleOf;
             break;
           }
           case "boolean": {
-            const json2 = _json;
-            json2.type = "boolean";
+            const json = _json;
+            json.type = "boolean";
             break;
           }
           case "bigint": {
@@ -14545,23 +14044,23 @@ var JSONSchemaGenerator = class {
             break;
           }
           case "array": {
-            const json2 = _json;
+            const json = _json;
             const { minimum, maximum } = schema._zod.bag;
             if (typeof minimum === "number")
-              json2.minItems = minimum;
+              json.minItems = minimum;
             if (typeof maximum === "number")
-              json2.maxItems = maximum;
-            json2.type = "array";
-            json2.items = this.process(def.element, { ...params, path: [...params.path, "items"] });
+              json.maxItems = maximum;
+            json.type = "array";
+            json.items = this.process(def.element, { ...params, path: [...params.path, "items"] });
             break;
           }
           case "object": {
-            const json2 = _json;
-            json2.type = "object";
-            json2.properties = {};
+            const json = _json;
+            json.type = "object";
+            json.properties = {};
             const shape = def.shape;
             for (const key in shape) {
-              json2.properties[key] = this.process(shape[key], {
+              json.properties[key] = this.process(shape[key], {
                 ...params,
                 path: [...params.path, "properties", key]
               });
@@ -14576,15 +14075,15 @@ var JSONSchemaGenerator = class {
               }
             }));
             if (requiredKeys.size > 0) {
-              json2.required = Array.from(requiredKeys);
+              json.required = Array.from(requiredKeys);
             }
             if (def.catchall?._zod.def.type === "never") {
-              json2.additionalProperties = false;
+              json.additionalProperties = false;
             } else if (!def.catchall) {
               if (this.io === "output")
-                json2.additionalProperties = false;
+                json.additionalProperties = false;
             } else if (def.catchall) {
-              json2.additionalProperties = this.process(def.catchall, {
+              json.additionalProperties = this.process(def.catchall, {
                 ...params,
                 path: [...params.path, "additionalProperties"]
               });
@@ -14592,15 +14091,15 @@ var JSONSchemaGenerator = class {
             break;
           }
           case "union": {
-            const json2 = _json;
-            json2.anyOf = def.options.map((x, i) => this.process(x, {
+            const json = _json;
+            json.anyOf = def.options.map((x, i) => this.process(x, {
               ...params,
               path: [...params.path, "anyOf", i]
             }));
             break;
           }
           case "intersection": {
-            const json2 = _json;
+            const json = _json;
             const a = this.process(def.left, {
               ...params,
               path: [...params.path, "allOf", 0]
@@ -14614,17 +14113,17 @@ var JSONSchemaGenerator = class {
               ...isSimpleIntersection(a) ? a.allOf : [a],
               ...isSimpleIntersection(b) ? b.allOf : [b]
             ];
-            json2.allOf = allOf;
+            json.allOf = allOf;
             break;
           }
           case "tuple": {
-            const json2 = _json;
-            json2.type = "array";
+            const json = _json;
+            json.type = "array";
             const prefixItems = def.items.map((x, i) => this.process(x, { ...params, path: [...params.path, "prefixItems", i] }));
             if (this.target === "draft-2020-12") {
-              json2.prefixItems = prefixItems;
+              json.prefixItems = prefixItems;
             } else {
-              json2.items = prefixItems;
+              json.items = prefixItems;
             }
             if (def.rest) {
               const rest = this.process(def.rest, {
@@ -14632,29 +14131,29 @@ var JSONSchemaGenerator = class {
                 path: [...params.path, "items"]
               });
               if (this.target === "draft-2020-12") {
-                json2.items = rest;
+                json.items = rest;
               } else {
-                json2.additionalItems = rest;
+                json.additionalItems = rest;
               }
             }
             if (def.rest) {
-              json2.items = this.process(def.rest, {
+              json.items = this.process(def.rest, {
                 ...params,
                 path: [...params.path, "items"]
               });
             }
             const { minimum, maximum } = schema._zod.bag;
             if (typeof minimum === "number")
-              json2.minItems = minimum;
+              json.minItems = minimum;
             if (typeof maximum === "number")
-              json2.maxItems = maximum;
+              json.maxItems = maximum;
             break;
           }
           case "record": {
-            const json2 = _json;
-            json2.type = "object";
-            json2.propertyNames = this.process(def.keyType, { ...params, path: [...params.path, "propertyNames"] });
-            json2.additionalProperties = this.process(def.valueType, {
+            const json = _json;
+            json.type = "object";
+            json.propertyNames = this.process(def.keyType, { ...params, path: [...params.path, "propertyNames"] });
+            json.additionalProperties = this.process(def.valueType, {
               ...params,
               path: [...params.path, "additionalProperties"]
             });
@@ -14673,17 +14172,17 @@ var JSONSchemaGenerator = class {
             break;
           }
           case "enum": {
-            const json2 = _json;
+            const json = _json;
             const values = getEnumValues(def.entries);
             if (values.every((v) => typeof v === "number"))
-              json2.type = "number";
+              json.type = "number";
             if (values.every((v) => typeof v === "string"))
-              json2.type = "string";
-            json2.enum = values;
+              json.type = "string";
+            json.enum = values;
             break;
           }
           case "literal": {
-            const json2 = _json;
+            const json = _json;
             const vals = [];
             for (const val of def.values) {
               if (val === void 0) {
@@ -14704,23 +14203,23 @@ var JSONSchemaGenerator = class {
             if (vals.length === 0) {
             } else if (vals.length === 1) {
               const val = vals[0];
-              json2.type = val === null ? "null" : typeof val;
-              json2.const = val;
+              json.type = val === null ? "null" : typeof val;
+              json.const = val;
             } else {
               if (vals.every((v) => typeof v === "number"))
-                json2.type = "number";
+                json.type = "number";
               if (vals.every((v) => typeof v === "string"))
-                json2.type = "string";
+                json.type = "string";
               if (vals.every((v) => typeof v === "boolean"))
-                json2.type = "string";
+                json.type = "string";
               if (vals.every((v) => v === null))
-                json2.type = "null";
-              json2.enum = vals;
+                json.type = "null";
+              json.enum = vals;
             }
             break;
           }
           case "file": {
-            const json2 = _json;
+            const json = _json;
             const file = {
               type: "string",
               format: "binary",
@@ -14734,15 +14233,15 @@ var JSONSchemaGenerator = class {
             if (mime) {
               if (mime.length === 1) {
                 file.contentMediaType = mime[0];
-                Object.assign(json2, file);
+                Object.assign(json, file);
               } else {
-                json2.anyOf = mime.map((m) => {
+                json.anyOf = mime.map((m) => {
                   const mFile = { ...file, contentMediaType: m };
                   return mFile;
                 });
               }
             } else {
-              Object.assign(json2, file);
+              Object.assign(json, file);
             }
             break;
           }
@@ -14763,8 +14262,8 @@ var JSONSchemaGenerator = class {
             break;
           }
           case "success": {
-            const json2 = _json;
-            json2.type = "boolean";
+            const json = _json;
+            json.type = "boolean";
             break;
           }
           case "default": {
@@ -14799,12 +14298,12 @@ var JSONSchemaGenerator = class {
             break;
           }
           case "template_literal": {
-            const json2 = _json;
+            const json = _json;
             const pattern = schema._zod.pattern;
             if (!pattern)
               throw new Error("Pattern not found in template literal");
-            json2.type = "string";
-            json2.pattern = pattern.source;
+            json.type = "string";
+            json.pattern = pattern.source;
             break;
           }
           case "pipe": {
@@ -15148,7 +14647,7 @@ function isTransforming(_schema, _ctx) {
   throw new Error(`Unknown schema type: ${def.type}`);
 }
 
-// mcp-server/node_modules/zod/v4/mini/schemas.js
+// ../PortPilot-2026/mcp-server/node_modules/zod/v4/mini/schemas.js
 var ZodMiniType = /* @__PURE__ */ $constructor("ZodMiniType", (inst, def) => {
   if (!inst._zod)
     throw new Error("Uninitialized schema in ZodMiniType.");
@@ -15194,7 +14693,7 @@ function object(shape, params) {
   return new ZodMiniObject(def);
 }
 
-// mcp-server/node_modules/@modelcontextprotocol/sdk/dist/esm/server/zod-compat.js
+// ../PortPilot-2026/mcp-server/node_modules/@modelcontextprotocol/sdk/dist/esm/server/zod-compat.js
 function isZ4Schema(s) {
   const schema = s;
   return !!schema._zod;
@@ -15278,32 +14777,16 @@ function normalizeObjectSchema(schema) {
   }
   return void 0;
 }
-function getDotPath(path2) {
-  if (path2.length === 0) {
-    return "object root";
-  }
-  return path2.reduce((acc, seg, index) => {
-    if (index === 0) {
-      return String(seg);
-    }
-    if (typeof seg === "number") {
-      return `${acc}[${seg}]`;
-    }
-    return `${acc}.${seg}`;
-  }, "");
-}
 function getParseErrorMessage(error2) {
   if (error2 && typeof error2 === "object") {
-    if ("issues" in error2 && Array.isArray(error2.issues) && error2.issues.length > 0) {
-      return error2.issues.map((i) => {
-        if (!i.path?.length) {
-          return i.message;
-        }
-        return `${i.message} at ${getDotPath(i.path)}`;
-      }).join("\n");
-    }
     if ("message" in error2 && typeof error2.message === "string") {
       return error2.message;
+    }
+    if ("issues" in error2 && Array.isArray(error2.issues) && error2.issues.length > 0) {
+      const firstIssue = error2.issues[0];
+      if (firstIssue && typeof firstIssue === "object" && "message" in firstIssue) {
+        return String(firstIssue.message);
+      }
     }
     try {
       return JSON.stringify(error2);
@@ -15354,7 +14837,7 @@ function getLiteralValue(schema) {
   return void 0;
 }
 
-// mcp-server/node_modules/zod/v4/classic/iso.js
+// ../PortPilot-2026/mcp-server/node_modules/zod/v4/classic/iso.js
 var iso_exports2 = {};
 __export(iso_exports2, {
   ZodISODate: () => ZodISODate,
@@ -15395,7 +14878,7 @@ function duration2(params) {
   return _isoDuration(ZodISODuration, params);
 }
 
-// mcp-server/node_modules/zod/v4/classic/errors.js
+// ../PortPilot-2026/mcp-server/node_modules/zod/v4/classic/errors.js
 var initializer2 = (inst, issues) => {
   $ZodError.init(inst, issues);
   inst.name = "ZodError";
@@ -15429,13 +14912,13 @@ var ZodRealError = $constructor("ZodError", initializer2, {
   Parent: Error
 });
 
-// mcp-server/node_modules/zod/v4/classic/parse.js
+// ../PortPilot-2026/mcp-server/node_modules/zod/v4/classic/parse.js
 var parse2 = /* @__PURE__ */ _parse(ZodRealError);
 var parseAsync2 = /* @__PURE__ */ _parseAsync(ZodRealError);
 var safeParse3 = /* @__PURE__ */ _safeParse(ZodRealError);
 var safeParseAsync3 = /* @__PURE__ */ _safeParseAsync(ZodRealError);
 
-// mcp-server/node_modules/zod/v4/classic/schemas.js
+// ../PortPilot-2026/mcp-server/node_modules/zod/v4/classic/schemas.js
 var ZodType2 = /* @__PURE__ */ $constructor("ZodType", (inst, def) => {
   $ZodType.init(inst, def);
   inst.def = def;
@@ -16046,10 +15529,10 @@ function preprocess(fn, schema) {
   return pipe(transform(fn), schema);
 }
 
-// mcp-server/node_modules/zod/v4/classic/external.js
+// ../PortPilot-2026/mcp-server/node_modules/zod/v4/classic/external.js
 config(en_default2());
 
-// mcp-server/node_modules/@modelcontextprotocol/sdk/dist/esm/types.js
+// ../PortPilot-2026/mcp-server/node_modules/@modelcontextprotocol/sdk/dist/esm/types.js
 var LATEST_PROTOCOL_VERSION = "2025-11-25";
 var DEFAULT_NEGOTIATED_PROTOCOL_VERSION = "2025-03-26";
 var SUPPORTED_PROTOCOL_VERSIONS = [LATEST_PROTOCOL_VERSION, "2025-06-18", "2025-03-26", "2024-11-05", "2024-10-07"];
@@ -17582,12 +17065,12 @@ var UrlElicitationRequiredError = class extends McpError {
   }
 };
 
-// mcp-server/node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/interfaces.js
+// ../PortPilot-2026/mcp-server/node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/interfaces.js
 function isTerminal(status2) {
   return status2 === "completed" || status2 === "failed" || status2 === "cancelled";
 }
 
-// mcp-server/node_modules/zod-to-json-schema/dist/esm/Options.js
+// ../PortPilot-2026/mcp-server/node_modules/zod-to-json-schema/dist/esm/Options.js
 var ignoreOverride = /* @__PURE__ */ Symbol("Let zodToJsonSchema decide on which parser to use");
 var defaultOptions = {
   name: void 0,
@@ -17621,7 +17104,7 @@ var getDefaultOptions = (options) => typeof options === "string" ? {
   ...options
 };
 
-// mcp-server/node_modules/zod-to-json-schema/dist/esm/Refs.js
+// ../PortPilot-2026/mcp-server/node_modules/zod-to-json-schema/dist/esm/Refs.js
 var getRefs = (options) => {
   const _options = getDefaultOptions(options);
   const currentPath = _options.name !== void 0 ? [..._options.basePath, _options.definitionPath, _options.name] : _options.basePath;
@@ -17642,7 +17125,7 @@ var getRefs = (options) => {
   };
 };
 
-// mcp-server/node_modules/zod-to-json-schema/dist/esm/errorMessages.js
+// ../PortPilot-2026/mcp-server/node_modules/zod-to-json-schema/dist/esm/errorMessages.js
 function addErrorMessage(res, key, errorMessage, refs) {
   if (!refs?.errorMessages)
     return;
@@ -17658,7 +17141,7 @@ function setResponseValueAndErrors(res, key, value, errorMessage, refs) {
   addErrorMessage(res, key, errorMessage, refs);
 }
 
-// mcp-server/node_modules/zod-to-json-schema/dist/esm/getRelativePath.js
+// ../PortPilot-2026/mcp-server/node_modules/zod-to-json-schema/dist/esm/getRelativePath.js
 var getRelativePath = (pathA, pathB) => {
   let i = 0;
   for (; i < pathA.length && i < pathB.length; i++) {
@@ -17668,7 +17151,7 @@ var getRelativePath = (pathA, pathB) => {
   return [(pathA.length - i).toString(), ...pathB.slice(i)].join("/");
 };
 
-// mcp-server/node_modules/zod-to-json-schema/dist/esm/parsers/any.js
+// ../PortPilot-2026/mcp-server/node_modules/zod-to-json-schema/dist/esm/parsers/any.js
 function parseAnyDef(refs) {
   if (refs.target !== "openAi") {
     return {};
@@ -17684,7 +17167,7 @@ function parseAnyDef(refs) {
   };
 }
 
-// mcp-server/node_modules/zod-to-json-schema/dist/esm/parsers/array.js
+// ../PortPilot-2026/mcp-server/node_modules/zod-to-json-schema/dist/esm/parsers/array.js
 function parseArrayDef(def, refs) {
   const res = {
     type: "array"
@@ -17708,7 +17191,7 @@ function parseArrayDef(def, refs) {
   return res;
 }
 
-// mcp-server/node_modules/zod-to-json-schema/dist/esm/parsers/bigint.js
+// ../PortPilot-2026/mcp-server/node_modules/zod-to-json-schema/dist/esm/parsers/bigint.js
 function parseBigintDef(def, refs) {
   const res = {
     type: "integer",
@@ -17754,24 +17237,24 @@ function parseBigintDef(def, refs) {
   return res;
 }
 
-// mcp-server/node_modules/zod-to-json-schema/dist/esm/parsers/boolean.js
+// ../PortPilot-2026/mcp-server/node_modules/zod-to-json-schema/dist/esm/parsers/boolean.js
 function parseBooleanDef() {
   return {
     type: "boolean"
   };
 }
 
-// mcp-server/node_modules/zod-to-json-schema/dist/esm/parsers/branded.js
+// ../PortPilot-2026/mcp-server/node_modules/zod-to-json-schema/dist/esm/parsers/branded.js
 function parseBrandedDef(_def, refs) {
   return parseDef(_def.type._def, refs);
 }
 
-// mcp-server/node_modules/zod-to-json-schema/dist/esm/parsers/catch.js
+// ../PortPilot-2026/mcp-server/node_modules/zod-to-json-schema/dist/esm/parsers/catch.js
 var parseCatchDef = (def, refs) => {
   return parseDef(def.innerType._def, refs);
 };
 
-// mcp-server/node_modules/zod-to-json-schema/dist/esm/parsers/date.js
+// ../PortPilot-2026/mcp-server/node_modules/zod-to-json-schema/dist/esm/parsers/date.js
 function parseDateDef(def, refs, overrideDateStrategy) {
   const strategy = overrideDateStrategy ?? refs.dateStrategy;
   if (Array.isArray(strategy)) {
@@ -17830,7 +17313,7 @@ var integerDateParser = (def, refs) => {
   return res;
 };
 
-// mcp-server/node_modules/zod-to-json-schema/dist/esm/parsers/default.js
+// ../PortPilot-2026/mcp-server/node_modules/zod-to-json-schema/dist/esm/parsers/default.js
 function parseDefaultDef(_def, refs) {
   return {
     ...parseDef(_def.innerType._def, refs),
@@ -17838,12 +17321,12 @@ function parseDefaultDef(_def, refs) {
   };
 }
 
-// mcp-server/node_modules/zod-to-json-schema/dist/esm/parsers/effects.js
+// ../PortPilot-2026/mcp-server/node_modules/zod-to-json-schema/dist/esm/parsers/effects.js
 function parseEffectsDef(_def, refs) {
   return refs.effectStrategy === "input" ? parseDef(_def.schema._def, refs) : parseAnyDef(refs);
 }
 
-// mcp-server/node_modules/zod-to-json-schema/dist/esm/parsers/enum.js
+// ../PortPilot-2026/mcp-server/node_modules/zod-to-json-schema/dist/esm/parsers/enum.js
 function parseEnumDef(def) {
   return {
     type: "string",
@@ -17851,7 +17334,7 @@ function parseEnumDef(def) {
   };
 }
 
-// mcp-server/node_modules/zod-to-json-schema/dist/esm/parsers/intersection.js
+// ../PortPilot-2026/mcp-server/node_modules/zod-to-json-schema/dist/esm/parsers/intersection.js
 var isJsonSchema7AllOfType = (type) => {
   if ("type" in type && type.type === "string")
     return false;
@@ -17893,7 +17376,7 @@ function parseIntersectionDef(def, refs) {
   } : void 0;
 }
 
-// mcp-server/node_modules/zod-to-json-schema/dist/esm/parsers/literal.js
+// ../PortPilot-2026/mcp-server/node_modules/zod-to-json-schema/dist/esm/parsers/literal.js
 function parseLiteralDef(def, refs) {
   const parsedType2 = typeof def.value;
   if (parsedType2 !== "bigint" && parsedType2 !== "number" && parsedType2 !== "boolean" && parsedType2 !== "string") {
@@ -17913,7 +17396,7 @@ function parseLiteralDef(def, refs) {
   };
 }
 
-// mcp-server/node_modules/zod-to-json-schema/dist/esm/parsers/string.js
+// ../PortPilot-2026/mcp-server/node_modules/zod-to-json-schema/dist/esm/parsers/string.js
 var emojiRegex2 = void 0;
 var zodPatterns = {
   /**
@@ -18238,7 +17721,7 @@ function stringifyRegExpWithFlags(regex, refs) {
   return pattern;
 }
 
-// mcp-server/node_modules/zod-to-json-schema/dist/esm/parsers/record.js
+// ../PortPilot-2026/mcp-server/node_modules/zod-to-json-schema/dist/esm/parsers/record.js
 function parseRecordDef(def, refs) {
   if (refs.target === "openAi") {
     console.warn("Warning: OpenAI may not support records in schemas! Try an array of key-value pairs instead.");
@@ -18290,7 +17773,7 @@ function parseRecordDef(def, refs) {
   return schema;
 }
 
-// mcp-server/node_modules/zod-to-json-schema/dist/esm/parsers/map.js
+// ../PortPilot-2026/mcp-server/node_modules/zod-to-json-schema/dist/esm/parsers/map.js
 function parseMapDef(def, refs) {
   if (refs.mapStrategy === "record") {
     return parseRecordDef(def, refs);
@@ -18315,7 +17798,7 @@ function parseMapDef(def, refs) {
   };
 }
 
-// mcp-server/node_modules/zod-to-json-schema/dist/esm/parsers/nativeEnum.js
+// ../PortPilot-2026/mcp-server/node_modules/zod-to-json-schema/dist/esm/parsers/nativeEnum.js
 function parseNativeEnumDef(def) {
   const object3 = def.values;
   const actualKeys = Object.keys(def.values).filter((key) => {
@@ -18329,7 +17812,7 @@ function parseNativeEnumDef(def) {
   };
 }
 
-// mcp-server/node_modules/zod-to-json-schema/dist/esm/parsers/never.js
+// ../PortPilot-2026/mcp-server/node_modules/zod-to-json-schema/dist/esm/parsers/never.js
 function parseNeverDef(refs) {
   return refs.target === "openAi" ? void 0 : {
     not: parseAnyDef({
@@ -18339,7 +17822,7 @@ function parseNeverDef(refs) {
   };
 }
 
-// mcp-server/node_modules/zod-to-json-schema/dist/esm/parsers/null.js
+// ../PortPilot-2026/mcp-server/node_modules/zod-to-json-schema/dist/esm/parsers/null.js
 function parseNullDef(refs) {
   return refs.target === "openApi3" ? {
     enum: ["null"],
@@ -18349,7 +17832,7 @@ function parseNullDef(refs) {
   };
 }
 
-// mcp-server/node_modules/zod-to-json-schema/dist/esm/parsers/union.js
+// ../PortPilot-2026/mcp-server/node_modules/zod-to-json-schema/dist/esm/parsers/union.js
 var primitiveMappings = {
   ZodString: "string",
   ZodNumber: "number",
@@ -18417,7 +17900,7 @@ var asAnyOf = (def, refs) => {
   return anyOf.length ? { anyOf } : void 0;
 };
 
-// mcp-server/node_modules/zod-to-json-schema/dist/esm/parsers/nullable.js
+// ../PortPilot-2026/mcp-server/node_modules/zod-to-json-schema/dist/esm/parsers/nullable.js
 function parseNullableDef(def, refs) {
   if (["ZodString", "ZodNumber", "ZodBigInt", "ZodBoolean", "ZodNull"].includes(def.innerType._def.typeName) && (!def.innerType._def.checks || !def.innerType._def.checks.length)) {
     if (refs.target === "openApi3") {
@@ -18449,7 +17932,7 @@ function parseNullableDef(def, refs) {
   return base && { anyOf: [base, { type: "null" }] };
 }
 
-// mcp-server/node_modules/zod-to-json-schema/dist/esm/parsers/number.js
+// ../PortPilot-2026/mcp-server/node_modules/zod-to-json-schema/dist/esm/parsers/number.js
 function parseNumberDef(def, refs) {
   const res = {
     type: "number"
@@ -18498,7 +17981,7 @@ function parseNumberDef(def, refs) {
   return res;
 }
 
-// mcp-server/node_modules/zod-to-json-schema/dist/esm/parsers/object.js
+// ../PortPilot-2026/mcp-server/node_modules/zod-to-json-schema/dist/esm/parsers/object.js
 function parseObjectDef(def, refs) {
   const forceOptionalIntoNullable = refs.target === "openAi";
   const result = {
@@ -18568,7 +18051,7 @@ function safeIsOptional(schema) {
   }
 }
 
-// mcp-server/node_modules/zod-to-json-schema/dist/esm/parsers/optional.js
+// ../PortPilot-2026/mcp-server/node_modules/zod-to-json-schema/dist/esm/parsers/optional.js
 var parseOptionalDef = (def, refs) => {
   if (refs.currentPath.toString() === refs.propertyPath?.toString()) {
     return parseDef(def.innerType._def, refs);
@@ -18587,7 +18070,7 @@ var parseOptionalDef = (def, refs) => {
   } : parseAnyDef(refs);
 };
 
-// mcp-server/node_modules/zod-to-json-schema/dist/esm/parsers/pipeline.js
+// ../PortPilot-2026/mcp-server/node_modules/zod-to-json-schema/dist/esm/parsers/pipeline.js
 var parsePipelineDef = (def, refs) => {
   if (refs.pipeStrategy === "input") {
     return parseDef(def.in._def, refs);
@@ -18607,12 +18090,12 @@ var parsePipelineDef = (def, refs) => {
   };
 };
 
-// mcp-server/node_modules/zod-to-json-schema/dist/esm/parsers/promise.js
+// ../PortPilot-2026/mcp-server/node_modules/zod-to-json-schema/dist/esm/parsers/promise.js
 function parsePromiseDef(def, refs) {
   return parseDef(def.type._def, refs);
 }
 
-// mcp-server/node_modules/zod-to-json-schema/dist/esm/parsers/set.js
+// ../PortPilot-2026/mcp-server/node_modules/zod-to-json-schema/dist/esm/parsers/set.js
 function parseSetDef(def, refs) {
   const items = parseDef(def.valueType._def, {
     ...refs,
@@ -18632,7 +18115,7 @@ function parseSetDef(def, refs) {
   return schema;
 }
 
-// mcp-server/node_modules/zod-to-json-schema/dist/esm/parsers/tuple.js
+// ../PortPilot-2026/mcp-server/node_modules/zod-to-json-schema/dist/esm/parsers/tuple.js
 function parseTupleDef(def, refs) {
   if (def.rest) {
     return {
@@ -18660,24 +18143,24 @@ function parseTupleDef(def, refs) {
   }
 }
 
-// mcp-server/node_modules/zod-to-json-schema/dist/esm/parsers/undefined.js
+// ../PortPilot-2026/mcp-server/node_modules/zod-to-json-schema/dist/esm/parsers/undefined.js
 function parseUndefinedDef(refs) {
   return {
     not: parseAnyDef(refs)
   };
 }
 
-// mcp-server/node_modules/zod-to-json-schema/dist/esm/parsers/unknown.js
+// ../PortPilot-2026/mcp-server/node_modules/zod-to-json-schema/dist/esm/parsers/unknown.js
 function parseUnknownDef(refs) {
   return parseAnyDef(refs);
 }
 
-// mcp-server/node_modules/zod-to-json-schema/dist/esm/parsers/readonly.js
+// ../PortPilot-2026/mcp-server/node_modules/zod-to-json-schema/dist/esm/parsers/readonly.js
 var parseReadonlyDef = (def, refs) => {
   return parseDef(def.innerType._def, refs);
 };
 
-// mcp-server/node_modules/zod-to-json-schema/dist/esm/selectParser.js
+// ../PortPilot-2026/mcp-server/node_modules/zod-to-json-schema/dist/esm/selectParser.js
 var selectParser = (def, typeName, refs) => {
   switch (typeName) {
     case ZodFirstPartyTypeKind.ZodString:
@@ -18753,7 +18236,7 @@ var selectParser = (def, typeName, refs) => {
   }
 };
 
-// mcp-server/node_modules/zod-to-json-schema/dist/esm/parseDef.js
+// ../PortPilot-2026/mcp-server/node_modules/zod-to-json-schema/dist/esm/parseDef.js
 function parseDef(def, refs, forceResolution = false) {
   const seenItem = refs.seen.get(def);
   if (refs.override) {
@@ -18809,7 +18292,7 @@ var addMeta = (def, refs, jsonSchema) => {
   return jsonSchema;
 };
 
-// mcp-server/node_modules/zod-to-json-schema/dist/esm/zodToJsonSchema.js
+// ../PortPilot-2026/mcp-server/node_modules/zod-to-json-schema/dist/esm/zodToJsonSchema.js
 var zodToJsonSchema = (schema, options) => {
   const refs = getRefs(options);
   let definitions = typeof options === "object" && options.definitions ? Object.entries(options.definitions).reduce((acc, [name2, schema2]) => ({
@@ -18871,7 +18354,7 @@ var zodToJsonSchema = (schema, options) => {
   return combined;
 };
 
-// mcp-server/node_modules/@modelcontextprotocol/sdk/dist/esm/server/zod-json-schema-compat.js
+// ../PortPilot-2026/mcp-server/node_modules/@modelcontextprotocol/sdk/dist/esm/server/zod-json-schema-compat.js
 function mapMiniTarget(t) {
   if (!t)
     return "draft-7";
@@ -18913,7 +18396,7 @@ function parseWithCompat(schema, data) {
   return result.data;
 }
 
-// mcp-server/node_modules/@modelcontextprotocol/sdk/dist/esm/shared/protocol.js
+// ../PortPilot-2026/mcp-server/node_modules/@modelcontextprotocol/sdk/dist/esm/shared/protocol.js
 var DEFAULT_REQUEST_TIMEOUT_MSEC = 6e4;
 var Protocol = class {
   constructor(_options) {
@@ -18954,9 +18437,6 @@ var Protocol = class {
       this.setRequestHandler(GetTaskPayloadRequestSchema, async (request, extra) => {
         const handleTaskResult = async () => {
           const taskId = request.params.taskId;
-          if (!await this._taskStore.getTask(taskId, extra.sessionId)) {
-            throw new McpError(ErrorCode.InvalidParams, `Task not found: ${taskId}`);
-          }
           if (this._taskMessageQueue) {
             let queuedMessage;
             while (queuedMessage = await this._taskMessageQueue.dequeue(taskId, extra.sessionId)) {
@@ -18987,12 +18467,12 @@ var Protocol = class {
             throw new McpError(ErrorCode.InvalidParams, `Task not found: ${taskId}`);
           }
           if (!isTerminal(task.status)) {
-            await this._waitForTaskUpdate(taskId, extra.signal, extra.sessionId);
+            await this._waitForTaskUpdate(taskId, extra.signal);
             return await handleTaskResult();
           }
           if (isTerminal(task.status)) {
             const result = await this._taskStore.getTaskResult(taskId, extra.sessionId);
-            this._clearTaskQueue(taskId, extra.sessionId);
+            this._clearTaskQueue(taskId);
             return {
               ...result,
               _meta: {
@@ -19029,7 +18509,7 @@ var Protocol = class {
             throw new McpError(ErrorCode.InvalidParams, `Cannot cancel task in terminal status: ${task.status}`);
           }
           await this._taskStore.updateTaskStatus(request.params.taskId, "cancelled", "Client cancelled task execution.", extra.sessionId);
-          this._clearTaskQueue(request.params.taskId, extra.sessionId);
+          this._clearTaskQueue(request.params.taskId);
           const cancelledTask = await this._taskStore.getTask(request.params.taskId, extra.sessionId);
           if (!cancelledTask) {
             throw new McpError(ErrorCode.InvalidParams, `Task not found after cancellation: ${request.params.taskId}`);
@@ -19157,19 +18637,6 @@ var Protocol = class {
     const handler = this._requestHandlers.get(request.method) ?? this.fallbackRequestHandler;
     const capturedTransport = this._transport;
     const relatedTaskId = request.params?._meta?.[RELATED_TASK_META_KEY]?.taskId;
-    const sessionId = capturedTransport?.sessionId;
-    const store = this._taskStore;
-    let relatedTaskFound = true;
-    let relatedTaskLookup;
-    if (relatedTaskId && store && this._taskMessageQueue && sessionId !== void 0) {
-      relatedTaskFound = false;
-      relatedTaskLookup = (async () => {
-        if (!await store.getTask(relatedTaskId, sessionId)) {
-          throw new McpError(ErrorCode.InvalidParams, `Task not found: ${relatedTaskId}`);
-        }
-        relatedTaskFound = true;
-      })();
-    }
     if (handler === void 0) {
       const errorResponse = {
         jsonrpc: "2.0",
@@ -19179,10 +18646,7 @@ var Protocol = class {
           message: "Method not found"
         }
       };
-      if (relatedTaskId && relatedTaskLookup) {
-        const queuedError = { type: "error", message: errorResponse, timestamp: Date.now() };
-        relatedTaskLookup.then(() => this._enqueueTaskMessage(relatedTaskId, queuedError, sessionId), () => capturedTransport?.send(errorResponse)).catch((error2) => this._onerror(new Error(`Failed to send an error response: ${error2}`)));
-      } else if (relatedTaskId && this._taskMessageQueue) {
+      if (relatedTaskId && this._taskMessageQueue) {
         this._enqueueTaskMessage(relatedTaskId, {
           type: "error",
           message: errorResponse,
@@ -19233,10 +18697,7 @@ var Protocol = class {
       closeSSEStream: extra?.closeSSEStream,
       closeStandaloneSSEStream: extra?.closeStandaloneSSEStream
     };
-    (relatedTaskLookup ?? Promise.resolve()).then(() => {
-      if (relatedTaskLookup && abortController.signal.aborted) {
-        throw new McpError(ErrorCode.ConnectionClosed, "Request was cancelled");
-      }
+    Promise.resolve().then(() => {
       if (taskCreationParams) {
         this.assertTaskHandlerCapability(request.method);
       }
@@ -19271,7 +18732,7 @@ var Protocol = class {
           ...error2["data"] !== void 0 && { data: error2["data"] }
         }
       };
-      if (relatedTaskId && this._taskMessageQueue && relatedTaskFound) {
+      if (relatedTaskId && this._taskMessageQueue) {
         await this._enqueueTaskMessage(relatedTaskId, {
           type: "error",
           message: errorResponse,
@@ -19751,7 +19212,7 @@ var Protocol = class {
       throw new Error("Cannot enqueue task message: taskStore and taskMessageQueue are not configured");
     }
     const maxQueueSize = this._options?.maxTaskQueueSize;
-    await this._taskMessageQueue.enqueue(taskId, message, sessionId ?? this._transport?.sessionId, maxQueueSize);
+    await this._taskMessageQueue.enqueue(taskId, message, sessionId, maxQueueSize);
   }
   /**
    * Clears the message queue for a task and rejects any pending request resolvers.
@@ -19780,13 +19241,12 @@ var Protocol = class {
    * Uses polling to check for updates at the task's configured poll interval.
    * @param taskId The task ID to wait for
    * @param signal Abort signal to cancel the wait
-   * @param sessionId Session of the request that waits, passed to the task store
    * @returns Promise that resolves when an update occurs or rejects if aborted
    */
-  async _waitForTaskUpdate(taskId, signal, sessionId) {
+  async _waitForTaskUpdate(taskId, signal) {
     let interval = this._options?.defaultTaskPollInterval ?? 1e3;
     try {
-      const task = await this._taskStore?.getTask(taskId, sessionId);
+      const task = await this._taskStore?.getTask(taskId);
       if (task?.pollInterval) {
         interval = task.pollInterval;
       }
@@ -19890,7 +19350,7 @@ function mergeCapabilities(base, additional) {
   return result;
 }
 
-// mcp-server/node_modules/@modelcontextprotocol/sdk/dist/esm/validation/ajv-provider.js
+// ../PortPilot-2026/mcp-server/node_modules/@modelcontextprotocol/sdk/dist/esm/validation/ajv-provider.js
 var import_ajv = __toESM(require_ajv(), 1);
 var import_ajv_formats = __toESM(require_dist(), 1);
 function createDefaultAjvInstance() {
@@ -19958,7 +19418,7 @@ var AjvJsonSchemaValidator = class {
   }
 };
 
-// mcp-server/node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/server.js
+// ../PortPilot-2026/mcp-server/node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/server.js
 var ExperimentalServerTasks = class {
   constructor(_server) {
     this._server = _server;
@@ -20171,7 +19631,7 @@ var ExperimentalServerTasks = class {
   }
 };
 
-// mcp-server/node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/helpers.js
+// ../PortPilot-2026/mcp-server/node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/helpers.js
 function assertToolsCallTaskCapability(requests, method, entityName) {
   if (!requests) {
     throw new Error(`${entityName} does not support task creation (required for ${method})`);
@@ -20206,7 +19666,7 @@ function assertClientRequestTaskCapability(requests, method, entityName) {
   }
 }
 
-// mcp-server/node_modules/@modelcontextprotocol/sdk/dist/esm/server/index.js
+// ../PortPilot-2026/mcp-server/node_modules/@modelcontextprotocol/sdk/dist/esm/server/index.js
 var Server = class extends Protocol {
   /**
    * Initializes this server with the given name and version information.
@@ -20272,7 +19732,16 @@ var Server = class extends Protocol {
     if (!methodSchema) {
       throw new Error("Schema is missing a method literal");
     }
-    const methodValue = getLiteralValue(methodSchema);
+    let methodValue;
+    if (isZ4Schema(methodSchema)) {
+      const v4Schema = methodSchema;
+      const v4Def = v4Schema._zod?.def;
+      methodValue = v4Def?.value ?? v4Schema.value;
+    } else {
+      const v3Schema = methodSchema;
+      const legacyDef = v3Schema._def;
+      methodValue = legacyDef?.value ?? v3Schema.value;
+    }
     if (typeof methodValue !== "string") {
       throw new Error("Schema method literal must be a string");
     }
@@ -20577,7 +20046,7 @@ var Server = class extends Protocol {
   }
 };
 
-// mcp-server/node_modules/@modelcontextprotocol/sdk/dist/esm/server/completable.js
+// ../PortPilot-2026/mcp-server/node_modules/@modelcontextprotocol/sdk/dist/esm/server/completable.js
 var COMPLETABLE_SYMBOL = /* @__PURE__ */ Symbol.for("mcp.completable");
 function isCompletable(schema) {
   return !!schema && typeof schema === "object" && COMPLETABLE_SYMBOL in schema;
@@ -20591,7 +20060,7 @@ var McpZodTypeKind;
   McpZodTypeKind2["Completable"] = "McpCompletable";
 })(McpZodTypeKind || (McpZodTypeKind = {}));
 
-// mcp-server/node_modules/@modelcontextprotocol/sdk/dist/esm/shared/toolNameValidation.js
+// ../PortPilot-2026/mcp-server/node_modules/@modelcontextprotocol/sdk/dist/esm/shared/toolNameValidation.js
 var TOOL_NAME_REGEX = /^[A-Za-z0-9._-]{1,128}$/;
 function validateToolName(name) {
   const warnings = [];
@@ -20649,7 +20118,7 @@ function validateAndWarnToolName(name) {
   return result.isValid;
 }
 
-// mcp-server/node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/mcp-server.js
+// ../PortPilot-2026/mcp-server/node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/mcp-server.js
 var ExperimentalMcpServerTasks = class {
   constructor(_mcpServer) {
     this._mcpServer = _mcpServer;
@@ -20664,43 +20133,7 @@ var ExperimentalMcpServerTasks = class {
   }
 };
 
-// mcp-server/node_modules/@modelcontextprotocol/sdk/dist/esm/server/mcp.js
-function toolInputElementCount(value, max) {
-  let count = 0;
-  const stack = [value];
-  while (stack.length > 0) {
-    const node = stack.pop();
-    if (node === null || typeof node !== "object")
-      continue;
-    if (Array.isArray(node)) {
-      for (const child of node) {
-        if (++count > max)
-          return count;
-        if (child !== null && typeof child === "object")
-          stack.push(child);
-      }
-    } else {
-      for (const key in node) {
-        if (!Object.prototype.hasOwnProperty.call(node, key))
-          continue;
-        if (++count > max)
-          return count;
-        const child = node[key];
-        if (child !== null && typeof child === "object")
-          stack.push(child);
-      }
-    }
-  }
-  return count;
-}
-function resolveMaxToolInputElements(value) {
-  if (value === void 0 || value === Infinity)
-    return void 0;
-  if (typeof value !== "number" || Number.isNaN(value) || value < 1) {
-    throw new RangeError(`maxToolInputElements must be a number of at least 1, or Infinity, got ${String(value)}`);
-  }
-  return value;
-}
+// ../PortPilot-2026/mcp-server/node_modules/@modelcontextprotocol/sdk/dist/esm/server/mcp.js
 var McpServer = class {
   constructor(serverInfo, options) {
     this._registeredResources = {};
@@ -20712,7 +20145,6 @@ var McpServer = class {
     this._resourceHandlersInitialized = false;
     this._promptHandlersInitialized = false;
     this.server = new Server(serverInfo, options);
-    this._maxToolInputElements = resolveMaxToolInputElements(options?.maxToolInputElements);
   }
   /**
    * Access experimental features.
@@ -20843,15 +20275,12 @@ var McpServer = class {
    * Validates tool input arguments against the tool's input schema.
    */
   async validateToolInput(tool, args, toolName) {
-    if (this._maxToolInputElements !== void 0 && toolInputElementCount(args, this._maxToolInputElements) > this._maxToolInputElements) {
-      throw new McpError(ErrorCode.InvalidParams, `Invalid arguments for tool ${toolName}: arguments contain more than the maximum of ${this._maxToolInputElements} elements`);
-    }
     if (!tool.inputSchema) {
       return void 0;
     }
     const inputObj = normalizeObjectSchema(tool.inputSchema);
     const schemaToParse = inputObj ?? tool.inputSchema;
-    const parseResult = await safeParseAsync2(schemaToParse, args ?? {});
+    const parseResult = await safeParseAsync2(schemaToParse, args);
     if (!parseResult.success) {
       const error2 = "error" in parseResult ? parseResult.error : "Unknown error";
       const errorMessage = getParseErrorMessage(error2);
@@ -21089,7 +20518,7 @@ var McpServer = class {
       }
       if (prompt.argsSchema) {
         const argsObj = normalizeObjectSchema(prompt.argsSchema);
-        const parseResult = await safeParseAsync2(argsObj, request.params.arguments ?? {});
+        const parseResult = await safeParseAsync2(argsObj, request.params.arguments);
         if (!parseResult.success) {
           const error2 = "error" in parseResult ? parseResult.error : "Unknown error";
           const errorMessage = getParseErrorMessage(error2);
@@ -21496,21 +20925,12 @@ var EMPTY_COMPLETION_RESULT = {
   }
 };
 
-// mcp-server/node_modules/@modelcontextprotocol/sdk/dist/esm/server/stdio.js
+// ../PortPilot-2026/mcp-server/node_modules/@modelcontextprotocol/sdk/dist/esm/server/stdio.js
 import process2 from "node:process";
 
-// mcp-server/node_modules/@modelcontextprotocol/sdk/dist/esm/shared/stdio.js
-var STDIO_DEFAULT_MAX_BUFFER_SIZE = 10 * 1024 * 1024;
+// ../PortPilot-2026/mcp-server/node_modules/@modelcontextprotocol/sdk/dist/esm/shared/stdio.js
 var ReadBuffer = class {
-  constructor(options) {
-    this._maxBufferSize = options?.maxBufferSize ?? STDIO_DEFAULT_MAX_BUFFER_SIZE;
-  }
   append(chunk) {
-    const newSize = (this._buffer?.length ?? 0) + chunk.length;
-    if (newSize > this._maxBufferSize) {
-      this.clear();
-      throw new Error(`ReadBuffer exceeded maximum size of ${this._maxBufferSize} bytes`);
-    }
     this._buffer = this._buffer ? Buffer.concat([this._buffer, chunk]) : chunk;
   }
   readMessage() {
@@ -21536,26 +20956,20 @@ function serializeMessage(message) {
   return JSON.stringify(message) + "\n";
 }
 
-// mcp-server/node_modules/@modelcontextprotocol/sdk/dist/esm/server/stdio.js
+// ../PortPilot-2026/mcp-server/node_modules/@modelcontextprotocol/sdk/dist/esm/server/stdio.js
 var StdioServerTransport = class {
-  constructor(_stdin = process2.stdin, _stdout = process2.stdout, options) {
+  constructor(_stdin = process2.stdin, _stdout = process2.stdout) {
     this._stdin = _stdin;
     this._stdout = _stdout;
+    this._readBuffer = new ReadBuffer();
     this._started = false;
     this._ondata = (chunk) => {
-      try {
-        this._readBuffer.append(chunk);
-        this.processReadBuffer();
-      } catch (error2) {
-        this.onerror?.(error2);
-        this.close().catch(() => {
-        });
-      }
+      this._readBuffer.append(chunk);
+      this.processReadBuffer();
     };
     this._onerror = (error2) => {
       this.onerror?.(error2);
     };
-    this._readBuffer = new ReadBuffer({ maxBufferSize: options?.maxBufferSize });
   }
   /**
    * Starts listening for messages on stdin.
@@ -21593,8 +21007,8 @@ var StdioServerTransport = class {
   }
   send(message) {
     return new Promise((resolve) => {
-      const json2 = serializeMessage(message);
-      if (this._stdout.write(json2)) {
+      const json = serializeMessage(message);
+      if (this._stdout.write(json)) {
         resolve();
       } else {
         this._stdout.once("drain", resolve);
@@ -21603,271 +21017,49 @@ var StdioServerTransport = class {
   }
 };
 
-// mcp-server/node_modules/@hono/node-server/dist/constants-BLSFu_RU.mjs
-var X_ALREADY_SENT = "x-hono-already-sent";
-
-// mcp-server/node_modules/@hono/node-server/dist/index.mjs
-import { STATUS_CODES, ServerResponse, createServer } from "node:http";
-import { Http2ServerRequest, constants } from "node:http2";
-import { Readable } from "node:stream";
-
-// mcp-server/node_modules/hono/dist/helper/websocket/index.js
-var defineWebSocketHelper = (handler) => {
-  return ((...args) => {
-    if (typeof args[0] === "function") {
-      const [createEvents, options] = args;
-      return async function upgradeWebSocket2(c, next) {
-        const result = await handler(c, await createEvents(c), options);
-        if (result) return result;
-        await next();
-      };
-    } else {
-      const [c, events, options] = args;
-      return (async () => {
-        const upgraded = await handler(c, events, options);
-        if (!upgraded) throw new Error("Failed to upgrade WebSocket");
-        return upgraded;
-      })();
-    }
-  });
-};
-
-// mcp-server/node_modules/@hono/node-server/dist/index.mjs
+// ../PortPilot-2026/mcp-server/node_modules/@hono/node-server/dist/index.mjs
+import { Http2ServerRequest as Http2ServerRequest2, constants as h2constants } from "http2";
+import { Http2ServerRequest } from "http2";
+import { Readable } from "stream";
+import crypto2 from "crypto";
 var RequestError = class extends Error {
   constructor(message, options) {
     super(message, options);
     this.name = "RequestError";
   }
 };
-var nonJoinedHeaders = /* @__PURE__ */ new Set([
-  "age",
-  "authorization",
-  "content-length",
-  "content-type",
-  "etag",
-  "expires",
-  "from",
-  "host",
-  "if-modified-since",
-  "if-unmodified-since",
-  "last-modified",
-  "location",
-  "max-forwards",
-  "proxy-authorization",
-  "referer",
-  "retry-after",
-  "server",
-  "user-agent"
-]);
-var validHeaderName = /^[!#$%&'*+\-.^_`|~\dA-Za-z]+$/;
-var isHttpWhitespace = (code) => code === 9 || code === 10 || code === 13 || code === 32;
-var normalizeHeaderValue = (value) => {
-  if (!isHttpWhitespace(value.charCodeAt(0)) && !isHttpWhitespace(value.charCodeAt(value.length - 1))) return value;
-  let start = 0;
-  let end = value.length;
-  while (start < end && isHttpWhitespace(value.charCodeAt(start))) start++;
-  while (end > start && isHttpWhitespace(value.charCodeAt(end - 1))) end--;
-  return value.slice(start, end);
-};
-var forbiddenHeaderValue = /[\0\r\n]/;
-var GlobalHeaders = globalThis.Headers;
-var materializeHeaders = (rawHeaders, HeadersCtor = GlobalHeaders) => {
-  const headers = new HeadersCtor();
-  for (let i = 0; i < rawHeaders.length; i += 2) {
-    const name = rawHeaders[i];
-    if (!name.startsWith(":")) headers.append(name, rawHeaders[i + 1]);
-  }
-  return headers;
-};
-var RequestHeaders = class {
-  #incoming;
-  #rawHeaders;
-  #headers;
-  #invalidValue;
-  constructor(incoming) {
-    this.#incoming = incoming;
-    if (incoming instanceof Http2ServerRequest) this.#rawHeaders = incoming.rawHeaders.slice();
-  }
-  get #lazyRawHeaders() {
-    return this.#rawHeaders ??= this.#incoming.rawHeaders.slice();
-  }
-  get #native() {
-    if (!this.#headers) {
-      this.#headers = materializeHeaders(this.#lazyRawHeaders);
-      this.#rawHeaders = void 0;
-    }
-    return this.#headers;
-  }
-  #normalizedName(name) {
-    if (typeof name !== "string") return;
-    if (!validHeaderName.test(name)) throw new TypeError(`Invalid header name: ${name}`);
-    return name.toLowerCase();
-  }
-  #lookupHttp1(lowerName) {
-    const headers = this.#incoming instanceof Http2ServerRequest ? void 0 : this.#incoming.headers;
-    if (!headers || nonJoinedHeaders.has(lowerName) || lowerName === "set-cookie" || lowerName === "__proto__") return;
-    if (!Object.hasOwn(headers, lowerName)) return null;
-    const rawValue = headers[lowerName];
-    if (typeof rawValue === "string") {
-      const value = normalizeHeaderValue(rawValue);
-      return forbiddenHeaderValue.test(value) ? void 0 : value;
-    }
-  }
-  #lookup(rawHeaders, lowerName) {
-    const separator = lowerName === "cookie" ? "; " : ", ";
-    let value = null;
-    for (let i = 0; i < rawHeaders.length; i += 2) {
-      const rawName = rawHeaders[i];
-      if (rawName.length === lowerName.length && rawName.toLowerCase() === lowerName) {
-        const rawValue = normalizeHeaderValue(rawHeaders[i + 1]);
-        if (forbiddenHeaderValue.test(rawValue)) {
-          this.#invalidValue = true;
-          return;
-        }
-        value = value === null ? rawValue : value + separator + rawValue;
-      }
-    }
-    return value;
-  }
-  append(name, value) {
-    this.#native.append(name, value);
-  }
-  delete(name) {
-    this.#native.delete(name);
-  }
-  get(name) {
-    const lowerName = this.#normalizedName(name);
-    if (lowerName && !this.#headers && !this.#invalidValue) {
-      const http1Value = this.#lookupHttp1(lowerName);
-      if (http1Value !== void 0) return http1Value;
-      const value = this.#lookup(this.#lazyRawHeaders, lowerName);
-      if (value !== void 0) return value;
-    }
-    return this.#native.get(name);
-  }
-  has(name) {
-    const lowerName = this.#normalizedName(name);
-    if (lowerName && !this.#headers && !this.#invalidValue) {
-      const http1Value = this.#lookupHttp1(lowerName);
-      if (http1Value !== void 0) return http1Value !== null;
-      const value = this.#lookup(this.#lazyRawHeaders, lowerName);
-      if (value !== void 0) return value !== null;
-    }
-    return this.#native.has(name);
-  }
-  set(name, value) {
-    this.#native.set(name, value);
-  }
-  getSetCookie() {
-    return this.#native.getSetCookie();
-  }
-  keys() {
-    return this.#native.keys();
-  }
-  values() {
-    return this.#native.values();
-  }
-  entries() {
-    return this.#native.entries();
-  }
-  forEach(callback, thisArg) {
-    this.#native.forEach((value, key) => {
-      callback.call(thisArg, value, key, this);
-    });
-  }
-  [Symbol.iterator]() {
-    return this.entries();
-  }
-};
-Object.defineProperty(RequestHeaders.prototype, /* @__PURE__ */ Symbol.for("nodejs.util.inspect.custom"), { value: function(depth, options, inspectFn) {
-  return `Headers (lightweight) ${inspectFn(Object.fromEntries(this), {
-    ...options,
-    depth: depth == null ? null : depth - 1
-  })}`;
-} });
-Object.setPrototypeOf(RequestHeaders.prototype, GlobalHeaders.prototype);
-var newHeadersFromIncoming = (incoming) => globalThis.Headers === GlobalHeaders ? new RequestHeaders(incoming) : materializeHeaders(incoming.rawHeaders, globalThis.Headers);
-var reValidRequestUrl = /^\/[!#$&-;=?-\[\]_a-z~]*$/;
-var reDotSegment = /\/\.\.?(?:[/?#]|$)/;
-var reValidHost = /^[a-z0-9._-]+(?::(?:[1-5]\d{3,4}|[6-9]\d{3}))?$/;
-var buildUrl = (scheme, host, incomingUrl) => {
-  const url = `${scheme}://${host}${incomingUrl}`;
-  if (!reValidHost.test(host)) {
-    const urlObj = new URL(url);
-    if (urlObj.hostname.length !== host.length && urlObj.hostname !== (host.includes(":") ? host.replace(/:\d+$/, "") : host).toLowerCase()) throw new RequestError("Invalid host header");
-    return urlObj.href;
-  } else if (incomingUrl.length === 0) return url + "/";
-  else {
-    if (incomingUrl.charCodeAt(0) !== 47) throw new RequestError("Invalid URL");
-    if (!reValidRequestUrl.test(incomingUrl) || reDotSegment.test(incomingUrl)) return new URL(url).href;
-    return url;
-  }
-};
 var toRequestError = (e) => {
-  if (e instanceof RequestError) return e;
+  if (e instanceof RequestError) {
+    return e;
+  }
   return new RequestError(e.message, { cause: e });
 };
 var GlobalRequest = global.Request;
-var Request$1 = class extends GlobalRequest {
+var Request = class extends GlobalRequest {
   constructor(input, options) {
     if (typeof input === "object" && getRequestCache in input) {
-      const hasReplacementBody = options !== void 0 && "body" in options && options.body != null;
-      if (input[bodyConsumedDirectlyKey] && !hasReplacementBody) throw new TypeError("Cannot construct a Request with a Request object that has already been used.");
       input = input[getRequestCache]();
     }
-    if (typeof options?.body?.getReader !== "undefined") options.duplex ??= "half";
+    if (typeof options?.body?.getReader !== "undefined") {
+      ;
+      options.duplex ??= "half";
+    }
     super(input, options);
   }
 };
-var wrapBodyStream = /* @__PURE__ */ Symbol("wrapBodyStream");
-var byteExactEncodings = /* @__PURE__ */ new Set([
-  "latin1",
-  "binary",
-  "hex",
-  "base64",
-  "base64url"
-]);
-var isByteExactEncoding = (encoding) => encoding === null || byteExactEncodings.has(encoding);
-var bodyBufferedBeforeDisconnectKey = /* @__PURE__ */ Symbol("bodyBufferedBeforeDisconnect");
-var bodyBufferedLengthBeforeDisconnectKey = /* @__PURE__ */ Symbol("bodyBufferedLengthBeforeDisconnect");
-var toBufferChunk = (chunk, encoding) => Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk, encoding ?? "utf8");
-var isRecoverableDisconnectedIncoming = (incoming) => !(incoming instanceof Http2ServerRequest) && !!incoming.complete && !!incoming.readableAborted && typeof incoming.read === "function" && isByteExactEncoding(incoming.readableEncoding);
-var recordBodyBufferedBeforeDisconnect = (incoming) => {
-  if (incoming.readableDidRead || !isRecoverableDisconnectedIncoming(incoming)) return;
-  const incomingWithRecovery = incoming;
-  incomingWithRecovery[bodyBufferedLengthBeforeDisconnectKey] ??= incoming.readableLength;
-};
-var readBodyBufferedBeforeDisconnect = (incoming, chunks) => {
-  if (incoming.readableDidRead && !chunks || !isRecoverableDisconnectedIncoming(incoming)) return;
-  const incomingWithRecovery = incoming;
-  if (incomingWithRecovery[bodyBufferedBeforeDisconnectKey] !== void 0) return incomingWithRecovery[bodyBufferedBeforeDisconnectKey];
-  let result;
-  const errored = incoming.errored;
-  if (errored && errored.code !== "ECONNRESET") result = errored;
-  else if (incomingWithRecovery[bodyBufferedLengthBeforeDisconnectKey] !== void 0 && incoming.readableLength !== incomingWithRecovery[bodyBufferedLengthBeforeDisconnectKey]) result = newBodyUnusableError();
-  else {
-    const bodyChunks = chunks ?? [];
-    const chunk = incoming.read();
-    if (chunk !== null) bodyChunks.push(toBufferChunk(chunk, incoming.readableEncoding));
-    const buffer = bodyChunks.length === 1 ? bodyChunks[0] : Buffer.concat(bodyChunks);
-    result = buffer;
-    const contentLength = incoming.headers["content-length"];
-    if (typeof contentLength === "string" && /^\d+$/.test(contentLength)) {
-      const expectedLength = Number(contentLength);
-      if (Number.isSafeInteger(expectedLength) && buffer.length !== expectedLength) result = newBodyUnusableError();
+var newHeadersFromIncoming = (incoming) => {
+  const headerRecord = [];
+  const rawHeaders = incoming.rawHeaders;
+  for (let i = 0; i < rawHeaders.length; i += 2) {
+    const { [i]: key, [i + 1]: value } = rawHeaders;
+    if (key.charCodeAt(0) !== /*:*/
+    58) {
+      headerRecord.push([key, value]);
     }
   }
-  incomingWithRecovery[bodyBufferedBeforeDisconnectKey] = result;
-  return result;
+  return new Headers(headerRecord);
 };
-var enqueueBufferedBody = (controller, buffered) => {
-  if (buffered instanceof Error) {
-    controller.error(buffered);
-    return;
-  }
-  if (buffered.length > 0) controller.enqueue(buffered);
-  controller.close();
-};
+var wrapBodyStream = /* @__PURE__ */ Symbol("wrapBodyStream");
 var newRequestFromIncoming = (method, url, headers, incoming, abortController) => {
   const init = {
     method,
@@ -21876,224 +21068,55 @@ var newRequestFromIncoming = (method, url, headers, incoming, abortController) =
   };
   if (method === "TRACE") {
     init.method = "GET";
-    const req = new Request$1(url, init);
-    Object.defineProperty(req, "method", { get() {
-      return "TRACE";
-    } });
+    const req = new Request(url, init);
+    Object.defineProperty(req, "method", {
+      get() {
+        return "TRACE";
+      }
+    });
     return req;
   }
-  if (!(method === "GET" || method === "HEAD")) if ("rawBody" in incoming && incoming.rawBody instanceof Buffer) init.body = new ReadableStream({ start(controller) {
-    controller.enqueue(incoming.rawBody);
-    controller.close();
-  } });
-  else if (incoming[wrapBodyStream]) {
-    let reader;
-    init.body = new ReadableStream({ async pull(controller) {
-      try {
-        if (!reader) {
-          const buffered = readBodyBufferedBeforeDisconnect(incoming);
-          if (buffered !== void 0) {
-            enqueueBufferedBody(controller, buffered);
-            return;
+  if (!(method === "GET" || method === "HEAD")) {
+    if ("rawBody" in incoming && incoming.rawBody instanceof Buffer) {
+      init.body = new ReadableStream({
+        start(controller) {
+          controller.enqueue(incoming.rawBody);
+          controller.close();
+        }
+      });
+    } else if (incoming[wrapBodyStream]) {
+      let reader;
+      init.body = new ReadableStream({
+        async pull(controller) {
+          try {
+            reader ||= Readable.toWeb(incoming).getReader();
+            const { done, value } = await reader.read();
+            if (done) {
+              controller.close();
+            } else {
+              controller.enqueue(value);
+            }
+          } catch (error2) {
+            controller.error(error2);
           }
         }
-        reader ||= Readable.toWeb(incoming).getReader();
-        const { done, value } = await reader.read();
-        if (done) controller.close();
-        else controller.enqueue(value);
-      } catch (error2) {
-        controller.error(error2);
-      }
-    } });
-  } else {
-    const buffered = readBodyBufferedBeforeDisconnect(incoming);
-    if (buffered !== void 0) init.body = new ReadableStream({ start(controller) {
-      enqueueBufferedBody(controller, buffered);
-    } });
-    else init.body = Readable.toWeb(incoming);
+      });
+    } else {
+      init.body = Readable.toWeb(incoming);
+    }
   }
-  return new Request$1(url, init);
+  return new Request(url, init);
 };
 var getRequestCache = /* @__PURE__ */ Symbol("getRequestCache");
 var requestCache = /* @__PURE__ */ Symbol("requestCache");
 var incomingKey = /* @__PURE__ */ Symbol("incomingKey");
 var urlKey = /* @__PURE__ */ Symbol("urlKey");
-var methodKey = /* @__PURE__ */ Symbol("methodKey");
 var headersKey = /* @__PURE__ */ Symbol("headersKey");
 var abortControllerKey = /* @__PURE__ */ Symbol("abortControllerKey");
 var getAbortController = /* @__PURE__ */ Symbol("getAbortController");
-var abortRequest = /* @__PURE__ */ Symbol("abortRequest");
-var bodyBufferKey = /* @__PURE__ */ Symbol("bodyBuffer");
-var bodyReadPromiseKey = /* @__PURE__ */ Symbol("bodyReadPromise");
-var bodyConsumedDirectlyKey = /* @__PURE__ */ Symbol("bodyConsumedDirectly");
-var bodyLockReaderKey = /* @__PURE__ */ Symbol("bodyLockReader");
-var abortReasonKey = /* @__PURE__ */ Symbol("abortReason");
-var newBodyUnusableError = () => {
-  return /* @__PURE__ */ new TypeError("Body is unusable");
-};
-var rejectBodyUnusable = () => {
-  return Promise.reject(newBodyUnusableError());
-};
-var textDecoder = new TextDecoder();
-var consumeBodyDirectOnce = (request) => {
-  if (request[bodyConsumedDirectlyKey]) return rejectBodyUnusable();
-  request[bodyConsumedDirectlyKey] = true;
-};
-var toArrayBuffer = (buf) => {
-  return buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength);
-};
-var contentType = (request) => {
-  return (request[headersKey] ||= newHeadersFromIncoming(request[incomingKey])).get("content-type") || "";
-};
-var methodTokenRegExp = /^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$/;
-var normalizeIncomingMethod = (method) => {
-  if (typeof method !== "string" || method.length === 0) return "GET";
-  switch (method) {
-    case "DELETE":
-    case "GET":
-    case "HEAD":
-    case "OPTIONS":
-    case "PATCH":
-    case "POST":
-    case "PUT":
-    case "QUERY":
-      return method;
-  }
-  const upper = method.toUpperCase();
-  switch (upper) {
-    case "DELETE":
-    case "GET":
-    case "HEAD":
-    case "OPTIONS":
-    case "POST":
-    case "PUT":
-      return upper;
-    default:
-      return method;
-  }
-};
-var validateDirectReadMethod = (method) => {
-  if (!methodTokenRegExp.test(method)) return /* @__PURE__ */ new TypeError(`'${method}' is not a valid HTTP method.`);
-  const normalized = method.toUpperCase();
-  if (normalized === "CONNECT" || normalized === "TRACK" || normalized === "TRACE" && method !== "TRACE") return /* @__PURE__ */ new TypeError(`'${method}' HTTP method is unsupported.`);
-};
-var readBodyWithFastPath = (request, method, fromBuffer) => {
-  if (request[bodyConsumedDirectlyKey]) return rejectBodyUnusable();
-  const methodName = request.method;
-  if (methodName === "GET" || methodName === "HEAD") return request[getRequestCache]()[method]();
-  const methodValidationError = validateDirectReadMethod(methodName);
-  if (methodValidationError) return Promise.reject(methodValidationError);
-  if (request[requestCache]) {
-    if (methodName !== "TRACE") return request[requestCache][method]();
-  }
-  const alreadyUsedError = consumeBodyDirectOnce(request);
-  if (alreadyUsedError) return alreadyUsedError;
-  const raw = readRawBodyIfAvailable(request);
-  if (raw) {
-    const result = Promise.resolve(fromBuffer(raw, request));
-    request[bodyBufferKey] = void 0;
-    return result;
-  }
-  return readBodyDirect(request).then((buf) => {
-    const result = fromBuffer(buf, request);
-    request[bodyBufferKey] = void 0;
-    return result;
-  });
-};
-var readRawBodyIfAvailable = (request) => {
-  const incoming = request[incomingKey];
-  if ("rawBody" in incoming && incoming.rawBody instanceof Buffer) return incoming.rawBody;
-};
-var normalizeAbortError = (request, incoming) => {
-  if (incoming.errored) return incoming.errored;
-  const reason = request[abortReasonKey];
-  if (reason !== void 0) return reason instanceof Error ? reason : new Error(String(reason));
-  return /* @__PURE__ */ new Error("Client connection prematurely closed.");
-};
-var readBodyDirect = (request) => {
-  if (request[bodyBufferKey]) return Promise.resolve(request[bodyBufferKey]);
-  if (request[bodyReadPromiseKey]) return request[bodyReadPromiseKey];
-  const incoming = request[incomingKey];
-  if (incoming.readableDidRead) return rejectBodyUnusable();
-  const buffered = readBodyBufferedBeforeDisconnect(incoming);
-  if (buffered !== void 0) {
-    if (buffered instanceof Error) return Promise.reject(buffered);
-    request[bodyBufferKey] = buffered;
-    return Promise.resolve(buffered);
-  }
-  const promise = new Promise((resolve, reject) => {
-    const chunks = [];
-    let settled = false;
-    const finish = (callback) => {
-      if (settled) return;
-      settled = true;
-      cleanup();
-      callback();
-    };
-    const recoverCompleteBodyAfterDisconnect = (error2) => {
-      const streamError = incoming.errored ?? error2;
-      if (!isRecoverableDisconnectedIncoming(incoming) || streamError && streamError.code !== "ECONNRESET") return false;
-      finish(() => {
-        const recovered = readBodyBufferedBeforeDisconnect(incoming, chunks);
-        if (recovered instanceof Error) reject(recovered);
-        else if (recovered === void 0) reject(error2 ?? normalizeAbortError(request, incoming));
-        else {
-          request[bodyBufferKey] = recovered;
-          resolve(recovered);
-        }
-      });
-      return true;
-    };
-    const onData = (chunk) => {
-      chunks.push(toBufferChunk(chunk, incoming.readableEncoding));
-    };
-    const onEnd = () => {
-      finish(() => {
-        const buffer = chunks.length === 1 ? chunks[0] : Buffer.concat(chunks);
-        request[bodyBufferKey] = buffer;
-        resolve(buffer);
-      });
-    };
-    const onError = (error2) => {
-      if (recoverCompleteBodyAfterDisconnect(error2)) return;
-      finish(() => {
-        reject(error2);
-      });
-    };
-    const onClose = () => {
-      if (incoming.readableEnded) {
-        onEnd();
-        return;
-      }
-      if (recoverCompleteBodyAfterDisconnect()) return;
-      finish(() => {
-        reject(normalizeAbortError(request, incoming));
-      });
-    };
-    const cleanup = () => {
-      incoming.off("data", onData);
-      incoming.off("end", onEnd);
-      incoming.off("error", onError);
-      incoming.off("close", onClose);
-      request[bodyReadPromiseKey] = void 0;
-    };
-    incoming.on("data", onData);
-    incoming.on("end", onEnd);
-    incoming.on("error", onError);
-    incoming.on("close", onClose);
-    queueMicrotask(() => {
-      if (settled) return;
-      if (incoming.readableEnded) onEnd();
-      else if (incoming.errored) onError(incoming.errored);
-      else if (incoming.destroyed) onClose();
-    });
-  });
-  request[bodyReadPromiseKey] = promise;
-  return promise;
-};
 var requestPrototype = {
   get method() {
-    return this[methodKey];
+    return this[incomingKey].method || "GET";
   },
   get url() {
     return this[urlKey];
@@ -22101,57 +21124,24 @@ var requestPrototype = {
   get headers() {
     return this[headersKey] ||= newHeadersFromIncoming(this[incomingKey]);
   },
-  [abortRequest](reason) {
-    if (this[abortReasonKey] === void 0) this[abortReasonKey] = reason;
-    const abortController = this[abortControllerKey];
-    if (abortController && !abortController.signal.aborted) abortController.abort(reason);
-  },
   [getAbortController]() {
-    this[abortControllerKey] ||= new AbortController();
-    if (this[abortReasonKey] !== void 0 && !this[abortControllerKey].signal.aborted) this[abortControllerKey].abort(this[abortReasonKey]);
+    this[getRequestCache]();
     return this[abortControllerKey];
   },
   [getRequestCache]() {
-    const abortController = this[getAbortController]();
-    if (this[requestCache]) return this[requestCache];
-    const method = this.method;
-    if (this[bodyConsumedDirectlyKey] && !(method === "GET" || method === "HEAD")) {
-      this[bodyBufferKey] = void 0;
-      const init = {
-        method: method === "TRACE" ? "GET" : method,
-        headers: this.headers,
-        signal: abortController.signal
-      };
-      if (method !== "TRACE") {
-        init.body = new ReadableStream({ start(c) {
-          c.close();
-        } });
-        init.duplex = "half";
-      }
-      const req = new Request$1(this[urlKey], init);
-      if (method === "TRACE") Object.defineProperty(req, "method", { get() {
-        return "TRACE";
-      } });
-      return this[requestCache] = req;
-    }
-    return this[requestCache] = newRequestFromIncoming(this.method, this[urlKey], this.headers, this[incomingKey], abortController);
-  },
-  get body() {
-    if (!this[bodyConsumedDirectlyKey]) return this[getRequestCache]().body;
-    const request = this[getRequestCache]();
-    if (!this[bodyLockReaderKey] && request.body) this[bodyLockReaderKey] = request.body.getReader();
-    return request.body;
-  },
-  get bodyUsed() {
-    if (this[bodyConsumedDirectlyKey]) return true;
-    if (this[requestCache]) return this[requestCache].bodyUsed;
-    return false;
+    this[abortControllerKey] ||= new AbortController();
+    return this[requestCache] ||= newRequestFromIncoming(
+      this.method,
+      this[urlKey],
+      this.headers,
+      this[incomingKey],
+      this[abortControllerKey]
+    );
   }
 };
-Object.defineProperty(requestPrototype, "signal", { get() {
-  return this[getAbortController]().signal;
-} });
 [
+  "body",
+  "bodyUsed",
   "cache",
   "credentials",
   "destination",
@@ -22160,120 +21150,111 @@ Object.defineProperty(requestPrototype, "signal", { get() {
   "redirect",
   "referrer",
   "referrerPolicy",
+  "signal",
   "keepalive"
 ].forEach((k) => {
-  Object.defineProperty(requestPrototype, k, { get() {
-    return this[getRequestCache]()[k];
-  } });
-});
-["clone", "formData"].forEach((k) => {
-  Object.defineProperty(requestPrototype, k, { value: function() {
-    if (this[bodyConsumedDirectlyKey]) {
-      if (k === "clone") throw newBodyUnusableError();
-      return rejectBodyUnusable();
+  Object.defineProperty(requestPrototype, k, {
+    get() {
+      return this[getRequestCache]()[k];
     }
-    return this[getRequestCache]()[k]();
-  } });
-});
-Object.defineProperty(requestPrototype, "text", { value: function() {
-  return readBodyWithFastPath(this, "text", (buf) => textDecoder.decode(buf));
-} });
-Object.defineProperty(requestPrototype, "arrayBuffer", { value: function() {
-  return readBodyWithFastPath(this, "arrayBuffer", (buf) => toArrayBuffer(buf));
-} });
-Object.defineProperty(requestPrototype, "blob", { value: function() {
-  return readBodyWithFastPath(this, "blob", (buf, request) => {
-    const type = contentType(request);
-    const init = type ? { headers: { "content-type": type } } : void 0;
-    return new Response(buf, init).blob();
   });
-} });
-Object.defineProperty(requestPrototype, "json", { value: function() {
-  if (this[bodyConsumedDirectlyKey]) return rejectBodyUnusable();
-  return this.text().then(JSON.parse);
-} });
-Object.defineProperty(requestPrototype, /* @__PURE__ */ Symbol.for("nodejs.util.inspect.custom"), { value: function(depth, options, inspectFn) {
-  return `Request (lightweight) ${inspectFn({
-    method: this.method,
-    url: this.url,
-    headers: this.headers,
-    nativeRequest: this[requestCache]
-  }, {
-    ...options,
-    depth: depth == null ? null : depth - 1
-  })}`;
-} });
-Object.setPrototypeOf(requestPrototype, Request$1.prototype);
+});
+["arrayBuffer", "blob", "clone", "formData", "json", "text"].forEach((k) => {
+  Object.defineProperty(requestPrototype, k, {
+    value: function() {
+      return this[getRequestCache]()[k]();
+    }
+  });
+});
+Object.defineProperty(requestPrototype, /* @__PURE__ */ Symbol.for("nodejs.util.inspect.custom"), {
+  value: function(depth, options, inspectFn) {
+    const props = {
+      method: this.method,
+      url: this.url,
+      headers: this.headers,
+      nativeRequest: this[requestCache]
+    };
+    return `Request (lightweight) ${inspectFn(props, { ...options, depth: depth == null ? null : depth - 1 })}`;
+  }
+});
+Object.setPrototypeOf(requestPrototype, Request.prototype);
 var newRequest = (incoming, defaultHostname) => {
   const req = Object.create(requestPrototype);
   req[incomingKey] = incoming;
-  req[methodKey] = normalizeIncomingMethod(incoming.method);
   const incomingUrl = incoming.url || "";
-  if (incomingUrl[0] !== "/" && (incomingUrl.startsWith("http://") || incomingUrl.startsWith("https://"))) {
-    if (incoming instanceof Http2ServerRequest) throw new RequestError("Absolute URL for :path is not allowed in HTTP/2");
+  if (incomingUrl[0] !== "/" && // short-circuit for performance. most requests are relative URL.
+  (incomingUrl.startsWith("http://") || incomingUrl.startsWith("https://"))) {
+    if (incoming instanceof Http2ServerRequest) {
+      throw new RequestError("Absolute URL for :path is not allowed in HTTP/2");
+    }
     try {
-      req[urlKey] = new URL(incomingUrl).href;
+      const url2 = new URL(incomingUrl);
+      req[urlKey] = url2.href;
     } catch (e) {
       throw new RequestError("Invalid absolute URL", { cause: e });
     }
     return req;
   }
   const host = (incoming instanceof Http2ServerRequest ? incoming.authority : incoming.headers.host) || defaultHostname;
-  if (!host) throw new RequestError("Missing host header");
+  if (!host) {
+    throw new RequestError("Missing host header");
+  }
   let scheme;
   if (incoming instanceof Http2ServerRequest) {
     scheme = incoming.scheme;
-    if (!(scheme === "http" || scheme === "https")) throw new RequestError("Unsupported scheme");
-  } else scheme = incoming.socket && incoming.socket.encrypted ? "https" : "http";
-  try {
-    req[urlKey] = buildUrl(scheme, host, incomingUrl);
-  } catch (e) {
-    if (e instanceof RequestError) throw e;
-    else throw new RequestError("Invalid URL", { cause: e });
+    if (!(scheme === "http" || scheme === "https")) {
+      throw new RequestError("Unsupported scheme");
+    }
+  } else {
+    scheme = incoming.socket && incoming.socket.encrypted ? "https" : "http";
   }
+  const url = new URL(`${scheme}://${host}${incomingUrl}`);
+  if (url.hostname.length !== host.length && url.hostname !== host.replace(/:\d+$/, "")) {
+    throw new RequestError("Invalid host header");
+  }
+  req[urlKey] = url.href;
   return req;
 };
-var defaultContentType = "text/plain; charset=UTF-8";
 var responseCache = /* @__PURE__ */ Symbol("responseCache");
 var getResponseCache = /* @__PURE__ */ Symbol("getResponseCache");
 var cacheKey = /* @__PURE__ */ Symbol("cache");
 var GlobalResponse = global.Response;
-var Response$1 = class Response$12 {
+var Response2 = class _Response {
   #body;
   #init;
   [getResponseCache]() {
-    const cache = this[cacheKey];
-    const liveHeaders = cache && cache[2] instanceof Headers ? cache[2] : void 0;
     delete this[cacheKey];
-    return this[responseCache] ||= new GlobalResponse(this.#body, liveHeaders ? {
-      status: this.#init?.status,
-      statusText: this.#init?.statusText,
-      headers: liveHeaders
-    } : this.#init);
+    return this[responseCache] ||= new GlobalResponse(this.#body, this.#init);
   }
   constructor(body, init) {
     let headers;
     this.#body = body;
-    if (init instanceof GlobalResponse) {
+    if (init instanceof _Response) {
       const cachedGlobalResponse = init[responseCache];
       if (cachedGlobalResponse) {
         this.#init = cachedGlobalResponse;
         this[getResponseCache]();
         return;
+      } else {
+        this.#init = init.#init;
+        headers = new Headers(init.#init.headers);
       }
-      this.#init = init instanceof Response$12 ? init.#init : init;
-      headers = new Headers(init.headers);
-    } else this.#init = init;
-    if (body == null || typeof body === "string" || typeof body?.getReader !== "undefined" || body instanceof Blob || body instanceof Uint8Array) this[cacheKey] = [
-      init?.status || 200,
-      body ?? null,
-      headers || init?.headers
-    ];
+    } else {
+      this.#init = init;
+    }
+    if (typeof body === "string" || typeof body?.getReader !== "undefined" || body instanceof Blob || body instanceof Uint8Array) {
+      ;
+      this[cacheKey] = [init?.status || 200, body, headers || init?.headers];
+    }
   }
   get headers() {
     const cache = this[cacheKey];
     if (cache) {
-      if (!(cache[2] instanceof Headers)) cache[2] = new Headers(cache[2] || (cache[1] === null ? void 0 : { "content-type": defaultContentType }));
+      if (!(cache[2] instanceof Headers)) {
+        cache[2] = new Headers(
+          cache[2] || { "content-type": "text/plain; charset=UTF-8" }
+        );
+      }
       return cache[2];
     }
     return this[getResponseCache]().headers;
@@ -22286,87 +21267,33 @@ var Response$1 = class Response$12 {
     return status2 >= 200 && status2 < 300;
   }
 };
-[
-  "body",
-  "bodyUsed",
-  "redirected",
-  "statusText",
-  "trailers",
-  "type",
-  "url"
-].forEach((k) => {
-  Object.defineProperty(Response$1.prototype, k, { get() {
-    return this[getResponseCache]()[k];
-  } });
+["body", "bodyUsed", "redirected", "statusText", "trailers", "type", "url"].forEach((k) => {
+  Object.defineProperty(Response2.prototype, k, {
+    get() {
+      return this[getResponseCache]()[k];
+    }
+  });
 });
-[
-  "arrayBuffer",
-  "blob",
-  "clone",
-  "formData",
-  "json",
-  "text"
-].forEach((k) => {
-  Object.defineProperty(Response$1.prototype, k, { value: function() {
-    return this[getResponseCache]()[k]();
-  } });
+["arrayBuffer", "blob", "clone", "formData", "json", "text"].forEach((k) => {
+  Object.defineProperty(Response2.prototype, k, {
+    value: function() {
+      return this[getResponseCache]()[k]();
+    }
+  });
 });
-Object.defineProperty(Response$1.prototype, /* @__PURE__ */ Symbol.for("nodejs.util.inspect.custom"), { value: function(depth, options, inspectFn) {
-  return `Response (lightweight) ${inspectFn({
-    status: this.status,
-    headers: this.headers,
-    ok: this.ok,
-    nativeResponse: this[responseCache]
-  }, {
-    ...options,
-    depth: depth == null ? null : depth - 1
-  })}`;
-} });
-Object.setPrototypeOf(Response$1, GlobalResponse);
-Object.setPrototypeOf(Response$1.prototype, GlobalResponse.prototype);
-var validRedirectUrl = /^https?:\/\/[!#-;=?-[\]_a-z~A-Z]+$/;
-var parseRedirectUrl = (url) => {
-  if (url instanceof URL) return url.href;
-  if (validRedirectUrl.test(url)) return url;
-  return new URL(url).href;
-};
-var validRedirectStatuses = /* @__PURE__ */ new Set([
-  301,
-  302,
-  303,
-  307,
-  308
-]);
-Object.defineProperty(Response$1, "redirect", {
-  value: function redirect(url, status2 = 302) {
-    if (!validRedirectStatuses.has(status2)) throw new RangeError("Invalid status code");
-    return new Response$1(null, {
-      status: status2,
-      headers: { location: parseRedirectUrl(url) }
-    });
-  },
-  writable: true,
-  configurable: true
+Object.defineProperty(Response2.prototype, /* @__PURE__ */ Symbol.for("nodejs.util.inspect.custom"), {
+  value: function(depth, options, inspectFn) {
+    const props = {
+      status: this.status,
+      headers: this.headers,
+      ok: this.ok,
+      nativeResponse: this[responseCache]
+    };
+    return `Response (lightweight) ${inspectFn(props, { ...options, depth: depth == null ? null : depth - 1 })}`;
+  }
 });
-Object.defineProperty(Response$1, "json", {
-  value: function json(data, init) {
-    const body = JSON.stringify(data);
-    if (body === void 0) throw new TypeError("The data is not JSON serializable");
-    const initHeaders = init?.headers;
-    let headers;
-    if (initHeaders) {
-      headers = new Headers(initHeaders);
-      if (!headers.has("content-type")) headers.set("content-type", "application/json");
-    } else headers = { "content-type": "application/json" };
-    return new Response$1(body, {
-      status: init?.status ?? 200,
-      statusText: init?.statusText,
-      headers
-    });
-  },
-  writable: true,
-  configurable: true
-});
+Object.setPrototypeOf(Response2, GlobalResponse);
+Object.setPrototypeOf(Response2.prototype, GlobalResponse.prototype);
 async function readWithoutBlocking(readPromise) {
   return Promise.race([readPromise, Promise.resolve().then(() => Promise.resolve(void 0))]);
 }
@@ -22383,49 +21310,72 @@ function writeFromReadableStreamDefaultReader(reader, writable, currentReadPromi
     writable.off("error", cancel);
   });
   function handleStreamError(error2) {
-    if (error2) writable.destroy(error2);
+    if (error2) {
+      writable.destroy(error2);
+    }
   }
   function onDrain() {
     reader.read().then(flow, handleStreamError);
   }
   function flow({ done, value }) {
     try {
-      if (done) writable.end();
-      else if (!writable.write(value)) writable.once("drain", onDrain);
-      else return reader.read().then(flow, handleStreamError);
+      if (done) {
+        writable.end();
+      } else if (!writable.write(value)) {
+        writable.once("drain", onDrain);
+      } else {
+        return reader.read().then(flow, handleStreamError);
+      }
     } catch (e) {
       handleStreamError(e);
     }
   }
 }
 function writeFromReadableStream(stream, writable) {
-  if (stream.locked) throw new TypeError("ReadableStream is locked.");
-  else if (writable.destroyed) return;
+  if (stream.locked) {
+    throw new TypeError("ReadableStream is locked.");
+  } else if (writable.destroyed) {
+    return;
+  }
   return writeFromReadableStreamDefaultReader(stream.getReader(), writable);
 }
-var buildOutgoingHttpHeaders = (headers, defaultContentType2) => {
+var buildOutgoingHttpHeaders = (headers) => {
   const res = {};
-  if (!(headers instanceof Headers)) headers = new Headers(headers ?? void 0);
-  if (headers.has("set-cookie")) {
-    const cookies = [];
-    for (const [k, v] of headers) if (k === "set-cookie") cookies.push(v);
-    else res[k] = v;
-    if (cookies.length > 0) res["set-cookie"] = cookies;
-  } else for (const [k, v] of headers) res[k] = v;
-  if (defaultContentType2) res["content-type"] ??= defaultContentType2;
+  if (!(headers instanceof Headers)) {
+    headers = new Headers(headers ?? void 0);
+  }
+  const cookies = [];
+  for (const [k, v] of headers) {
+    if (k === "set-cookie") {
+      cookies.push(v);
+    } else {
+      res[k] = v;
+    }
+  }
+  if (cookies.length > 0) {
+    res["set-cookie"] = cookies;
+  }
+  res["content-type"] ??= "text/plain; charset=UTF-8";
   return res;
 };
+var X_ALREADY_SENT = "x-hono-already-sent";
+if (typeof global.crypto === "undefined") {
+  global.crypto = crypto2;
+}
 var outgoingEnded = /* @__PURE__ */ Symbol("outgoingEnded");
 var incomingDraining = /* @__PURE__ */ Symbol("incomingDraining");
 var DRAIN_TIMEOUT_MS = 500;
 var MAX_DRAIN_BYTES = 64 * 1024 * 1024;
 var drainIncoming = (incoming) => {
   const incomingWithDrainState = incoming;
-  if (incoming.destroyed || incomingWithDrainState[incomingDraining]) return;
+  if (incoming.destroyed || incomingWithDrainState[incomingDraining]) {
+    return;
+  }
   incomingWithDrainState[incomingDraining] = true;
-  if (incoming instanceof Http2ServerRequest) {
+  if (incoming instanceof Http2ServerRequest2) {
     try {
-      incoming.stream?.close?.(constants.NGHTTP2_NO_ERROR);
+      ;
+      incoming.stream?.close?.(h2constants.NGHTTP2_NO_ERROR);
     } catch {
     }
     return;
@@ -22441,49 +21391,35 @@ var drainIncoming = (incoming) => {
     cleanup();
     const socket = incoming.socket;
     if (socket && !socket.destroyed) {
-      if (typeof socket.destroySoon === "function") socket.destroySoon();
-      else if (typeof socket.destroy === "function") socket.destroy();
+      socket.destroySoon();
     }
   };
   const timer = setTimeout(forceClose, DRAIN_TIMEOUT_MS);
   timer.unref?.();
   const onData = (chunk) => {
     bytesRead += chunk.length;
-    if (bytesRead > MAX_DRAIN_BYTES) forceClose();
+    if (bytesRead > MAX_DRAIN_BYTES) {
+      forceClose();
+    }
   };
   incoming.on("data", onData);
   incoming.on("end", cleanup);
   incoming.on("error", cleanup);
   incoming.resume();
 };
-var makeCloseHandler = (req, incoming, outgoing, needsBodyCleanup) => () => {
-  if (incoming.errored) {
-    recordBodyBufferedBeforeDisconnect(incoming);
-    req[abortRequest](incoming.errored.toString());
-  } else if (!outgoing.writableFinished) {
-    recordBodyBufferedBeforeDisconnect(incoming);
-    req[abortRequest]("Client connection prematurely closed.");
-  }
-  if (needsBodyCleanup && !incoming.readableEnded) setTimeout(() => {
-    if (!incoming.readableEnded) setTimeout(() => {
-      drainIncoming(incoming);
-    });
-  });
-};
-var isImmediateCacheableResponse = (res) => {
-  if (!(cacheKey in res)) return false;
-  const body = res[cacheKey][1];
-  return body === null || typeof body === "string" || body instanceof Uint8Array;
-};
-var handleRequestError = () => new Response(null, { status: 400 });
-var handleFetchError = (e) => new Response(null, { status: e instanceof Error && (e.name === "TimeoutError" || e.constructor.name === "TimeoutError") ? 504 : 500 });
+var handleRequestError = () => new Response(null, {
+  status: 400
+});
+var handleFetchError = (e) => new Response(null, {
+  status: e instanceof Error && (e.name === "TimeoutError" || e.constructor.name === "TimeoutError") ? 504 : 500
+});
 var handleResponseError = (e, outgoing) => {
   const err = e instanceof Error ? e : new Error("unknown error", { cause: e });
-  if (err.code === "ERR_STREAM_PREMATURE_CLOSE") console.info("The user aborted a request.");
-  else {
+  if (err.code === "ERR_STREAM_PREMATURE_CLOSE") {
+    console.info("The user aborted a request.");
+  } else {
     console.error(e);
     if (!outgoing.headersSent) {
-      if (outgoing instanceof ServerResponse) outgoing._contentLength = null;
       outgoing.writeHead(500, { "Content-Type": "text/plain" });
     }
     outgoing.end(`Error: ${err.message}`);
@@ -22491,98 +21427,74 @@ var handleResponseError = (e, outgoing) => {
   }
 };
 var flushHeaders = (outgoing) => {
-  if ("flushHeaders" in outgoing && outgoing.writable) outgoing.flushHeaders();
-};
-var trySetContentLength = (outgoing, status2, length) => {
-  const http1 = outgoing;
-  if (http1._contentLength === null && http1._hasBody && http1.useChunkedEncodingByDefault && !http1._removedContLen && status2 >= 200 && status2 !== 204 && status2 !== 304 && !outgoing.hasHeader("content-length") && !outgoing.hasHeader("transfer-encoding") && !outgoing.hasHeader("trailer")) {
-    http1._contentLength = length;
-    return true;
+  if ("flushHeaders" in outgoing && outgoing.writable) {
+    outgoing.flushHeaders();
   }
-  return false;
-};
-var writeDefaultHeaders = (outgoing, status2, length) => {
-  if (trySetContentLength(outgoing, status2, length)) outgoing.writeHead(status2, { "Content-Type": defaultContentType });
-  else outgoing.writeHead(status2, {
-    "Content-Type": defaultContentType,
-    "Content-Length": length
-  });
 };
 var responseViaCache = async (res, outgoing) => {
   let [status2, body, header] = res[cacheKey];
-  if (!header) {
-    if (body === null) {
-      outgoing.writeHead(status2);
-      outgoing.end();
-    } else if (typeof body === "string") {
-      writeDefaultHeaders(outgoing, status2, Buffer.byteLength(body));
-      outgoing.end(body);
-    } else if (body instanceof Uint8Array) {
-      writeDefaultHeaders(outgoing, status2, body.byteLength);
-      outgoing.end(body);
-    } else if (body instanceof Blob) {
-      writeDefaultHeaders(outgoing, status2, body.size);
-      outgoing.end(new Uint8Array(await body.arrayBuffer()));
-    } else {
-      outgoing.writeHead(status2, { "Content-Type": defaultContentType });
-      flushHeaders(outgoing);
-      await writeFromReadableStream(body, outgoing)?.catch((e) => handleResponseError(e, outgoing));
-    }
-    outgoing[outgoingEnded]?.();
-    return;
-  }
   let hasContentLength = false;
-  let plainHeaders = false;
-  let canAutoLength = true;
-  if (header instanceof Headers) {
+  if (!header) {
+    header = { "content-type": "text/plain; charset=UTF-8" };
+  } else if (header instanceof Headers) {
     hasContentLength = header.has("content-length");
-    header = buildOutgoingHttpHeaders(header, body === null ? void 0 : defaultContentType);
+    header = buildOutgoingHttpHeaders(header);
   } else if (Array.isArray(header)) {
     const headerObj = new Headers(header);
     hasContentLength = headerObj.has("content-length");
-    header = buildOutgoingHttpHeaders(headerObj, body === null ? void 0 : defaultContentType);
+    header = buildOutgoingHttpHeaders(headerObj);
   } else {
-    plainHeaders = true;
     for (const key in header) {
       if (key.length === 14 && key.toLowerCase() === "content-length") {
         hasContentLength = true;
         break;
       }
-      if (key.length === 17 && key.toLowerCase() === "transfer-encoding" || key.length === 7 && key.toLowerCase() === "trailer") canAutoLength = false;
     }
   }
   if (!hasContentLength) {
-    let length;
-    if (typeof body === "string") length = Buffer.byteLength(body);
-    else if (body instanceof Uint8Array) length = body.byteLength;
-    else if (body instanceof Blob) length = body.size;
-    if (length !== void 0 && (!plainHeaders || !canAutoLength || !trySetContentLength(outgoing, status2, length))) {
-      if (plainHeaders) header = { ...header };
-      header["Content-Length"] = length;
+    if (typeof body === "string") {
+      header["Content-Length"] = Buffer.byteLength(body);
+    } else if (body instanceof Uint8Array) {
+      header["Content-Length"] = body.byteLength;
+    } else if (body instanceof Blob) {
+      header["Content-Length"] = body.size;
     }
   }
   outgoing.writeHead(status2, header);
-  if (body == null) outgoing.end();
-  else if (typeof body === "string" || body instanceof Uint8Array) outgoing.end(body);
-  else if (body instanceof Blob) outgoing.end(new Uint8Array(await body.arrayBuffer()));
-  else {
+  if (typeof body === "string" || body instanceof Uint8Array) {
+    outgoing.end(body);
+  } else if (body instanceof Blob) {
+    outgoing.end(new Uint8Array(await body.arrayBuffer()));
+  } else {
     flushHeaders(outgoing);
-    await writeFromReadableStream(body, outgoing)?.catch((e) => handleResponseError(e, outgoing));
+    await writeFromReadableStream(body, outgoing)?.catch(
+      (e) => handleResponseError(e, outgoing)
+    );
   }
+  ;
   outgoing[outgoingEnded]?.();
 };
 var isPromise = (res) => typeof res.then === "function";
 var responseViaResponseObject = async (res, outgoing, options = {}) => {
-  if (isPromise(res)) if (options.errorHandler) try {
-    res = await res;
-  } catch (err) {
-    const errRes = await options.errorHandler(err);
-    if (!errRes) return;
-    res = errRes;
+  if (isPromise(res)) {
+    if (options.errorHandler) {
+      try {
+        res = await res;
+      } catch (err) {
+        const errRes = await options.errorHandler(err);
+        if (!errRes) {
+          return;
+        }
+        res = errRes;
+      }
+    } else {
+      res = await res.catch(handleFetchError);
+    }
   }
-  else res = await res.catch(handleFetchError);
-  if (cacheKey in res) return responseViaCache(res, outgoing);
-  const resHeaderRecord = buildOutgoingHttpHeaders(res.headers, res.body === null ? void 0 : defaultContentType);
+  if (cacheKey in res) {
+    return responseViaCache(res, outgoing);
+  }
+  const resHeaderRecord = buildOutgoingHttpHeaders(res.headers);
   if (res.body) {
     const reader = res.body.getReader();
     const values = [];
@@ -22605,21 +21517,29 @@ var responseViaResponseObject = async (res, outgoing, options = {}) => {
           break;
         }
         currentReadPromise = void 0;
-        if (chunk.value) values.push(chunk.value);
+        if (chunk.value) {
+          values.push(chunk.value);
+        }
         if (chunk.done) {
           done = true;
           break;
         }
       }
-      if (done && !("content-length" in resHeaderRecord)) resHeaderRecord["content-length"] = values.reduce((acc, value) => acc + value.length, 0);
+      if (done && !("content-length" in resHeaderRecord)) {
+        resHeaderRecord["content-length"] = values.reduce((acc, value) => acc + value.length, 0);
+      }
     }
     outgoing.writeHead(res.status, resHeaderRecord);
     values.forEach((value) => {
+      ;
       outgoing.write(value);
     });
-    if (done) outgoing.end();
-    else {
-      if (values.length === 0) flushHeaders(outgoing);
+    if (done) {
+      outgoing.end();
+    } else {
+      if (values.length === 0) {
+        flushHeaders(outgoing);
+      }
       await writeFromReadableStreamDefaultReader(reader, outgoing, currentReadPromise);
     }
   } else if (resHeaderRecord[X_ALREADY_SENT]) {
@@ -22627,56 +21547,88 @@ var responseViaResponseObject = async (res, outgoing, options = {}) => {
     outgoing.writeHead(res.status, resHeaderRecord);
     outgoing.end();
   }
+  ;
   outgoing[outgoingEnded]?.();
 };
 var getRequestListener = (fetchCallback, options = {}) => {
   const autoCleanupIncoming = options.autoCleanupIncoming ?? true;
-  if (options.overrideGlobalObjects !== false && global.Request !== Request$1) {
-    Object.defineProperty(global, "Request", { value: Request$1 });
-    Object.defineProperty(global, "Response", { value: Response$1 });
+  if (options.overrideGlobalObjects !== false && global.Request !== Request) {
+    Object.defineProperty(global, "Request", {
+      value: Request
+    });
+    Object.defineProperty(global, "Response", {
+      value: Response2
+    });
   }
   return async (incoming, outgoing) => {
     let res, req;
-    let needsBodyCleanup = false;
-    let closeHandlerAttached = false;
-    const ensureCloseHandler = () => {
-      if (!req || closeHandlerAttached) return;
-      closeHandlerAttached = true;
-      outgoing.on("close", makeCloseHandler(req, incoming, outgoing, needsBodyCleanup));
-    };
     try {
       req = newRequest(incoming, options.hostname);
-      needsBodyCleanup = autoCleanupIncoming && !(incoming.method === "GET" || incoming.method === "HEAD");
-      if (needsBodyCleanup) {
+      let incomingEnded = !autoCleanupIncoming || incoming.method === "GET" || incoming.method === "HEAD";
+      if (!incomingEnded) {
+        ;
         incoming[wrapBodyStream] = true;
-        if (incoming instanceof Http2ServerRequest) outgoing[outgoingEnded] = () => {
-          if (!incoming.readableEnded) setTimeout(() => {
-            if (!incoming.readableEnded) setTimeout(() => {
-              incoming.destroy();
-              outgoing.destroy();
-            });
-          });
-        };
-      }
-      res = fetchCallback(req, {
-        incoming,
-        outgoing
-      });
-      if (!isPromise(res) && isImmediateCacheableResponse(res)) {
-        if (needsBodyCleanup && !incoming.readableEnded) outgoing.once("finish", () => {
-          if (!incoming.readableEnded) drainIncoming(incoming);
+        incoming.on("end", () => {
+          incomingEnded = true;
         });
+        if (incoming instanceof Http2ServerRequest2) {
+          ;
+          outgoing[outgoingEnded] = () => {
+            if (!incomingEnded) {
+              setTimeout(() => {
+                if (!incomingEnded) {
+                  setTimeout(() => {
+                    drainIncoming(incoming);
+                  });
+                }
+              });
+            }
+          };
+        }
+        outgoing.on("finish", () => {
+          if (!incomingEnded) {
+            drainIncoming(incoming);
+          }
+        });
+      }
+      outgoing.on("close", () => {
+        const abortController = req[abortControllerKey];
+        if (abortController) {
+          if (incoming.errored) {
+            req[abortControllerKey].abort(incoming.errored.toString());
+          } else if (!outgoing.writableFinished) {
+            req[abortControllerKey].abort("Client connection prematurely closed.");
+          }
+        }
+        if (!incomingEnded) {
+          setTimeout(() => {
+            if (!incomingEnded) {
+              setTimeout(() => {
+                drainIncoming(incoming);
+              });
+            }
+          });
+        }
+      });
+      res = fetchCallback(req, { incoming, outgoing });
+      if (cacheKey in res) {
         return responseViaCache(res, outgoing);
       }
-      ensureCloseHandler();
     } catch (e) {
-      if (!res) if (options.errorHandler) {
-        ensureCloseHandler();
-        res = await options.errorHandler(req ? e : toRequestError(e));
-        if (!res) return;
-      } else if (!req) res = handleRequestError();
-      else res = handleFetchError(e);
-      else return handleResponseError(e, outgoing);
+      if (!res) {
+        if (options.errorHandler) {
+          res = await options.errorHandler(req ? e : toRequestError(e));
+          if (!res) {
+            return;
+          }
+        } else if (!req) {
+          res = handleRequestError();
+        } else {
+          res = handleFetchError(e);
+        }
+      } else {
+        return handleResponseError(e, outgoing);
+      }
     }
     try {
       return await responseViaResponseObject(res, outgoing, options);
@@ -22685,212 +21637,18 @@ var getRequestListener = (fetchCallback, options = {}) => {
     }
   };
 };
-var CloseEvent = globalThis.CloseEvent ?? class extends Event {
-  #eventInitDict;
-  constructor(type, eventInitDict = {}) {
-    super(type, eventInitDict);
-    this.#eventInitDict = eventInitDict;
-  }
-  get wasClean() {
-    return this.#eventInitDict.wasClean ?? false;
-  }
-  get code() {
-    return this.#eventInitDict.code ?? 0;
-  }
-  get reason() {
-    return this.#eventInitDict.reason ?? "";
-  }
-};
-var ErrorEvent = globalThis.ErrorEvent ?? class extends Event {
-  #eventInitDict;
-  constructor(type, eventInitDict = {}) {
-    super(type, eventInitDict);
-    this.#eventInitDict = eventInitDict;
-  }
-  get message() {
-    return this.#eventInitDict.message ?? "";
-  }
-  get filename() {
-    return this.#eventInitDict.filename ?? "";
-  }
-  get lineno() {
-    return this.#eventInitDict.lineno ?? 0;
-  }
-  get colno() {
-    return this.#eventInitDict.colno ?? 0;
-  }
-  get error() {
-    return this.#eventInitDict.error ?? null;
-  }
-};
-var generateConnectionSymbol = () => /* @__PURE__ */ Symbol("connection");
-var CONNECTION_SYMBOL_KEY = /* @__PURE__ */ Symbol("CONNECTION_SYMBOL_KEY");
-var WAIT_FOR_WEBSOCKET_SYMBOL = /* @__PURE__ */ Symbol("WAIT_FOR_WEBSOCKET_SYMBOL");
-var upgradeWebSocket = defineWebSocketHelper(async (c, events, options) => {
-  if (c.req.header("upgrade")?.toLowerCase() !== "websocket") return;
-  const env = c.env;
-  const waitForWebSocket = env[WAIT_FOR_WEBSOCKET_SYMBOL];
-  if (!waitForWebSocket || !env.incoming) return new Response(null, { status: 500 });
-  const connectionSymbol = generateConnectionSymbol();
-  env[CONNECTION_SYMBOL_KEY] = connectionSymbol;
-  (async () => {
-    let ws;
-    try {
-      ws = await waitForWebSocket(env.incoming, connectionSymbol);
-    } catch {
-      return;
-    }
-    const messagesReceivedInStarting = [];
-    const bufferMessage = (data, isBinary) => {
-      messagesReceivedInStarting.push([data, isBinary]);
-    };
-    ws.on("message", bufferMessage);
-    const ctx = {
-      binaryType: "arraybuffer",
-      close(code, reason) {
-        ws.close(code, reason);
-      },
-      protocol: ws.protocol,
-      raw: ws,
-      get readyState() {
-        return ws.readyState;
-      },
-      send(source, opts) {
-        ws.send(source, { compress: opts?.compress });
-      },
-      url: new URL(c.req.url)
-    };
-    try {
-      events?.onOpen?.(new Event("open"), ctx);
-    } catch (e) {
-      (options?.onError ?? console.error)(e);
-    }
-    const handleMessage = (data, isBinary) => {
-      const datas = Array.isArray(data) ? data : [data];
-      for (const data2 of datas) try {
-        events?.onMessage?.(new MessageEvent("message", { data: isBinary ? data2 instanceof ArrayBuffer ? data2 : data2.buffer.slice(data2.byteOffset, data2.byteOffset + data2.byteLength) : typeof data2 === "string" ? data2 : Buffer.from(data2).toString("utf-8") }), ctx);
-      } catch (e) {
-        (options?.onError ?? console.error)(e);
-      }
-    };
-    ws.off("message", bufferMessage);
-    for (const message of messagesReceivedInStarting) handleMessage(...message);
-    ws.on("message", (data, isBinary) => {
-      handleMessage(data, isBinary);
-    });
-    ws.on("close", (code, reason) => {
-      try {
-        events?.onClose?.(new CloseEvent("close", {
-          code,
-          reason: reason.toString()
-        }), ctx);
-      } catch (e) {
-        (options?.onError ?? console.error)(e);
-      }
-    });
-    ws.on("error", (error2) => {
-      try {
-        events?.onError?.(new ErrorEvent("error", { error: error2 }), ctx);
-      } catch (e) {
-        (options?.onError ?? console.error)(e);
-      }
-    });
-  })();
-  return new Response();
-});
 
-// mcp-server/node_modules/@modelcontextprotocol/sdk/dist/esm/shared/mediaType.js
-var import_content_type = __toESM(require_content_type(), 1);
-function mediaTypeEssence(header) {
-  if (!header) {
-    return void 0;
-  }
-  try {
-    return import_content_type.default.parse(header).type;
-  } catch {
-    const essence = (header.split(";", 1)[0] ?? "").trim().toLowerCase();
-    if (essence === "" || header.slice(essence.length).includes(",")) {
-      return void 0;
-    }
-    return essence;
-  }
-}
-function isJsonContentType(header) {
-  if (header === "application/json") {
-    return true;
-  }
-  return mediaTypeEssence(header) === "application/json";
-}
-
-// mcp-server/node_modules/@modelcontextprotocol/sdk/dist/esm/server/requestBody.js
-var DEFAULT_MAX_REQUEST_BODY_SIZE = 4 * 1024 * 1024;
-var MAX_BATCH_SIZE = 100;
-function requestBodyTooLargeMessage(maxBytes) {
-  return `Payload Too Large: Request body must not exceed ${maxBytes} bytes`;
-}
-function resolveMaxRequestBodySize(value) {
-  if (value === void 0) {
-    return DEFAULT_MAX_REQUEST_BODY_SIZE;
-  }
-  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
-    throw new RangeError(`maxRequestBodySize must be a positive number of bytes, got ${String(value)}`);
-  }
-  return value;
-}
-async function readRequestBody(request, maxBytes = DEFAULT_MAX_REQUEST_BODY_SIZE) {
-  if (Number(request.headers.get("content-length")) > maxBytes) {
-    return { tooLarge: true };
-  }
-  if (request.body === null) {
-    return { tooLarge: false, text: "" };
-  }
-  const reader = request.body.getReader();
-  const decoder = new TextDecoder();
-  let received = 0;
-  let text = "";
-  try {
-    for (; ; ) {
-      const { done, value } = await reader.read();
-      if (done) {
-        break;
-      }
-      received += value.byteLength;
-      if (received > maxBytes) {
-        return { tooLarge: true };
-      }
-      text += decoder.decode(value, { stream: true });
-    }
-  } finally {
-    reader.releaseLock();
-  }
-  return { tooLarge: false, text: text + decoder.decode() };
-}
-
-// mcp-server/node_modules/@modelcontextprotocol/sdk/dist/esm/server/sseKeepAlive.js
-var DEFAULT_SSE_KEEP_ALIVE_MS = 15e3;
-var MAX_TIMER_DELAY_MS = 2 ** 31 - 1;
-function armSseKeepAlive(intervalMs, onTick) {
-  if (!Number.isFinite(intervalMs) || intervalMs < 1) {
-    return void 0;
-  }
-  const timer = setInterval(onTick, Math.min(intervalMs, MAX_TIMER_DELAY_MS));
-  timer.unref?.();
-  return timer;
-}
-
-// mcp-server/node_modules/@modelcontextprotocol/sdk/dist/esm/server/webStandardStreamableHttp.js
+// ../PortPilot-2026/mcp-server/node_modules/@modelcontextprotocol/sdk/dist/esm/server/webStandardStreamableHttp.js
 var WebStandardStreamableHTTPServerTransport = class {
   constructor(options = {}) {
     this._started = false;
     this._hasHandledRequest = false;
     this._streamMapping = /* @__PURE__ */ new Map();
     this._requestToStreamMapping = /* @__PURE__ */ new Map();
-    this._resumableStreams = /* @__PURE__ */ new Set();
     this._requestResponseMap = /* @__PURE__ */ new Map();
     this._initialized = false;
     this._enableJsonResponse = false;
     this._standaloneSseStreamId = "_GET_stream";
-    this._closed = false;
     this.sessionIdGenerator = options.sessionIdGenerator;
     this._enableJsonResponse = options.enableJsonResponse ?? false;
     this._eventStore = options.eventStore;
@@ -22900,28 +21658,6 @@ var WebStandardStreamableHTTPServerTransport = class {
     this._allowedOrigins = options.allowedOrigins;
     this._enableDnsRebindingProtection = options.enableDnsRebindingProtection ?? false;
     this._retryInterval = options.retryInterval;
-    this._keepAliveMs = options.keepAliveMs ?? DEFAULT_SSE_KEEP_ALIVE_MS;
-    this._maxRequestBodySize = resolveMaxRequestBodySize(options.maxRequestBodySize);
-  }
-  /**
-   * Arms a keep-alive interval for an SSE stream that periodically writes an SSE
-   * comment frame so intermediaries and idle timeouts don't kill the connection.
-   * The returned timer is owned by the stream it was armed for: the stream's
-   * cancel/cleanup callbacks must clear it. The interval clears itself if a
-   * write fails (stream already closed/cancelled).
-   */
-  startKeepAlive(controller, encoder) {
-    if (this._closed)
-      return void 0;
-    const timer = armSseKeepAlive(this._keepAliveMs, () => {
-      try {
-        controller.enqueue(encoder.encode(": keepalive\n\n"));
-      } catch {
-        if (timer !== void 0)
-          clearInterval(timer);
-      }
-    });
-    return timer;
   }
   /**
    * Starts the transport. This is required by the Transport interface but is a no-op
@@ -22984,9 +21720,6 @@ var WebStandardStreamableHTTPServerTransport = class {
    * Returns a Response object (Web Standard)
    */
   async handleRequest(req, options) {
-    if (this._closed) {
-      return this.createJsonErrorResponse(404, -32001, "Session not found");
-    }
     if (!this.sessionIdGenerator && this._hasHandledRequest) {
       throw new Error("Stateless transport cannot be reused across requests. Create a new transport per request.");
     }
@@ -23031,7 +21764,6 @@ data:
 `;
     }
     controller.enqueue(encoder.encode(primingEvent));
-    this._resumableStreams.add(streamId);
   }
   /**
    * Handles GET requests for SSE stream
@@ -23062,25 +21794,18 @@ data:
     }
     const encoder = new TextEncoder();
     let streamController;
-    let keepAliveTimer = void 0;
     const readable = new ReadableStream({
       start: (controller) => {
         streamController = controller;
       },
       cancel: () => {
-        if (keepAliveTimer !== void 0) {
-          clearInterval(keepAliveTimer);
-        }
-        if (this._streamMapping.get(this._standaloneSseStreamId)?.controller === streamController) {
-          this._streamMapping.delete(this._standaloneSseStreamId);
-        }
+        this._streamMapping.delete(this._standaloneSseStreamId);
       }
     });
     const headers = {
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache, no-transform",
-      Connection: "keep-alive",
-      "X-Accel-Buffering": "no"
+      Connection: "keep-alive"
     };
     if (this.sessionId !== void 0) {
       headers["mcp-session-id"] = this.sessionId;
@@ -23089,9 +21814,6 @@ data:
       controller: streamController,
       encoder,
       cleanup: () => {
-        if (keepAliveTimer !== void 0) {
-          clearInterval(keepAliveTimer);
-        }
         this._streamMapping.delete(this._standaloneSseStreamId);
         try {
           streamController.close();
@@ -23099,7 +21821,6 @@ data:
         }
       }
     });
-    keepAliveTimer = this.startKeepAlive(streamController, encoder);
     return new Response(readable, { headers });
   }
   /**
@@ -23127,33 +21848,21 @@ data:
       const headers = {
         "Content-Type": "text/event-stream",
         "Cache-Control": "no-cache, no-transform",
-        Connection: "keep-alive",
-        "X-Accel-Buffering": "no"
+        Connection: "keep-alive"
       };
       if (this.sessionId !== void 0) {
         headers["mcp-session-id"] = this.sessionId;
       }
       const encoder = new TextEncoder();
       let streamController;
-      let keepAliveTimer = void 0;
-      let replayedStreamId = void 0;
-      let cancelled = false;
       const readable = new ReadableStream({
         start: (controller) => {
           streamController = controller;
         },
         cancel: () => {
-          cancelled = true;
-          if (keepAliveTimer !== void 0) {
-            clearInterval(keepAliveTimer);
-          }
-          if (replayedStreamId !== void 0 && this._streamMapping.get(replayedStreamId)?.controller === streamController) {
-            this._streamMapping.delete(replayedStreamId);
-          }
         }
       });
-      const replayedEventIds = /* @__PURE__ */ new Set();
-      replayedStreamId = await this._eventStore.replayEventsAfter(lastEventId, {
+      const replayedStreamId = await this._eventStore.replayEventsAfter(lastEventId, {
         send: async (eventId, message) => {
           const success = this.writeSSEEvent(streamController, encoder, message, eventId);
           if (!success) {
@@ -23162,27 +21871,13 @@ data:
               streamController.close();
             } catch {
             }
-          } else {
-            replayedEventIds.add(eventId);
           }
         }
       });
-      if (this._closed || cancelled) {
-        try {
-          streamController.close();
-        } catch {
-        }
-        return this.createJsonErrorResponse(404, -32001, "Session not found");
-      }
-      this._streamMapping.get(replayedStreamId)?.cleanup();
       this._streamMapping.set(replayedStreamId, {
         controller: streamController,
         encoder,
-        replayedEventIds,
         cleanup: () => {
-          if (keepAliveTimer !== void 0) {
-            clearInterval(keepAliveTimer);
-          }
           this._streamMapping.delete(replayedStreamId);
           try {
             streamController.close();
@@ -23190,8 +21885,6 @@ data:
           }
         }
       });
-      this._resumableStreams.add(replayedStreamId);
-      keepAliveTimer = this.startKeepAlive(streamController, encoder);
       return new Response(readable, { headers });
     } catch (error2) {
       this.onerror?.(error2);
@@ -23250,7 +21943,7 @@ data:
         return this.createJsonErrorResponse(406, -32e3, "Not Acceptable: Client must accept both application/json and text/event-stream");
       }
       const ct = req.headers.get("content-type");
-      if (!isJsonContentType(ct)) {
+      if (!ct || !ct.includes("application/json")) {
         this.onerror?.(new Error("Unsupported Media Type: Content-Type must be application/json"));
         return this.createJsonErrorResponse(415, -32e3, "Unsupported Media Type: Content-Type must be application/json");
       }
@@ -23263,21 +21956,11 @@ data:
         rawMessage = options.parsedBody;
       } else {
         try {
-          const body = await readRequestBody(req, this._maxRequestBodySize);
-          if (body.tooLarge) {
-            const message = requestBodyTooLargeMessage(this._maxRequestBodySize);
-            this.onerror?.(new Error(message));
-            return this.createJsonErrorResponse(413, -32e3, message);
-          }
-          rawMessage = JSON.parse(body.text);
+          rawMessage = await req.json();
         } catch {
           this.onerror?.(new Error("Parse error: Invalid JSON"));
           return this.createJsonErrorResponse(400, -32700, "Parse error: Invalid JSON");
         }
-      }
-      if (Array.isArray(rawMessage) && rawMessage.length > MAX_BATCH_SIZE) {
-        this.onerror?.(new Error(`Invalid Request: Batch must not exceed ${MAX_BATCH_SIZE} messages`));
-        return this.createJsonErrorResponse(400, -32600, `Invalid Request: Batch must not exceed ${MAX_BATCH_SIZE} messages`);
       }
       let messages;
       try {
@@ -23289,9 +21972,6 @@ data:
       } catch {
         this.onerror?.(new Error("Parse error: Invalid JSON-RPC message"));
         return this.createJsonErrorResponse(400, -32700, "Parse error: Invalid JSON-RPC message");
-      }
-      if (this._closed) {
-        return this.createJsonErrorResponse(404, -32001, "Session not found");
       }
       const isInitializationRequest = messages.some(isInitializeRequest);
       if (isInitializationRequest) {
@@ -23318,9 +21998,6 @@ data:
         if (protocolError) {
           return protocolError;
         }
-      }
-      if (this._closed) {
-        return this.createJsonErrorResponse(404, -32001, "Session not found");
       }
       const hasRequests = messages.some(isJSONRPCRequest);
       if (!hasRequests) {
@@ -23352,25 +22029,18 @@ data:
       }
       const encoder = new TextEncoder();
       let streamController;
-      let keepAliveTimer = void 0;
       const readable = new ReadableStream({
         start: (controller) => {
           streamController = controller;
         },
         cancel: () => {
-          if (keepAliveTimer !== void 0) {
-            clearInterval(keepAliveTimer);
-          }
-          if (this._streamMapping.get(streamId)?.controller === streamController) {
-            this._streamMapping.delete(streamId);
-          }
+          this._streamMapping.delete(streamId);
         }
       });
       const headers = {
         "Content-Type": "text/event-stream",
-        "Cache-Control": "no-cache, no-transform",
-        Connection: "keep-alive",
-        "X-Accel-Buffering": "no"
+        "Cache-Control": "no-cache",
+        Connection: "keep-alive"
       };
       if (this.sessionId !== void 0) {
         headers["mcp-session-id"] = this.sessionId;
@@ -23381,9 +22051,6 @@ data:
             controller: streamController,
             encoder,
             cleanup: () => {
-              if (keepAliveTimer !== void 0) {
-                clearInterval(keepAliveTimer);
-              }
               this._streamMapping.delete(streamId);
               try {
                 streamController.close();
@@ -23394,33 +22061,19 @@ data:
           this._requestToStreamMapping.set(message.id, streamId);
         }
       }
-      try {
-        await this.writePrimingEvent(streamController, encoder, streamId, clientProtocolVersion);
-        for (const message of messages) {
-          let closeSSEStream;
-          let closeStandaloneSSEStream;
-          if (isJSONRPCRequest(message) && this._eventStore && clientProtocolVersion >= "2025-11-25") {
-            closeSSEStream = () => {
-              this.closeSSEStream(message.id);
-            };
-            closeStandaloneSSEStream = () => {
-              this.closeStandaloneSSEStream();
-            };
-          }
-          this.onmessage?.(message, { authInfo: options?.authInfo, requestInfo, closeSSEStream, closeStandaloneSSEStream });
+      await this.writePrimingEvent(streamController, encoder, streamId, clientProtocolVersion);
+      for (const message of messages) {
+        let closeSSEStream;
+        let closeStandaloneSSEStream;
+        if (isJSONRPCRequest(message) && this._eventStore && clientProtocolVersion >= "2025-11-25") {
+          closeSSEStream = () => {
+            this.closeSSEStream(message.id);
+          };
+          closeStandaloneSSEStream = () => {
+            this.closeStandaloneSSEStream();
+          };
         }
-      } catch (error2) {
-        this._streamMapping.get(streamId)?.cleanup();
-        this._resumableStreams.delete(streamId);
-        for (const message of messages) {
-          if (isJSONRPCRequest(message)) {
-            this._requestToStreamMapping.delete(message.id);
-          }
-        }
-        throw error2;
-      }
-      if (this._streamMapping.get(streamId)?.controller === streamController) {
-        keepAliveTimer = this.startKeepAlive(streamController, encoder);
+        this.onmessage?.(message, { authInfo: options?.authInfo, requestInfo, closeSSEStream, closeStandaloneSSEStream });
       }
       return new Response(readable, { status: 200, headers });
     } catch (error2) {
@@ -23440,12 +22093,9 @@ data:
     if (protocolError) {
       return protocolError;
     }
-    try {
-      await Promise.resolve(this._onsessionclosed?.(this.sessionId));
-      return new Response(null, { status: 200 });
-    } finally {
-      await this.close();
-    }
+    await Promise.resolve(this._onsessionclosed?.(this.sessionId));
+    await this.close();
+    return new Response(null, { status: 200 });
   }
   /**
    * Validates session ID for non-initialization requests.
@@ -23492,16 +22142,11 @@ data:
     return void 0;
   }
   async close() {
-    if (this._closed) {
-      return;
-    }
-    this._closed = true;
     this._streamMapping.forEach(({ cleanup }) => {
       cleanup();
     });
     this._streamMapping.clear();
     this._requestResponseMap.clear();
-    this._resumableStreams.clear();
     this.onclose?.();
   }
   /**
@@ -23545,7 +22190,7 @@ data:
       if (standaloneSse === void 0) {
         return;
       }
-      if (standaloneSse.controller && standaloneSse.encoder && (eventId === void 0 || !standaloneSse.replayedEventIds?.has(eventId))) {
+      if (standaloneSse.controller && standaloneSse.encoder) {
         this.writeSSEEvent(standaloneSse.controller, standaloneSse.encoder, message, eventId);
       }
       return;
@@ -23554,19 +22199,13 @@ data:
     if (!streamId) {
       throw new Error(`No connection established for request ID: ${String(requestId)}`);
     }
-    let stream = this._streamMapping.get(streamId);
-    if (!this._enableJsonResponse) {
+    const stream = this._streamMapping.get(streamId);
+    if (!this._enableJsonResponse && stream?.controller && stream?.encoder) {
       let eventId;
       if (this._eventStore) {
         eventId = await this._eventStore.storeEvent(streamId, message);
-        stream = this._streamMapping.get(streamId);
       }
-      if (stream?.controller && stream?.encoder && (eventId === void 0 || !stream.replayedEventIds?.has(eventId))) {
-        const written = this.writeSSEEvent(stream.controller, stream.encoder, message, eventId);
-        if (written && eventId !== void 0) {
-          this._resumableStreams.add(streamId);
-        }
-      }
+      this.writeSSEEvent(stream.controller, stream.encoder, message, eventId);
     }
     if (isJSONRPCResultResponse(message) || isJSONRPCErrorResponse(message)) {
       this._requestResponseMap.set(requestId, message);
@@ -23574,25 +22213,6 @@ data:
       const allResponsesReady = relatedIds.every((id) => this._requestResponseMap.has(id));
       if (allResponsesReady) {
         if (!stream) {
-          if (this._closed) {
-            for (const id of relatedIds) {
-              this._requestResponseMap.delete(id);
-              this._requestToStreamMapping.delete(id);
-            }
-            return;
-          }
-          if (!this._enableJsonResponse && this._eventStore && this._resumableStreams.has(streamId)) {
-            for (const id of relatedIds) {
-              this._requestResponseMap.delete(id);
-              this._requestToStreamMapping.delete(id);
-            }
-            this._resumableStreams.delete(streamId);
-            return;
-          }
-          for (const id of relatedIds) {
-            this._requestResponseMap.delete(id);
-            this._requestToStreamMapping.delete(id);
-          }
           throw new Error(`No connection established for request ID: ${String(requestId)}`);
         }
         if (this._enableJsonResponse && stream.resolveJson) {
@@ -23615,13 +22235,12 @@ data:
           this._requestResponseMap.delete(id);
           this._requestToStreamMapping.delete(id);
         }
-        this._resumableStreams.delete(streamId);
       }
     }
   }
 };
 
-// mcp-server/node_modules/@modelcontextprotocol/sdk/dist/esm/server/streamableHttp.js
+// ../PortPilot-2026/mcp-server/node_modules/@modelcontextprotocol/sdk/dist/esm/server/streamableHttp.js
 var StreamableHTTPServerTransport = class {
   constructor(options = {}) {
     this._requestContext = /* @__PURE__ */ new WeakMap();
@@ -24351,10 +22970,10 @@ function rerunSteps(run, exists = fs.existsSync) {
   }
   return out;
 }
-function createServer2() {
+function createServer() {
   const server = new McpServer({
     name: "portpilot",
-    version: "3.8.2"
+    version: "3.9.0"
   });
   server.tool(
     "get_status",
@@ -24848,7 +23467,7 @@ async function startHttp(port, host) {
         transport.onclose = () => {
           if (transport.sessionId) delete transports[transport.sessionId];
         };
-        await createServer2().connect(transport);
+        await createServer().connect(transport);
       } else {
         res.writeHead(400, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ jsonrpc: "2.0", error: { code: -32e3, message: "No valid session ID" }, id: null }));
@@ -24914,7 +23533,7 @@ async function main() {
     const host = hostIdx !== -1 ? args[hostIdx + 1] : "127.0.0.1";
     await startHttp(port, host);
   } else {
-    await createServer2().connect(new StdioServerTransport());
+    await createServer().connect(new StdioServerTransport());
     console.error("PortPilot MCP Server (stdio) running");
   }
 }
