@@ -124,7 +124,8 @@ contextBridge.exposeInMainWorld('portpilot', {
 
   // Window operations
   window: {
-    autoResize: (appCount) => ipcRenderer.invoke('window:autoResize', appCount)
+    autoResize: (appCount) => ipcRenderer.invoke('window:autoResize', appCount),
+    setTitleBar: (colors) => ipcRenderer.invoke('window:setTitleBar', colors)
   },
 
   // Tray operations

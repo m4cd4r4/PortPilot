@@ -185,7 +185,10 @@ body {
 .header {
   display: flex;
   align-items: center;
-  padding: 8px 16px;
+  /* With the Windows overlay title bar the OS draws the window buttons over the right edge:
+     keep the header's own buttons clear of them. The env() values are absent elsewhere,
+     where this is the plain 16px. */
+  padding: 8px calc(100vw - env(titlebar-area-x, 0px) - env(titlebar-area-width, 100vw) + 16px) 8px 16px;
   background: var(--bg-secondary);
   border-bottom: var(--border-width) solid var(--border-color);
   -webkit-app-region: drag;
