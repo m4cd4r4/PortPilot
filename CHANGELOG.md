@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.8.2] - 2026-10-14
+
 ### Added
 - **A browser profile can say what it is for.** New optional fields `purpose` (a short phrase) and `sites` (hostnames) on a browser profile, edited in the Browsers tab and shown in the row. `start_browser` takes `for` (free text or a URL) and starts the profile whose sites, name, purpose, note or start URL fit; `list_browser_profiles` takes `for` as a ranked filter. `NO_MATCH` names the profiles that exist and tells Claude to ask you; `AMBIGUOUS` lists the candidates when the top two are close; neither starts anything. PortPilot has no built-in knowledge of any site: it matches only the words and hostnames you gave the profile.
 - **Claude is told about your profiles at the start of a conversation.** The plugin adds a short note (one line per profile: name, port, mode, purpose, sites; at most 25 profiles and 2 KB; no folder paths, URL queries or long notes) so "access Google Search Console" routes through `start_browser` `for` with no port chosen. Nothing is added with no profiles, and an unreadable config adds nothing.

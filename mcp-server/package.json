@@ -1,6 +1,6 @@
 {
   "name": "portpilot-mcp-server",
-  "version": "3.8.1",
+  "version": "3.8.2",
   "description": "MCP server for PortPilot - manage local development servers from Claude",
   "main": "index.js",
   "type": "module",
