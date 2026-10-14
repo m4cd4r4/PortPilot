@@ -111,23 +111,34 @@ async function main() {
     check('Logs opens the log view for the crashed app', (await text(win, '#logs-app-name')) === 'boom');
     await win.keyboard.press('Escape');
     await win.evaluate(() => document.getElementById('modal-logs').classList.add('hidden'));
+    // Record every state word the card shows from here on: polling can miss a Starting that lasts under a second on a busy machine.
+    await win.evaluate((sel) => {
+      window.__words = [];
+      const note = () => {
+        const el = document.querySelector(sel);
+        const w = el ? el.textContent.trim() : '';
+        if (w && w !== window.__words[window.__words.length - 1]) window.__words.push(w);
+      };
+      new MutationObserver(note).observe(document.body, { subtree: true, childList: true, characterData: true });
+      note();
+    }, `${card('app_boom')} .state-word`);
     await win.click('.crash-toast-btn:has-text("Restart")');
     await win.waitForSelector('.crash-toast', { state: 'detached', timeout: 8000 });
     check('Restart dismisses the toast and starts the app again', true);
     // The new run gets its own countdown: Starting, never the old run's Crashed, until it
     // dies again (boom exits ~0.6 s after every start, so a second toast follows).
-    const wordOf = () => text(win, `${card('app_boom')} .state-word`);
     const seen = [];
     const second = Date.now() + 20000;
     let sawStarting = false;
     while (Date.now() < second && !/crashed 2x/.test(await win.$$eval('.crash-toast-title', (ts) => ts.map((t) => t.textContent).join(' ')))) {
-      const w = await wordOf();
-      if (/starting/i.test(w)) sawStarting = true;
-      if (sawStarting) seen.push(w);
       await h.sleep(100);
     }
-    check('Restart shows Starting for the new run', sawStarting);
-    check('no stale Crashed while the new run is starting', sawStarting && !seen.some((w) => /crashed/i.test(w)), [...new Set(seen)].join(' | '));
+    const words = await win.evaluate(() => window.__words);
+    const at = words.findIndex((w) => /starting/i.test(w));
+    sawStarting = at > -1;
+    if (sawStarting) seen.push(...words.slice(at));
+    check('Restart shows Starting for the new run', sawStarting, JSON.stringify(words));
+    check('no stale Crashed while the new run is starting', sawStarting && !seen.slice(0, -1).some((w) => /crashed/i.test(w)), [...new Set(seen)].join(' | '));
     const t1 = Date.now();
     const crashedAgain = await until(async () => /crashed.*exit 3/i.test(await text(win, `${card('app_boom')} .state-cell`)), 4000, 'crashed again').then(() => true, () => false);
     check('the second crash ends the new countdown too', crashedAgain, `after +${((Date.now() - t1) / 1000).toFixed(1)}s`);
