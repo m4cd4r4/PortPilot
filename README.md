@@ -82,6 +82,20 @@ The MCP server is bundled, so there is no `npm install`. One install gives Claud
 - **A browser per purpose.** In the Browsers tab you say what each profile is for (`Google Search Console, Analytics`) and which sites it logs into (`search.google.com`). Ask Claude to "access Google Search Console" and PortPilot hands it the right profile and port (`start_browser` with `for`); it refuses to guess when two profiles fit, and says so when none does. A headed profile can also keep a saved window position and size, and stay in front, for the times Claude has to click pixels on the screen.
 - **Browsers that do not collide.** Several sessions can each have a named browser profile with its own debug port. A profile one session started is leased to it while that session is alive: a second session is told `IN_USE` and is steered to a free profile (`start_browser` with `name: "any"` picks one), unless it passes `takeover:true` after telling you.
 
+### Make Claude use PortPilot by default
+
+The plugin does most of this on its own: the dev-server guard routes starts through PortPilot, a skill tells Claude never to start a server with bare Bash, and the start of every conversation lists your browser profiles. The skill is the part Claude decides to load, so for a firm default add this to `~/.claude/CLAUDE.md` (all projects) or a project's `CLAUDE.md`:
+
+```text
+## Local servers and browsers: use PortPilot
+- Start, stop and check dev servers with the PortPilot MCP tools (list_running, check_port, start_app, add_app), never a bare `npm run dev &` or `kill`. Reuse a running server.
+- For any browser automation, call PortPilot `start_browser` with `for` set to the site or URL, and use the `cdpUrl` it returns. Never launch a browser with a debug port or choose a port yourself.
+- On NO_MATCH or AMBIGUOUS, ask me; do not fall back to `name: "any"` for a task tied to a site.
+- Never kill a port or delete an app unless I ask.
+```
+
+Then label each browser profile in the Browsers tab (what it is for, which sites it logs into), because Claude can only match what you wrote. Other MCP assistants have no plugin, so put the same text in their instructions file.
+
 ## New in the desktop app (3.4 and 3.5)
 
 Each row now tells you what is happening and who did it.
