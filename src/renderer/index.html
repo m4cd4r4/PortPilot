@@ -485,6 +485,15 @@
       </div>
     </div>
 
+    <!-- Command palette (Ctrl+K) -->
+    <div id="palette" class="palette hidden" role="dialog" aria-modal="true" aria-label="Command palette">
+      <div class="palette-box">
+        <input type="text" id="palette-input" class="palette-input" role="combobox" aria-expanded="true" aria-controls="palette-list" aria-autocomplete="list" aria-activedescendant="" placeholder="Type a command: start, stop, history, free port, browser" autocomplete="off" spellcheck="false">
+        <ul id="palette-list" class="palette-list" role="listbox" aria-label="Commands"></ul>
+        <div id="palette-foot" class="palette-foot" aria-live="polite"></div>
+      </div>
+    </div>
+
     <!-- Toast Container -->
     <div id="toast-container"></div>
   </div>
@@ -495,10 +504,12 @@
   <script src="../core/browserView.js"></script>
   <script src="../core/nowStrip.js"></script>
   <script src="../core/titleBar.js"></script>
+  <script src="../core/palette.js"></script>
   <script src="renderer.js"></script>
   <script src="history.js"></script>
   <script src="browsers.js"></script>
   <script src="rowThumbs.js"></script>
   <script src="nowStrip.js"></script>
+  <script src="palette.js"></script>
 </body>
 </html>
