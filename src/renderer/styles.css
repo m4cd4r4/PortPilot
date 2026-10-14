@@ -2580,7 +2580,8 @@ body {
   padding: 6px 8px;
   background: var(--card-bg);
   border: var(--border-width) solid var(--card-border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-card);
+  box-shadow: var(--elev-card);
 }
 .hthumb {
   width: 96px;
@@ -2601,7 +2602,8 @@ body {
 .happ { font-weight: 600; color: var(--text-primary); white-space: nowrap; }
 .hport, .hgit, .hcmd, .hby { font-family: 'SF Mono', 'Cascadia Code', 'Consolas', monospace; font-size: 0.68rem; color: var(--text-muted); white-space: nowrap; }
 .hpin { color: var(--accent-yellow); font-size: 0.7rem; }
-.hdetected { color: var(--accent-cyan); border: 1px solid var(--accent-cyan); border-radius: 999px; padding: 0 6px; font-size: 0.62rem; line-height: 1.5; letter-spacing: 0.02em; white-space: nowrap; }
+/* Same chip as .now-claude on the strip: outlined in its colour, radius-sm. */
+.hdetected { color: var(--accent-cyan); border: var(--border-width) solid var(--accent-cyan); border-radius: var(--radius-sm); padding: 0 5px; font-size: 0.62rem; line-height: 1.5; letter-spacing: 0.02em; white-space: nowrap; }
 .hwhen { margin-left: auto; color: var(--text-secondary); font-size: 0.7rem; white-space: nowrap; }
 .htitle, .hcmd { flex: 0 1 auto; min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .htitle { color: var(--text-primary); }
@@ -2643,7 +2645,8 @@ body {
   padding: 7px 10px;
   background: var(--card-bg);
   border: var(--border-width) solid var(--card-border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-card);
+  box-shadow: var(--elev-card);
 }
 .brow .state-cell { margin-left: auto; }
 .bmodes { display: inline-flex; border: var(--border-width) solid var(--border-color); border-radius: var(--radius); overflow: hidden; flex-shrink: 0; }
@@ -2662,7 +2665,7 @@ body {
 .bmode[aria-pressed="true"] { background: var(--bg-tertiary); color: var(--accent-cyan); font-weight: 600; }
 .bmode:disabled { cursor: default; opacity: 0.6; }
 .bmode:focus-visible { outline: 2px solid var(--accent-cyan); outline-offset: -2px; }
-.bclaim { font-size: 0.68rem; color: var(--accent-purple); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bclaim { font-size: 0.68rem; color: var(--accent-purple); border: var(--border-width) solid var(--accent-purple); border-radius: var(--radius-sm); padding: 0 5px; line-height: 1.5; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .bsub { flex-wrap: wrap; row-gap: 0; }
 .bsub-item { min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .bwarn { font-size: 0.7rem; color: var(--accent-yellow); }
