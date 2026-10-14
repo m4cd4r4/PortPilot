@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PortPilot Redesign Canvas</title>
+<style>
+/* Fixed by Macdara 2026-10-14: dark navy and periwinkle accent (the app's existing Tokyo Night tokens). Open: radius, elevation, density, type scale, motion, layout. */
+:root{
+  --bg:#1a1b26; --bg2:#24283b; --bg3:#2f3549; --tx:#c0caf5; --tx2:#9aa5ce; --mut:#565f89;
+  --acc:#7aa2f7; --grn:#9ece6a; --red:#f7768e; --yel:#e0af68; --pur:#bb9af7; --cy:#7dcfff; --bd:#3b4261;
+  --font:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+}
+*{box-sizing:border-box;margin:0}
+body{background:#10111a;color:var(--tx);font:14px/1.45 var(--font);padding:24px 16px 64px}
+.page{max-width:1500px;margin:0 auto}
+h1{font-size:22px;margin-bottom:6px}
+.lede{color:var(--tx2);max-width:78ch;margin-bottom:20px}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 20px}
+.tabs button{background:var(--bg2);color:var(--tx2);border:1px solid var(--bd);padding:8px 14px;border-radius:8px;font:inherit;cursor:pointer}
+.tabs button[aria-selected=true]{color:var(--bg);background:var(--acc);border-color:var(--acc);font-weight:600}
+.dir{display:none}.dir.on{display:block}
+.meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-bottom:20px}
+.meta div{background:var(--bg2);border:1px solid var(--bd);border-radius:10px;padding:12px 14px}
+.meta b{display:block;color:var(--acc);font-size:12px;letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px}
+.frames{display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start}
+.cap{color:var(--mut);font-size:12px;margin:0 0 6px}
+.win{background:var(--bg);border:1px solid var(--bd);border-radius:10px;overflow:hidden;position:relative}
+.win.d{width:1100px;max-width:100%}.win.m{width:390px;max-width:100%}
+/* ----- shared app chrome ----- */
+.top{display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid var(--bd)}
+.logo{font-weight:700;letter-spacing:.12em;color:var(--cy);font-size:13px}
+.search{flex:1;background:var(--bg2);border:1px solid var(--bd);border-radius:8px;padding:6px 10px;color:var(--mut);font-size:13px;display:flex;justify-content:space-between;min-width:0}
+.kbd{border:1px solid var(--bd);border-radius:4px;padding:0 5px;font-size:11px;color:var(--tx2)}
+.btn{background:var(--acc);color:#10111a;border-radius:8px;padding:6px 12px;font-weight:600;font-size:13px;white-space:nowrap}
+.nav{display:flex;gap:2px;padding:0 10px;border-bottom:1px solid var(--bd)}
+.nav span{padding:9px 12px;color:var(--tx2);font-size:13px}.nav .on{color:var(--acc);box-shadow:inset 0 -2px var(--acc)}
+.body{padding:14px;display:grid;gap:14px}
+.h{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.h b{font-size:12px;letter-spacing:.07em;text-transform:uppercase;color:var(--tx2)}
+.h i{font-style:normal;color:var(--mut);font-size:12px}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block;background:var(--grn);margin-right:6px;flex:none}
+.dot.s{background:transparent;border:1.5px solid var(--mut)}.dot.c{background:var(--red)}
+.pill{font-size:11px;border:1px solid var(--bd);border-radius:999px;padding:0 8px;color:var(--tx2);white-space:nowrap}
+.pill.cl{color:var(--pur);border-color:#5a4a8a}.pill.br{color:var(--cy)}
+.mono{font-family:ui-monospace,Consolas,monospace}
+/* faux page thumbnails (fictional sites) */
+.th{position:relative;overflow:hidden;background:#fff;border-radius:6px;border:1px solid var(--bd);aspect-ratio:16/10;width:100%}
+.th::before{content:"";position:absolute;inset:0 0 auto 0;height:16%;background:var(--t1,#3b4cca)}
+.th::after{content:"";position:absolute;left:8%;right:30%;top:30%;height:12%;background:var(--t2,#e6e9f5);box-shadow:0 14px 0 var(--t2,#e6e9f5),0 28px 0 var(--t2,#e6e9f5)}
+.th i{position:absolute;right:8%;top:30%;width:16%;height:32%;background:var(--t3,#f5a623);border-radius:4px}
+.t-a{--t1:#3b4cca;--t3:#f5a623}.t-b{--t1:#0f766e;--t3:#e11d48;--t2:#d9efe9}.t-c{--t1:#1f2937;--t3:#7c3aed;--t2:#e5e7eb}.t-d{--t1:#b45309;--t3:#0ea5e9;--t2:#fdebd0}
+.btn2{border:1px solid var(--bd);border-radius:6px;padding:3px 9px;font-size:12px;color:var(--tx);background:var(--bg3);white-space:nowrap}
+.btn2.g{color:var(--red);border-color:#6b3a4a}
+.warn{background:#2c2618;border:1px solid #6b5a2a;border-radius:8px;padding:10px 12px;display:grid;gap:8px}
+.warn .a{display:flex;gap:8px;flex-wrap:wrap}
+.drawer{position:absolute;right:0;top:86px;bottom:0;width:360px;background:var(--bg2);border-left:1px solid var(--bd);padding:14px;display:grid;gap:10px;align-content:start;box-shadow:-12px 0 24px rgba(0,0,0,.35)}
+.drawer .row{display:flex;justify-content:space-between;gap:8px;font-size:13px;border-bottom:1px solid var(--bd);padding:6px 0}
+.drawer .row span:first-child{color:var(--mut)}
+.pal{position:absolute;left:50%;top:70px;transform:translateX(-50%);width:min(520px,92%);background:var(--bg2);border:1px solid var(--bd);border-radius:12px;box-shadow:0 24px 48px rgba(0,0,0,.55);padding:10px;display:grid;gap:4px}
+.pal div{padding:7px 10px;border-radius:6px;font-size:13px;display:flex;justify-content:space-between}
+.pal .sel{background:var(--bg3);color:var(--acc)}
+.empty{border:1px dashed var(--bd);border-radius:10px;padding:18px;text-align:center;color:var(--tx2);display:grid;gap:8px;justify-items:center}
+/* ===== Direction A: tuned dense list ===== */
+.A{--r:6px}
+.A .grp{border:1px solid var(--bd);border-radius:var(--r);overflow:hidden}
+.A .gh{background:var(--bg2);padding:7px 12px;display:flex;justify-content:space-between;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--tx2)}
+.A .r{display:grid;grid-template-columns:20px 54px minmax(0,1.3fr) 70px minmax(0,1fr) 120px;gap:12px;align-items:center;padding:8px 12px;border-top:1px solid var(--bd)}
+.A .r .th{width:54px;border-radius:4px}
+.A .nm b{display:block;font-weight:600}.A .nm small{color:var(--mut)}
+.A .act{display:flex;gap:6px;justify-content:flex-end}
+.A.mob .r{grid-template-columns:20px 54px minmax(0,1fr) auto}.A.mob .r>span.mono{display:none}.A.mob .r .x{display:none}
+/* ===== Direction B: preview strip + dense list ===== */
+.B{--r:10px}
+.B .now{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+.B .card{align-content:start;background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r);padding:10px;display:grid;gap:8px;box-shadow:0 2px 0 rgba(0,0,0,.25)}
+.B .card .l1{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.B .card b{font-weight:600}.B .card .l2{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.B .card .act{display:flex;gap:6px}
+.B .list{border:1px solid var(--bd);border-radius:var(--r);overflow:hidden}
+.B .r{display:grid;grid-template-columns:20px minmax(0,1.4fr) 70px minmax(0,1fr) 70px;gap:12px;align-items:center;padding:8px 12px;border-top:1px solid var(--bd)}
+.B .r:first-child{border-top:0}
+.B .r small{color:var(--mut)}
+.B.mob .now{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;gap:10px;padding-bottom:4px}.B.mob .card{flex:0 0 78%;scroll-snap-align:start}.B.mob .r{grid-template-columns:20px minmax(0,1fr) auto auto}.B.mob .r .x{display:none}
+.B .chip{border:1px solid var(--bd);background:var(--bg2);border-radius:999px;padding:3px 10px;font-size:12px;color:var(--tx2)}
+.B .chip.on{color:var(--acc);border-color:var(--acc)}
+.more{background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r,8px);padding:10px 12px;display:flex;justify-content:space-between;gap:12px;color:var(--tx2)}
+/* ===== Direction C: cards everywhere ===== */
+.C{--r:14px}
+.C .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
+.C .card{align-content:start;background:linear-gradient(180deg,var(--bg2),#202436);border:1px solid var(--bd);border-radius:var(--r);padding:12px;display:grid;gap:10px}
+.C .card.off .th{filter:grayscale(1) brightness(.5)}
+.C .card .l1{display:flex;justify-content:space-between;align-items:center}
+.C .card b{font-size:15px}
+.C .card .l2{display:flex;gap:6px;flex-wrap:wrap}
+.C .card .act{display:flex;gap:8px}
+.C .btn3{flex:1;text-align:center;border-radius:8px;padding:6px;background:var(--bg3);border:1px solid var(--bd);font-size:13px}
+.C .btn3.p{background:var(--acc);color:#10111a;border-color:var(--acc);font-weight:600}
+.C.mob .grid{grid-template-columns:1fr}
+.C .side{display:flex;gap:6px;flex-wrap:wrap}
+.C .chip{border-radius:999px;padding:4px 12px;font-size:12px;background:var(--bg2);border:1px solid var(--bd);color:var(--tx2)}
+.C .chip.on{background:var(--acc);color:#10111a;border-color:var(--acc);font-weight:600}
+@media (max-width:640px){.win.d{width:100%}}
+</style>
+</head>
+<body>
+<div class="page">
+<h1>PortPilot redesign: round 2 canvas</h1>
+<p class="lede">Three full directions for the desktop app home, rendered with fictional apps. Fixed: the dark navy and periwinkle palette. Open: radius, density, elevation, layout, type scale. Shared signature move in all three: <b>a page preview you can see without hovering</b> (today it is a 32 by 18 pixel sliver). Shared: Ctrl+K command palette, technical detail behind a drawer, and the 87-port wall moved off the home screen.</p>
+<div class="tabs" role="tablist" id="tabs"></div>
+<div id="dirs"></div>
+</div>
+<script>
+const apps=[
+ {n:'shop-web',p:3000,b:'feat/checkout',up:'2h 14m',cl:true,t:'t-a',s:'run',cmd:'next dev',st:'Running'},
+ {n:'harbor-api',p:8000,b:'main',up:'41m',cl:false,t:'t-b',s:'run',cmd:'uvicorn app:app',st:'Running'},
+ {n:'docs-site',p:4321,b:'main',up:'6h 02m',cl:false,t:'t-c',s:'run',cmd:'astro dev',st:'Running'},
+ {n:'admin-ui',p:5173,b:'fix/table-sort',up:'12m',cl:true,t:'t-d',s:'run',cmd:'vite',st:'Running'},
+ {n:'worker-queue',p:null,b:'main',up:'',cl:false,t:'t-c',s:'stop',cmd:'node worker.js',st:'Stopped'},
+ {n:'blog-preview',p:4000,b:'main',up:'',cl:false,t:'t-b',s:'stop',cmd:'astro dev',st:'Stopped'},
+ {n:'pay-sandbox',p:3100,b:'chore/deps',up:'',cl:true,t:'t-a',s:'crash',cmd:'npm run dev',st:'Crashed'},
+];
+const run=apps.filter(a=>a.s==='run'), rest=apps.filter(a=>a.s!=='run');
+const dot=a=>`<span class="dot ${a.s==='stop'?'s':a.s==='crash'?'c':''}"></span>`;
+const chrome=(inner,mob,pal)=>`<div class="top"><span class="logo">PORTPILOT</span><span class="search"><span>Search apps, ports, runs</span>${mob?'':'<span class="kbd">Ctrl+K</span>'}</span>${mob?'':'<span class="btn">+ Add app</span>'}</div><div class="nav"><span class="on">Apps</span><span>History</span><span>Browsers</span></div><div class="body">${inner}</div>${pal||''}`;
+const pal=`<div class="pal"><div class="sel"><span>Start shop-web</span><span class="kbd">Enter</span></div><div><span>Open history for harbor-api</span><span class="kbd">H</span></div><div><span>Free port 3100 (held by node.exe)</span></div><div><span>Switch browser profile: google</span></div></div>`;
+const conflict=`<div class="warn"><div><b>:3100 is held by node.exe</b> (PID 28220, not started by PortPilot)</div><div class="a"><span class="btn2">Use :3101 instead</span><span class="btn2 g">Kill and start</span><span class="btn2">Show process</span></div></div>`;
+const ports=`<div class="more"><span><b>Everything listening</b> &nbsp; 87 ports: 25 dev, 50 other, 12 system</span><span>Open ports panel &rarr;</span></div>`;
+const drawer=a=>`<div class="drawer"><div class="th ${a.t}"><i></i></div><div class="h"><b>${a.n}</b><span class="pill">${a.st}</span></div><div class="row"><span>URL</span><span class="mono">localhost:${a.p}</span></div><div class="row"><span>Command</span><span class="mono">${a.cmd}</span></div><div class="row"><span>Branch</span><span>${a.b}</span></div><div class="row"><span>PID</span><span class="mono">28144</span></div><div class="row"><span>Folder</span><span class="mono">I:/Scratch/${a.n}</span></div><div class="act" style="display:flex;gap:6px"><span class="btn2">Open</span><span class="btn2">Logs</span><span class="btn2 g">Stop</span></div></div>`;
+const tags=a=>`${a.cl?'<span class="pill cl">&#10022; Claude</span>':''}<span class="pill br mono">${a.b}</span>`;
+/* A */
+const A=(mob)=>{
+ const row=a=>`<div class="r">${dot(a)}<div class="th ${a.t}"><i></i></div><div class="nm"><b>${a.n}</b><small>${a.cmd}</small></div><span class="mono">${a.p?':'+a.p:'-'}</span><div class="x">${tags(a)}</div><div class="act"><span class="btn2">${a.s==='run'?'Open':'Start'}</span>${a.s==='run'?'<span class="btn2 g">Stop</span>':''}</div></div>`;
+ return `<div class="A ${mob?'mob':''}">`+chrome(`<div class="grp"><div class="gh"><span>Running</span><span>${run.length}</span></div>${run.map(row).join('')}</div><div class="grp"><div class="gh"><span>Stopped and crashed</span><span>${rest.length}</span></div>${rest.map(row).join('')}</div>${ports}`,mob)+`</div>`};
+/* B */
+const B=(mob,withPal,withDrawer)=>{
+ const card=a=>`<div class="card"><div class="th ${a.t}"><i></i></div><div class="l1"><b>${dot(a)}${a.n}</b><span class="mono">:${a.p}</span></div><small style="color:var(--mut)">up ${a.up}</small><div class="l2">${tags(a)}</div><div class="act"><span class="btn2">Open</span><span class="btn2">Details</span><span class="btn2 g">Stop</span></div></div>`;
+ const row=a=>`<div class="r">${dot(a)}<div><b>${a.n}</b> <small>${a.cmd}</small></div><span class="mono">${a.p?':'+a.p:'-'}</span><div class="x">${a.st==='Crashed'?'<span class="pill" style="color:var(--red);border-color:#6b3a4a">Crashed 4m ago</span>':tags(a)}</div><div><span class="btn2">Start</span></div></div>`;
+ return `<div class="B ${mob?'mob':''}">`+chrome(`<div class="h"><b>Now running</b><i>${run.length} servers &middot; latest first</i></div><div class="now">${run.map(card).join('')}</div>${conflict}<div class="h"><b>Other apps</b><span><span class="chip on">All</span> <span class="chip">Mine</span> <span class="chip">Claude</span></span></div><div class="list">${rest.map(row).join('')}</div>${ports}`,mob,withPal?pal:'')+(withDrawer?drawer(apps[0]):'')+`</div>`};
+/* C */
+const C=(mob,withPal)=>{
+ const card=a=>`<div class="card ${a.s!=='run'?'off':''}"><div class="th ${a.t}"><i></i></div><div class="l1"><b>${a.n}</b>${dot(a)}</div><div class="l2">${a.p?'<span class="pill mono">:'+a.p+'</span>':''}${tags(a)}${a.s==='crash'?'<span class="pill" style="color:var(--red);border-color:#6b3a4a">Crashed</span>':''}</div><div class="act"><span class="btn3 p">${a.s==='run'?'Open':'Start'}</span><span class="btn3">${a.s==='run'?'Stop':'Details'}</span></div></div>`;
+ const empty=`<div class="empty"><b>No other servers are listening</b><span>Start one of your apps, or let PortPilot adopt what is already running.</span><span class="btn2">Scan now</span></div>`;
+ return `<div class="C ${mob?'mob':''}">`+chrome(`<div class="side"><span class="chip on">All ${apps.length}</span><span class="chip">Running ${run.length}</span><span class="chip">Claude</span><span class="chip">Stopped</span><span class="chip">Everything listening (87)</span></div><div class="grid">${apps.map(card).join('')}</div>${conflict}`,mob,withPal?pal:'')+`</div>`};
+const DIRS=[
+ {id:'A',name:'A  Tuned dense list',tag:'Least change',
+  meta:[['What it is','Keeps the grouped list you have, fixes its problems: a 54px preview in every row, 6px radius, the 87-port wall behind one summary row, row actions that do not clip.'],['Gives up','The preview is still small. Home looks like the list you already know, only calmer.'],['Cost','Smallest. Mostly CSS plus the preview size in rowThumbs.js. About 1 slice.']],
+  frames:[['1440: home',A(false)],['390: home',A(true)]]},
+ {id:'B',name:'B  Preview strip + dense list (recommended)',tag:'Recommended',
+  meta:[['What it is','A "Now running" strip of large preview cards, latest first, then a compact list for everything else. Details open in a drawer. The conflict card and Ctrl+K palette keep the prescriptive pattern.'],['Why','It answers "show me my localhost pages" on the first screen and keeps the density your tools rule asks for in the list underneath.'],['Cost','About 3 slices: strip, list restyle, palette. Reuses status.js, the drawer and thumbnails.']],
+  frames:[['1440: home with detail drawer',B(false,false,true)],['1440: Ctrl+K palette',B(false,true,false)],['390: home',B(true)]]},
+ {id:'C',name:'C  Cards everywhere',tag:'Most change',
+  meta:[['What it is','Every app is a large card with a preview, status ring and one primary action. Filter chips on top. The port wall is a chip, not a section.'],['Gives up','Density. 7 apps fill a screen; your real 30 would scroll. This is the direction your "data-dense tools" rule argues against.'],['Cost','About 5 slices: card grid, filters, palette, empty and error states, keyboard focus.']],
+  frames:[['1440: home',C(false)],['1440: with Ctrl+K palette',C(false,true)],['390: home',C(true)]]},
+];
+const tabs=document.getElementById('tabs'),dirs=document.getElementById('dirs');
+DIRS.forEach((d,i)=>{
+ const b=document.createElement('button');b.textContent=d.name;b.setAttribute('role','tab');b.setAttribute('aria-selected',i===1);b.onclick=()=>show(i);tabs.appendChild(b);
+ const s=document.createElement('section');s.className='dir'+(i===1?' on':'');
+ s.innerHTML=`<div class="meta">${d.meta.map(m=>`<div><b>${m[0]}</b>${m[1]}</div>`).join('')}</div><div class="frames">${d.frames.map(f=>`<div><p class="cap">${f[0]}</p><div class="win ${f[0].startsWith('390')?'m':'d'}">${f[1]}</div></div>`).join('')}</div>`;
+ dirs.appendChild(s);
+});
+function show(i){[...tabs.children].forEach((b,j)=>b.setAttribute('aria-selected',i===j));[...dirs.children].forEach((s,j)=>s.classList.toggle('on',i===j));}
+if(location.hash){const k={a:0,b:1,c:2}[location.hash.slice(1).toLowerCase()];if(k!=null)show(k);}
+</script>
+</body>
+</html>
