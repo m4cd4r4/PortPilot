@@ -47,15 +47,42 @@
       </article>`;
   }
 
+  // The layout the page was last set up for; null until the first render.
+  let applied = null;
+
+  /**
+   * Everything around the strip that follows homeLayout: a body class for CSS, the
+   * ports section's name, and its open/closed state. Preview folds the port list into
+   * one "Everything listening" row; a switch of layout sets it, later clicks stay.
+   */
+  function applyLayout() {
+    const layout = M.homeLayoutOf(state.settings);
+    if (layout === applied) return;
+    document.body.classList.toggle('home-preview', layout === 'preview');
+    const label = document.querySelector('#ports-section .section-label');
+    if (label) label.textContent = layout === 'preview' ? 'Everything listening' : 'Active Ports';
+    if (applied !== null || layout === 'preview') {
+      state.portsCollapsed = layout === 'preview';
+      const section = document.getElementById('ports-section');
+      if (section) section.classList.toggle('collapsed', state.portsCollapsed);
+    }
+    applied = layout;
+  }
+
   /** Rebuild the strip from current state. Cheap: runs on every renderApps. */
   function render() {
+    applyLayout();
     const el = host();
     if (!el) return;
     if (!enabled()) { el.hidden = true; el.innerHTML = ''; return; }
-    const cards = M.runningCards(state);
+    // The search box narrows the strip like it narrows the list.
+    const cards = M.runningCards({ ...state, apps: _filterApps(state.apps) });
     if (!cards.length) {
       el.hidden = false;
-      el.innerHTML = `<div class="now-head"><span class="now-title-text">Now running</span><span class="count-badge count-badge-small">0</span></div><div class="now-empty">Nothing is running. Start an app below and its page shows up here.</div>`;
+      const msg = state.globalSearch
+        ? `No running app matches "${escapeHtml(state.globalSearch)}".`
+        : 'Nothing is running. Start an app below and its page shows up here.';
+      el.innerHTML = `<div class="now-head"><span class="now-title-text">Now running</span><span class="count-badge count-badge-small">0</span></div><div class="now-empty">${msg}</div>`;
       return;
     }
     el.hidden = false;
