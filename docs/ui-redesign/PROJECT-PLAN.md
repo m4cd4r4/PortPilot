@@ -141,6 +141,47 @@ The VS Code ports tree now groups active ports into Dev Servers / Other User Por
 #### Slice 6 landed (2026-06-30) - apps tree, partial
 The VS Code apps tree now nests branch children under their parent as collapsible `TreeItem`s (`getChildren` returns a parent's `children`; children excluded from top-level/group lists), mirroring the desktop renderer. A branch row uses the `git-branch` ThemeIcon colour-coded to the nearest `charts.*` palette entry (hue-mapped from the branch colour, so it tracks the window's Peacock colour - a TreeView can't paint arbitrary per-row hex), with `⎇ <branch>` in the description; a parent shows a `⎇N` branch count. `PortPilotApp` gained the optional `parentId`/`branch`/`worktreePath`/`colorSource` fields. **Still pending for Slice 6:** ports-tree grouping (Dev/Other/System, System collapsed) and kill-gating on system rows. Note: rebuilding `out/` does not hot-update an installed extension - the user must reload the Extension Development Host or reinstall the `.vsix`.
 
+## Round 2 - preview strip home (decided 2026-10-14)
+
+Direction chosen: **B, Preview strip + dense list**, from [round2/canvas.html](./round2/canvas.html) (A tuned dense list and C cards everywhere were the other two). Scope: the desktop app only. Fixed: the dark navy and periwinkle palette (Tokyo Night tokens). Open: radius, elevation, density, type scale, motion, home layout.
+
+**Diagnosis (installed 3.8.2, Apps screen at 390px):** the screen opens on a collapsed project list and then 87 raw port rows (`:3011`, `node.exe`, PID) with no hierarchy, and the row buttons clip at the right edge. Page previews exist but are 32 by 18 px (`src/renderer/rowThumbs.js`, hover to enlarge), so the user has never seen them. Thumbnails are already captured at 480 px wide (`THUMB_WIDTH` in `src/main/thumbnails.js`), so cards need no new capture work.
+
+**Signature move:** a "Now running" strip of large preview cards, latest first. Everything else is layout around it.
+
+**Kept from the June direction:** the dense list for everything that is not running, the slide-over drawer for detail, status shapes from `src/core/status.js`, and the prescriptive port-conflict card.
+
+### Rules every round 2 slice holds
+
+- Tokens only: no raw colour, radius or shadow in a component. New tokens (`--radius-card`, `--elev-card`) get a value in every theme; Brutalist keeps square corners.
+- Every slice is checked in at least TokyoNight, a light theme and Brutalist, at 1440 and 390, and a person reads the screenshots (measuring the DOM does not show balance or crowding).
+- New home sits behind the setting `homeLayout` (`classic` default, `preview`) until R2-2 lands, then the default flips in its own PR. The classic Apps screen stays byte-identical until then.
+- `history-ui`, `browsers-ui`, `browsers-purpose` and `desktop-detect` e2e stay green, run against the installed build after release.
+- No new dependency, no framework.
+
+### Slices
+
+| # | Slice | Scope | Effort | Status |
+|---|---|---|---|---|
+| R2-0 | Tokens | `--radius-card`, `--elev-card`, preview aspect ratio, per theme. No layout change. | S | later |
+| R2-1 | Now running strip | Cards for running and detected servers: 480 px preview from `history:rowThumbs`, name, port, branch, Claude mark, uptime, Open / Details / Stop. No-preview fallback card. Phone: horizontal swipe row. Behind `homeLayout`. | M | later |
+| R2-2 | Home hierarchy | Strip above a compact "Other apps" list (stopped, crashed). The 87-port wall becomes one "Everything listening" summary row. Conflict card kept. Flip `homeLayout` default in a follow-up PR. | M | later |
+| R2-3 | Ctrl+K palette | Start / stop an app, open history for an app, free a port, switch browser profile. Reuses existing IPC. Keyboard only paths tested. | M | later |
+| R2-4 | Row and button polish | Fix clipped row actions at 390, consistent button set, row actions on hover plus keyboard focus. | S | later |
+| R2-5 | History and Browsers on the same tokens | Same card radius, elevation and chips. No behaviour change. | S | later |
+
+### Round 2 does NOT cover
+
+- VS Code views and the web agent (they reuse the tokens later).
+- Settings screen, theme picker, left rail (still Phase 5 of the June plan).
+- New scanning or thumbnail capture logic.
+- Cards for stopped apps (kept in the list on purpose: density is the user's rule for tools).
+
+### Open questions
+
+- How many apps and running servers the real config has on a normal day decides whether the strip needs a "show all" cap. The real config has 30 apps; check how many run at once before R2-1.
+- What the strip shows for a server whose thumbnail has not been taken yet (first scan) and for IPv6-only servers, which get no thumbnail today.
+
 ## What this plan does NOT cover
 
 - A framework migration (staying vanilla HTML/CSS/JS by constraint).
