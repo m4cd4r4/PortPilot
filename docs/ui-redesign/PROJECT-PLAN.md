@@ -168,7 +168,7 @@ Direction chosen: **B, Preview strip + dense list**, from [round2/canvas.html](.
 | R2-2 | Home hierarchy | Strip above a compact "Other apps" list (stopped, crashed). The 87-port wall becomes one "Everything listening" summary row. Conflict card kept. Default flipped to `preview` in its own PR. | M | merged (#103) |
 | R2-3 | Ctrl+K palette | Start / stop an app, open history for an app, free a port, switch browser profile. Reuses existing IPC. Keyboard only paths tested. | M | merged (#106) |
 | R2-4 | Row and button polish | Fix clipped row actions at 390, consistent button set, row actions on hover plus keyboard focus. | S | merged (#107) |
-| R2-5 | History and Browsers on the same tokens | Same card radius, elevation and chips. No behaviour change. | S | later |
+| R2-5 | History and Browsers on the same tokens | Same card radius, elevation and chips. No behaviour change. | S | merged (#108) |
 
 ### Round 2 does NOT cover
 
