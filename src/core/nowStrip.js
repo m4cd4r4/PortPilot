@@ -12,10 +12,10 @@
 
   const HOME_LAYOUTS = ['classic', 'preview'];
 
-  /** The saved homeLayout, or 'classic' for anything unknown (the safe default). */
+  /** The saved homeLayout, or 'preview' (the default) for anything unset or unknown. */
   function homeLayoutOf(settings) {
     const v = settings && settings.homeLayout;
-    return HOME_LAYOUTS.includes(v) ? v : 'classic';
+    return HOME_LAYOUTS.includes(v) ? v : 'preview';
   }
 
   /**

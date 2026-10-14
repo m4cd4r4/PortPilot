@@ -77,7 +77,7 @@ function createAgent({ configStore, port = DEFAULT_PORT, token = crypto.randomBy
     let html = fs.readFileSync(path.join(RENDERER_DIR, 'index.html'), 'utf8');
     // The portal serves only the Apps view for now: drop the tabs it cannot back.
     html = html.replace(/[ \t]*<button[^>]*data-view="(?:history|browsers)"[^>]*>[^<]*<\/button>\r?\n/g, '');
-    html = html.replace(/[ \t]*<script src="(?:\.\.\/core\/runView|\.\.\/core\/browserView|history|browsers|rowThumbs|nowStrip)\.js"><\/script>\r?\n/g, '');
+    html = html.replace(/[ \t]*<script src="(?:\.\.\/core\/runView|\.\.\/core\/browserView|\.\.\/core\/titleBar|history|browsers|rowThumbs|nowStrip)\.js"><\/script>\r?\n/g, '');
     html = html.replace('</head>', `  <meta name="pp-token" content="${token}">\n</head>`);
     html = html.replace('<script src="renderer.js"></script>',
       '<script src="portpilot-web.js"></script>\n  <script src="renderer.js"></script>');
@@ -173,6 +173,7 @@ function createAgent({ configStore, port = DEFAULT_PORT, token = crypto.randomBy
       // window.PortPilotStatus is undefined -> classify() throws on scan.
       if (req.url === '/core/status.js') return serveStatic(res, 'status.js', CORE_DIR);
       if (req.url === '/core/conflict.js') return serveStatic(res, 'conflict.js', CORE_DIR);
+      if (req.url === '/core/nowStrip.js') return serveStatic(res, 'nowStrip.js', CORE_DIR);   // renderer.js reads homeLayoutOf from it
     }
     send(res, 404, 'Not found');
   });

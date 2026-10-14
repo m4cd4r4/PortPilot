@@ -1,8 +1,8 @@
 // ============ Home "Now running" strip ============
 // Large page previews for every running or detected app, above the Apps list, when
-// the setting homeLayout is 'preview'. Which apps and in what order comes from
+// the setting homeLayout is 'preview' (the default). Which apps and in what order comes from
 // src/core/nowStrip.js; the pixels are the 480 px thumbnails rowThumbs.js already
-// fetches, so nothing new is captured here. With homeLayout 'classic' (the default)
+// fetches, so nothing new is captured here. With homeLayout 'classic'
 // the strip is hidden and empty, and the Apps screen is exactly as it was.
 // Loaded after rowThumbs.js, which provides the thumbnail cache; renderer.js provides
 // state, appRowState, icon and escapeHtml, and calls render() at the end of renderApps.

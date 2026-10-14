@@ -4,7 +4,7 @@
  * Run: node tests/desktop-strip.e2e.js   (needs Electron + playwright; not part of test:unit)
  * Set PORTPILOT_SHOTS_DIR to save strip screenshots (3 themes x 1440 and 390).
  *
- * Covers: classic layout shows no strip; preview layout shows a card only for a running
+ * Covers: a fresh config defaults to the preview home; classic layout shows no strip; preview layout shows a card only for a running
  * app, with a decoded 16:9 page preview, Open / Details / Stop; Details opens the drawer;
  * Stop removes the card; at 390 px the strip is a horizontal swipe row and the page does
  * not scroll sideways.
@@ -28,15 +28,20 @@ async function main() {
       { id: 'app_idle', name: 'idle', command: `node server.js --port ${idlePort}`, cwd: shop, preferredPort: idlePort },
       { id: 'app_blocked', name: 'blocked', command: `node server.js --port ${blockedPort}`, cwd: shop, preferredPort: blockedPort },
     ],
-  });
+  }, { freshSettings: true });
 
   let foreign = null;
   const { app, win } = await h.launch(world);
   try {
     await win.waitForSelector('.app-card[data-id="app_shop"]');
 
+    // ---- Default: a fresh config gets the preview home --------------------------
+    console.log('step: default layout');
+    check('default: a fresh config shows the strip', await win.evaluate(() => !document.getElementById('now-strip').hidden && document.getElementById('setting-home-layout').value === 'preview'));
+
     // ---- Classic: the strip is absent ------------------------------------------
     console.log('step: classic layout');
+    await win.evaluate(async () => { document.getElementById('setting-home-layout').value = 'classic'; await window.saveSettings(); });
     await win.click('.app-card[data-id="app_shop"] [data-act="startApp"]');
     await until(async () => (await win.$$('.app-card[data-id="app_shop"] .row-thumb img')).length === 1, 60000, 'row thumbnail');
     check('classic: the strip is hidden', await win.$eval('#now-strip', (e) => e.hidden && getComputedStyle(e).display === 'none'));
