@@ -35,10 +35,10 @@ async function setup() {
 (async () => {
   console.log('\n=== browser ipc ===\n');
 
-  await t('registers exactly the ten channels', async () => {
+  await t('registers exactly the eleven channels', async () => {
     const { handlers } = await setup();
     assert.deepStrictEqual([...handlers.keys()].sort(), [
-      'browser:duplicate', 'browser:extensions', 'browser:history', 'browser:list', 'browser:remove',
+      'browser:captureWindow', 'browser:duplicate', 'browser:extensions', 'browser:history', 'browser:list', 'browser:remove',
       'browser:reopen', 'browser:save', 'browser:setMode', 'browser:start', 'browser:stop',
     ]);
   });
@@ -310,6 +310,70 @@ async function setup() {
     assert.deepStrictEqual(opened, ['https://one.test/', 'https://two.test/']);
     assert.strictEqual((await call('browser:reopen', 'b_missing')).code, 'NOT_FOUND');
     assert.strictEqual((await call('browser:reopen', 42)).code, 'BAD_ARGS');
+    await w.cleanup();
+  });
+
+  await t('save takes purpose, sites and a window from form strings, lists them, and clears them with blanks', async () => {
+    const { call, cfg, newPort } = await setup();
+    const form = { purpose: ' Google Search Console ', sites: 'Search.Google.com, analytics.google.com', window: { left: '-1920', top: '40', width: '1200', height: '800', front: true } };
+    const added = await call('browser:save', null, { name: 'gsc', port: newPort, browser: 'brave', ...form });
+    assert.strictEqual(added.success, true, added.error);
+    const p = bp.getProfile(cfg, 'gsc');
+    assert.strictEqual(p.purpose, 'Google Search Console');
+    assert.deepStrictEqual(p.sites, ['search.google.com', 'analytics.google.com']);
+    assert.deepStrictEqual(p.window, { left: -1920, top: 40, width: 1200, height: 800, front: true });
+    const row = (await call('browser:list')).profiles.find((r) => r.name === 'gsc');
+    assert.strictEqual(row.purpose, 'Google Search Console');
+    assert.strictEqual(row.window.left, -1920);
+    const cleared = await call('browser:save', 'gsc', { purpose: '', sites: '', window: { left: '', top: '', width: '', height: '', front: false } });
+    assert.strictEqual(cleared.success, true);
+    const q = bp.getProfile(cfg, 'gsc');
+    assert.deepStrictEqual([q.purpose, q.sites, q.window], [undefined, undefined, undefined]);
+  });
+
+  await t('save refuses a bad site or window with a plain code, and changes nothing', async () => {
+    const { call, cfg, newPort } = await setup();
+    assert.strictEqual((await call('browser:save', null, { name: 'x1', port: newPort, sites: 'https://a.test/path' })).code, 'BAD_SITES');
+    assert.strictEqual((await call('browser:save', null, { name: 'x1', port: newPort, window: { width: '50' } })).code, 'BAD_WINDOW');
+    assert.strictEqual((await call('browser:save', null, { name: 'x1', port: newPort, purpose: 'p'.repeat(201) })).code, 'BAD_PURPOSE');
+    assert.strictEqual((await call('browser:save', 'shop', { sites: ['a b'] })).code, 'BAD_SITES');
+    assert.deepStrictEqual(bp.listProfiles(cfg).map((p) => p.name), ['shop']);
+    assert.strictEqual(bp.getProfile(cfg, 'shop').sites, undefined);
+  });
+
+  await t('a running profile can have its purpose and window edited (they never move the port)', async () => {
+    const { call, cfg, w } = await setup();
+    await call('browser:start', 'shop');
+    const r = await call('browser:save', 'shop', { purpose: 'Shop admin', window: { width: 900, height: 700 } });
+    assert.strictEqual(r.success, true, r.error);
+    assert.strictEqual(bp.getProfile(cfg, 'shop').purpose, 'Shop admin');
+    await w.cleanup();
+  });
+
+  await t('captureWindow returns the running window; stopped, unknown and bad names fail plainly', async () => {
+    const { call, w } = await setup();
+    const stopped = await call('browser:captureWindow', 'shop');
+    assert.strictEqual(stopped.code, 'NOT_RUNNING');
+    assert.strictEqual(stopped.action, undefined, 'the model-facing action is dropped');
+    await call('browser:start', 'shop');
+    w.actual = { left: -50, top: 10, width: 1300, height: 900, windowState: 'normal' };
+    const ok = await call('browser:captureWindow', 'shop');
+    assert.deepStrictEqual(ok.window, { left: -50, top: 10, width: 1300, height: 900 });
+    assert.strictEqual(ok.windowState, 'normal');
+    w.windowFails = true;
+    assert.strictEqual((await call('browser:captureWindow', 'shop')).code, 'CAPTURE_FAILED');
+    assert.strictEqual((await call('browser:captureWindow', 'nope')).code, 'NOT_FOUND');
+    assert.strictEqual((await call('browser:captureWindow', 7)).code, 'BAD_ARGS');
+    await w.cleanup();
+  });
+
+  await t('start through the desktop reports where a saved window really landed', async () => {
+    const { call, cfg, w } = await setup();
+    bp.updateProfile(cfg, 'shop', { mode: 'headed', window: { left: 10, top: 20, width: 800, height: 600 } });
+    const r = await call('browser:start', 'shop');
+    assert.strictEqual(r.success, true);
+    assert.strictEqual(r.window.applied, true);
+    assert.strictEqual(r.window.actual.width, 800);
     await w.cleanup();
   });
 

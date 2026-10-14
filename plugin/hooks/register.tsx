@@ -30,6 +30,13 @@
  * inbox/<id>.json, where the app asks it to look at a crash (Ask Claude). A
  * request names the app only; the prompt is built here, as Fix it builds it.
  *
+ * Browser profiles: at the start of each conversation the first message carries a short note
+ * (context block `portpilotBrowsers`) listing the user's browser profiles, what each is for and
+ * which sites, so "access Google Search Console" routes to the right profile through
+ * start_browser `for` with no port chosen. Only profile names, ports, modes, purposes and sites;
+ * never a folder path or a URL query (browserContextBlock). Nothing is added when the user has no
+ * profiles, and any failure to read the config adds nothing and never blocks the prompt.
+ *
  * Reads the PortPilot config and runtime sidecar directly, so it works with
  * the desktop app closed. The pure logic lives in guard-core.mjs and
  * crash-core.mjs.
@@ -55,6 +62,7 @@ import {
   type Platform,
   type Runtime,
 } from './guard-core.mjs'
+import { browserContextBlock } from './browser-context.mjs'
 import { checkNotices, EMPTY, freshPorts, noteStart, observable, takeQueued } from './observe.mjs'
 
 const REFRESH_MS = 15_000
@@ -263,6 +271,21 @@ export const register: Register = (on) => {
     $.clock.every(REFRESH_MS, () => { void refresh($) })
     return started
   })
+
+  // Tell Claude which browser profiles exist, once per conversation, in the first message's context.
+  on('prompt.context', async ($, e, next) => {
+    const ran = await next(e)
+    try {
+      platform ??= await detectPlatform($)
+      dir ??= await configDir($, platform)
+      const config = dir ? await readJson<{ browserProfiles?: unknown }>($, `${dir}/portpilot-config.json`) : null
+      const text = browserContextBlock(config)
+      if (!text) return ran
+      return { ...ran, blocks: [...ran.blocks.filter((b) => b.name !== 'portpilotBrowsers'), { name: 'portpilotBrowsers', text }] }
+    } catch {
+      return ran
+    }
+  }).catch(($, e, next) => next(e)) // fail open: a note that cannot be built is simply not sent
 
   // Stamp this session on every PortPilot start, however Claude called it, so
   // a later crash finds its way back here. start_browser/stop_browser carry it too: it labels

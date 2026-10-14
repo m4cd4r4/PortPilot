@@ -1,7 +1,8 @@
 /**
- * The browser-profile tools (plan row 26, slice 2): one set of five tools that the MCP server and
- * the web agent both expose, so a model asks for a profile by NAME and PortPilot supplies the port
- * and the CDP URL. A caller never chooses a port.
+ * The browser-profile tools (plan row 26, slice 2): one set of tools that the MCP server and
+ * the web agent both expose, so a model asks for a profile by NAME (or by the site or task it is
+ * FOR: `start_browser` `for`, resolved by browserMatch.js) and PortPilot supplies the port and the
+ * CDP URL. A caller never chooses a port.
  *
  *   list_browser_profiles  list_browsers  start_browser  stop_browser  set_browser_mode  browser_history
  *
@@ -31,6 +32,7 @@ const profiles = require('./browserProfiles');
 const run = require('./browserRun');
 const history = require('./browserHistory');
 const lease = require('./browserLease');
+const { matchProfiles } = require('./browserMatch');
 
 const CLAIMS_FILE = 'portpilot-browser-claims.json';
 const emptyClaims = () => ({ profiles: {} });
@@ -113,7 +115,9 @@ const NEXT = {
   LAUNCH_FAILED: 'Ask the user to check that the browser starts normally.',
   STOP_FAILED: 'Ask the user to close that browser window by hand.',
   BAD_MODE: `Use one of: ${profiles.MODES.join(', ')}.`,
-  IN_USE: 'Do not use it. Call list_browser_profiles and pick a profile that shows free: true, or call start_browser with name "any" to be given one. Only if the user agrees to share this one, call again with takeover:true.',
+  IN_USE: 'Do not use it. Call list_browser_profiles and pick a free profile (free: true) that suits the task. name "any" gives a throwaway browser with no logins: use it only when the task is not tied to a site. Only if the user agrees to share this one, call again with takeover:true.',
+  NO_MATCH: 'Tell the user no PortPilot browser profile is set up for this, name the profiles that exist, and ask them to create or label one in the PortPilot Browsers tab. Do not invent a port, do not launch a browser yourself and do not fall back to name "any" for a site task.',
+  AMBIGUOUS: 'Do not guess. Tell the user which profiles fit and ask which to use, then call start_browser with that profile name.',
   NO_FREE_PROFILE: 'Every profile is in use or blocked. Ask the user to add a profile in the PortPilot Browsers tab, or to say which one you may take over (then call start_browser with its name and takeover:true).',
   UNKNOWN_TOOL: 'Use one of: list_browser_profiles, list_browsers, start_browser, stop_browser, set_browser_mode, browser_history.',
 };
@@ -128,10 +132,43 @@ function failure(err, configPath) {
   };
   if (err.holder) out.holder = err.holder;
   if (err.leasedTo) out.leasedTo = err.leasedTo;
-  if (code === 'NOT_FOUND') {
+  if (Array.isArray(err.candidates)) out.candidates = err.candidates;
+  if (code === 'NOT_FOUND' || code === 'NO_MATCH') {
     try { out.known = profiles.listProfiles(configPath).map((p) => p.name); } catch { /* the list is a courtesy */ }
   }
   return out;
+}
+
+/**
+ * The profile `args.for` (free text, or a URL) is meant for. Throws NO_MATCH (nothing fits: names the
+ * profiles that exist) or AMBIGUOUS (two or more fit about equally: names them, never picks one).
+ * @returns {{ profile: object, matched: { for: string, score: number, reason: string } }}
+ */
+function resolveFor(configPath, text) {
+  const stored = profiles.listProfiles(configPath);
+  const m = matchProfiles(stored, text);
+  const shown = String(text).replace(/\s+/g, ' ').trim().slice(0, 80);
+  if (m.status === 'none') {
+    const names = stored.map((p) => p.name);
+    throw new ApiError('NO_MATCH', names.length
+      ? `no browser profile is set up for "${shown}". Existing profiles: ${names.join(', ')}`
+      : `no browser profile is set up for "${shown}": there are no profiles yet`);
+  }
+  if (m.status === 'ambiguous') {
+    throw new ApiError('AMBIGUOUS', `"${shown}" fits more than one browser profile about equally: ${m.candidates.map((c) => c.name).join(', ')}`,
+      { candidates: m.candidates.map((c) => ({ name: c.name, reason: c.reason })) });
+  }
+  const top = m.matches[0];
+  return { profile: profiles.getProfile(configPath, m.best), matched: { for: shown, score: top.score, reason: top.reason } };
+}
+
+/** The for argument: undefined when absent, the trimmed text when given, BAD_ARGS when it is not text. */
+function forOf(args) {
+  if (args.for == null) return undefined;
+  if (typeof args.for !== 'string' || !args.for.trim()) {
+    throw new ApiError('BAD_ARGS', 'for must be text: the site or task the browser is for, such as "google search console" or a URL');
+  }
+  return args.for.trim();
 }
 
 const nameOf = (args) => {
@@ -268,6 +305,7 @@ async function startNamed(configPath, profile, caller, args, ctx) {
 
   const out = { ...view(r, claim), already: !!r.already };
   if (r.offscreen) out.offscreen = r.offscreen;
+  if (r.window) out.window = r.window;
   if (held) {
     out.takeoverNote = `Took "${r.name}" over from ${held.by}${held.short && !String(held.by).includes(held.short) ? ` (session ${held.short})` : ''}. They may still be using it: leave tabs you did not open alone, and tell the user.`;
   } else if (claim.by !== caller.by) {
@@ -316,7 +354,16 @@ const HISTORY_MAX = 50;
 
 const TOOLS = {
   async list_browser_profiles(configPath, args, ctx) {
-    const stored = profiles.listProfiles(configPath);
+    let stored = profiles.listProfiles(configPath);
+    const query = forOf(args);
+    let ranked = null; // with `for`: the matches, best first
+    let ambiguous = false;
+    if (query !== undefined) {
+      const m = matchProfiles(stored, query);
+      ranked = new Map(m.matches.map((x, i) => [x.name, { ...x, rank: i + 1 }]));
+      ambiguous = m.status === 'ambiguous';
+      stored = m.matches.map((x) => stored.find((p) => p.name === x.name));
+    }
     const { rows, warnings } = await run.allStatus(configPath, stored, ctx.deps);
     const live = lease.liveSessionIds(configPath);
     const me = lease.cleanId(args.sessionId);
@@ -330,10 +377,21 @@ const TOOLS = {
       const p = stored.find((x) => x.name === st.name) || {};
       if (p.url) row.url = p.url;
       if (p.note) row.note = p.note;
+      if (p.purpose) row.purpose = p.purpose;
+      if (p.sites && p.sites.length) row.sites = p.sites;
+      if (p.window) row.window = p.window;
+      if (ranked) { const m = ranked.get(st.name); row.match = { rank: m.rank, score: m.score, reason: m.reason }; }
       if (st.tabs && st.tabs.length) row.tabs = st.tabs.slice(0, 5).map((t) => ({ title: t.title, url: t.url }));
       return row;
     });
-    return { success: true, profiles: out, warnings: warnings.map((w) => w.sentence) };
+    const result = { success: true, profiles: out, warnings: warnings.map((w) => w.sentence) };
+    if (ranked) {
+      result.for = String(query).slice(0, 80);
+      result.ambiguous = ambiguous;
+      if (!out.length) result.note = 'No profile fits. Tell the user, and ask them to create or label a profile for it in the PortPilot Browsers tab. Do not pick a port or launch a browser yourself.';
+      else if (ambiguous) result.note = 'More than one profile fits about equally: do not guess. Ask the user which to use.';
+    }
+    return result;
   },
 
   async list_browsers(configPath, args, ctx) {
@@ -343,6 +401,14 @@ const TOOLS = {
   async start_browser(configPath, args, ctx) {
     const stored = profiles.listProfiles(configPath);
     const caller = callerOf(args, ctx);
+    const query = forOf(args);
+    if (query !== undefined) {
+      if (typeof args.name === 'string' && args.name.trim()) {
+        throw new ApiError('BAD_ARGS', 'pass either name (an exact profile) or for (the site or task), not both');
+      }
+      const { profile, matched } = resolveFor(configPath, query);
+      return { success: true, ...(await startNamed(configPath, profile, caller, args, ctx)), matchedBy: matched };
+    }
     if (isAnyRequest(args, stored)) return { success: true, ...(await startAny(configPath, args, caller, ctx)) };
     const name = nameOf(args);
     const profile = profiles.getProfile(configPath, name); // NOT_FOUND before anything runs
@@ -482,4 +548,26 @@ async function call(configPath, tool, args, ctx = {}) {
   }
 }
 
-module.exports = { TOOL_NAMES, call, reopen, startHistorySampler, claimsPathFor, cdpUrlFor };
+/**
+ * The running browser's real window bounds, for the desktop's "Capture current position" button.
+ * Not one of the tools: a model has no use for it, and it only reads. Resolves like call().
+ * @returns {Promise<{ success: true, name, window: { left, top, width, height }, windowState } | { success: false, code, error, action }>}
+ */
+async function captureWindow(configPath, name, ctx = {}) {
+  try {
+    const profile = profiles.getProfile(configPath, name);
+    const deps = ctx.deps || run.defaultDeps();
+    const st = await run.profileStatus(configPath, profile, deps);
+    if (st.state !== 'up' || st.owner !== 'profile') {
+      throw new ApiError('NOT_RUNNING', `"${profile.name}" is not running, so there is no window to read`, { action: 'Start the profile, put the window where you want it, then capture.' });
+    }
+    const b = await deps.windowBounds(profile.port);
+    if (!b) throw new ApiError('CAPTURE_FAILED', 'the browser did not report a window position (no page open, or CDP did not answer)', { action: 'Open a page in the browser window and try again.' });
+    const w = { left: b.left, top: b.top, width: b.width, height: b.height };
+    return { success: true, name: profile.name, window: w, windowState: b.windowState || 'normal' };
+  } catch (err) {
+    return failure(err, configPath);
+  }
+}
+
+module.exports = { TOOL_NAMES, call, reopen, captureWindow, startHistorySampler, claimsPathFor, cdpUrlFor };

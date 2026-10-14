@@ -143,6 +143,34 @@
     return parts.join('. ');
   }
 
+  // ---- Purpose, sites and window ---------------------------------------------------
+
+  /** "Google Search Console · search.google.com, analytics.google.com", or '' when neither is set. */
+  function purposeLine(row) {
+    const sites = Array.isArray(row && row.sites) ? row.sites : [];
+    return [row && row.purpose, sites.join(', ')].filter(Boolean).join(' · ');
+  }
+
+  /** "1200x800 at 100,50 · stays in front" for a saved window; '' when nothing is saved. */
+  function windowLine(w) {
+    if (!w) return '';
+    const size = Number.isFinite(w.width) || Number.isFinite(w.height) ? `${Number.isFinite(w.width) ? w.width : '?'}x${Number.isFinite(w.height) ? w.height : '?'}` : '';
+    const at = Number.isFinite(w.left) || Number.isFinite(w.top) ? `${Number.isFinite(w.left) ? w.left : '?'},${Number.isFinite(w.top) ? w.top : '?'}` : '';
+    const place = [size, at && `at ${at}`].filter(Boolean).join(' ');
+    return [place, w.front ? 'stays in front' : ''].filter(Boolean).join(' · ');
+  }
+
+  /** The toast after Start when a saved window did not land where it was asked to. */
+  function placementWarning(win) {
+    if (!win) return '';
+    const bits = [];
+    if (win.requested && Object.keys(win.requested).length && !win.applied) {
+      bits.push(win.actual ? 'The window is not exactly where the profile says: the system adjusted it.' : 'The window could not be placed.');
+    }
+    if (win.front && win.front.topmost === false) bits.push('Always-on-top did not take; the window was brought to the front once.');
+    return bits.join(' ');
+  }
+
   // The API's `action` text is written for a model ("Call list_browser_profiles ..."). A person
   // gets the same advice in their own terms.
   const NEXT = {
@@ -163,6 +191,11 @@
     BAD_NAME: 'Use letters, digits, dot, dash or underscore.',
     BAD_PORT: 'Use a port from 1024 to 65535.',
     BAD_URL: 'Start with http://, https:// or file://, or leave it blank.',
+    BAD_SITES: 'List only hostnames such as search.google.com, separated by commas.',
+    BAD_PURPOSE: 'Keep it to a short phrase.',
+    BAD_WINDOW: 'Leave a field blank to keep it free, or use whole numbers.',
+    NOT_RUNNING: 'Start the profile, put its window where you want it, then capture.',
+    CAPTURE_FAILED: 'Open a page in the browser window and try again.',
     BUSY: 'Wait for the current action to finish.',
     IN_USE: 'Another Claude session is using this profile. Pick another profile or ask that session to stop it.',
   };
@@ -182,5 +215,6 @@
   }
 
   return { STATES, MODES, modeInfo, stateOf, sortRows, summary, ago, claimLine, suggestPort, defaultBrowser, tabsLine, failureText, extensionsText,
+    purposeLine, windowLine, placementWarning,
     sessionWhen, startedByWord, endedWord, sessionLine, tabLabel, shownTabs, reopenText };
 });

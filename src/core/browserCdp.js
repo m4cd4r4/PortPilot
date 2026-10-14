@@ -51,10 +51,15 @@ async function openTab(port, url) {
  * `send(method, params)` resolves with the CDP result or rejects with its error.
  */
 async function withBrowserSession(port, fn) {
-  if (typeof WebSocket !== 'function') return null;
   const v = await version(port);
   if (!v || !v.webSocketDebuggerUrl) return null;
-  const ws = new WebSocket(v.webSocketDebuggerUrl);
+  return withSocket(v.webSocketDebuggerUrl, fn);
+}
+
+/** Like withBrowserSession, for any CDP websocket URL (a page target's own, say). */
+async function withSocket(url, fn) {
+  if (typeof WebSocket !== 'function') return null;
+  const ws = new WebSocket(url);
   let id = 0;
   const pending = new Map();
   // A hung browser can accept the connection and never finish the handshake; without a limit the
@@ -121,4 +126,67 @@ async function parkOffscreen(port, left) {
   }
 }
 
-module.exports = { version, pageTabs, openTab, withBrowserSession, closeBrowser, parkOffscreen };
+/** The first page's window id, or null. */
+async function firstWindowId(port, send) {
+  const [tab] = await pageTabs(port);
+  if (!tab) return null;
+  const { windowId } = await send('Browser.getWindowForTarget', { targetId: tab.id });
+  return windowId;
+}
+
+const BOUND_KEYS = ['left', 'top', 'width', 'height'];
+const pickBounds = (b) => Object.fromEntries(BOUND_KEYS.filter((k) => Number.isFinite(b && b[k])).map((k) => [k, b[k]]));
+
+/**
+ * The first page's window bounds as the browser reports them: { left, top, width, height, windowState },
+ * or null when nothing answers or no page is open.
+ */
+async function getWindowBounds(port) {
+  try {
+    return await withBrowserSession(port, async (send) => {
+      const windowId = await firstWindowId(port, send);
+      if (windowId == null) return null;
+      const { bounds } = await send('Browser.getWindowBounds', { windowId });
+      return { ...pickBounds(bounds), windowState: bounds.windowState || 'normal' };
+    });
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Place the first page's window: any of left, top, width, height (an omitted one is left as it is),
+ * in the normal window state. The OS may adjust or refuse, so the bounds are read back and returned:
+ * the answer is where the window really is. Null when the browser could not be asked.
+ * @returns {Promise<{ left, top, width, height, windowState }|null>}
+ */
+async function setWindowBounds(port, wanted) {
+  try {
+    return await withBrowserSession(port, async (send) => {
+      const windowId = await firstWindowId(port, send);
+      if (windowId == null) return null;
+      // A maximised or minimised window ignores new bounds until it is back to normal.
+      await send('Browser.setWindowBounds', { windowId, bounds: { windowState: 'normal' } });
+      await send('Browser.setWindowBounds', { windowId, bounds: { ...pickBounds(wanted), windowState: 'normal' } });
+      const { bounds } = await send('Browser.getWindowBounds', { windowId });
+      return { ...pickBounds(bounds), windowState: bounds.windowState || 'normal' };
+    });
+  } catch {
+    return null;
+  }
+}
+
+/** Raise the first page's tab and window (Page.bringToFront on the page's own socket). True when accepted. */
+async function bringToFront(port) {
+  try {
+    const list = await getJson(port, '/json');
+    const tab = (Array.isArray(list) ? list : []).find((t) => t.type === 'page' && t.webSocketDebuggerUrl);
+    if (!tab) return false;
+    const r = await withSocket(tab.webSocketDebuggerUrl, (send) => send('Page.bringToFront'));
+    return r !== null;
+  } catch {
+    return false;
+  }
+}
+
+module.exports = { version, pageTabs, openTab, withBrowserSession, withSocket, closeBrowser, parkOffscreen, getWindowBounds, setWindowBounds, bringToFront };

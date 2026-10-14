@@ -18,6 +18,7 @@ const os = require('os');
 const path = require('path');
 const configFile = require('./configFile');
 const { BROWSER_IDS, browserIdFromPath } = require('./browserDetect');
+const { normaliseHost } = require('./browserMatch');
 
 const MODES = ['headed', 'offscreen', 'headless'];
 const PORT_MIN = 1024;
@@ -27,6 +28,11 @@ const PORT_MAX = 65535;
 const NAME_RE = /^[A-Za-z0-9](?:[A-Za-z0-9._-]{0,62}[A-Za-z0-9_-])?$/;
 // Windows device names, with or without an extension.
 const RESERVED_RE = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/i;
+
+const PURPOSE_MAX = 200;
+const SITES_MAX = 20;
+// A saved window placement: every field optional, each inside sane bounds.
+const WINDOW_LIMITS = { left: [-10000, 10000], top: [-10000, 10000], width: [200, 8000], height: [200, 8000] };
 
 class ProfileError extends Error {
   constructor(code, message) { super(message); this.name = 'ProfileError'; this.code = code; }
@@ -71,8 +77,54 @@ function assertDistinctDirs(configPath, profile, others) {
 }
 
 /**
+ * The `sites` field as a clean list of lowercase hostnames. Takes an array, or one string with
+ * the hosts separated by commas, spaces or newlines (the form field). Case is folded and repeats
+ * are dropped; a scheme, path, port or wildcard is refused rather than quietly trimmed, because
+ * "https://x.com/a" would otherwise be stored as something the user did not type.
+ */
+function cleanSites(value) {
+  if (value == null || value === '') return [];
+  const items = Array.isArray(value) ? value : (typeof value === 'string' ? value.split(/[\s,;]+/) : null);
+  if (!items) throw new ProfileError('BAD_SITES', 'sites must be a list of hostnames such as search.google.com');
+  const out = [];
+  for (const raw of items) {
+    if (typeof raw !== 'string') throw new ProfileError('BAD_SITES', 'sites must be a list of hostnames such as search.google.com');
+    if (!raw.trim()) continue;
+    const host = normaliseHost(raw);
+    if (!host) {
+      throw new ProfileError('BAD_SITES', `"${raw.trim().slice(0, 60)}" is not a hostname. Use only the host, such as search.google.com: no https://, path, port or *.`);
+    }
+    if (!out.includes(host)) out.push(host);
+  }
+  if (out.length > SITES_MAX) throw new ProfileError('BAD_SITES', `at most ${SITES_MAX} sites per profile`);
+  return out;
+}
+
+/**
+ * The `window` field: { left?, top?, width?, height?, front? } or null when nothing is set.
+ * Numbers may arrive as numeric strings (the form); blank means "not set".
+ */
+function cleanWindow(value) {
+  if (value == null || value === '') return null;
+  if (typeof value !== 'object' || Array.isArray(value)) throw new ProfileError('BAD_WINDOW', 'window must be an object: { left, top, width, height, front }');
+  const out = {};
+  for (const [key, [min, max]] of Object.entries(WINDOW_LIMITS)) {
+    const raw = value[key];
+    if (raw == null || (typeof raw === 'string' && !raw.trim())) continue;
+    const n = typeof raw === 'string' ? Number(raw.trim()) : raw;
+    if (typeof n !== 'number' || !Number.isInteger(n) || n < min || n > max) {
+      throw new ProfileError('BAD_WINDOW', `window ${key} must be a whole number from ${min} to ${max}`);
+    }
+    out[key] = n;
+  }
+  if (value.front != null && typeof value.front !== 'boolean') throw new ProfileError('BAD_WINDOW', 'window front must be true or false');
+  if (value.front === true) out.front = true;
+  return Object.keys(out).length ? out : null;
+}
+
+/**
  * Validate and normalise profile fields against the profiles that already exist.
- * @param {object} fields  { name, port, browser?, mode?, url?, note?, userDataDir? }
+ * @param {object} fields  { name, port, browser?, mode?, url?, note?, purpose?, sites?, window?, userDataDir? }
  * @param {object[]} others profiles to stay unique against (exclude the one being edited)
  * @returns {object} the clean profile; throws ProfileError(code) otherwise
  */
@@ -104,7 +156,15 @@ function validateProfile(fields, others = []) {
   const portClash = others.find((p) => p.port === port);
   if (portClash) throw new ProfileError('DUPLICATE_PORT', `port ${port} is already used by profile "${portClash.name}"`);
 
+  const purpose = f.purpose == null ? '' : String(f.purpose).replace(/\s+/g, ' ').trim();
+  if (purpose.length > PURPOSE_MAX) throw new ProfileError('BAD_PURPOSE', `purpose must be at most ${PURPOSE_MAX} characters`);
+  const sites = cleanSites(f.sites);
+  const win = cleanWindow(f.window);
+
   const out = { name, port, browser, mode, url, note };
+  if (purpose) out.purpose = purpose;
+  if (sites.length) out.sites = sites;
+  if (win) out.window = win;
   if (f.userDataDir != null && f.userDataDir !== '') {
     if (typeof f.userDataDir !== 'string' || !path.isAbsolute(f.userDataDir)) {
       throw new ProfileError('BAD_DIR', 'userDataDir must be an absolute path');
@@ -201,6 +261,7 @@ function importPool(configPath, poolPath, { adoptDirs = false } = {}) {
   mutateProfiles(configPath, (list) => {
     for (const entry of pool.profiles) {
       const e = entry || {};
+      // A pool file knows nothing about purpose, sites or window: they stay empty.
       const fields = { name: e.name, port: e.port, mode: e.mode, url: e.url, note: e.description, browser };
       if (adoptDirs && pool.profileRoot && typeof e.name === 'string') {
         const dir = path.resolve(path.dirname(poolPath), pool.profileRoot, e.name);
@@ -221,7 +282,7 @@ function importPool(configPath, poolPath, { adoptDirs = false } = {}) {
 }
 
 module.exports = {
-  MODES, PORT_MIN, PORT_MAX, ProfileError,
+  MODES, PORT_MIN, PORT_MAX, PURPOSE_MAX, SITES_MAX, WINDOW_LIMITS, ProfileError,
   profilesRootFor, userDataDirFor, assertDistinctDirs, validateProfile,
   listProfiles, getProfile, addProfile, updateProfile, removeProfile, importPool,
 };

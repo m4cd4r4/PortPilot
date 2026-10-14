@@ -2593,6 +2593,14 @@ body {
 .bsub { flex-wrap: wrap; row-gap: 0; }
 .bsub-item { min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .bwarn { font-size: 0.7rem; color: var(--accent-yellow); }
+.blabel { font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); margin-right: 4px; }
+.bpurpose .bsub-item { color: var(--text-primary); }
+.bwindow { margin: 4px 0 8px; border: var(--border-width) solid var(--border-color); border-radius: var(--radius); padding: 6px 10px 8px; }
+.bwindow > summary { cursor: pointer; font-size: 0.78rem; color: var(--text-secondary); padding: 2px 0; }
+.bwindow > summary:focus-visible { outline: 2px solid var(--accent-cyan); outline-offset: 2px; }
+.bwindow[open] > summary { margin-bottom: 4px; }
+.bwindow .form-group { margin-bottom: 8px; }
+.bwindow #bf-capture-note { display: block; margin: 6px 0 0; min-height: 1em; }
 .bhint { font-size: 0.7rem; color: var(--text-muted); line-height: 1.4; margin: 4px 0 8px; }
 .bext { font-size: 0.78rem; color: var(--text-secondary); margin-bottom: 8px; }
 .bext-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }

@@ -1,5 +1,5 @@
 /**
- * IPC for the Browsers tab: list, start, stop, mode, save, remove, duplicate, extensions, history, reopen.
+ * IPC for the Browsers tab: list, start, stop, mode, save, remove, duplicate, extensions, history, reopen, captureWindow.
  * Kept out of ipcHandlers.js (already 960+ lines).
  *
  * Start, stop and mode go through browserApi, the same code the MCP tools and the HTTP routes use,
@@ -25,15 +25,15 @@ const lower = (s) => String(s).trim().toLowerCase();
 
 // Fields the panel may set. Never userDataDir: that would let a compromised renderer point a
 // profile at any folder on disk.
-const EDITABLE = ['port', 'browser', 'mode', 'url', 'note'];
+const EDITABLE = ['port', 'browser', 'mode', 'url', 'note', 'purpose', 'sites', 'window'];
 const pick = (src, keys) => Object.fromEntries(keys.filter((k) => src && src[k] !== undefined).map((k) => [k, src[k]]));
 
 const isPlainName = (v) => typeof v === 'string' && v.trim().length > 0 && v.length <= 200;
 
 // Codes the panel may show as they are. Anything else (a Node errno such as EPERM, say) becomes INTERNAL.
 const KNOWN_CODES = new Set([
-  'BAD_ARGS', 'BAD_BROWSER', 'BAD_DIR', 'BAD_MODE', 'BAD_NAME', 'BAD_POOL', 'BAD_PORT', 'BAD_URL', 'BROWSER_NOT_FOUND',
-  'BUSY', 'COPY_FAILED', 'DUPLICATE_DIR', 'DUPLICATE_NAME', 'DUPLICATE_PORT', 'IN_USE', 'LAUNCH_FAILED', 'NOT_FOUND', 'NOT_OURS', 'NOT_VERIFIED',
+  'BAD_ARGS', 'BAD_BROWSER', 'BAD_DIR', 'BAD_MODE', 'BAD_NAME', 'BAD_POOL', 'BAD_PORT', 'BAD_PURPOSE', 'BAD_SITES', 'BAD_URL', 'BAD_WINDOW', 'BROWSER_NOT_FOUND',
+  'BUSY', 'CAPTURE_FAILED', 'COPY_FAILED', 'DUPLICATE_DIR', 'DUPLICATE_NAME', 'DUPLICATE_PORT', 'IN_USE', 'LAUNCH_FAILED', 'NOT_FOUND', 'NOT_OURS', 'NOT_RUNNING', 'NOT_VERIFIED',
   'PORT_HELD', 'PROFILE_RUNNING', 'SOURCE_RUNNING', 'START_TIMEOUT', 'STOP_FAILED',
 ]);
 const GENERIC = 'Something went wrong. The details are in the PortPilot log.';
@@ -202,6 +202,12 @@ function setupBrowserIpc(ipcMain, configStore, injected = {}) {
       const r = await duplicateProfile(configPath(), from, { name: f.name, port: f.port, note: f.note }, runDeps());
       return { success: true, profile: r.profile, copied: r.copied, leftOut: r.leftOut };
     });
+  }));
+
+  /** The running browser's real window bounds, to fill the Window fields of the edit form. Read only. */
+  ipcMain.handle('browser:captureWindow', guarded((name) => {
+    if (!isPlainName(name)) return { success: false, code: 'BAD_ARGS', error: 'name is required.' };
+    return exclusive([name], async () => clean(await api.captureWindow(configPath(), name, ctx())));
   }));
 
   ipcMain.handle('browser:extensions', guarded((name) => {

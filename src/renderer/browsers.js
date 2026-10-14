@@ -81,6 +81,8 @@
     const up = row.state === 'up';
     const tabs = BV.tabsLine(row.tabs);
     const sub = [row.note, tabs || row.url].filter(Boolean); // a running profile's tabs already say where it is
+    const purpose = BV.purposeLine(row);
+    const placed = BV.windowLine(row.window);
     const claim = BV.claimLine(row.claim);
     const btn = (act, label, extra = '', title = '') =>
       `<button type="button" class="btn btn-small btn-secondary" data-bact="${act}" data-name="${esc(row.name)}"${title ? ` title="${esc(title)}"` : ''}${extra}>${label}</button>`;
@@ -90,6 +92,8 @@
     <span class="state-cell state-${esc(st.state)}" style="--state-color: var(${esc(st.token)})"><span class="state-glyph" aria-hidden="true">${esc(st.glyph)}</span><span class="state-word">${esc(st.word)}</span></span>
   </div>
   <div class="hline hline-sub">${modesHtml(row)}${claim ? `<span class="bclaim">${esc(claim)}</span>` : ''}</div>
+  ${purpose ? `<div class="hline hline-sub bsub bpurpose"><span class="bsub-item" title="What this profile is for. Claude picks it by these words and sites."><span class="blabel">For</span> ${esc(purpose)}</span></div>` : ''}
+  ${placed ? `<div class="hline hline-sub bsub bplace"><span class="bsub-item" title="Saved window placement, used when the profile starts headed"><span class="blabel">Window</span> ${esc(placed)}</span></div>` : ''}
   ${sub.length ? `<div class="hline hline-sub bsub">${sub.map((x) => `<span class="bsub-item">${esc(x)}</span>`).join('')}</div>` : ''}
   ${row.warning ? `<div class="bwarn" role="status">${esc(row.warning)}</div>` : ''}
   ${busyText ? `<div class="hprog" role="status">${esc(busyText)}</div>` : ''}
@@ -164,6 +168,8 @@
       if (res.offscreen && res.offscreen.parked === false) {
         showToast('The window could not be moved off screen on this system, so it may be visible.', 'warning');
       }
+      const placement = BV.placementWarning(res.window);
+      if (placement) showToast(placement, 'warning');
     }
   }
 
@@ -196,6 +202,42 @@
       <div class="bhint" id="bf-mode-hint">${esc(BV.modeInfo(current).hint)}</div>`;
   }
 
+  /** Purpose, sites and the collapsible Window section: shared by Add and Edit. `row` is null when adding. */
+  function purposeFields(row) {
+    const w = (row && row.window) || {};
+    const num = (id, label, v) => field(id, label, `<input type="number" id="${id}" value="${v == null ? '' : esc(v)}" min="-10000" max="10000" placeholder="auto">`);
+    const canCapture = !!row && row.state === 'up';
+    return field('bf-purpose', 'What it is for (optional)', text('bf-purpose', (row && row.purpose) || '', ' maxlength="200" placeholder="e.g. Google Search Console, Analytics"'))
+      + field('bf-sites', 'Sites (optional, comma separated)', text('bf-sites', ((row && row.sites) || []).join(', '), ' placeholder="e.g. search.google.com, analytics.google.com"'))
+      + '<div class="bhint">Ask Claude to use a site and PortPilot picks the profile whose sites or purpose fit. Hostnames only, no https://.</div>'
+      + `<details class="bwindow" id="bf-window"${row && row.window ? ' open' : ''}><summary>Window</summary>
+        <div class="bhint">Where a headed browser opens, for when Claude has to click pixels on the screen. Blank fields are left to the browser. Offscreen and headless ignore this.</div>
+        <div class="form-row">${num('bf-left', 'Left', w.left)}${num('bf-top', 'Top', w.top)}</div>
+        <div class="form-row">${num('bf-width', 'Width', w.width)}${num('bf-height', 'Height', w.height)}</div>
+        <div class="form-group"><label class="checkbox-label" for="bf-front"><input type="checkbox" id="bf-front"${w.front ? ' checked' : ''}> Keep in front</label></div>
+        <div class="bhint">Keep in front raises the page on every start or reuse. Always-on-top is Windows only and best effort; other systems get the position, size and bring-to-front.</div>
+        <button type="button" class="btn btn-small btn-secondary" id="bf-capture"${canCapture ? '' : ' disabled'} title="${canCapture ? 'Read where the running window is now' : 'Start the profile and place its window first'}">Capture current position</button>
+        <span class="bhint" id="bf-capture-note" role="status"></span>
+      </details>`;
+  }
+
+  async function captureWindow(name) {
+    const note = $('bf-capture-note');
+    const btn = $('bf-capture');
+    if (!note || !btn) return;
+    btn.disabled = true;
+    note.textContent = 'Reading the window...';
+    let res;
+    try { res = await window.portpilot.browsers.captureWindow(name); } catch (err) { res = { success: false, error: err.message }; }
+    if (!b.dialog || b.dialog.name !== name) return; // closed while waiting
+    btn.disabled = false;
+    if (!res.success) { note.textContent = BV.failureText(res); return; }
+    for (const k of ['left', 'top', 'width', 'height']) $(`bf-${k}`).value = res.window[k] == null ? '' : res.window[k];
+    note.textContent = res.windowState && res.windowState !== 'normal'
+      ? `The window is ${res.windowState}: restore it to a normal window and capture again for a size worth keeping. Save to keep these numbers.`
+      : 'Captured. Save to keep these numbers.';
+  }
+
   const DIALOGS = {
     add: () => ({
       title: 'Add browser profile',
@@ -205,7 +247,8 @@
         + `<div class="form-row">${field('bf-port', 'Port', `<input type="number" id="bf-port" value="${BV.suggestPort(b.rows)}" min="1024" max="65535">`)}${field('bf-browser', 'Browser', browserSelect(BV.defaultBrowser(b.rows, b.browsers)))}</div>`
         + field('bf-mode', 'Mode', modeSelect('headed'))
         + field('bf-url', 'Start URL (optional)', text('bf-url', '', ' placeholder="https://"'))
-        + field('bf-note', 'Note (optional)', text('bf-note', '', ' maxlength="500"')),
+        + field('bf-note', 'Note (optional)', text('bf-note', '', ' maxlength="500"'))
+        + purposeFields(null),
       submit: () => window.portpilot.browsers.save(null, formFields(true)),
       done: (res) => {
         showToast(`Added ${res.profile.name} on :${res.profile.port}`, 'success');
@@ -220,7 +263,8 @@
         + (row.state === 'up' ? '<div class="bhint">Stop the profile to change its port or browser.</div>' : '')
         + field('bf-mode', 'Mode', modeSelect(row.mode))
         + field('bf-url', 'Start URL (optional)', text('bf-url', row.url || '', ' placeholder="https://"'))
-        + field('bf-note', 'Note (optional)', text('bf-note', row.note || '', ' maxlength="500"')),
+        + field('bf-note', 'Note (optional)', text('bf-note', row.note || '', ' maxlength="500"'))
+        + purposeFields(row),
       submit: () => window.portpilot.browsers.save(row.name, formFields(row.state !== 'up')),
       done: () => showToast(`Saved ${row.name}`, 'success'),
     }),
@@ -264,6 +308,11 @@
 
   function formFields(withMoves) {
     const f = { mode: $('bf-mode').value, url: $('bf-url').value, note: $('bf-note').value };
+    if ($('bf-purpose')) {
+      f.purpose = $('bf-purpose').value;
+      f.sites = $('bf-sites').value;
+      f.window = { left: $('bf-left').value, top: $('bf-top').value, width: $('bf-width').value, height: $('bf-height').value, front: $('bf-front').checked };
+    }
     if ($('bf-name') && !$('bf-name').disabled) f.name = $('bf-name').value;
     if (withMoves) { f.port = $('bf-port').value; f.browser = $('bf-browser').value; }
     return f;
@@ -357,6 +406,9 @@
     $('browser-modal-close').addEventListener('click', closeDialog);
     $('browser-modal-cancel').addEventListener('click', closeDialog);
     $('browser-modal-ok').addEventListener('click', submitDialog);
+    $('browser-modal-body').addEventListener('click', (e) => {
+      if (e.target.closest('#bf-capture') && b.dialog && b.dialog.name) captureWindow(b.dialog.name);
+    });
     $('modal-browser').addEventListener('click', (e) => { if (e.target === $('modal-browser')) closeDialog(); });
     $('modal-browser').addEventListener('keydown', (e) => {
       if (e.key === 'Escape') closeDialog();

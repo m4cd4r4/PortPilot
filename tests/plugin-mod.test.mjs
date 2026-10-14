@@ -13,6 +13,7 @@ import assert from 'node:assert';
 import {
   parseListeners, parseTasklistName, appStates, statusLine, parseStart, normPath, startDir, decide, routeResult,
 } from '../plugin/hooks/guard-core.mjs';
+import { browserContextBlock } from '../plugin/hooks/browser-context.mjs';
 import { checkNotices, cmdSafe, EMPTY, isOneShot, noteStart, NOTICE_MS, takeQueued, uniqueAppName } from '../plugin/hooks/observe.mjs';
 
 let passed = 0;
@@ -508,6 +509,16 @@ t('review: parseStart keeps the raw step; the script stays normalised', () => {
   const s = parseStart('cd web && npm run dev -- --port 3005 &');
   assert.equal(s.raw, 'npm run dev -- --port 3005');
   assert.equal(s.script, 'npm dev');
+});
+
+// ---- browser profiles note (the bundled copy the plugin really loads) ----------
+
+t('the bundled browser note lists purpose and sites, and says nothing without profiles', () => {
+  const text = browserContextBlock({ browserProfiles: [{ name: 'gsc', port: 9220, mode: 'headed', purpose: 'Google Search Console', sites: ['search.google.com'], userDataDir: 'C:/secret' }] });
+  assert.ok(text.includes('gsc :9220 headed - Google Search Console [search.google.com]'), text);
+  assert.ok(!text.includes('secret'));
+  assert.equal(browserContextBlock({ browserProfiles: [] }), '');
+  assert.equal(browserContextBlock(null), '');
 });
 
 for (const [name, fn] of tests) {

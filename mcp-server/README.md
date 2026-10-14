@@ -81,9 +81,9 @@ If prompted for permissions, add to `~/.claude/settings.json`:
 | `toggle_favorite` | Toggle favorite status |
 | `list_groups` | List all groups |
 | `move_to_group` | Move an app into a group |
-| `list_browser_profiles` | List named browser profiles: port, `cdpUrl`, state, who is using each, `free`, `leasedTo` |
+| `list_browser_profiles` | List named browser profiles: port, `cdpUrl`, state, `purpose`, `sites`, `window`, who is using each, `free`, `leasedTo`. `for` filters to the profiles that fit a site or task, ranked |
 | `list_browsers` | List installed Chromium-family browsers |
-| `start_browser` | Start a named profile and get its port and `cdpUrl`. `IN_USE` when another live session holds it; `name: "any"` picks a free one; `takeover:true` overrides |
+| `start_browser` | Start the profile for a site or task (`for`, free text or a URL) or an exact `name`, and get its port and `cdpUrl`. `NO_MATCH` / `AMBIGUOUS` start nothing. `IN_USE` when another live session holds it; `name: "any"` is a throwaway browser with no logins, never for a site task; `takeover:true` overrides |
 | `stop_browser` | Stop a profile PortPilot started (`IN_USE` for another live session's profile unless `takeover:true`) |
 | `set_browser_mode` | Set a profile's mode: headed, offscreen or headless |
 | `browser_history` | Past browser sessions with the pages that were open (`profile`, `since`, `limit`) |

@@ -78,6 +78,11 @@ try {
     assert.strictEqual(names.length, 26, `tool count is ${names.length}: update README, docs/index.html and the plugin skill when it changes`);
     const start = m.result.tools.find((x) => x.name === 'start_browser');
     assert.ok(start.inputSchema.properties.takeover && start.inputSchema.properties.sessionId && start.inputSchema.properties.free);
+    assert.strictEqual(start.inputSchema.properties.for.type, 'string', 'start_browser takes for');
+    assert.ok(/never.*any|any.*never/i.test(start.description) && /throwaway/.test(start.description), 'any is documented as throwaway');
+    assert.ok(/throwaway/.test(start.inputSchema.properties.name.description));
+    const list = m.result.tools.find((x) => x.name === 'list_browser_profiles');
+    assert.strictEqual(list.inputSchema.properties.for.type, 'string', 'list_browser_profiles takes for');
     assert.ok(!(start.inputSchema.required || []).includes('name'), 'name is optional: "any" or free:true picks one');
     const hist = m.result.tools.find((x) => x.name === 'browser_history');
     assert.strictEqual(hist.inputSchema.properties.limit.maximum, 50);
@@ -165,6 +170,42 @@ try {
     const any = await tool('start_browser', { name: 'any', sessionId: 'bbbb2222-other' });
     assert.strictEqual(any.isError, true);
     assert.strictEqual(any.body.code, 'NO_FREE_PROFILE');
+  });
+
+  // Purpose routing: a profile that says what it is for, added now so the tests above keep one profile.
+  await t('list_browser_profiles shows purpose, sites and window, and for returns the matching profile, ranked', async () => {
+    const consolePort = await freePort();
+    profiles.addProfile(cfg, {
+      name: 'search-console', port: consolePort, browser: 'brave', mode: 'headed',
+      purpose: 'Google Search Console, Analytics', sites: ['search.google.com', 'analytics.google.com'],
+      window: { left: 20, top: 30, width: 1100, height: 800, front: true },
+    });
+    const all = await tool('list_browser_profiles', {});
+    const gsc = all.body.profiles.find((p) => p.name === 'search-console');
+    assert.strictEqual(gsc.purpose, 'Google Search Console, Analytics');
+    assert.deepStrictEqual(gsc.sites, ['search.google.com', 'analytics.google.com']);
+    assert.strictEqual(gsc.window.front, true);
+    const { isError, body } = await tool('list_browser_profiles', { for: 'https://search.google.com/search-console/performance' });
+    assert.strictEqual(isError, false);
+    assert.deepStrictEqual(body.profiles.map((p) => p.name), ['search-console']);
+    assert.strictEqual(body.profiles[0].match.rank, 1);
+    assert.strictEqual(body.ambiguous, false);
+  });
+
+  await t('start_browser with for and no match is NO_MATCH: it names the profiles and starts nothing', async () => {
+    const { isError, body } = await tool('start_browser', { for: 'linkedin' });
+    assert.strictEqual(isError, true);
+    assert.strictEqual(body.code, 'NO_MATCH');
+    assert.deepStrictEqual(body.known, ['shop-a', 'search-console']);
+    assert.match(body.action, /ask them to create or label one/);
+    const state = (await tool('list_browser_profiles', {})).body.profiles.map((p) => p.state);
+    assert.ok(!state.includes('up'), 'nothing was started');
+  });
+
+  await t('start_browser with both name and for is BAD_ARGS', async () => {
+    const { isError, body } = await tool('start_browser', { name: 'shop-a', for: 'shop' });
+    assert.strictEqual(isError, true);
+    assert.strictEqual(body.code, 'BAD_ARGS');
   });
 
   await t('list_browsers answers', async () => {

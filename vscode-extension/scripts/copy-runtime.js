@@ -26,6 +26,7 @@ const FILES = [
   'core/browserDetect.js',
   'core/browserHistory.js',
   'core/browserLease.js',
+  'core/browserMatch.js',
   'core/browserProfiles.js',
   'core/browserView.js',
   'core/browserRun.js',

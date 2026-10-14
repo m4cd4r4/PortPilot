@@ -37,6 +37,9 @@ function world({ installed = [{ id: 'brave', label: 'Brave', path: '/fake/brave'
   const w = {
     servers: new Map(), holders: new Map(), spawned: [], killed: [], parked: [],
     closeWorks: true, neverListens: false, spawnThrows: null, pid: 5000,
+    // Window placement: what the fake browser was asked, and how it behaves.
+    placed: [], fronted: [], pinned: [], actual: null, placeFails: false, windowFails: false, frontFails: false, pinResult: true,
+    clamp: {}, // fields the fake OS changes: { left: 0 } makes it refuse to put the window anywhere but 0
   };
   w.deps = {
     ...run.defaultDeps(),
@@ -67,6 +70,15 @@ function world({ installed = [{ id: 'brave', label: 'Brave', path: '/fake/brave'
       for (const [port, h] of w.holders) if (h.pid === pid) await w.drop(port);
     },
     park: async (port, left) => { w.parked.push({ port, left }); return { parked: true, left }; },
+    placeWindow: async (port, want) => {
+      w.placed.push({ port, want });
+      if (w.placeFails) return null;
+      w.actual = { left: 0, top: 0, width: 1280, height: 800, windowState: 'normal', ...want, ...w.clamp };
+      return w.actual;
+    },
+    windowBounds: async () => (w.windowFails ? null : (w.actual || { left: 10, top: 20, width: 1000, height: 700, windowState: 'normal' })),
+    bringToFront: async (port) => { w.fronted.push(port); return !w.frontFails; },
+    pinTopmost: async (pid) => { w.pinned.push(pid); return w.pinResult; },
   };
   w.drop = async (port) => {
     const s = w.servers.get(port);

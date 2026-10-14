@@ -124,5 +124,36 @@ t('reopenText says what opened, what failed and that hidden secrets may need a s
   assert.match(v.failureText({ code: 'IN_USE', error: 'x is in use' }), /Another Claude session/);
 });
 
+t('purposeLine joins the purpose and the sites; empty when neither is set', () => {
+  assert.strictEqual(v.purposeLine({ purpose: 'Google Search Console', sites: ['search.google.com', 'analytics.google.com'] }), 'Google Search Console · search.google.com, analytics.google.com');
+  assert.strictEqual(v.purposeLine({ sites: ['a.test'] }), 'a.test');
+  assert.strictEqual(v.purposeLine({ purpose: 'Only words' }), 'Only words');
+  assert.strictEqual(v.purposeLine({}), '');
+  assert.strictEqual(v.purposeLine(null), '');
+});
+
+t('windowLine shows size, position and keep-in-front; negative and partial values read plainly', () => {
+  assert.strictEqual(v.windowLine({ left: -1920, top: 40, width: 1200, height: 800, front: true }), '1200x800 at -1920,40 · stays in front');
+  assert.strictEqual(v.windowLine({ left: 0, top: 0 }), 'at 0,0');
+  assert.strictEqual(v.windowLine({ width: 900, height: 700 }), '900x700');
+  assert.strictEqual(v.windowLine({ front: true }), 'stays in front');
+  assert.strictEqual(v.windowLine(undefined), '');
+  assert.strictEqual(v.windowLine({}), '');
+});
+
+t('placementWarning is empty when the window landed, and says so when it did not', () => {
+  assert.strictEqual(v.placementWarning(undefined), '');
+  assert.strictEqual(v.placementWarning({ requested: { left: 1 }, actual: { left: 1 }, applied: true }), '');
+  assert.match(v.placementWarning({ requested: { left: 1 }, actual: { left: 0 }, applied: false }), /adjusted it/);
+  assert.match(v.placementWarning({ requested: { left: 1 }, actual: null, applied: false }), /could not be placed/);
+  assert.match(v.placementWarning({ requested: {}, applied: true, front: { raised: true, topmost: false } }), /Always-on-top did not take/);
+  assert.strictEqual(v.placementWarning({ requested: {}, applied: true, front: { raised: true, topmost: null } }), '');
+});
+
+t('the new failure codes get a next step in plain words', () => {
+  assert.match(v.failureText({ code: 'BAD_SITES', error: 'x is not a hostname' }), /hostnames such as search\.google\.com/);
+  assert.match(v.failureText({ code: 'NOT_RUNNING', error: 'not running' }), /Start the profile/);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);
