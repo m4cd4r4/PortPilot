@@ -51,7 +51,8 @@ function makeWorld(prefix) {
   const configPath = path.join(configDir, 'portpilot-config.json');
   return {
     tmp, configDir, configPath,
-    writeConfig: (cfg) => fs.writeFileSync(configPath, JSON.stringify({ settings: {}, groups: [], apps: [], ...cfg })),
+    // These specs drive the classic Apps list, so the world pins it; pass { freshSettings: true } to get the app's real defaults.
+    writeConfig: (cfg, { freshSettings = false } = {}) => fs.writeFileSync(configPath, JSON.stringify({ groups: [], apps: [], ...cfg, settings: freshSettings ? (cfg.settings || {}) : { homeLayout: 'classic', ...cfg.settings } })),
     mkdir: (name) => { const d = path.join(tmp, name); fs.mkdirSync(d, { recursive: true }); return d; },
   };
 }

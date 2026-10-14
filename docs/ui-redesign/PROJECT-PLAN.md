@@ -155,7 +155,7 @@ Direction chosen: **B, Preview strip + dense list**, from [round2/canvas.html](.
 
 - Tokens only: no raw colour, radius or shadow in a component. New tokens (`--radius-card`, `--elev-card`) get a value in every theme; Brutalist keeps square corners.
 - Every slice is checked in at least TokyoNight, a light theme and Brutalist, at 1440 and 390, and a person reads the screenshots (measuring the DOM does not show balance or crowding).
-- New home sits behind the setting `homeLayout` (`classic` default, `preview`) until R2-2 lands, then the default flips in its own PR. The classic Apps screen stays byte-identical until then.
+- New home sits behind the setting `homeLayout` (`preview` default since the flip PR; `classic` stays selectable in Settings, and a saved choice always wins).
 - `history-ui`, `browsers-ui`, `browsers-purpose` and `desktop-detect` e2e stay green, run against the installed build after release.
 - No new dependency, no framework.
 
@@ -165,7 +165,7 @@ Direction chosen: **B, Preview strip + dense list**, from [round2/canvas.html](.
 |---|---|---|---|---|
 | R2-0 | Tokens | `--radius-card`, `--elev-card`, preview aspect ratio, per theme. No layout change. | S | merged (#101) |
 | R2-1 | Now running strip | Cards for running and detected servers: 480 px preview from `history:rowThumbs`, name, port, branch, Claude mark, uptime, Open / Details / Stop. No-preview fallback card. Phone: horizontal swipe row. Behind `homeLayout`. | M | merged (#102) |
-| R2-2 | Home hierarchy | Strip above a compact "Other apps" list (stopped, crashed). The 87-port wall becomes one "Everything listening" summary row. Conflict card kept. Flip `homeLayout` default in a follow-up PR. | M | in PR |
+| R2-2 | Home hierarchy | Strip above a compact "Other apps" list (stopped, crashed). The 87-port wall becomes one "Everything listening" summary row. Conflict card kept. Default flipped to `preview` in its own PR. | M | merged (#103) |
 | R2-3 | Ctrl+K palette | Start / stop an app, open history for an app, free a port, switch browser profile. Reuses existing IPC. Keyboard only paths tested. | M | later |
 | R2-4 | Row and button polish | Fix clipped row actions at 390, consistent button set, row actions on hover plus keyboard focus. | S | later |
 | R2-5 | History and Browsers on the same tokens | Same card radius, elevation and chips. No behaviour change. | S | later |

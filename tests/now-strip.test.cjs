@@ -5,11 +5,12 @@ const S = require('../src/core/nowStrip');
 let n = 0;
 const t = (name, fn) => { fn(); n += 1; };
 
-t('homeLayoutOf defaults to classic for anything unknown', () => {
-  assert.strictEqual(S.homeLayoutOf(undefined), 'classic');
-  assert.strictEqual(S.homeLayoutOf({}), 'classic');
-  assert.strictEqual(S.homeLayoutOf({ homeLayout: 'grid' }), 'classic');
+t('homeLayoutOf defaults to preview for anything unset or unknown', () => {
+  assert.strictEqual(S.homeLayoutOf(undefined), 'preview');
+  assert.strictEqual(S.homeLayoutOf({}), 'preview');
+  assert.strictEqual(S.homeLayoutOf({ homeLayout: 'grid' }), 'preview');
   assert.strictEqual(S.homeLayoutOf({ homeLayout: 'preview' }), 'preview');
+  assert.strictEqual(S.homeLayoutOf({ homeLayout: 'classic' }), 'classic');
 });
 
 const apps = [

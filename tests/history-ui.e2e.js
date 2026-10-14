@@ -59,7 +59,7 @@ async function main() {
     { id: 'app_shop', name: 'shop', command: `node server.js --port ${shopPort}`, cwd: shop, preferredPort: shopPort },
     { id: 'app_plain', name: 'plain', command: `node server.js --port ${plainPort}`, cwd: plain, preferredPort: plainPort },
   ];
-  fs.writeFileSync(configPath, JSON.stringify({ apps, settings: {}, groups: [] }));
+  fs.writeFileSync(configPath, JSON.stringify({ apps, settings: { homeLayout: 'classic' }, groups: [] }));
 
   // History before launch: stopped, crashed (pinned), and a run with no git state.
   const seed = async (appId, endedBy, exitCode) => {
