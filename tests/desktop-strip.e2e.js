@@ -19,16 +19,18 @@ const SHOTS = process.env.PORTPILOT_SHOTS_DIR || '';
 const card = (id) => `.now-card[data-id="${id}"]`;
 
 async function main() {
-  const [shopPort, idlePort] = await h.freePorts(2);
+  const [shopPort, idlePort, blockedPort] = await h.freePorts(3);
   const shop = world.mkdir('shop');
   fs.writeFileSync(path.join(shop, 'server.js'), h.SERVER);
   world.writeConfig({
     apps: [
       { id: 'app_shop', name: 'shop', command: `node server.js --port ${shopPort}`, cwd: shop, preferredPort: shopPort },
       { id: 'app_idle', name: 'idle', command: `node server.js --port ${idlePort}`, cwd: shop, preferredPort: idlePort },
+      { id: 'app_blocked', name: 'blocked', command: `node server.js --port ${blockedPort}`, cwd: shop, preferredPort: blockedPort },
     ],
   });
 
+  let foreign = null;
   const { app, win } = await h.launch(world);
   try {
     await win.waitForSelector('.app-card[data-id="app_shop"]');
@@ -39,6 +41,9 @@ async function main() {
     await until(async () => (await win.$$('.app-card[data-id="app_shop"] .row-thumb img')).length === 1, 60000, 'row thumbnail');
     check('classic: the strip is hidden', await win.$eval('#now-strip', (e) => e.hidden && getComputedStyle(e).display === 'none'));
     check('classic: no strip cards exist', (await win.$$('.now-card')).length === 0);
+    check('classic: the running app stays in the list', (await win.$$('.app-card[data-id="app_shop"]')).length === 1);
+    check('classic: the ports section keeps its name and stays open', await win.evaluate(() =>
+      /Active Ports/.test(document.querySelector('#ports-section .section-label').textContent) && !document.getElementById('ports-section').classList.contains('collapsed')));
 
     // ---- Preview: a card for the running app only ------------------------------
     console.log('step: preview layout');
@@ -60,6 +65,47 @@ async function main() {
     for (const act of ['openInBrowser', 'openDrawer', 'stopApp']) {
       check(`the card has the ${act} button`, (await win.$$(`${card('app_shop')} [data-act="${act}"]`)).length === 1);
     }
+
+    // ---- Home hierarchy: strip, then the rest, then one ports row --------------
+    console.log('step: home hierarchy');
+    check('the running app leaves the list (it is on the strip)', (await win.$$('.app-card[data-id="app_shop"]')).length === 0);
+    check('the stopped app stays in the list', (await win.$$('.app-card[data-id="app_idle"]')).length === 1);
+    check('the list section is named Other apps', /Other apps/.test(await win.$eval('#apps-list .app-section .section-title', (e) => e.textContent)));
+    const order = await win.evaluate(() => {
+      const y = (s) => document.querySelector(s).getBoundingClientRect().top;
+      return { strip: y('#now-strip'), list: y('#apps-list'), ports: y('#ports-section') };
+    });
+    check('order is strip, then list, then ports', order.strip < order.list && order.list < order.ports, JSON.stringify(order));
+    const ports = await win.evaluate(() => {
+      const sec = document.getElementById('ports-section');
+      return {
+        label: sec.querySelector('.section-label').textContent,
+        collapsed: sec.classList.contains('collapsed'),
+        gridHidden: getComputedStyle(document.getElementById('ports-list')).display === 'none' || document.getElementById('ports-list').offsetHeight === 0,
+        barH: Math.round(sec.querySelector('.section-header-bar').getBoundingClientRect().height),
+      };
+    });
+    check('the ports block is one row named Everything listening', /Everything listening/.test(ports.label), ports.label);
+    check('that row starts collapsed, with no port rows showing', ports.collapsed && ports.gridHidden, JSON.stringify(ports));
+    await win.click('#ports-section-toggle');
+    check('clicking the row opens the port list', await win.evaluate(() => !document.getElementById('ports-section').classList.contains('collapsed')));
+    await win.click('#ports-section-toggle');
+    check('and clicking again folds it', await win.evaluate(() => document.getElementById('ports-section').classList.contains('collapsed')));
+
+    // The prescriptive conflict card stays in the list.
+    foreign = h.holdPort(blockedPort);
+    await until(async () => { await win.evaluate(() => window.loadApps()); return win.$('.app-card[data-id="app_blocked"] .conflict-strip'); }, 30000, 'conflict strip');
+    check('a port conflict still shows its card in the list', true);
+
+    // Search narrows the strip too.
+    await win.fill('#global-search', 'zzz-nothing');
+    await win.waitForTimeout(400);
+    check('a search with no match empties the strip and says so', /No running app matches/.test(await win.$eval('#now-strip', (e) => e.textContent)));
+    await win.fill('#global-search', 'shop');
+    await win.waitForTimeout(400);
+    check('a matching search keeps the card', (await win.$$(card('app_shop'))).length === 1);
+    await win.fill('#global-search', '');
+    await win.waitForTimeout(300);
 
     // ---- No-preview fallback ---------------------------------------------------
     console.log('step: no-preview fallback');
@@ -114,7 +160,15 @@ async function main() {
     await until(async () => (await win.$$(card('app_shop'))).length === 0, 15000, 'card removed');
     check('Stop removes the card', true);
     check('with nothing running the strip says so', /Nothing is running/.test(await win.$eval('#now-strip', (e) => e.textContent)));
+    check('the stopped app is back in the list', (await win.$$('.app-card[data-id="app_shop"]')).length === 1);
+
+    // ---- Back to classic restores the old shape --------------------------------
+    await win.evaluate(async () => { document.getElementById('setting-home-layout').value = 'classic'; await window.saveSettings(); });
+    await win.waitForTimeout(400);
+    check('classic again: the strip hides and the ports section is named and open again', await win.evaluate(() =>
+      document.getElementById('now-strip').hidden && /Active Ports/.test(document.querySelector('#ports-section .section-label').textContent) && !document.getElementById('ports-section').classList.contains('collapsed')));
   } finally {
+    if (foreign) foreign.kill();
     const w = app.windows()[0];
     if (w) {
       const { apps = [] } = await w.evaluate(() => window.portpilot.process.list()).catch(() => ({}));

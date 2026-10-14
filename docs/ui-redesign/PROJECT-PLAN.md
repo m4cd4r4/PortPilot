@@ -164,8 +164,8 @@ Direction chosen: **B, Preview strip + dense list**, from [round2/canvas.html](.
 | # | Slice | Scope | Effort | Status |
 |---|---|---|---|---|
 | R2-0 | Tokens | `--radius-card`, `--elev-card`, preview aspect ratio, per theme. No layout change. | S | merged (#101) |
-| R2-1 | Now running strip | Cards for running and detected servers: 480 px preview from `history:rowThumbs`, name, port, branch, Claude mark, uptime, Open / Details / Stop. No-preview fallback card. Phone: horizontal swipe row. Behind `homeLayout`. | M | in PR |
-| R2-2 | Home hierarchy | Strip above a compact "Other apps" list (stopped, crashed). The 87-port wall becomes one "Everything listening" summary row. Conflict card kept. Flip `homeLayout` default in a follow-up PR. | M | later |
+| R2-1 | Now running strip | Cards for running and detected servers: 480 px preview from `history:rowThumbs`, name, port, branch, Claude mark, uptime, Open / Details / Stop. No-preview fallback card. Phone: horizontal swipe row. Behind `homeLayout`. | M | merged (#102) |
+| R2-2 | Home hierarchy | Strip above a compact "Other apps" list (stopped, crashed). The 87-port wall becomes one "Everything listening" summary row. Conflict card kept. Flip `homeLayout` default in a follow-up PR. | M | in PR |
 | R2-3 | Ctrl+K palette | Start / stop an app, open history for an app, free a port, switch browser profile. Reuses existing IPC. Keyboard only paths tested. | M | later |
 | R2-4 | Row and button polish | Fix clipped row actions at 390, consistent button set, row actions on hover plus keyboard focus. | S | later |
 | R2-5 | History and Browsers on the same tokens | Same card radius, elevation and chips. No behaviour change. | S | later |

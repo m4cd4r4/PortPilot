@@ -966,7 +966,18 @@ function _sortApps(apps) {
   }
 }
 
+// The web agent page has no strip (its script is stripped), so it always lists every app.
+const isStripLayout = () => !!window.PortPilotStripView && window.PortPilotNowStrip.homeLayoutOf(state.settings) === 'preview';
+
+/** Running (started here) or detected on its port. */
+const isLiveApp = (app) => !!(state.runningApps.find(r => r.id === app.id && r.running) || state.detectedApps[app.id]);
+
+/** Does the app belong in the list? In the preview layout a live app is on the strip instead. */
+const isListedApp = (app) => !isStripLayout() || !isLiveApp(app);
+
 function renderApps() {
+  // The strip first: the early returns below (empty list, no search match) still owe it a redraw.
+  if (window.PortPilotStripView) window.PortPilotStripView.render();
   if (state.apps.length === 0 && state.groups.length === 0) {
     dom.appsList.innerHTML = `<div class="empty-state">
       No apps registered. Click "Add App" to register your first app.
@@ -983,7 +994,11 @@ function renderApps() {
   for (const a of state.apps) {
     if (isChild(a)) (childrenByParent[a.parentId] = childrenByParent[a.parentId] || []).push(a);
   }
-  const topLevel = state.apps.filter(a => !isChild(a));
+  // Preview layout: a running app lives in the Now running strip, so the list below it
+  // holds only the rest. A running parent stays when it still has a branch to list.
+  const stripOn = isStripLayout();
+  const hasListedKid = (a) => (childrenByParent[a.id] || []).some(isListedApp);
+  const topLevel = state.apps.filter(a => !isChild(a) && (isListedApp(a) || hasListedKid(a)));
 
   const favorites = _sortApps(_filterApps(topLevel.filter(app => app.isFavorite)));
   const groupedApps = {};
@@ -1045,7 +1060,7 @@ function renderApps() {
         <div class="section-apps ${isExpanded ? '' : 'collapsed'}">
           ${apps.length > 0
             ? apps.map(app => renderAppTree(app, childrenByParent)).join('')
-            : '<div class="group-empty">No apps in this group</div>'}
+            : `<div class="group-empty">${stripOn && state.apps.some(a => a.group === group.id) ? 'Everything here is running (see Now running)' : 'No apps in this group'}</div>`}
         </div>
       </div>
     `;
@@ -1057,7 +1072,7 @@ function renderApps() {
       <div class="app-section">
         <div class="section-header" data-act="toggleSection" data-section="others">
           <span class="section-toggle">${state.otherProjectsExpanded ? icon('chevron', 10) : '<span style="display:inline-block;transform:rotate(-90deg)">' + icon('chevron', 10) + '</span>'}</span>
-          <span class="section-title">${icon('folder', 12)} Other Projects</span>
+          <span class="section-title">${icon('folder', 12)} ${stripOn ? 'Other apps' : 'Other Projects'}</span>
           <span class="section-count">${ungroupedApps.length}</span>
         </div>
         <div class="section-apps ${state.otherProjectsExpanded ? '' : 'collapsed'}">
@@ -1070,13 +1085,12 @@ function renderApps() {
   dom.appsList.innerHTML = html;
   reapplyArmed(dom.appsList);
   updateGroupSelects();
-  if (window.PortPilotStripView) window.PortPilotStripView.render();
   if (window.PortPilotRowThumbs) window.PortPilotRowThumbs.sync();
 }
 
 // Render a top-level app plus any branch/worktree children nested beneath it.
 function renderAppTree(app, childrenByParent) {
-  const kids = _sortApps(_filterApps(childrenByParent[app.id] || []));
+  const kids = _sortApps(_filterApps(childrenByParent[app.id] || []).filter(isListedApp));
   if (!kids.length) return renderAppCard(app, 0);
   return `<div class="app-tree">
     ${renderAppCard(app, kids.length)}
