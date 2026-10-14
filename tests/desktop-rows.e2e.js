@@ -66,9 +66,17 @@ async function main() {
       const rest = await actionsState(0);
       check(`${w}: actions are hidden at rest`, rest.opacity === '0', rest.opacity);
 
-      await win.hover('.port-row');
-      await win.waitForTimeout(250);
-      const hov = await actionsState(0);
+      // A background rescan can replace the row under a stationary pointer (hover does not re-apply
+      // until the mouse moves), so re-hover until it shows. A real bug never shows and times out.
+      let hov = null;
+      await until(async () => {
+        await win.mouse.move(0, 0);
+        await win.hover('.port-row');
+        await win.waitForTimeout(250);
+        hov = await actionsState(0);
+        return hov.opacity === '1';
+      }, 15000, 'row actions to show on hover').catch(() => {});
+      hov = hov || await actionsState(0);
       check(`${w}: actions show on hover`, hov.opacity === '1', hov.opacity);
       check(`${w}: Kill is inside the viewport on hover`, hov.right <= hov.vw && hov.left >= 0, `${hov.left}-${hov.right} of ${hov.vw}`);
 
