@@ -771,6 +771,24 @@ function setupIpcHandlers(ipcMain, configStore) {
 
   // ============ Window Management ============
 
+  /** Recolour the window buttons drawn over the header (Windows overlay title bar) to match the theme. */
+  ipcMain.handle('window:setTitleBar', async (_, colors) => {
+    try {
+      const { BrowserWindow } = require('electron');
+      const window = BrowserWindow.getFocusedWindow() || BrowserWindow.getAllWindows()[0];
+      if (!window || typeof window.setTitleBarOverlay !== 'function' || process.platform !== 'win32') return { success: false, error: 'No overlay title bar' };
+      const hex = (v) => (typeof v === 'string' && /^#[0-9a-f]{6}$/i.test(v) ? v : null);
+      const color = hex(colors && colors.color);
+      const symbolColor = hex(colors && colors.symbolColor);
+      const height = Number(colors && colors.height);
+      if (!color || !symbolColor || !(height >= 24 && height <= 96)) return { success: false, error: 'Bad title bar colours' };
+      window.setTitleBarOverlay({ color, symbolColor, height: Math.round(height) });
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+
   /** Auto-resize window based on app count (v1.6 feature) */
   ipcMain.handle('window:autoResize', async (_, appCount) => {
     try {

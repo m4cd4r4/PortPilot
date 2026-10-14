@@ -9,6 +9,35 @@ let webAgent = null;  // opt-in loopback web agent (Option C), shares this proce
 let mcpServer = null; // shared HTTP MCP server: one process for every Claude session, vs one stdio child per session
 let localhostWatcher = null; // records every localhost dev server into the run history (setting autoTrackLocalhost)
 
+// Windows: no OS title bar and no File/Edit/View/Window menu. The PortPilot header is the
+// title bar (it is already a drag region) and the OS draws only the window buttons over its
+// right edge, coloured to match the theme (renderer: syncTitleBar, IPC window:setTitleBar).
+const OVERLAY_TITLE_BAR = process.platform === 'win32';
+const TITLE_BAR_DEFAULT = { color: '#24283b', symbolColor: '#c0caf5', height: 48 }; // TokyoNight header
+
+/** Keyboard shortcuts the removed default menu used to carry (Ctrl+R stays Scan in the app). */
+function installMenuShortcuts(win) {
+  win.webContents.on('before-input-event', (event, input) => {
+    if (input.type !== 'keyDown') return;
+    const ctrl = input.control || input.meta;
+    const key = String(input.key).toLowerCase();
+    if (key === 'f12' || (ctrl && input.shift && key === 'i')) {
+      win.webContents.toggleDevTools();
+    } else if (key === 'f11') {
+      win.setFullScreen(!win.isFullScreen());
+    } else if (ctrl && (key === '=' || key === '+')) {
+      win.webContents.setZoomLevel(win.webContents.getZoomLevel() + 0.5);
+    } else if (ctrl && key === '-') {
+      win.webContents.setZoomLevel(win.webContents.getZoomLevel() - 0.5);
+    } else if (ctrl && key === '0') {
+      win.webContents.setZoomLevel(0);
+    } else {
+      return;
+    }
+    event.preventDefault();
+  });
+}
+
 /** Create the main application window */
 function createWindow(configStore) {
   mainWindow = new BrowserWindow({
@@ -17,6 +46,7 @@ function createWindow(configStore) {
     minWidth: 600,
     minHeight: 400,
     backgroundColor: '#1a1a1a', // Dark background to match app theme
+    ...(OVERLAY_TITLE_BAR ? { titleBarStyle: 'hidden', titleBarOverlay: TITLE_BAR_DEFAULT } : {}),
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -26,6 +56,7 @@ function createWindow(configStore) {
     show: false
   });
 
+  if (OVERLAY_TITLE_BAR) installMenuShortcuts(mainWindow);
   mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
 
   mainWindow.once('ready-to-show', () => {
@@ -163,6 +194,7 @@ if (!gotTheLock) {
   app.whenReady().then(() => {
     // Set dark mode for native title bar on Windows
     nativeTheme.themeSource = 'dark';
+    if (OVERLAY_TITLE_BAR) Menu.setApplicationMenu(null);
 
     // Create window first, then pass it to ConfigStore for file watching
     const window = createWindow(null);

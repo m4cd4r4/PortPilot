@@ -2644,6 +2644,41 @@ function resolveTheme(choice) {
   return choice;
 }
 
+// Windows draws only the window buttons over the header's right edge. Give them the
+// header's colour and height so they read as part of it (no-op elsewhere and in the web agent).
+let titleBarSent = '';
+
+/** The header's colours as the OS wants them. Read from the theme's variables, not the body's
+ *  computed colour: the body fades between themes over 200 ms, so a computed read lags. */
+function titleBarColors() {
+  const header = document.querySelector('.header');
+  if (!header || !window.PortPilotTitleBar) return null;
+  const vars = getComputedStyle(document.body);
+  return window.PortPilotTitleBar.colorsFor({
+    headerBg: getComputedStyle(header).backgroundColor,
+    pageBg: vars.getPropertyValue('--bg-primary'),
+    text: vars.getPropertyValue('--text-primary'),
+  });
+}
+window.titleBarColors = titleBarColors;
+
+function syncTitleBar() {
+  const api = window.portpilot && window.portpilot.window;
+  if (!api || !api.setTitleBar) return;
+  requestAnimationFrame(() => {   // after data-theme has restyled the header
+    const header = document.querySelector('.header');
+    const colors = titleBarColors();
+    if (!header || !colors) return;
+    // A header that wraps onto two rows (<= 600 px) still gets one row's worth of buttons.
+    const payload = { ...colors, height: Math.min(48, Math.round(header.getBoundingClientRect().height)) };
+    const key = JSON.stringify(payload);
+    if (key === titleBarSent) return;
+    titleBarSent = key;
+    api.setTitleBar(payload).catch(() => { titleBarSent = ''; });
+  });
+}
+window.addEventListener('resize', () => { clearTimeout(syncTitleBar.t); syncTitleBar.t = setTimeout(syncTitleBar, 150); });
+
 function loadTheme() {
   let saved = localStorage.getItem('portpilot-theme') || 'tokyonight';
   if (RETIRED_THEMES[saved]) saved = RETIRED_THEMES[saved];
@@ -2665,6 +2700,7 @@ function setTheme(choice, showNotification = true) {
   document.querySelectorAll('.theme-btn').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.theme === choice);
   });
+  syncTitleBar();
 
   if (showNotification) {
     showToast(`Theme: ${THEME_LABELS[choice] || choice}`, 'success');
