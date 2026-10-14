@@ -417,5 +417,5 @@
     document.addEventListener('portpilot:view', (e) => onView(e.detail.view));
   });
 
-  window.PortPilotBrowsers = { load };
+  window.PortPilotBrowsers = { load, toggle, profiles: () => b.rows.map((r) => ({ name: r.name, state: r.state })) };
 })();

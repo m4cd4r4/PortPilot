@@ -276,5 +276,19 @@
     });
   });
 
-  window.PortPilotHistory = { setView, load };
+  /** Open History showing only one app's runs (the palette's "History for X"). Resolves true when it has any. */
+  async function showApp(appId) {
+    setView('history');
+    for (const id of ['history-search', 'history-branch', 'history-from', 'history-to']) $(id).value = '';
+    $('history-dirty').checked = false;
+    await load();
+    const sel = $('history-app');
+    const has = [...sel.options].some((o) => o.value === appId);
+    sel.value = has ? appId : '';
+    h.limit = PAGE;
+    render();
+    return has;
+  }
+
+  window.PortPilotHistory = { setView, load, showApp };
 })();

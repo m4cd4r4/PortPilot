@@ -2669,3 +2669,25 @@ body {
   .now-row { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; gap: 10px; padding-bottom: 6px; }
   .now-card { flex: 0 0 78%; scroll-snap-align: start; }
 }
+
+/* ============ Command palette (Ctrl+K) ============ */
+.palette { position: fixed; inset: 0; z-index: 400; display: flex; align-items: flex-start; justify-content: center; padding: 12vh 12px 0; background: rgba(0, 0, 0, 0.5); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
+.palette-box { width: min(580px, 100%); max-height: 70vh; display: flex; flex-direction: column; background: var(--bg-primary); border: var(--border-width) solid var(--border-color); border-radius: var(--radius-card); box-shadow: var(--elev-card); overflow: hidden; }
+.palette-input { width: 100%; box-sizing: border-box; padding: 14px 16px; font: inherit; font-size: 1rem; color: var(--text-primary); background: var(--bg-secondary); border: 0; border-bottom: var(--border-width) solid var(--border-color); outline: none; }
+.palette-input:focus-visible { box-shadow: inset 0 -2px 0 var(--accent-primary); }
+.palette-input::placeholder { color: var(--text-muted); }
+.palette-list { list-style: none; margin: 0; padding: 4px; overflow-y: auto; }
+.palette-row { display: flex; align-items: baseline; gap: 10px; padding: 8px 12px; border-radius: var(--radius-sm); cursor: pointer; color: var(--text-primary); }
+.palette-row.active { background: var(--bg-tertiary); box-shadow: inset 3px 0 0 var(--accent-primary); }
+.palette-row.armed { box-shadow: inset 3px 0 0 var(--accent-red); }
+.palette-kind { flex: 0 0 58px; font-size: 0.68rem; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-muted); }
+.palette-label { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.palette-hint { flex: 0 1 auto; max-width: 40%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.78rem; color: var(--text-secondary); }
+.palette-empty { padding: 14px 12px; color: var(--text-secondary); }
+.palette-foot { min-height: 18px; padding: 8px 14px; font-size: 0.75rem; color: var(--text-muted); border-top: var(--border-width) solid var(--border-color); }
+.palette-foot.warn { color: var(--accent-red); }
+@media (max-width: 600px) {
+  .palette { padding-top: 8vh; }
+  .palette-kind { flex-basis: 48px; }
+  .palette-hint { max-width: 34%; }
+}
