@@ -86,6 +86,7 @@
           </div>
           <span id="apps-count" class="count-badge">0 apps</span>
         </div>
+        <div id="now-strip" class="now-strip" aria-label="Now running" hidden></div>
         <div id="apps-list" class="apps-list">
           <div class="empty-state">No apps registered. Click "Add App" to get started.</div>
         </div>
@@ -171,6 +172,13 @@
           <label class="setting-row">
             <span>Show page previews on running apps</span>
             <input type="checkbox" id="setting-row-previews" checked>
+          </label>
+          <label class="setting-row">
+            <span>Home layout</span>
+            <select id="setting-home-layout" class="btn btn-small btn-secondary">
+              <option value="classic">Classic list</option>
+              <option value="preview">Preview strip (beta)</option>
+            </select>
           </label>
         </div>
         <div class="settings-section">
@@ -485,9 +493,11 @@
   <script src="../core/conflict.js"></script>
   <script src="../core/runView.js"></script>
   <script src="../core/browserView.js"></script>
+  <script src="../core/nowStrip.js"></script>
   <script src="renderer.js"></script>
   <script src="history.js"></script>
   <script src="browsers.js"></script>
   <script src="rowThumbs.js"></script>
+  <script src="nowStrip.js"></script>
 </body>
 </html>

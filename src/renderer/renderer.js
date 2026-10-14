@@ -286,6 +286,7 @@ function setupDelegation() {
     showProcess: el => showPortRow(+el.dataset.port),
     startApp: el => startApp(el.dataset.id),
     openInBrowser: el => openInBrowser(el.dataset.id),
+    openDrawer: el => openAppDrawer(el.dataset.id),
     viewLogs: el => viewLogs(el.dataset.id),
     // An app PortPilot did not start can only be stopped by killing whatever
     // holds its port, so that path confirms inline first.
@@ -1069,6 +1070,7 @@ function renderApps() {
   dom.appsList.innerHTML = html;
   reapplyArmed(dom.appsList);
   updateGroupSelects();
+  if (window.PortPilotStripView) window.PortPilotStripView.render();
   if (window.PortPilotRowThumbs) window.PortPilotRowThumbs.sync();
 }
 
@@ -2526,6 +2528,7 @@ async function loadSettings() {
     document.getElementById('setting-history-max-runs').value = state.settings.historyMaxRuns || 1000;
     document.getElementById('setting-history-max-mb').value = state.settings.historyMaxMB || 150;
     document.getElementById('setting-row-previews').checked = state.settings.rowPreviews !== false;
+    document.getElementById('setting-home-layout').value = window.PortPilotNowStrip.homeLayoutOf(state.settings);
     state.favoritesExpanded = result.settings.favoritesExpanded !== false;
     state.otherProjectsExpanded = result.settings.otherProjectsExpanded !== false;
     const pge = result.settings.portGroupExpanded;
@@ -2555,13 +2558,16 @@ async function saveSettings() {
     autoTrackLocalhost: document.getElementById('setting-auto-track').checked,
     historyMaxRuns: Math.max(10, parseInt(document.getElementById('setting-history-max-runs').value) || 1000),
     historyMaxMB: Math.max(10, parseInt(document.getElementById('setting-history-max-mb').value) || 150),
-    rowPreviews: document.getElementById('setting-row-previews').checked
+    rowPreviews: document.getElementById('setting-row-previews').checked,
+    homeLayout: document.getElementById('setting-home-layout').value
   };
   await window.portpilot.config.updateSettings(settings);
   const previewsChanged = (state.settings.rowPreviews !== false) !== settings.rowPreviews;
+  const layoutChanged = window.PortPilotNowStrip.homeLayoutOf(state.settings) !== window.PortPilotNowStrip.homeLayoutOf(settings);
   state.settings = settings;
   setupAutoScan();   // apply new autoScan / scanInterval immediately
   if (previewsChanged && window.PortPilotRowThumbs) window.PortPilotRowThumbs.settingChanged();
+  else if (layoutChanged) renderApps();
   showToast('Settings saved', 'success');
 }
 

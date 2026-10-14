@@ -20,10 +20,17 @@
   /** The run's thumb belongs to the server on screen only when the ports agree. */
   const portMatches = (id, cur) => cur.port == null || livePort(id) == null || cur.port === livePort(id);
 
-  /** True when the row exists and is on screen (not inside a collapsed group). */
+  /** True when the row (or a Now running strip card) exists and is on screen (not inside a collapsed group). */
   function visibleCard(id) {
-    const el = document.querySelector(`.app-card[data-id="${CSS.escape(id)}"]`);
+    const el = document.querySelector(`.app-card[data-id="${CSS.escape(id)}"], .now-card[data-id="${CSS.escape(id)}"]`);
     return !!el && el.offsetParent !== null;
+  }
+
+  /** The full 480 px thumbnail for a running app (data URL), or '' when none is cached yet. */
+  function urlFor(id) {
+    if (!enabled() || !isRunning(id)) return '';
+    const cur = byApp[id];
+    return (cur && portMatches(id, cur) && cache.get(cur.id)) || '';
   }
 
   /** The thumbnail cell for one row, or '' (the row then looks exactly as before). */
@@ -149,5 +156,5 @@
     refresh().then(renderApps);
   }
 
-  window.PortPilotRowThumbs = { html, sync, refresh, settingChanged };
+  window.PortPilotRowThumbs = { html, urlFor, enabled, sync, refresh, settingChanged };
 })();
