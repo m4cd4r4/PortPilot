@@ -152,13 +152,19 @@ async function main() {
     // so retry once through the palette and say so out loud.
     const outcome = () => win.evaluate(() => (window.__seen || []).some((t) => /Failed to kill/.test(t)));
     await until(async () => !(await listening(heldPort)) || (await outcome()), 60000, 'kill outcome');
-    if (await listening(heldPort)) {
-      console.log('NOTE: scanner missed the port on the first try (' + (await win.evaluate(() => window.__seen.filter((t) => /Failed to kill/.test(t)).join(' | '))) + '); retrying through the palette');
+    // A failed kill drops the port from the list, so each retry rescans first, then frees through the palette again.
+    for (let attempt = 1; attempt <= 3 && (await listening(heldPort)); attempt++) {
+      console.log(`NOTE: scanner missed the port (${await win.evaluate(() => window.__seen.filter((t) => /Failed to kill/.test(t)).join(' | '))}); retry ${attempt} through the palette`);
+      await win.evaluate(() => { window.__seen = []; });
+      await ask('scan ports', 'Scan ports');
+      await win.keyboard.press('Enter');
+      await until(() => win.evaluate((p) => (state.ports || []).some((x) => x.port === p), heldPort), 20000, 'rescan sees the held port');
       await ask(String(heldPort), `Free port ${heldPort}`);
       await win.keyboard.press('Enter');
       await win.keyboard.press('Enter');
-      await until(async () => !(await listening(heldPort)), 60000, 'port freed on retry');
+      await until(async () => !(await listening(heldPort)) || (await outcome()), 60000, 'retry kill outcome');
     }
+    await until(async () => !(await listening(heldPort)), 5000, 'port freed');
     check('and the port is really free', true);
 
     // ---- A browser profile from the Apps tab -----------------------------------
