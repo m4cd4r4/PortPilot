@@ -2642,3 +2642,27 @@ body {
   .bhist-tabs li { flex-direction: column; gap: 0; }
   .bhist-title { max-width: 100%; }
 }
+
+/* ============ Now running strip (round 2, homeLayout: preview) ============ */
+.now-strip { margin-bottom: 16px; }
+.now-strip[hidden] { display: none; }
+.now-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.now-title-text { font-size: 0.8rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-secondary); }
+.now-empty { padding: 14px; border: var(--border-width) dashed var(--border-color); border-radius: var(--radius-card); color: var(--text-muted); font-size: 0.85rem; }
+.now-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 360px)); gap: 12px; }
+.now-card { display: flex; flex-direction: column; min-width: 0; background: var(--bg-secondary); border: var(--border-width) solid var(--border-color); border-radius: var(--radius-card); box-shadow: var(--elev-card); overflow: hidden; }
+.now-card.drawer-open { border-color: var(--accent-primary); }
+.now-preview { aspect-ratio: var(--preview-aspect); background: var(--bg-tertiary); border-bottom: var(--border-width) solid var(--border-color); overflow: hidden; }
+.now-preview img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: top left; }
+.now-preview-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: var(--text-muted); }
+.now-initial { font-size: 2rem; font-weight: 700; color: var(--text-secondary); line-height: 1; }
+.now-why { font-size: 0.72rem; }
+.now-body { display: flex; flex-direction: column; gap: 8px; padding: 10px; }
+.now-name { font-weight: 600; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
+.now-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-height: 20px; font-size: 0.72rem; color: var(--text-secondary); }
+.now-claude { color: var(--accent-purple); border: var(--border-width) solid var(--accent-purple); border-radius: var(--radius-sm); padding: 0 5px; line-height: 1.5; }
+.now-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+@media (max-width: 600px) {
+  .now-row { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; gap: 10px; padding-bottom: 6px; }
+  .now-card { flex: 0 0 78%; scroll-snap-align: start; }
+}
