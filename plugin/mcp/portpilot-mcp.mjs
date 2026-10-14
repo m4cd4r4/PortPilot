@@ -24761,6 +24761,7 @@ function createServer2() {
   const sessionIdShape = external_exports.string().max(200).optional().describe("Leave unset. The PortPilot plugin fills in the real session id");
   const agentShape = external_exports.string().max(100).optional().describe("Optional: your agent name, shown to anyone else using this browser");
   const nameShape = external_exports.string().describe("Profile name, exactly as list_browser_profiles shows it");
+  const forShape = external_exports.string().max(300).optional().describe('The site or task this browser is for, as free text or a URL: "google search console", "facebook", "https://search.google.com/search-console". Matched against the sites, name and purpose of each profile');
   const takeoverShape = external_exports.boolean().optional().describe("Only after telling the user: use or stop a profile that another live Claude session is using. Leave unset otherwise");
   const browserTool = (name, description, shape) => server.tool(name, description, shape, async (args) => {
     const result = await browserApi.call(getConfigPath(), name, args, { surface: "mcp" });
@@ -24768,14 +24769,21 @@ function createServer2() {
   });
   browserTool(
     "list_browser_profiles",
-    "List the named browser profiles PortPilot manages: port, cdpUrl, state (up, down or blocked), who is using each running one, and its open tabs. Each row has free (true: you may start or take it) and leasedTo (the Claude session using it, or null). Call this first to find the profile name you need.",
-    { sessionId: sessionIdShape }
+    'List the named browser profiles PortPilot manages: port, cdpUrl, state (up, down or blocked), purpose and sites (what the user set the profile up for), saved window placement, who is using each running one, and its open tabs. Each row has free (true: you may start or take it) and leasedTo (the Claude session using it, or null). Pass for (a site, URL or task such as "google search console") to get only the profiles that fit it, best first, each with match.reason; ambiguous:true means do not guess, ask the user. To just use the browser for a site, call start_browser with for instead.',
+    { for: forShape, sessionId: sessionIdShape }
   );
   browserTool("list_browsers", "List the browsers installed on this machine that a profile can use.", {});
   browserTool(
     "start_browser",
-    'Start a named browser profile (or reuse it if already running) and get back its port and cdpUrl. Connect your automation to cdpUrl. Never choose a port yourself: the profile owns its port. A profile another live Claude session is using is refused with IN_USE: pick a free one, or pass name "any" to be given one. Pass takeover:true only after telling the user.',
-    { name: external_exports.string().optional().describe('Profile name as list_browser_profiles shows it, or "any" for a free profile (the one you already hold comes first)'), free: external_exports.boolean().optional().describe('With no name: same as name "any"'), takeover: takeoverShape, agent: agentShape, sessionId: sessionIdShape }
+    'Start the browser profile the user set up for a site or task (or reuse it if already running) and get back its port and cdpUrl. Pass for with the site or task ("google search console", "facebook", or a URL): PortPilot picks the profile whose sites, name or purpose fit, so you never choose a port or a profile yourself. NO_MATCH means no profile is set up for it: tell the user, do not invent a port or launch a browser. AMBIGUOUS means several fit: ask the user. Or pass name for an exact profile the user named (list_browser_profiles shows them). name "any" gives a throwaway browser with no logins: never use it for a task tied to a site. Connect your automation to cdpUrl. A profile another live Claude session is using is refused with IN_USE. Pass takeover:true only after telling the user. A headed profile with a saved window is placed there (result window.actual shows where it really is) and, if set to stay in front, raised.',
+    {
+      for: forShape,
+      name: external_exports.string().optional().describe('Exact profile name as list_browser_profiles shows it. Not together with for. "any" = a throwaway browser with no logins (the one you already hold comes first), never for a task tied to a site'),
+      free: external_exports.boolean().optional().describe('With no name and no for: same as name "any" (a throwaway browser with no logins)'),
+      takeover: takeoverShape,
+      agent: agentShape,
+      sessionId: sessionIdShape
+    }
   );
   browserTool(
     "stop_browser",

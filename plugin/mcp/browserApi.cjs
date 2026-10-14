@@ -404,6 +404,199 @@ var require_browserDetect = __commonJS({
   }
 });
 
+// src/core/browserMatch.js
+var require_browserMatch = __commonJS({
+  "src/core/browserMatch.js"(exports2, module2) {
+    "use strict";
+    var SCORE = {
+      SITE_EXACT: 100,
+      // the query host is the profile's site
+      SITE_UNDER: 90,
+      // the query host is a subdomain of the profile's site
+      SITE_RELATED: 50,
+      // same registrable domain, or the profile's site is below the query host
+      URL_HOST_EXACT: 60,
+      // the profile's start URL is on the query host (weaker than a declared site)
+      URL_HOST_RELATED: 30,
+      NAME_EXACT: 200,
+      // the query IS the profile name
+      PURPOSE_WORD: 10,
+      NAME_WORD: 8,
+      SITE_LABEL: 6,
+      // "facebook" from facebook.com
+      URL_LABEL: 4,
+      NOTE_WORD: 5,
+      PHRASE: 10
+      // the whole query appears in the purpose, in order
+    };
+    var MIN_SCORE = 5;
+    var AMBIGUITY_RATIO = 0.75;
+    var STOP_WORDS = new Set("a an the for to of on in at and or my our your with from via by into onto this that these those it its is are be use using used open access go check visit start launch get need want run do does please can could would should me i we you us up out about as any one some browser profile port portpilot claude site website web page pages tab tabs login log sign signin".split(/\s+/));
+    var HOST_RE = /^(?=.{1,253}$)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)*$/;
+    var SECOND_LEVEL = /* @__PURE__ */ new Set(["co", "com", "org", "net", "gov", "edu", "ac", "or", "ne", "go"]);
+    function normaliseHost(value) {
+      if (typeof value !== "string") return null;
+      const h = value.trim().toLowerCase().replace(/\.$/, "");
+      if (!h || h.length > 253 || !HOST_RE.test(h)) return null;
+      return h;
+    }
+    function registrable(host) {
+      const labels = host.split(".");
+      if (labels.length <= 2) return host;
+      const tld = labels[labels.length - 1];
+      const second = labels[labels.length - 2];
+      const keep = tld.length === 2 && SECOND_LEVEL.has(second) ? 3 : 2;
+      return labels.slice(-keep).join(".");
+    }
+    var stripWww = (h) => h.replace(/^www\./, "");
+    var isUnder = (host, parent) => host !== parent && host.endsWith(`.${parent}`);
+    function wordsOf(text) {
+      return String(text == null ? "" : text).replace(/([a-z0-9])([A-Z])/g, "$1 $2").toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+    }
+    var fold = (w) => w.length > 3 && w.endsWith("s") ? w.slice(0, -1) : w;
+    function hostOfToken(token) {
+      const t = token.replace(/^[("'<\[]+|[)"'>\],.;:!?]+$/g, "");
+      const m = t.match(/^(?:[a-z][a-z0-9+.-]*:\/\/)?(?:[^@/\s]*@)?([^/?#:\s]+)(?::\d+)?(?:[/?#]|$)/i);
+      if (!m) return null;
+      const host = normaliseHost(m[1]);
+      if (!host) return null;
+      if (/^[a-z][a-z0-9+.-]*:\/\//i.test(t)) return stripWww(host);
+      return /\.[a-z]{2,}$/.test(host) || host === "localhost" ? stripWww(host) : null;
+    }
+    function parseQuery(query) {
+      const raw = String(query == null ? "" : query).trim().toLowerCase().slice(0, 500);
+      const hosts = [];
+      const rest = [];
+      for (const token of raw.split(/\s+/).filter(Boolean)) {
+        const host = hostOfToken(token);
+        if (host) {
+          if (!hosts.includes(host)) hosts.push(host);
+          continue;
+        }
+        rest.push(token);
+      }
+      const words = [];
+      const add = (w) => {
+        if (w.length >= 2 && !STOP_WORDS.has(w) && !words.includes(w)) words.push(w);
+      };
+      for (const w of wordsOf(rest.join(" "))) add(w);
+      for (const h of hosts) for (const w of h.split(".").slice(0, -1)) if (w !== "www") add(w);
+      return { hosts, words };
+    }
+    function hostScore(queryHost, siteHost, tier) {
+      if (queryHost === siteHost) return tier.exact;
+      if (isUnder(queryHost, siteHost)) return tier.under;
+      if (isUnder(siteHost, queryHost) || registrable(queryHost) === registrable(siteHost)) return tier.related;
+      return 0;
+    }
+    var SITE_TIER = { exact: SCORE.SITE_EXACT, under: SCORE.SITE_UNDER, related: SCORE.SITE_RELATED };
+    var URL_TIER = { exact: SCORE.URL_HOST_EXACT, under: SCORE.URL_HOST_EXACT, related: SCORE.URL_HOST_RELATED };
+    function startUrlHost(url) {
+      try {
+        const u = new URL(String(url));
+        return u.protocol === "http:" || u.protocol === "https:" ? stripWww(u.hostname.toLowerCase()) : null;
+      } catch {
+        return null;
+      }
+    }
+    var folded = (text) => new Set(wordsOf(text).map(fold));
+    function scoreOne(profile, q, rawQuery) {
+      const p = profile || {};
+      const reasons = [];
+      let score = 0;
+      if (String(rawQuery).trim().toLowerCase() === String(p.name).toLowerCase()) {
+        return { score: SCORE.NAME_EXACT, reason: `name is "${p.name}"` };
+      }
+      let site = { score: 0, text: "" };
+      const sites = Array.isArray(p.sites) ? p.sites : [];
+      for (const qh of q.hosts) {
+        for (const s of sites) {
+          const sh = normaliseHost(s);
+          if (!sh) continue;
+          const sc = hostScore(qh, stripWww(sh), SITE_TIER);
+          if (sc > site.score) site = { score: sc, text: `${sc >= SCORE.SITE_UNDER ? "site" : "a related site"} ${sh}` };
+        }
+      }
+      if (site.score) {
+        score += site.score;
+        reasons.push(site.text);
+      }
+      if (!site.score) {
+        const uh2 = startUrlHost(p.url);
+        if (uh2) {
+          let best = 0;
+          for (const qh of q.hosts) best = Math.max(best, hostScore(qh, uh2, URL_TIER));
+          if (best) {
+            score += best;
+            reasons.push(`start URL on ${uh2}`);
+          }
+        }
+      }
+      const purpose = folded(p.purpose);
+      const name = folded(p.name);
+      const note = folded(p.note);
+      const labels = /* @__PURE__ */ new Set();
+      for (const s of sites) {
+        const sh = normaliseHost(s);
+        if (sh) {
+          for (const w of sh.split(".").slice(0, -1)) if (w !== "www") labels.add(fold(w));
+        }
+      }
+      const urlLabels = /* @__PURE__ */ new Set();
+      const uh = startUrlHost(p.url);
+      if (uh) for (const w of uh.split(".").slice(0, -1)) urlLabels.add(fold(w));
+      const hits = { purpose: [], name: [], note: [], site: [], url: [] };
+      for (const w of q.words) {
+        const f = fold(w);
+        if (purpose.has(f)) {
+          score += SCORE.PURPOSE_WORD;
+          hits.purpose.push(w);
+        } else if (name.has(f)) {
+          score += SCORE.NAME_WORD;
+          hits.name.push(w);
+        } else if (labels.has(f)) {
+          score += SCORE.SITE_LABEL;
+          hits.site.push(w);
+        } else if (note.has(f)) {
+          score += SCORE.NOTE_WORD;
+          hits.note.push(w);
+        } else if (urlLabels.has(f)) {
+          score += SCORE.URL_LABEL;
+          hits.url.push(w);
+        }
+      }
+      if (hits.purpose.length) reasons.push(`purpose has ${hits.purpose.join(", ")}`);
+      if (hits.name.length) reasons.push(`name has ${hits.name.join(", ")}`);
+      if (hits.site.length) reasons.push(`sites include ${hits.site.join(", ")}`);
+      if (hits.note.length) reasons.push(`note has ${hits.note.join(", ")}`);
+      if (hits.url.length) reasons.push(`start URL has ${hits.url.join(", ")}`);
+      if (q.words.length > 1 && p.purpose) {
+        const flat = wordsOf(p.purpose).map(fold).join(" ");
+        if (flat.includes(q.words.map(fold).join(" "))) {
+          score += SCORE.PHRASE;
+          reasons.push("purpose says it in these words");
+        }
+      }
+      return { score, reason: reasons.join("; ") };
+    }
+    function matchProfiles2(profiles2, query) {
+      const list = Array.isArray(profiles2) ? profiles2.filter((p) => p && typeof p.name === "string") : [];
+      const q = parseQuery(query);
+      const empty = { status: "none", matches: [], best: null, candidates: [] };
+      if (!q.hosts.length && !q.words.length) return empty;
+      const matches = list.map((p) => ({ name: p.name, ...scoreOne(p, q, query) })).filter((m) => m.score >= MIN_SCORE).sort((a, b) => b.score - a.score || a.name.localeCompare(b.name));
+      if (!matches.length) return empty;
+      const [top, second] = matches;
+      if (second && second.score >= top.score * AMBIGUITY_RATIO) {
+        const candidates = matches.filter((m) => m.score >= top.score * AMBIGUITY_RATIO);
+        return { status: "ambiguous", matches, best: null, candidates };
+      }
+      return { status: "match", matches, best: top.name, candidates: [] };
+    }
+    module2.exports = { SCORE, MIN_SCORE, AMBIGUITY_RATIO, STOP_WORDS, normaliseHost, registrable, parseQuery, matchProfiles: matchProfiles2 };
+  }
+});
+
 // src/core/browserProfiles.js
 var require_browserProfiles = __commonJS({
   "src/core/browserProfiles.js"(exports2, module2) {
@@ -412,11 +605,15 @@ var require_browserProfiles = __commonJS({
     var path2 = require("path");
     var configFile2 = require_configFile();
     var { BROWSER_IDS, browserIdFromPath } = require_browserDetect();
+    var { normaliseHost } = require_browserMatch();
     var MODES = ["headed", "offscreen", "headless"];
     var PORT_MIN = 1024;
     var PORT_MAX = 65535;
     var NAME_RE = /^[A-Za-z0-9](?:[A-Za-z0-9._-]{0,62}[A-Za-z0-9_-])?$/;
     var RESERVED_RE = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/i;
+    var PURPOSE_MAX = 200;
+    var SITES_MAX = 20;
+    var WINDOW_LIMITS = { left: [-1e4, 1e4], top: [-1e4, 1e4], width: [200, 8e3], height: [200, 8e3] };
     var ProfileError = class extends Error {
       constructor(code, message) {
         super(message);
@@ -451,6 +648,40 @@ var require_browserProfiles = __commonJS({
       const clash = others.find((o) => samePath(userDataDirFor(configPath, o)) === mine);
       if (clash) throw new ProfileError("DUPLICATE_DIR", `profile "${clash.name}" already uses the folder ${mine}`);
     }
+    function cleanSites(value) {
+      if (value == null || value === "") return [];
+      const items = Array.isArray(value) ? value : typeof value === "string" ? value.split(/[\s,;]+/) : null;
+      if (!items) throw new ProfileError("BAD_SITES", "sites must be a list of hostnames such as search.google.com");
+      const out = [];
+      for (const raw of items) {
+        if (typeof raw !== "string") throw new ProfileError("BAD_SITES", "sites must be a list of hostnames such as search.google.com");
+        if (!raw.trim()) continue;
+        const host = normaliseHost(raw);
+        if (!host) {
+          throw new ProfileError("BAD_SITES", `"${raw.trim().slice(0, 60)}" is not a hostname. Use only the host, such as search.google.com: no https://, path, port or *.`);
+        }
+        if (!out.includes(host)) out.push(host);
+      }
+      if (out.length > SITES_MAX) throw new ProfileError("BAD_SITES", `at most ${SITES_MAX} sites per profile`);
+      return out;
+    }
+    function cleanWindow(value) {
+      if (value == null || value === "") return null;
+      if (typeof value !== "object" || Array.isArray(value)) throw new ProfileError("BAD_WINDOW", "window must be an object: { left, top, width, height, front }");
+      const out = {};
+      for (const [key, [min, max]] of Object.entries(WINDOW_LIMITS)) {
+        const raw = value[key];
+        if (raw == null || typeof raw === "string" && !raw.trim()) continue;
+        const n = typeof raw === "string" ? Number(raw.trim()) : raw;
+        if (typeof n !== "number" || !Number.isInteger(n) || n < min || n > max) {
+          throw new ProfileError("BAD_WINDOW", `window ${key} must be a whole number from ${min} to ${max}`);
+        }
+        out[key] = n;
+      }
+      if (value.front != null && typeof value.front !== "boolean") throw new ProfileError("BAD_WINDOW", "window front must be true or false");
+      if (value.front === true) out.front = true;
+      return Object.keys(out).length ? out : null;
+    }
     function validateProfile(fields, others = []) {
       const f = fields || {};
       const name = typeof f.name === "string" ? f.name.trim() : "";
@@ -476,7 +707,14 @@ var require_browserProfiles = __commonJS({
       if (clash) throw new ProfileError("DUPLICATE_NAME", `a profile named "${clash.name}" already exists`);
       const portClash = others.find((p) => p.port === port);
       if (portClash) throw new ProfileError("DUPLICATE_PORT", `port ${port} is already used by profile "${portClash.name}"`);
+      const purpose = f.purpose == null ? "" : String(f.purpose).replace(/\s+/g, " ").trim();
+      if (purpose.length > PURPOSE_MAX) throw new ProfileError("BAD_PURPOSE", `purpose must be at most ${PURPOSE_MAX} characters`);
+      const sites = cleanSites(f.sites);
+      const win = cleanWindow(f.window);
       const out = { name, port, browser, mode, url, note };
+      if (purpose) out.purpose = purpose;
+      if (sites.length) out.sites = sites;
+      if (win) out.window = win;
       if (f.userDataDir != null && f.userDataDir !== "") {
         if (typeof f.userDataDir !== "string" || !path2.isAbsolute(f.userDataDir)) {
           throw new ProfileError("BAD_DIR", "userDataDir must be an absolute path");
@@ -573,6 +811,9 @@ var require_browserProfiles = __commonJS({
       MODES,
       PORT_MIN,
       PORT_MAX,
+      PURPOSE_MAX,
+      SITES_MAX,
+      WINDOW_LIMITS,
       ProfileError,
       profilesRootFor,
       userDataDirFor,
@@ -622,10 +863,13 @@ var require_browserCdp = __commonJS({
       }
     }
     async function withBrowserSession(port, fn) {
-      if (typeof WebSocket !== "function") return null;
       const v = await version(port);
       if (!v || !v.webSocketDebuggerUrl) return null;
-      const ws = new WebSocket(v.webSocketDebuggerUrl);
+      return withSocket(v.webSocketDebuggerUrl, fn);
+    }
+    async function withSocket(url, fn) {
+      if (typeof WebSocket !== "function") return null;
+      const ws = new WebSocket(url);
       let id = 0;
       const pending = /* @__PURE__ */ new Map();
       await new Promise((resolve, reject) => {
@@ -697,7 +941,52 @@ var require_browserCdp = __commonJS({
         return { parked: false, left: null };
       }
     }
-    module2.exports = { version, pageTabs, openTab, withBrowserSession, closeBrowser, parkOffscreen };
+    async function firstWindowId(port, send) {
+      const [tab] = await pageTabs(port);
+      if (!tab) return null;
+      const { windowId } = await send("Browser.getWindowForTarget", { targetId: tab.id });
+      return windowId;
+    }
+    var BOUND_KEYS = ["left", "top", "width", "height"];
+    var pickBounds = (b) => Object.fromEntries(BOUND_KEYS.filter((k) => Number.isFinite(b && b[k])).map((k) => [k, b[k]]));
+    async function getWindowBounds(port) {
+      try {
+        return await withBrowserSession(port, async (send) => {
+          const windowId = await firstWindowId(port, send);
+          if (windowId == null) return null;
+          const { bounds } = await send("Browser.getWindowBounds", { windowId });
+          return { ...pickBounds(bounds), windowState: bounds.windowState || "normal" };
+        });
+      } catch {
+        return null;
+      }
+    }
+    async function setWindowBounds(port, wanted) {
+      try {
+        return await withBrowserSession(port, async (send) => {
+          const windowId = await firstWindowId(port, send);
+          if (windowId == null) return null;
+          await send("Browser.setWindowBounds", { windowId, bounds: { windowState: "normal" } });
+          await send("Browser.setWindowBounds", { windowId, bounds: { ...pickBounds(wanted), windowState: "normal" } });
+          const { bounds } = await send("Browser.getWindowBounds", { windowId });
+          return { ...pickBounds(bounds), windowState: bounds.windowState || "normal" };
+        });
+      } catch {
+        return null;
+      }
+    }
+    async function bringToFront(port) {
+      try {
+        const list = await getJson(port, "/json");
+        const tab = (Array.isArray(list) ? list : []).find((t) => t.type === "page" && t.webSocketDebuggerUrl);
+        if (!tab) return false;
+        const r = await withSocket(tab.webSocketDebuggerUrl, (send) => send("Page.bringToFront"));
+        return r !== null;
+      } catch {
+        return false;
+      }
+    }
+    module2.exports = { version, pageTabs, openTab, withBrowserSession, withSocket, closeBrowser, parkOffscreen, getWindowBounds, setWindowBounds, bringToFront };
   }
 });
 
@@ -1146,6 +1435,18 @@ var require_browserRun = __commonJS({
       }
       return Promise.resolve();
     }
+    function pinTopmost(pid) {
+      if (process.platform !== "win32" || !Number.isInteger(pid) || pid <= 0) return Promise.resolve(null);
+      const script = `Add-Type -Namespace PP -Name Win -MemberDefinition '[DllImport("user32.dll")] public static extern bool SetWindowPos(IntPtr h, IntPtr a, int x, int y, int cx, int cy, uint f);'; $h = (Get-Process -Id ${pid}).MainWindowHandle; if ($h -eq [IntPtr]::Zero) { exit 3 }; if ([PP.Win]::SetWindowPos($h, [IntPtr](-1), 0, 0, 0, 0, 0x13)) { exit 0 } else { exit 4 }`;
+      return new Promise((resolve) => {
+        execFile(
+          "powershell.exe",
+          ["-NoProfile", "-NonInteractive", "-Command", script],
+          { timeout: 15e3, windowsHide: true },
+          (err) => resolve(!err)
+        );
+      });
+    }
     var defaultDeps = () => ({
       spawn,
       inspectPort,
@@ -1156,7 +1457,11 @@ var require_browserRun = __commonJS({
       pageTabs: cdp.pageTabs,
       openTab: cdp.openTab,
       closeBrowser: cdp.closeBrowser,
-      park: cdp.parkOffscreen
+      park: cdp.parkOffscreen,
+      placeWindow: cdp.setWindowBounds,
+      windowBounds: cdp.getWindowBounds,
+      bringToFront: cdp.bringToFront,
+      pinTopmost
     });
     var norm = (s) => String(s).replace(/\\/g, "/").replace(/\/+$/, "").toLowerCase();
     var BROWSER_PROCESS_RE = /chrome|chromium|msedge|brave|opera|vivaldi|browser/i;
@@ -1245,7 +1550,11 @@ var require_browserRun = __commonJS({
       const mode = o.mode || profile.mode;
       if (!MODES.includes(mode)) throw new RunError("BAD_MODE", `mode must be one of: ${MODES.join(", ")}`);
       const before = await profileStatus(configPath, profile, d);
-      if (before.state === "up" && before.owner === "profile") return { ...before, already: true };
+      if (before.state === "up" && before.owner === "profile") {
+        const out2 = { ...before, already: true };
+        if (mode === "headed" && profile.window && profile.window.front) out2.window = await placeWindow(profile, before.pid, d);
+        return out2;
+      }
       if (before.state === "up") {
         throw new RunError("NOT_VERIFIED", `:${profile.port} answers CDP but its owner cannot be identified, so it is not treated as profile "${profile.name}". Close it or pick another port.`);
       }
@@ -1297,6 +1606,40 @@ var require_browserRun = __commonJS({
       }
       const out = { ...after, already: false };
       if (mode === "offscreen") out.offscreen = await d.park(profile.port, OFFSCREEN_LEFT);
+      else if (mode === "headed" && profile.window) out.window = await placeWindow(profile, after.pid, d);
+      return out;
+    }
+    var BOUND_KEYS = ["left", "top", "width", "height"];
+    var PLACE_TOLERANCE = 20;
+    var PLACE_TRIES = 3;
+    var requestedBounds = (win) => Object.fromEntries(BOUND_KEYS.filter((k) => win && Number.isFinite(win[k])).map((k) => [k, win[k]]));
+    var boundsMatch = (want, got) => !!got && Object.keys(want).every((k) => Number.isFinite(got[k]) && Math.abs(got[k] - want[k]) <= PLACE_TOLERANCE);
+    async function guarded(what, fn) {
+      try {
+        return await fn();
+      } catch (err) {
+        console.error(`[browserRun] ${what} failed:`, err && err.message);
+        return null;
+      }
+    }
+    async function placeWindow(profile, pid, d) {
+      const win = profile.window || {};
+      const requested = requestedBounds(win);
+      const out = { requested, actual: null, applied: Object.keys(requested).length === 0 };
+      if (Object.keys(requested).length) {
+        let actual = null;
+        for (let i = 0; i < PLACE_TRIES && !actual; i++) {
+          actual = await guarded("placing the window", () => d.placeWindow(profile.port, requested));
+          if (!actual && i < PLACE_TRIES - 1) await d.sleep(300);
+        }
+        out.actual = actual;
+        out.applied = boundsMatch(requested, actual);
+      }
+      if (win.front) {
+        const raised = !!await guarded("bringing the page to front", () => d.bringToFront(profile.port));
+        const topmost = await guarded("setting the window always-on-top", () => d.pinTopmost(pid));
+        out.front = { raised, topmost: topmost === null || topmost === void 0 ? null : !!topmost };
+      }
       return out;
     }
     async function waitDown(profile, d, ms, pollMs) {
@@ -1344,7 +1687,10 @@ var require_browserRun = __commonJS({
       allStatus,
       buildArgs,
       startProfile,
-      stopProfile
+      stopProfile,
+      placeWindow,
+      pinTopmost,
+      PLACE_TOLERANCE
     };
   }
 });
@@ -1686,6 +2032,7 @@ var profiles = require_browserProfiles();
 var run = require_browserRun();
 var history = require_browserHistory();
 var lease = require_browserLease();
+var { matchProfiles } = require_browserMatch();
 var CLAIMS_FILE = "portpilot-browser-claims.json";
 var emptyClaims = () => ({ profiles: {} });
 var lower = (s) => String(s).toLowerCase();
@@ -1756,7 +2103,9 @@ var NEXT = {
   LAUNCH_FAILED: "Ask the user to check that the browser starts normally.",
   STOP_FAILED: "Ask the user to close that browser window by hand.",
   BAD_MODE: `Use one of: ${profiles.MODES.join(", ")}.`,
-  IN_USE: 'Do not use it. Call list_browser_profiles and pick a profile that shows free: true, or call start_browser with name "any" to be given one. Only if the user agrees to share this one, call again with takeover:true.',
+  IN_USE: 'Do not use it. Call list_browser_profiles and pick a free profile (free: true) that suits the task. name "any" gives a throwaway browser with no logins: use it only when the task is not tied to a site. Only if the user agrees to share this one, call again with takeover:true.',
+  NO_MATCH: 'Tell the user no PortPilot browser profile is set up for this, name the profiles that exist, and ask them to create or label one in the PortPilot Browsers tab. Do not invent a port, do not launch a browser yourself and do not fall back to name "any" for a site task.',
+  AMBIGUOUS: "Do not guess. Tell the user which profiles fit and ask which to use, then call start_browser with that profile name.",
   NO_FREE_PROFILE: "Every profile is in use or blocked. Ask the user to add a profile in the PortPilot Browsers tab, or to say which one you may take over (then call start_browser with its name and takeover:true).",
   UNKNOWN_TOOL: "Use one of: list_browser_profiles, list_browsers, start_browser, stop_browser, set_browser_mode, browser_history."
 };
@@ -1770,13 +2119,39 @@ function failure(err, configPath) {
   };
   if (err.holder) out.holder = err.holder;
   if (err.leasedTo) out.leasedTo = err.leasedTo;
-  if (code === "NOT_FOUND") {
+  if (Array.isArray(err.candidates)) out.candidates = err.candidates;
+  if (code === "NOT_FOUND" || code === "NO_MATCH") {
     try {
       out.known = profiles.listProfiles(configPath).map((p) => p.name);
     } catch {
     }
   }
   return out;
+}
+function resolveFor(configPath, text) {
+  const stored = profiles.listProfiles(configPath);
+  const m = matchProfiles(stored, text);
+  const shown = String(text).replace(/\s+/g, " ").trim().slice(0, 80);
+  if (m.status === "none") {
+    const names = stored.map((p) => p.name);
+    throw new ApiError("NO_MATCH", names.length ? `no browser profile is set up for "${shown}". Existing profiles: ${names.join(", ")}` : `no browser profile is set up for "${shown}": there are no profiles yet`);
+  }
+  if (m.status === "ambiguous") {
+    throw new ApiError(
+      "AMBIGUOUS",
+      `"${shown}" fits more than one browser profile about equally: ${m.candidates.map((c) => c.name).join(", ")}`,
+      { candidates: m.candidates.map((c) => ({ name: c.name, reason: c.reason })) }
+    );
+  }
+  const top = m.matches[0];
+  return { profile: profiles.getProfile(configPath, m.best), matched: { for: shown, score: top.score, reason: top.reason } };
+}
+function forOf(args) {
+  if (args.for == null) return void 0;
+  if (typeof args.for !== "string" || !args.for.trim()) {
+    throw new ApiError("BAD_ARGS", 'for must be text: the site or task the browser is for, such as "google search console" or a URL');
+  }
+  return args.for.trim();
 }
 var nameOf = (args) => {
   if (typeof args.name !== "string" || !args.name.trim()) {
@@ -1895,6 +2270,7 @@ async function startNamed(configPath, profile, caller, args, ctx) {
   ensureSampler(configPath, ctx);
   const out = { ...view(r, claim), already: !!r.already };
   if (r.offscreen) out.offscreen = r.offscreen;
+  if (r.window) out.window = r.window;
   if (held) {
     out.takeoverNote = `Took "${r.name}" over from ${held.by}${held.short && !String(held.by).includes(held.short) ? ` (session ${held.short})` : ""}. They may still be using it: leave tabs you did not open alone, and tell the user.`;
   } else if (claim.by !== caller.by) {
@@ -1936,7 +2312,16 @@ var HISTORY_DEFAULT = 10;
 var HISTORY_MAX = 50;
 var TOOLS = {
   async list_browser_profiles(configPath, args, ctx) {
-    const stored = profiles.listProfiles(configPath);
+    let stored = profiles.listProfiles(configPath);
+    const query = forOf(args);
+    let ranked = null;
+    let ambiguous = false;
+    if (query !== void 0) {
+      const m = matchProfiles(stored, query);
+      ranked = new Map(m.matches.map((x, i) => [x.name, { ...x, rank: i + 1 }]));
+      ambiguous = m.status === "ambiguous";
+      stored = m.matches.map((x) => stored.find((p) => p.name === x.name));
+    }
     const { rows, warnings } = await run.allStatus(configPath, stored, ctx.deps);
     const live = lease.liveSessionIds(configPath);
     const me = lease.cleanId(args.sessionId);
@@ -1950,10 +2335,24 @@ var TOOLS = {
       const p = stored.find((x) => x.name === st.name) || {};
       if (p.url) row.url = p.url;
       if (p.note) row.note = p.note;
+      if (p.purpose) row.purpose = p.purpose;
+      if (p.sites && p.sites.length) row.sites = p.sites;
+      if (p.window) row.window = p.window;
+      if (ranked) {
+        const m = ranked.get(st.name);
+        row.match = { rank: m.rank, score: m.score, reason: m.reason };
+      }
       if (st.tabs && st.tabs.length) row.tabs = st.tabs.slice(0, 5).map((t) => ({ title: t.title, url: t.url }));
       return row;
     });
-    return { success: true, profiles: out, warnings: warnings.map((w) => w.sentence) };
+    const result = { success: true, profiles: out, warnings: warnings.map((w) => w.sentence) };
+    if (ranked) {
+      result.for = String(query).slice(0, 80);
+      result.ambiguous = ambiguous;
+      if (!out.length) result.note = "No profile fits. Tell the user, and ask them to create or label a profile for it in the PortPilot Browsers tab. Do not pick a port or launch a browser yourself.";
+      else if (ambiguous) result.note = "More than one profile fits about equally: do not guess. Ask the user which to use.";
+    }
+    return result;
   },
   async list_browsers(configPath, args, ctx) {
     return { success: true, browsers: ctx.deps.detect().map((b) => ({ id: b.id, label: b.label })) };
@@ -1961,6 +2360,14 @@ var TOOLS = {
   async start_browser(configPath, args, ctx) {
     const stored = profiles.listProfiles(configPath);
     const caller = callerOf(args, ctx);
+    const query = forOf(args);
+    if (query !== void 0) {
+      if (typeof args.name === "string" && args.name.trim()) {
+        throw new ApiError("BAD_ARGS", "pass either name (an exact profile) or for (the site or task), not both");
+      }
+      const { profile: profile2, matched } = resolveFor(configPath, query);
+      return { success: true, ...await startNamed(configPath, profile2, caller, args, ctx), matchedBy: matched };
+    }
     if (isAnyRequest(args, stored)) return { success: true, ...await startAny(configPath, args, caller, ctx) };
     const name = nameOf(args);
     const profile = profiles.getProfile(configPath, name);
@@ -2089,4 +2496,20 @@ async function call(configPath, tool, args, ctx = {}) {
     return failure(err, configPath);
   }
 }
-module.exports = { TOOL_NAMES, call, reopen, startHistorySampler, claimsPathFor, cdpUrlFor };
+async function captureWindow(configPath, name, ctx = {}) {
+  try {
+    const profile = profiles.getProfile(configPath, name);
+    const deps = ctx.deps || run.defaultDeps();
+    const st = await run.profileStatus(configPath, profile, deps);
+    if (st.state !== "up" || st.owner !== "profile") {
+      throw new ApiError("NOT_RUNNING", `"${profile.name}" is not running, so there is no window to read`, { action: "Start the profile, put the window where you want it, then capture." });
+    }
+    const b = await deps.windowBounds(profile.port);
+    if (!b) throw new ApiError("CAPTURE_FAILED", "the browser did not report a window position (no page open, or CDP did not answer)", { action: "Open a page in the browser window and try again." });
+    const w = { left: b.left, top: b.top, width: b.width, height: b.height };
+    return { success: true, name: profile.name, window: w, windowState: b.windowState || "normal" };
+  } catch (err) {
+    return failure(err, configPath);
+  }
+}
+module.exports = { TOOL_NAMES, call, reopen, captureWindow, startHistorySampler, claimsPathFor, cdpUrlFor };

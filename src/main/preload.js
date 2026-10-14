@@ -69,7 +69,8 @@ contextBridge.exposeInMainWorld('portpilot', {
     duplicate: (from, fields) => ipcRenderer.invoke('browser:duplicate', from, fields),
     extensions: (name) => ipcRenderer.invoke('browser:extensions', name),
     history: (name) => ipcRenderer.invoke('browser:history', name),
-    reopen: (id) => ipcRenderer.invoke('browser:reopen', id)
+    reopen: (id) => ipcRenderer.invoke('browser:reopen', id),
+    captureWindow: (name) => ipcRenderer.invoke('browser:captureWindow', name)
   },
 
   // Health probe

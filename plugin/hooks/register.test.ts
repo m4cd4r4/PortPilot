@@ -65,6 +65,8 @@ function world(on: On, w: World = {}) {
   })
   on('session.cwd', async () => ({ value: w.cwd ?? 'C:/work' }))
   on('session.id', async () => ({ value: 'sess-1' }))
+  // The engine's own context blocks, passed through.
+  on('prompt.context', async (_$, e) => ({ blocks: e.blocks }))
   on('tool.list', async () => ({ value: w.withStartTool === false ? [] : [
     { name: 'Bash', description: 'shell', mcp: false },
     { name: 'mcp__portpilot__start_app', description: 'start an app', mcp: true },
@@ -328,4 +330,40 @@ test('an inbox request for an app that is running again sends nothing', async ($
   await started($, on, { inbox: { requests: [{ appId: 'web', at: NOW + 1 }] }, prompts, toasts })
   expect(prompts).toEqual([])
   expect(toasts).toContain('PortPilot: web is not crashed now, nothing sent')
+})
+
+// ---- browser profiles in the first message's context -------------------------
+
+const PROFILES = [
+  { name: 'gsc', port: 9220, mode: 'headed', purpose: 'Google Search Console, Analytics', sites: ['search.google.com', 'analytics.google.com'], userDataDir: 'C:/secret/dir', url: 'https://x.test/?token=SECRET' },
+  { name: 'fb', port: 9226, mode: 'offscreen', purpose: 'Facebook', sites: ['facebook.com'] },
+]
+const CORE = [{ name: 'userEmail', text: 'me@example.test' }, { name: 'currentDate', text: 'Today' }]
+
+test('the first message carries the browser profiles: purpose and sites, no folder path or query', async ($, on) => {
+  world(on, { config: { ...CONFIG, browserProfiles: PROFILES } })
+  const r = await $.prompt.context({ blocks: CORE } as never)
+  const block = r.blocks.find((b) => b.name === 'portpilotBrowsers')
+  expect(block).toBeDefined()
+  expect(block!.text).toContain('gsc :9220 headed - Google Search Console, Analytics [search.google.com, analytics.google.com]')
+  expect(block!.text).toContain('fb :9226 offscreen - Facebook [facebook.com]')
+  expect(block!.text).toContain('start_browser')
+  expect(block!.text).not.toContain('secret')
+  expect(block!.text).not.toContain('SECRET')
+  expect(r.blocks.map((b) => b.name).slice(0, 2)).toEqual(['userEmail', 'currentDate'])
+})
+
+test('an empty profile list adds no block', async ($, on) => {
+  world(on, { config: { ...CONFIG, browserProfiles: [] } })
+  expect((await $.prompt.context({ blocks: CORE } as never)).blocks).toEqual(CORE)
+})
+
+test('a config with no browser profiles at all adds no block', async ($, on) => {
+  world(on)
+  expect((await $.prompt.context({ blocks: CORE } as never)).blocks).toEqual(CORE)
+})
+
+test('an unreadable config adds nothing and does not throw', async ($, on) => {
+  world(on, { config: null })
+  expect((await $.prompt.context({ blocks: CORE } as never)).blocks).toEqual(CORE)
 })

@@ -29,13 +29,23 @@ the session ends, and collides with the one they already have open. Use the
 
 ## Browsers for automation
 
-Never launch a browser with a debug port yourself, and never pick a port for one. Ask for a
-named profile: `list_browser_profiles` (names, state, who is using each), then
-`start_browser` with the name. It returns `cdpUrl`; connect your automation there. If a
-profile shows `leasedTo` another session, do not use it: `start_browser` answers `IN_USE`.
-Pick a profile with `free: true`, or call `start_browser` with `name: "any"` to be given one
-(you get the one you already hold first). Pass `takeover:true` only after telling the user
-that you are taking a profile another session is using. If the port is held by another
+Never launch a browser with a debug port yourself, and never pick a port for one. The user
+sets up profiles in PortPilot, each with what it is for (`purpose`) and the sites it logs into
+(`sites`), and the start of the conversation lists them. Match by site first: for a task on a
+site, call `start_browser` with `for` set to the site, URL or task ("google search console",
+"https://search.google.com/..."). PortPilot picks the profile; you never pick a port or a
+profile yourself. It returns `cdpUrl`; connect your automation there. If the answer is
+`NO_MATCH`, tell the user no profile is set up for that site and ask them to create or label
+one in the PortPilot Browsers tab; do not invent a port, launch a browser yourself or fall
+back to `any`. If it is `AMBIGUOUS`, ask the user which profile. When the user names a profile
+("use the PortPilot port for Facebook"), `start_browser` with `name`, or `for` with their words;
+`list_browser_profiles` (optionally with `for`) shows the profiles, their purpose and their
+state. `name: "any"` is only for a throwaway browser with no logins, never for a task tied to a
+site (you get the one you already hold first). If a profile shows `leasedTo` another session,
+do not use it: `start_browser` answers `IN_USE`; pick another profile that suits the task. Pass
+`takeover:true` only after telling the user that you are taking a profile another session is using.
+A headed profile may have a saved window and keep in front: the start result's `window.actual` is
+where the window really is, and `window.front.topmost` is Windows-only best effort. If the port is held by another
 process the error names it: tell the user, do not kill it. Stop with `stop_browser` only a
 browser you started. `set_browser_mode` changes how a profile opens next time.
 `browser_history` lists what a profile had open in past sessions.

@@ -86,9 +86,27 @@ function killPid(pid) {
   return Promise.resolve();
 }
 
+/**
+ * Windows only, best effort: make the window of process `pid` always-on-top (user32 SetWindowPos with
+ * HWND_TOPMOST, no move, no resize, no activation). The browser's main process owns the top-level
+ * window and is the listener on the debug port, so that pid is the one handed in. True when Windows
+ * accepted it; false when it could not; null on any other OS (nothing was tried).
+ */
+function pinTopmost(pid) {
+  if (process.platform !== 'win32' || !Number.isInteger(pid) || pid <= 0) return Promise.resolve(null);
+  const script = `Add-Type -Namespace PP -Name Win -MemberDefinition '[DllImport("user32.dll")] public static extern bool SetWindowPos(IntPtr h, IntPtr a, int x, int y, int cx, int cy, uint f);'; `
+    + `$h = (Get-Process -Id ${pid}).MainWindowHandle; if ($h -eq [IntPtr]::Zero) { exit 3 }; `
+    + 'if ([PP.Win]::SetWindowPos($h, [IntPtr](-1), 0, 0, 0, 0, 0x13)) { exit 0 } else { exit 4 }';
+  return new Promise((resolve) => {
+    execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', script],
+      { timeout: 15000, windowsHide: true }, (err) => resolve(!err));
+  });
+}
+
 const defaultDeps = () => ({
   spawn, inspectPort, kill: killPid, sleep, detect: () => detectBrowsers(),
   version: cdp.version, pageTabs: cdp.pageTabs, openTab: cdp.openTab, closeBrowser: cdp.closeBrowser, park: cdp.parkOffscreen,
+  placeWindow: cdp.setWindowBounds, windowBounds: cdp.getWindowBounds, bringToFront: cdp.bringToFront, pinTopmost,
 });
 
 const norm = (s) => String(s).replace(/\\/g, '/').replace(/\/+$/, '').toLowerCase();
@@ -202,7 +220,12 @@ async function startProfile(configPath, name, o = {}, d = defaultDeps()) {
   if (!MODES.includes(mode)) throw new RunError('BAD_MODE', `mode must be one of: ${MODES.join(', ')}`);
 
   const before = await profileStatus(configPath, profile, d);
-  if (before.state === 'up' && before.owner === 'profile') return { ...before, already: true };
+  if (before.state === 'up' && before.owner === 'profile') {
+    // A reused browser that must stay in front is put back where it belongs (and raised) on every call.
+    const out = { ...before, already: true };
+    if (mode === 'headed' && profile.window && profile.window.front) out.window = await placeWindow(profile, before.pid, d);
+    return out;
+  }
   if (before.state === 'up') {
     throw new RunError('NOT_VERIFIED', `:${profile.port} answers CDP but its owner cannot be identified, so it is not treated as profile "${profile.name}". Close it or pick another port.`);
   }
@@ -253,6 +276,53 @@ async function startProfile(configPath, name, o = {}, d = defaultDeps()) {
   }
   const out = { ...after, already: false };
   if (mode === 'offscreen') out.offscreen = await d.park(profile.port, OFFSCREEN_LEFT);
+  else if (mode === 'headed' && profile.window) out.window = await placeWindow(profile, after.pid, d);
+  return out;
+}
+
+// ---- Window placement --------------------------------------------------------
+
+const BOUND_KEYS = ['left', 'top', 'width', 'height'];
+// The OS may nudge a window by its invisible resize border; this much is "where I asked".
+const PLACE_TOLERANCE = 20;
+const PLACE_TRIES = 3;
+
+const requestedBounds = (win) => Object.fromEntries(BOUND_KEYS.filter((k) => win && Number.isFinite(win[k])).map((k) => [k, win[k]]));
+const boundsMatch = (want, got) => !!got && Object.keys(want).every((k) => Number.isFinite(got[k]) && Math.abs(got[k] - want[k]) <= PLACE_TOLERANCE);
+
+/** Never fatal: placement is a courtesy to the caller, so a failure is logged and reported as not applied. */
+async function guarded(what, fn) {
+  try { return await fn(); } catch (err) { console.error(`[browserRun] ${what} failed:`, err && err.message); return null; }
+}
+
+/**
+ * Apply a headed profile's saved window: the bounds, then (front) raise it. Resolves with
+ * { requested, actual, applied, front? } and never throws. `actual` is read back from the browser.
+ *   applied  the browser reports the window within PLACE_TOLERANCE px of every field asked for
+ *   front    { raised: Page.bringToFront accepted, topmost: true | false | null }
+ *            topmost is Windows-only best effort: null means not tried (another OS), false means
+ *            Windows refused or the window handle was not found. Neither is an error.
+ * @param {object} profile  a validated profile with `window`
+ * @param {number|null} pid the browser's process id (the listener on the debug port)
+ */
+async function placeWindow(profile, pid, d) {
+  const win = profile.window || {};
+  const requested = requestedBounds(win);
+  const out = { requested, actual: null, applied: Object.keys(requested).length === 0 };
+  if (Object.keys(requested).length) {
+    let actual = null;
+    for (let i = 0; i < PLACE_TRIES && !actual; i++) {
+      actual = await guarded('placing the window', () => d.placeWindow(profile.port, requested));
+      if (!actual && i < PLACE_TRIES - 1) await d.sleep(300);
+    }
+    out.actual = actual;
+    out.applied = boundsMatch(requested, actual);
+  }
+  if (win.front) {
+    const raised = !!(await guarded('bringing the page to front', () => d.bringToFront(profile.port)));
+    const topmost = await guarded('setting the window always-on-top', () => d.pinTopmost(pid));
+    out.front = { raised, topmost: topmost === null || topmost === undefined ? null : !!topmost };
+  }
   return out;
 }
 
@@ -302,5 +372,5 @@ async function stopProfile(configPath, name, o = {}, d = defaultDeps()) {
 
 module.exports = {
   RunError, OFFSCREEN_LEFT, defaultDeps, inspectPort, parseNetstat, holdsDir, reservationWarning,
-  profileStatus, allStatus, buildArgs, startProfile, stopProfile,
+  profileStatus, allStatus, buildArgs, startProfile, stopProfile, placeWindow, pinTopmost, PLACE_TOLERANCE,
 };

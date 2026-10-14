@@ -51,6 +51,11 @@ Unit checks (`npm run test:unit`, `npm run test:mcp`) cover the logic; these sce
 | Expand History under a profile | Read the expander at 1440 and 390 px | Each session shows when, who, tab count, how it ended, its tab titles and redacted URLs, and Open again; no horizontal scroll | `browsers-history.e2e.js` |
 | Click Open again on a past session | Ask the profile's debug port for `/json` | A fresh browser is up and the page is open in a new tab; the hidden secret is not restored; a second session is recorded | `browsers-history.e2e.js` |
 | Two Claude sessions want the same profile | `start_browser` from both, with live heartbeats | The first wins; the second gets `IN_USE` naming the owner, and no second browser starts. A dead owner or `takeover:true` lets it through; `name: "any"` finds a free one | `tests/browser-api-lease.test.cjs`, `tests/mcp-browser.test.mjs` |
+| "Access Google Search Console" with a profile whose purpose says so | `POST /api/browser/start_browser` with `for` set to that sentence, then ask the profile's port | The profile starts on its own port; `matchedBy.reason` names the purpose or site; a different site or no `for` match is `NO_MATCH` listing the profiles and starts nothing | `tests/browser-purpose-api.test.cjs`, `tests/browsers-purpose.e2e.js` |
+| Two profiles fit a request about equally | `start_browser` with `for` set to a host both list | `AMBIGUOUS` with both names; nothing starts | `tests/browser-match.test.cjs`, `tests/browser-purpose-api.test.cjs` |
+| A conversation starts with browser profiles set up | Read the first message's context (`prompt.context`) | One block lists name, port, mode, purpose and sites; no folder path, no URL query, at most 25 profiles and 2 KB; none when there are no profiles | `plugin/hooks/register.test.ts` (`claude plugin test plugin`), `tests/browser-match.test.cjs` |
+| A headed profile has a saved window and keep in front | Start it through `for`, then ask the browser itself for its window bounds and Windows for the window's always-on-top style | The window is where the profile says (within 20 px) and, on Windows, always-on-top; reusing the running browser puts it back after it was moved | `tests/browsers-purpose.e2e.js` (opens one headed Brave for a few seconds; `PORTPILOT_E2E_NO_HEADED=1` skips it) |
+| Capture current position on a running profile whose window was moved | Move the window, press Capture, Save | The four fields hold the real window's numbers; the saved profile has them | `tests/browsers-purpose.e2e.js` |
 | Duplicate a profile that holds a saved password | Duplicate in a real, signed-in install | The new profile asks for the password-manager sign-in once; no password was copied | Manual: needs a Web Store install |
 
 ## Not yet automated
@@ -67,6 +72,7 @@ Unit checks (`npm run test:unit`, `npm run test:mcp`) cover the logic; these sce
 npm run test:e2e            # all of them, about 4 minutes
 node tests/browsers-ui.e2e.js   # one; skips without Brave
 node tests/browsers-history.e2e.js   # browser history and Open again; skips without Brave
+node tests/browsers-purpose.e2e.js   # purpose, sites, window, for, capture; one headed Brave; skips without Brave
 ```
 
 Re-run needs the MCP server's dependencies: `npm ci --prefix mcp-server` once per checkout. In a git worktree with a junctioned `node_modules`, run the specs from the worktree; Electron comes from the junction.
