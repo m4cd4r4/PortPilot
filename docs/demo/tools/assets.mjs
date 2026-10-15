@@ -32,6 +32,6 @@ await p.screenshot({ path: `${out}/crop-row-state.png`, clip: await union(p, ['.
   return { x: bs[0].x, y: bs[0].y, width: bs[0].width, height: bs[3].y + bs[3].height - bs[0].y };
 }) });
 const conflict = cards.find(async () => true);
-const ci = await p.evaluate(() => [...document.querySelectorAll('.app-card')].findIndex(c => c.innerText.includes('azureprep')));
+const ci = await p.evaluate(() => [...document.querySelectorAll('.app-card')].findIndex(c => c.innerText.includes('alight')));
 await cards[ci].screenshot({ path: `${out}/crop-conflict.png` });
 await b.close(); srv.close();

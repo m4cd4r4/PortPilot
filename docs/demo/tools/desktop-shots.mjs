@@ -22,7 +22,7 @@ for (const width of w.split(',').map(Number)) {
   await (await page.$('.crash-toast')).screenshot({ path: file('crash-toast', width) });
   await page.addStyleTag({ content: '.toast{display:none!important}' });
 
-  const conflict = await page.evaluateHandle(() => [...document.querySelectorAll('.app-card')].find((c) => c.innerText.includes('azureprep')));
+  const conflict = await page.evaluateHandle(() => [...document.querySelectorAll('.app-card')].find((c) => c.innerText.includes('alight')));
   await conflict.asElement().screenshot({ path: file('conflict', width) });
   await page.screenshot({ path: file('apps', width), fullPage: true });
   const apps = await page.evaluate(() => ({ cards: document.querySelectorAll('.app-card').length, overflowX: document.documentElement.scrollWidth > innerWidth }));

@@ -17,7 +17,7 @@ img{position:absolute;left:640px;top:90px;width:760px;border-radius:14px;border:
 .s{position:absolute;left:72px;bottom:64px;font:18px Consolas,monospace;color:#a9b1d6;background:#16161e;border:1px solid #2f3549;border-radius:8px;padding:10px 16px}
 .r{color:#f7768e}</style>
 <div class="t"><div class="b">${logo} PortPilot</div><h1>You and Claude Code, one view of what's running</h1><p>Dev servers, ports and crashes, shared with Claude Code.</p></div>
-<img src="${shot}"><div class="s">&#9875; <span class="r">1 crashed</span> · 6 up · :3000 examworthy-web</div>`;
+<img src="${shot}"><div class="s">&#9875; <span class="r">1 crashed</span> · 7 up · :3000 examworthy-web</div>`;
 const b = await chromium.launch({ executablePath: 'C:/Program Files/BraveSoftware/Brave-Browser/Application/brave.exe' });
 const p = await b.newPage({ viewport: { width: 1200, height: 630 } });
 await p.setContent(html);
