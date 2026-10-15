@@ -40,7 +40,7 @@ Four surfaces, one config file and one run record. An app you add in one shows u
 
 **Claude Code.** Install the plugin and Claude sees what you see: a status line, a guard that points a second start at the running server, a crash band with Fix it, and the 26 MCP tools such as `find_run`. Pick it when Claude is the one starting your servers.
 
-![Claude Code turning away a second npm run dev because harbor-web is already up on :3000](docs/demo/screenshots/claude-guard.png)
+![Claude Code turning away a second pnpm dev because examworthy-web is already up on :3000](docs/demo/screenshots/claude-guard.png)
 
 <details>
 <summary><b>More Claude Code views</b></summary>
@@ -51,7 +51,7 @@ Status line, worst state first, ✦ on apps Claude started:
 
 Crash band with Fix it, Restart, Logs and Dismiss:
 
-![Claude Code crash band for anchor-metrics with the last stderr line](docs/demo/screenshots/claude-crash-band.png)
+![Claude Code crash band for 550-au with the last stderr line](docs/demo/screenshots/claude-crash-band.png)
 
 `find_run` bringing back a past version of a page, with the literal steps:
 
@@ -74,7 +74,7 @@ The MCP server is bundled, so there is no `npm install`. One install gives Claud
 
 - **Status line.** Every session shows what is up, worst state first. A ✦ marks apps Claude started.
   ```text
-  ⚓ 1 crashed · 6 up · :3000 harbor-web
+  ⚓ 1 crashed · 6 up · :3000 examworthy-web
   ```
 - **Dev-server guard.** A start on a busy port is turned away with the URL to reuse. A clean start goes through PortPilot. If the guard can't tell what a command does, it lets it run.
 - **Crash band with Fix it.** When an app Claude started crashes, the session gets a band with Restart, Logs and Fix it. Fix it hands Claude the crash and the stderr tail.
@@ -128,7 +128,7 @@ The PortPilot MCP server works with Claude Code, Claude Desktop, Cursor, Windsur
 
 ```text
 "What's running on :3000?"
-"Start tugboat-api"
+"Start statewise"
 "Kill whatever is on port 8000"
 "Start all my favourites"
 ```
