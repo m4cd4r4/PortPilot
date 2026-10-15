@@ -181,6 +181,65 @@
     }),
   };
 
+  // ---- Browser profiles (the Browsers tab) ----
+  // Named browsers with their own debug port. State is mutable so Start / Stop
+  // in the Browsers tab behaves: each call settles after a short delay.
+  const tabsOf = (...pairs) => pairs.map(([title, url], i) => ({ id: 't' + i, title, url }));
+  const browserProfiles = [
+    { name: 'google', port: 9232, browser: 'brave', mode: 'headed', state: 'up', purpose: 'Google Search Console, Analytics', sites: ['search.google.com', 'analytics.google.com'],
+      tabs: tabsOf(['Performance - Search Console', 'https://search.google.com/search-console/performance'], ['Pages - Search Console', 'https://search.google.com/search-console/index']),
+      claim: { by: 'claude b71c', at: ago(4 * 60) } },
+    { name: 'github', port: 9233, browser: 'brave', mode: 'headed', state: 'up', purpose: 'GitHub', sites: ['github.com'],
+      tabs: tabsOf(['m4cd4r4/PortPilot', 'https://github.com/m4cd4r4/PortPilot']) },
+    { name: 'reddit', port: 9234, browser: 'brave', mode: 'headed', state: 'down', purpose: 'Reddit', sites: ['reddit.com'], url: 'https://www.reddit.com' },
+    { name: 'facebook', port: 9235, browser: 'brave', mode: 'headed', state: 'down', purpose: 'Facebook Pages', sites: ['facebook.com'], url: 'https://www.facebook.com' },
+    { name: 'upwork', port: 9236, browser: 'brave', mode: 'offscreen', state: 'down', purpose: 'Upwork', sites: ['upwork.com'], url: 'https://www.upwork.com' },
+    { name: 'stripe', port: 9231, browser: 'brave', mode: 'headed', state: 'blocked', purpose: 'Stripe dashboard', sites: ['dashboard.stripe.com'],
+      warning: 'Port 9231 is held by another program (node.exe, PID 7720). Stop it or move this profile to a free port.' },
+  ];
+  const browserView = (p) => ({ ...p, cdpUrl: 'http://127.0.0.1:' + p.port });
+  const browserNamed = (n) => browserProfiles.find((p) => p.name.toLowerCase() === String(n).toLowerCase());
+  const browsersApi = {
+    list: () => ok({ profiles: browserProfiles.map(browserView), warnings: [], browsers: [{ id: 'brave', label: 'Brave' }, { id: 'chrome', label: 'Google Chrome' }] }),
+    start: (name) => new Promise((resolve) => setTimeout(() => {
+      const p = browserNamed(name);
+      if (p) { p.state = 'up'; p.tabs = tabsOf([p.purpose, p.url || 'about:blank']); p.claim = { by: 'you', at: ago(0) }; }
+      resolve({ success: true, port: p && p.port, offscreen: null, window: null });
+    }, 900)),
+    stop: (name) => new Promise((resolve) => setTimeout(() => {
+      const p = browserNamed(name);
+      if (p) { p.state = 'down'; p.tabs = []; p.claim = null; }
+      resolve({ success: true });
+    }, 700)),
+    setMode: (name, mode) => { const p = browserNamed(name); if (p) p.mode = mode; return ok(); },
+    save: noop, remove: noop, duplicate: noop, reopen: noop, captureWindow: noop,
+    extensions: () => ok({ extensions: [] }),
+    history: () => ok({ sessions: [] }),
+  };
+
+  // ---- Start / stop that really change the picture (the animations drive these) ----
+  const dropPort = (port) => {
+    const i = ports.findIndex((p) => p.port === port);
+    if (i < 0) return;
+    const p = ports[i];
+    ports.splice(i, 1);
+    if (p.appId) {
+      delete running[p.appId]; delete matches[p.appId]; delete runtime[p.appId]; delete health[p.appId];
+      const k = runningApps.findIndex((r) => r.id === p.appId);
+      if (k >= 0) runningApps.splice(k, 1);
+    }
+    for (let j = unknownConflicts.length - 1; j >= 0; j--) if (unknownConflicts[j].occupiedBy.pid === p.pid) unknownConflicts.splice(j, 1);
+  };
+  const raisePort = (app, pid) => {
+    const port = app.preferredPort;
+    running[app.id] = { port, pid, processName: 'node.exe', commandLine: 'node next dev' };
+    ports.push({ port, pid, processName: 'node.exe', commandLine: 'node next dev', address: '127.0.0.1', appId: app.id });
+    runningApps.push({ id: app.id, pid, name: app.name, command: app.command, cwd: app.cwd, running: true, startTime: new Date().toISOString(), exitCode: null, crashed: false });
+    runtime[app.id] = { startedBy: { kind: 'human', surface: 'desktop', at: new Date().toISOString() }, pid, port };
+    matches[app.id] = { port, pid, address: '127.0.0.1', processName: 'node.exe', commandLine: 'node next dev', conflict: false, matchType: 'preferredPort-cwd', confidence: 'high' };
+    health[app.id] = 'healthy';
+  };
+
   window.portpilot = {
     ports: {
       scan: () => ok({ ports }),
@@ -194,11 +253,13 @@
         for (let n = from; n <= to; n++) if (!taken.has(n)) return ok({ port: n });
         return ok({ port: null });
       },
-      kill: noop, getDetails: (pid) => ok({ details: { uptime: uptimes[pid] || null } }),
+      kill: (port) => new Promise((resolve) => setTimeout(() => { dropPort(port); resolve({ success: true }); }, 500)), getDetails: (pid) => ok({ details: { uptime: uptimes[pid] || null } }),
     },
     process: {
       list: () => ok({ apps: runningApps, runtime }),
-      start: noop, stop: noop, kill: noop, logs: () => ok({ stdout: '', stderr: '' }),
+      start: (app) => new Promise((resolve) => setTimeout(() => { const pid = 5000 + Math.floor(Math.random() * 900); raisePort(app, pid); resolve({ success: true, pid }); }, 700)),
+      stop: (appId) => new Promise((resolve) => setTimeout(() => { if (running[appId]) dropPort(running[appId].port); resolve({ success: true }); }, 500)),
+      kill: noop, logs: () => ok({ stdout: '', stderr: '' }),
     },
     config: {
       getApps: () => ok({ apps }),
@@ -221,6 +282,7 @@
     // The crash toast main.js would send when 550-au dies, with a live
     // Claude session to hand it to (the shape crashAlert.buildCrashAlert makes).
     history,
+    browsers: browsersApi,
     on: (channel, cb) => {
       if (channel === 'history-progress') { progressListeners.push(cb); return; }
       if (channel !== 'crash-toast') return;
