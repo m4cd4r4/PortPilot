@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.9.1] - 2026-10-15
+
+### Added
+- **+ Add profile in the VS Code Browsers view.** A + in the view title adds a browser profile (name, port pre-filled with the next free one, optional purpose); **Remove** is in the profile menu and asks first. A running profile must be stopped first, and a removed profile's folder and sign-ins stay on disk. The desktop Browsers tab button now reads **+ Add profile**.
+
+### Fixed
+- The Windows exe carried the default Electron icon, so the installed app, its shortcuts and the taskbar showed it. The build now embeds the PortPilot logo.
+
 ## [3.9.0] - 2026-10-15
 
 ### Added
