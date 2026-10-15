@@ -105,8 +105,7 @@
         }
       ],
       "icon": "public/icon.png",
-      "artifactName": "${productName}-${version}-${arch}.${ext}",
-      "signAndEditExecutable": false
+      "artifactName": "${productName}-${version}-${arch}.${ext}"
     },
     "nsis": {
       "oneClick": false,
