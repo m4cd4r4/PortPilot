@@ -18,7 +18,7 @@ for (const width of w.split(',').map(Number)) {
   page.on('pageerror', (e) => problems.push(`pageerror: ${e.message}`));
   page.on('console', (m) => { if (m.type() === 'error') problems.push(`console: ${m.text()}`); });
   await page.addInitScript({ path: path.join(repo, 'docs', 'demo', 'demo-seed.js') });
-  await page.goto(pathToFileURL(path.join(repo, 'src', 'renderer', 'index.html')).href);
+  await page.goto(pathToFileURL(path.join(repo, 'src', 'renderer', 'index.html')).href + '?home=classic');
   // At <= 600 px the preview is hidden by CSS (the port chip needs the room), but still rendered.
   await page.waitForSelector('.app-card .row-thumb img', { state: 'attached' });
   await page.waitForTimeout(500);

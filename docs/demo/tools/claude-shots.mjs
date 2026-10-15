@@ -21,11 +21,11 @@ const { apps } = await pp.config.getApps();
 const { ports } = await pp.ports.scan();
 const { runtime } = await pp.process.list();
 const SESSION = 'b71c9e04-demo';
-// anchor-metrics: started by this Claude session, died with a KeyError.
+// 550-au: started by this Claude session, died because its port was taken.
 runtime.a_metrics = {
   startedBy: { kind: 'claude', surface: 'mcp', sessionId: SESSION, at: new Date(Date.now() - 25 * 60000).toISOString() },
-  crashed: { at: Date.now() - 4 * 60000, exitCode: 1, port: 9090, errorTail: '  File "main.py", line 42, in <module>\nKeyError: \'TIDE_DB_URL\'' },
-  port: 9090,
+  crashed: { at: Date.now() - 4 * 60000, exitCode: 1, port: 3210, errorTail: 'error when starting dev server:\nError: Port 3210 is already in use' },
+  port: 3210,
 };
 const config = { apps };
 const rt = { apps: runtime };
@@ -33,9 +33,9 @@ const listeners = new Map(ports.map((p) => [p.port, { pid: p.pid, processName: p
 
 // ---- the real outputs ----
 const status = guard.statusLine(config, rt, listeners, Date.now());
-const command = 'npm run dev';
+const command = 'pnpm dev';
 const start = guard.parseStart(command);
-const dir = guard.startDir('C:/dev/harbor', 'web', { windows: true });
+const dir = guard.startDir('C:/dev', 'examworthy', { windows: true });
 const verdict = guard.decide({ start, dir, config, runtime: rt, listeners, windows: true });
 if (verdict.action !== 'deny') throw new Error(`guard did not deny: ${JSON.stringify(verdict)}`);
 const [crash] = crashCore.sessionCrashes(config, rt, listeners, SESSION, Date.now());
@@ -48,7 +48,7 @@ fs.writeFileSync(configPath, JSON.stringify({ apps, groups: [], settings: {} }))
 fs.mkdirSync(path.join(tmp, 'history'));
 const { runs } = await pp.history.list();
 fs.writeFileSync(path.join(tmp, 'history', 'runs.json'), JSON.stringify({ v: 1, runs }));
-const args = { query: 'checkout', dirty_only: true };
+const args = { query: 'design-gap', dirty_only: true };
 const result = await callTool(path.join(repo, 'plugin', 'mcp', 'portpilot-mcp.mjs'), configPath, 'find_run', args);
 fs.rmSync(tmp, { recursive: true, force: true });
 const found = JSON.parse(result.content[0].text);
@@ -89,20 +89,20 @@ const frame = (title, body) => `<!doctype html><meta charset="utf-8"><style>
 
 const wrap = (text, n = 96) => text.replace(new RegExp(`(.{1,${n}})(\\s|$)`, 'g'), '$1\n').trimEnd().split('\n');
 const shots = {
-  'claude-statusline': frame('claude  ~/dev/harbor/web', [
+  'claude-statusline': frame('claude  ~/dev/examworthy', [
     row('dim', '> reuse the server that is already up'), row('', ''), row('dim', '  ...'), row('sep', ''), row('grn', status)].join('')),
-  'claude-guard': frame('claude  ~/dev/harbor/web', [
+  'claude-guard': frame('claude  ~/dev/examworthy', [
     row('you', `> start the dev server`), row('', ''),
     row('tool', `* Bash(${command})`),
     ...wrap(verdict.reason).map((l, i) => row('warn', (i ? '    ' : '  ! ') + l))].join('')),
-  'claude-crash-band': frame('claude  ~/dev/tools/metrics', [
+  'claude-crash-band': frame('claude  ~/dev/550-au', [
     row('dim', '  ...'), row('sep', ''),
     row('red', crashCore.crashHeadline(crash)), row('dim', '  ' + crashCore.lastLine(crash.errorTail)),
     '<div style="margin-top:6px"><span class="btn p">Fix it</span><span class="btn">Restart</span><span class="btn">Logs</span><span class="btn">Dismiss</span></div>'].join('')),
 };
 const f = found.runs[0];
-shots['claude-find-run'] = frame('claude  ~/dev/harbor/web', [
-  row('you', '> bring back the checkout page from this morning'), row('', ''),
+shots['claude-find-run'] = frame('claude  ~/dev/examworthy', [
+  row('you', '> bring back the readiness card work from this morning'), row('', ''),
   row('tool', `* portpilot - find_run (MCP)(${Object.entries(args).map(([k, v]) => `${k}: ${JSON.stringify(v)}`).join(', ')})`),
   row('dim', `  ${found.count} of ${found.total} run${found.total === 1 ? '' : 's'}`),
   row('', `  ${f.appName}  ${f.git.branch} @ ${f.git.sha.slice(0, 7)}  +${f.git.files.length} uncommitted: ${f.git.files.join(', ')}`),

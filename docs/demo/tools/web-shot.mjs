@@ -38,7 +38,7 @@ try {
     await page.screenshot({ path: path.join(out, `web-apps-${width}.png`), fullPage: true });
 
     page.problems.length = 0;
-    await page.click('.view-tab[data-view="history"]');
+    if (await page.$('.view-tab[data-view="history"]')) await page.click('.view-tab[data-view="history"]');
     await page.waitForTimeout(1200);
     const hist = await page.evaluate(() => ({ rows: document.querySelectorAll('.hrow').length, thumbs: document.querySelectorAll('.hrow .hthumb img').length }));
     console.log(width, 'history', JSON.stringify({ ...hist, problems: page.problems }));

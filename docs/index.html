@@ -106,7 +106,7 @@
     <header class="hero">
       <div class="container hero-grid">
         <div class="hero-text">
-          <p class="eyebrow"><img src="logo-128.png" alt="" width="20" height="20"> PortPilot 3.6 &middot; free &middot; MIT</p>
+          <p class="eyebrow"><img src="logo-128.png" alt="" width="20" height="20"> PortPilot 3.9 &middot; free &middot; MIT</p>
           <h1>You and Claude Code, one view of what's running</h1>
           <p class="lede">PortPilot runs your local dev servers. With the Claude Code plugin, Claude sees the same apps, ports and crashes you do, and reuses a running server instead of starting a second copy.</p>
           <div class="cta-row">
@@ -117,19 +117,19 @@
         </div>
 
         <figure class="hero-visual">
-          <img src="screenshots/hero-app.png" class="hero-shot zoomable" tabindex="0" width="1280" height="820" alt="PortPilot desktop app with demo projects: harbor-web running on three branches, a port conflict strip on buoy-preview, and a crash toast for anchor-metrics with an Ask Claude button">
-          <div class="term" role="img" aria-label="Claude Code with the PortPilot plugin: the guard turns away a second copy of harbor-web, a crash band offers Fix it for anchor-metrics, and the status line shows 1 crashed and 6 up">
-            <div class="term-bar"><span></span><span></span><span></span><b>claude &middot; harbor-web</b></div>
+          <img src="screenshots/hero-app.png" class="hero-shot zoomable" tabindex="0" width="1280" height="820" alt="PortPilot desktop app: a Now running strip of page previews for examworthy-web on two branches, statewise and portpilot, a port conflict strip on azureprep, and a crash toast for 550-au with an Ask Claude button">
+          <div class="term" role="img" aria-label="Claude Code with the PortPilot plugin: the guard turns away a second copy of examworthy-web, a crash band offers Fix it for 550-au, and the status line shows 1 crashed and 6 up">
+            <div class="term-bar"><span></span><span></span><span></span><b>claude &middot; examworthy-web</b></div>
             <div class="term-body">
               <p><span class="t-dim">&gt;</span> npm run dev</p>
-              <p class="t-deny">PortPilot: harbor-web is already running on :3000 - reuse http://localhost:3000 instead of starting a second copy.</p>
+              <p class="t-deny">PortPilot: examworthy-web is already running on :3000 - reuse http://localhost:3000 instead of starting a second copy.</p>
               <div class="t-band">
-                <p><span class="t-red">&#10005; anchor-metrics crashed</span> <span class="t-dim">&middot; :9090 &middot; exit 1</span></p>
-                <p class="t-dim">KeyError: 'TIDE_DB_URL'</p>
+                <p><span class="t-red">&#10005; 550-au crashed</span> <span class="t-dim">&middot; :3210 &middot; exit 1</span></p>
+                <p class="t-dim">Error: Port 3210 is already in use</p>
                 <p class="t-btns"><span class="t-btn t-btn-main">Fix it</span><span class="t-btn">Restart</span><span class="t-btn">Logs</span><span class="t-btn">Dismiss</span></p>
               </div>
             </div>
-            <div class="term-status">&#9875; <span class="t-red">1 crashed</span> &middot; 6 up &middot; <span class="t-red">&#10005; anchor-metrics</span> &middot; :3000 harbor-web &middot; :3002 harbor-web<span class="t-cyan">&#10022;</span> &middot; +4</div>
+            <div class="term-status">&#9875; <span class="t-red">1 crashed</span> &middot; 6 up &middot; <span class="t-red">&#10005; 550-au</span> &middot; :3000 examworthy-web &middot; :3002 examworthy-web<span class="t-cyan">&#10022;</span> &middot; +4</div>
           </div>
         </figure>
       </div>
@@ -146,7 +146,7 @@
           <article class="card reveal">
             <h3>Status line</h3>
             <p>Every session shows what is up, worst state first. A <span class="t-cyan">&#10022;</span> marks apps Claude started.</p>
-            <code class="snip">&#9875; 1 crashed &middot; 6 up &middot; :3000 harbor-web</code>
+            <code class="snip">&#9875; 1 crashed &middot; 6 up &middot; :3000 examworthy-web</code>
           </article>
           <article class="card reveal">
             <h3>Dev-server guard</h3>
@@ -156,7 +156,7 @@
           <article class="card reveal">
             <h3>Crash band with Fix it</h3>
             <p>When an app Claude started crashes, the session gets a band with Restart, Logs and Fix it. Fix it hands Claude the crash and the stderr tail.</p>
-            <code class="snip"><span class="t-red">&#10005; anchor-metrics</span> &middot; exit 1</code>
+            <code class="snip"><span class="t-red">&#10005; 550-au</span> &middot; exit 1</code>
           </article>
         </div>
         <div class="install">
@@ -180,28 +180,28 @@
             <h3>Run history</h3>
             <p>Every start, stop and crash is recorded locally, with the branch, commit and any uncommitted files. Search by app, branch or file, then re-run an old version in a sibling worktree. Claude can look a run up too, with the <code>find_run</code> tool.</p>
           </div>
-          <img src="screenshots/crop-history.png" class="crop zoomable" tabindex="0" width="1440" height="400" loading="lazy" alt="The History tab: runs of harbor-web and tugboat-api, each with a page thumbnail or a no-preview box, a state word, the branch and commit, and buttons Open URL, Re-run this version, Copy SHA and Pin">
+          <img src="screenshots/crop-history.png" class="crop zoomable" tabindex="0" width="1440" height="400" loading="lazy" alt="The History tab: runs of examworthy-web, statewise, 550-au and cosmos-collective, each with a page thumbnail or a no-preview box, a state word, the branch and commit, and buttons Open URL, Re-run this version, Copy SHA and Pin">
         </div>
         <div class="feature-row reveal">
           <div class="feature-copy">
             <h3>Row state, page preview, and who started it</h3>
             <p>Every app shows its state, how long it has been in it and who started it: you, or a Claude Code session. A running app also shows a small preview of its page, so the right server is easy to spot. A crashed app reads <code>&#10005; Crashed &middot; exit 1</code>. The VS Code tree uses the same states.</p>
           </div>
-          <div class="crop-scroll" tabindex="-1"><img src="screenshots/crop-row-state.png" class="crop zoomable" tabindex="0" width="779" height="114" loading="lazy" alt="Four app rows, the two running harbor-web rows with a small page preview: harbor-web running 2h started by you, a branch running 18m started by claude a3f2, another branch not responding for 41m, and tugboat-api running 52m"></div>
+          <div class="crop-scroll" tabindex="-1"><img src="screenshots/crop-row-state.png" class="crop zoomable" tabindex="0" width="779" height="114" loading="lazy" alt="Four app rows, the two running examworthy-web rows with a small page preview: examworthy-web running 2h started by you, a branch running 18m started by claude a3f2, another branch not responding for 41m, and statewise running 52m"></div>
         </div>
         <div class="feature-row reveal">
           <div class="feature-copy">
             <h3>Conflict strip</h3>
             <p>When something else holds an app's port, the row says what holds it and offers Use free port, Kill &amp; start or Show process. Kill asks for a second click.</p>
           </div>
-          <div class="crop-scroll" tabindex="-1"><img src="screenshots/crop-conflict.png" class="crop zoomable" tabindex="0" width="779" height="75" loading="lazy" alt="buoy-preview row marked Port blocked: port 8000 is held by tugboat-api, with buttons Use 8001 instead, Stop tugboat-api and start, and Show process"></div>
+          <div class="crop-scroll" tabindex="-1"><img src="screenshots/crop-conflict.png" class="crop zoomable" tabindex="0" width="779" height="75" loading="lazy" alt="azureprep row marked Port blocked: port 3000 is held by examworthy-web, with buttons Use 3001 instead, Stop examworthy-web and start, and Show process"></div>
         </div>
         <div class="feature-row reveal">
           <div class="feature-copy">
             <h3>Crash toast with Ask Claude</h3>
             <p>A crash raises a sticky toast with the stderr tail. Ask Claude appears when the session that started the app is still open, and sends it the crash. Repeat crashes group into one toast.</p>
           </div>
-          <img src="screenshots/crop-crash-toast.png" class="crop crop-narrow zoomable" tabindex="0" width="360" height="137" loading="lazy" alt="Toast: anchor-metrics crashed 2 times in 5 minutes, exit 1, with a KeyError traceback and buttons Restart, Logs, Ask Claude and Dismiss">
+          <img src="screenshots/crop-crash-toast.png" class="crop crop-narrow zoomable" tabindex="0" width="360" height="121" loading="lazy" alt="Toast: 550-au crashed 2 times in 5 minutes, exit 1, with the Vite error that port 3210 is already in use and buttons Restart, Logs, Ask Claude and Dismiss">
         </div>
       </div>
     </section>
@@ -219,7 +219,7 @@
         </div>
         <ul class="asks" aria-label="Example requests">
           <li class="reveal">"What's running on :3000?"</li>
-          <li class="reveal">"Start tugboat-api"</li>
+          <li class="reveal">"Start statewise"</li>
           <li class="reveal">"Kill whatever is on port 8000"</li>
           <li class="reveal">"Start all my favourites"</li>
         </ul>
