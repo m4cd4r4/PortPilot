@@ -124,6 +124,9 @@ class BrowsersTreeProvider {
     refresh() {
         return this.poll(true);
     }
+    getRows() {
+        return this.rows;
+    }
     getRow(name) {
         return this.rows.find(r => r.name === name);
     }

@@ -6,6 +6,9 @@
 // plain-language next steps are the desktop Browsers tab's own (core/browserView.js).
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.isRefusal = exports.tabLabel = exports.descriptionOf = exports.isTabId = exports.cdpUrlFor = exports.isValidPort = exports.PORT_MAX = exports.PORT_MIN = exports.TAB_CAP = exports.MODES = void 0;
+exports.suggestPort = suggestPort;
+exports.nameProblem = nameProblem;
+exports.portProblem = portProblem;
 exports.normaliseProfiles = normaliseProfiles;
 exports.looksLikeCdpList = looksLikeCdpList;
 exports.shapeTabs = shapeTabs;
@@ -45,6 +48,41 @@ const lower = (s) => s.toLowerCase();
 const str = (v, max) => (typeof v === 'string' ? v.replace(/[\r\n\t]+/g, ' ').trim().slice(0, max) : '');
 const isValidPort = (p) => Number.isInteger(p) && p >= exports.PORT_MIN && p <= exports.PORT_MAX;
 exports.isValidPort = isValidPort;
+/**
+ * The next debug port for a new profile: first free from 9231 up, skipping the ports other
+ * profiles use, ports something else holds, and 9240 (the usual hand-made pool is 9222-9230 and 9240).
+ * Same rule as the desktop's Add profile.
+ */
+function suggestPort(used, held = []) {
+    const taken = new Set([...used, ...held]);
+    let port = 9231;
+    while (taken.has(port) || port === 9240)
+        port += 1;
+    return port;
+}
+const NAME_RE = /^[A-Za-z0-9](?:[A-Za-z0-9._-]{0,62}[A-Za-z0-9_-])?$/;
+/** Why a profile name cannot be used, or undefined. The core re-checks; this only saves a round trip. */
+function nameProblem(name, existing) {
+    const n = name.trim();
+    if (!n)
+        return 'Give the profile a name.';
+    if (!NAME_RE.test(n))
+        return 'Use letters, digits, dot, dash or underscore; start with a letter or digit.';
+    if (existing.some(e => lower(e) === lower(n)))
+        return `A profile named "${n}" already exists.`;
+    return undefined;
+}
+/** Why a port cannot be used, or undefined. `usedBy` maps a port to the profile that has it. */
+function portProblem(raw, usedBy) {
+    const t = raw.trim();
+    if (!/^\d+$/.test(t))
+        return 'Enter a port number.';
+    const port = Number(t);
+    if (!(0, exports.isValidPort)(port))
+        return `Use a port from ${exports.PORT_MIN} to ${exports.PORT_MAX}.`;
+    const owner = usedBy.get(port);
+    return owner ? `:${port} already belongs to "${owner}".` : undefined;
+}
 /** The CDP endpoint, always loopback. */
 const cdpUrlFor = (port) => `http://127.0.0.1:${port}`;
 exports.cdpUrlFor = cdpUrlFor;

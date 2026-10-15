@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
-import { browserCall, BrowserResult } from './config';
+import { browserCall, BrowserResult, addBrowserProfile, removeBrowserProfile, installedBrowsers, readBrowserProfilesCached } from './config';
 import { BrowsersTreeProvider, BrowserProfileItem, BrowserTabItem } from './browsersTreeProvider';
-import { MODES, failureMessage, isRefusal, validateOpenUrl, cdpUrlFor } from './browserModel';
+import { MODES, failureMessage, isRefusal, validateOpenUrl, cdpUrlFor, normaliseProfiles, suggestPort, nameProblem, portProblem } from './browserModel';
 import { activateTab, openUrlInProfile } from './browserProbe';
 
 interface Deps {
@@ -105,6 +105,65 @@ export function registerBrowserCommands(context: vscode.ExtensionContext, { prov
     await provider.refresh();
   }
 
+  /** + in the view title: name, port (the next free one is offered) and what it is for. Writes the shared config. */
+  async function addProfile(): Promise<void> {
+    const profiles = normaliseProfiles(readBrowserProfilesCached().profiles);
+    const usedBy = new Map(profiles.map(p => [p.port, p.name]));
+    const held = provider.getRows().filter(r => r.state === 'held').map(r => r.port);
+
+    const name = await vscode.window.showInputBox({
+      title: 'Add a browser profile (1 of 3)',
+      prompt: 'A short name. It also names the profile\'s folder, which keeps its own sign-ins.',
+      placeHolder: 'google',
+      validateInput: v => nameProblem(v, profiles.map(p => p.name)),
+    });
+    if (name === undefined) return;
+
+    const portText = await vscode.window.showInputBox({
+      title: 'Add a browser profile (2 of 3)',
+      prompt: 'The debug port this profile owns. Nothing else picks it.',
+      value: String(suggestPort(usedBy.keys(), held)),
+      validateInput: v => portProblem(v, usedBy),
+    });
+    if (portText === undefined) return;
+
+    const purpose = await vscode.window.showInputBox({
+      title: 'Add a browser profile (3 of 3)',
+      prompt: 'Optional: what it is for, so Claude can pick it ("Google Search Console, Analytics"). Leave empty to skip.',
+    });
+    if (purpose === undefined) return;
+
+    // The browser the newest profile uses, else the first one installed here.
+    const installed = installedBrowsers();
+    const last = profiles.length ? profiles[profiles.length - 1].browser : '';
+    const browser = installed.some(b => b.id === last) ? last : (installed[0]?.id ?? last ?? 'chrome');
+    const res = addBrowserProfile({ name: name.trim(), port: Number(portText), browser, ...(purpose.trim() ? { purpose: purpose.trim() } : {}) });
+    await provider.refresh();
+    if (!res.ok) { void vscode.window.showWarningMessage(`Could not add the profile. ${res.reason}`); return; }
+    quiet(`Added ${res.name} on :${res.port}`);
+  }
+
+  /** Remove from PortPilot only; the folder and its sign-ins stay on disk. A running profile is stopped first, by the user. */
+  async function removeProfile(item: unknown): Promise<void> {
+    const p = profileOf(item);
+    if (!p) return;
+    const { name, port, state } = p.row;
+    if (state === 'running') {
+      void vscode.window.showInformationMessage(`${name} is running. Stop it before removing it.`);
+      return;
+    }
+    const pick = await vscode.window.showWarningMessage(
+      `Remove the browser profile "${name}" (:${port})?`,
+      { modal: true, detail: 'Its folder and the sign-ins in it stay on disk. PortPilot just stops listing it.' },
+      'Remove'
+    );
+    if (pick !== 'Remove') return;
+    const res = removeBrowserProfile(name);
+    await provider.refresh();
+    if (!res.ok) { void vscode.window.showWarningMessage(`Could not remove ${name}. ${res.reason}`); return; }
+    quiet(`Removed ${name}`);
+  }
+
   async function copy(text: string, what: string): Promise<void> {
     await vscode.env.clipboard.writeText(text);
     quiet(`Copied ${what}`);
@@ -124,6 +183,8 @@ export function registerBrowserCommands(context: vscode.ExtensionContext, { prov
       const p = profileOf(item);
       return p ? copy(String(p.row.port), `port ${p.row.port}`) : undefined;
     }),
+    vscode.commands.registerCommand('portpilot.addBrowserProfile', addProfile),
+    vscode.commands.registerCommand('portpilot.removeBrowserProfile', removeProfile),
     vscode.commands.registerCommand('portpilot.refreshBrowsers', () => provider.refresh())
   );
 }

@@ -354,9 +354,9 @@ const serve = async (server) => { const port = await listen(server); cleanup.pus
     ProgressLocation: { Notification: 15 },
     window: {
       showInformationMessage: async (m) => { messages.push(['info', m]); },
-      showWarningMessage: async (m) => { messages.push(['warn', m]); },
+      showWarningMessage: async (m) => { messages.push(['warn', m]); return picks.warnPick; },
       showQuickPick: async (items) => { picks.lastItems = items; return picks.quick ? items.find((i) => i.id === picks.quick) : undefined; },
-      showInputBox: async (opts) => { picks.lastInput = opts; return picks.input; },
+      showInputBox: async (opts) => { picks.lastInput = opts; (picks.inputBoxes = picks.inputBoxes || []).push(opts); return picks.inputs ? picks.inputs.shift() : picks.input; },
       withProgress: async (_o, fn) => fn(),
       setStatusBarMessage: (m) => { status.push(m); return { dispose() {} }; },
     },
@@ -507,7 +507,7 @@ const serve = async (server) => { const port = await listen(server); cleanup.pus
 
   await t('commands: every command the manifest names is registered', () => {
     const pkg = JSON.parse(fs.readFileSync(path.join(ext, 'package.json'), 'utf8'));
-    const mine = ['startBrowser', 'stopBrowser', 'setBrowserMode', 'openBrowserUrl', 'copyBrowserCdp', 'copyBrowserPort', 'focusBrowserTab', 'refreshBrowsers'].map((n) => `portpilot.${n}`);
+    const mine = ['startBrowser', 'stopBrowser', 'setBrowserMode', 'openBrowserUrl', 'copyBrowserCdp', 'copyBrowserPort', 'focusBrowserTab', 'refreshBrowsers', 'addBrowserProfile', 'removeBrowserProfile'].map((n) => `portpilot.${n}`);
     const declared = pkg.contributes.commands.map((c) => c.command);
     for (const id of mine) {
       assert.ok(declared.includes(id), `${id} is not declared in package.json`);
@@ -531,6 +531,61 @@ const serve = async (server) => { const port = await listen(server); cleanup.pus
     for (const id of ['startBrowser', 'stopBrowser', 'setBrowserMode', 'openBrowserUrl', 'copyBrowserCdp', 'copyBrowserPort', 'focusBrowserTab']) {
       assert.ok(pkg.contributes.menus.commandPalette.some((m) => m.command === `portpilot.${id}` && m.when === 'false'), `${id} is hidden from the palette`);
     }
+  });
+
+  await t('model: suggestPort starts at 9231, skips used and held ports and 9240', () => {
+    const { suggestPort, nameProblem, portProblem } = require('../vscode-extension/out/browserModel.js');
+    assert.equal(suggestPort([]), 9231);
+    assert.equal(suggestPort([9231, 9232]), 9233);
+    assert.equal(suggestPort([9231], [9232, 9233]), 9234);
+    assert.equal(suggestPort([9239]), 9231);
+    assert.equal(suggestPort(Array.from({ length: 9 }, (_, i) => 9231 + i)), 9241);
+    assert.equal(nameProblem('', []), 'Give the profile a name.');
+    assert.ok(/letters/.test(nameProblem('-x', [])));
+    assert.ok(/already exists/.test(nameProblem('Shop', ['shop'])));
+    assert.equal(nameProblem('good.name', ['other']), undefined);
+    const used = new Map([[9300, 'shop']]);
+    assert.ok(/number/.test(portProblem('abc', used)));
+    assert.ok(/1024 to 65535/.test(portProblem('80', used)));
+    assert.ok(/belongs to "shop"/.test(portProblem('9300', used)));
+    assert.equal(portProblem('9301', used), undefined);
+  });
+
+  await t('commands: + adds a profile with the suggested port, Remove takes it out and keeps the folder', async () => {
+    const config = require('../vscode-extension/out/config.js');
+    picks.inputBoxes = [];
+    picks.inputs = ['fresh', '9777', 'for tests'];
+    await cmd('portpilot.addBrowserProfile')();
+    assert.equal(picks.inputBoxes.length, 3);
+    assert.ok(/^\d+$/.test(picks.inputBoxes[1].value), 'the port box is pre-filled');
+    assert.equal(picks.inputBoxes[0].validateInput('shop'), 'A profile named "shop" already exists.');
+    assert.ok(/belongs to/.test(picks.inputBoxes[1].validateInput(String(config.readBrowserProfilesCached().profiles[0].port))));
+    const added = config.readBrowserProfilesCached().profiles.find((p) => p.name === 'fresh');
+    assert.ok(added, 'profile is in the shared config');
+    assert.equal(added.port, 9777);
+    assert.equal(added.purpose, 'for tests');
+    // Cancelling any box adds nothing.
+    picks.inputs = ['cancelled', undefined];
+    await cmd('portpilot.addBrowserProfile')();
+    assert.ok(!config.readBrowserProfilesCached().profiles.some((p) => p.name === 'cancelled'));
+    // Remove needs the confirmation; declining leaves it.
+    await cmdProvider.refresh();
+    picks.warnPick = undefined;
+    await cmd('portpilot.removeBrowserProfile')(item('fresh'));
+    assert.ok(config.readBrowserProfilesCached().profiles.some((p) => p.name === 'fresh'));
+    picks.warnPick = 'Remove';
+    await cmd('portpilot.removeBrowserProfile')(item('fresh'));
+    assert.ok(!config.readBrowserProfilesCached().profiles.some((p) => p.name === 'fresh'));
+    picks.warnPick = undefined; picks.inputs = undefined;
+  });
+
+  await t('commands: Remove refuses a running profile', async () => {
+    messages.length = 0;
+    picks.warnPick = 'Remove';
+    await cmd('portpilot.removeBrowserProfile')(item('shop'));
+    assert.ok(messages.some(([, m]) => /is running\. Stop it before removing/.test(m)), JSON.stringify(messages));
+    assert.ok(require('../vscode-extension/out/config.js').readBrowserProfilesCached().profiles.some((p) => p.name === 'shop'));
+    picks.warnPick = undefined;
   });
 
   await t('commands: Start calls start_browser by name; Stop calls stop_browser', async () => {

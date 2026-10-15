@@ -88,6 +88,10 @@ export class BrowsersTreeProvider implements vscode.TreeDataProvider<Node> {
     return this.poll(true);
   }
 
+  getRows(): BrowserRow[] {
+    return this.rows;
+  }
+
   getRow(name: string): BrowserRow | undefined {
     return this.rows.find(r => r.name === name);
   }

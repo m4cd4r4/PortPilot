@@ -135,7 +135,12 @@ const runHistory: RunHistoryApi = require(path.join(__dirname, '..', 'runtime', 
 const runView: RunViewApi = require(path.join(__dirname, '..', 'runtime', 'core', 'runView.js'));
 
 // Browser profiles: the same `browserProfiles` list and the same start/stop API the MCP tools use.
-interface BrowserProfilesApi { listProfiles(configPath: string): unknown[]; }
+interface BrowserProfilesApi {
+  listProfiles(configPath: string): unknown[];
+  addProfile(configPath: string, fields: Record<string, unknown>): { name: string; port: number };
+  removeProfile(configPath: string, name: string, opts?: { purge?: boolean }): { removed: { name: string } };
+}
+interface BrowserDetectApi { detectBrowsers(): Array<{ id: string; label: string }>; }
 export interface BrowserResult {
   success: boolean;
   code?: string;
@@ -157,6 +162,9 @@ const browserProfiles: BrowserProfilesApi = require(path.join(__dirname, '..', '
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const browserApi: BrowserApi = require(path.join(__dirname, '..', 'runtime', 'core', 'browserApi.js'));
 
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const browserDetect: BrowserDetectApi = require(path.join(__dirname, '..', 'runtime', 'core', 'browserDetect.js'));
+
 let profilesCache: { key: string; profiles: unknown[] } | null = null;
 
 /** The raw `browserProfiles` list, re-read only when the config file's mtime or size moves. Empty on any read failure. */
@@ -168,6 +176,29 @@ export function readBrowserProfilesCached(): { key: string; profiles: unknown[] 
     if (profilesCache?.key !== key) profilesCache = { key, profiles: browserProfiles.listProfiles(configPath) };
     return profilesCache;
   } catch { return { key: 'none', profiles: [] }; }
+}
+
+/** Browsers installed on this computer, in the core's preference order. Empty on any failure. */
+export function installedBrowsers(): Array<{ id: string; label: string }> {
+  try { return browserDetect.detectBrowsers(); } catch { return []; }
+}
+
+export type ProfileEdit = { ok: true; name: string; port?: number } | { ok: false; reason: string };
+
+/** Add a browser profile to the shared config (same validation and lock as the desktop). Never throws. */
+export function addBrowserProfile(fields: Record<string, unknown>): ProfileEdit {
+  try {
+    const p = browserProfiles.addProfile(getConfigPath(), fields);
+    return { ok: true, name: p.name, port: p.port };
+  } catch (err) { return { ok: false, reason: (err as Error).message || 'The profile could not be added.' }; }
+}
+
+/** Remove a profile from the shared config. Its folder and sign-ins stay on disk. Never throws. */
+export function removeBrowserProfile(name: string): ProfileEdit {
+  try {
+    const r = browserProfiles.removeProfile(getConfigPath(), name, { purge: false });
+    return { ok: true, name: r.removed.name };
+  } catch (err) { return { ok: false, reason: (err as Error).message || 'The profile could not be removed.' }; }
 }
 
 /** One browser tool (list_browser_profiles, start_browser, stop_browser, set_browser_mode). Resolves always; a throw becomes a failure result. */

@@ -37,6 +37,9 @@ exports.rowStateOf = void 0;
 exports.getConfigPath = getConfigPath;
 exports.readConfig = readConfig;
 exports.readBrowserProfilesCached = readBrowserProfilesCached;
+exports.installedBrowsers = installedBrowsers;
+exports.addBrowserProfile = addBrowserProfile;
+exports.removeBrowserProfile = removeBrowserProfile;
 exports.browserCall = browserCall;
 exports.recordHumanStart = recordHumanStart;
 exports.recordAppStop = recordAppStop;
@@ -95,6 +98,8 @@ const runView = require(path.join(__dirname, '..', 'runtime', 'core', 'runView.j
 const browserProfiles = require(path.join(__dirname, '..', 'runtime', 'core', 'browserProfiles.js'));
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const browserApi = require(path.join(__dirname, '..', 'runtime', 'core', 'browserApi.js'));
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const browserDetect = require(path.join(__dirname, '..', 'runtime', 'core', 'browserDetect.js'));
 let profilesCache = null;
 /** The raw `browserProfiles` list, re-read only when the config file's mtime or size moves. Empty on any read failure. */
 function readBrowserProfilesCached() {
@@ -108,6 +113,35 @@ function readBrowserProfilesCached() {
     }
     catch {
         return { key: 'none', profiles: [] };
+    }
+}
+/** Browsers installed on this computer, in the core's preference order. Empty on any failure. */
+function installedBrowsers() {
+    try {
+        return browserDetect.detectBrowsers();
+    }
+    catch {
+        return [];
+    }
+}
+/** Add a browser profile to the shared config (same validation and lock as the desktop). Never throws. */
+function addBrowserProfile(fields) {
+    try {
+        const p = browserProfiles.addProfile(getConfigPath(), fields);
+        return { ok: true, name: p.name, port: p.port };
+    }
+    catch (err) {
+        return { ok: false, reason: err.message || 'The profile could not be added.' };
+    }
+}
+/** Remove a profile from the shared config. Its folder and sign-ins stay on disk. Never throws. */
+function removeBrowserProfile(name) {
+    try {
+        const r = browserProfiles.removeProfile(getConfigPath(), name, { purge: false });
+        return { ok: true, name: r.removed.name };
+    }
+    catch (err) {
+        return { ok: false, reason: err.message || 'The profile could not be removed.' };
     }
 }
 /** One browser tool (list_browser_profiles, start_browser, stop_browser, set_browser_mode). Resolves always; a throw becomes a failure result. */

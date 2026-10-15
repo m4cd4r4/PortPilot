@@ -253,6 +253,17 @@
         "title": "Refresh Browsers",
         "icon": "$(refresh)",
         "category": "PortPilot"
+      },
+      {
+        "command": "portpilot.addBrowserProfile",
+        "title": "Add Browser Profile",
+        "icon": "$(add)",
+        "category": "PortPilot"
+      },
+      {
+        "command": "portpilot.removeBrowserProfile",
+        "title": "Remove Browser Profile",
+        "category": "PortPilot"
       }
     ],
     "configuration": {
@@ -323,9 +334,14 @@
           "group": "navigation@2"
         },
         {
+          "command": "portpilot.addBrowserProfile",
+          "when": "view == portpilot.browsers",
+          "group": "navigation@1"
+        },
+        {
           "command": "portpilot.refreshBrowsers",
           "when": "view == portpilot.browsers",
-          "group": "navigation"
+          "group": "navigation@2"
         }
       ],
       "view/item/context": [
@@ -478,6 +494,11 @@
           "command": "portpilot.copyBrowserPort",
           "when": "view == portpilot.browsers && viewItem =~ /bprofile/",
           "group": "3_copy@2"
+        },
+        {
+          "command": "portpilot.removeBrowserProfile",
+          "when": "view == portpilot.browsers && viewItem =~ /bprofile/ && viewItem =~ /bdown|bheld/",
+          "group": "4_manage@1"
         }
       ],
       "commandPalette": [
@@ -522,6 +543,10 @@
           "when": "false"
         },
         {
+          "command": "portpilot.removeBrowserProfile",
+          "when": "false"
+        },
+        {
           "command": "portpilot.setBrowserMode",
           "when": "false"
         },
@@ -550,7 +575,7 @@
       },
       {
         "view": "portpilot.browsers",
-        "contents": "No browser profiles yet. Create one in the PortPilot app (Browsers tab) or ask Claude to start_browser."
+        "contents": "No browser profiles yet. Each one is a named browser with its own debug port and sign-ins.\n[Add a profile](command:portpilot.addBrowserProfile)\nClaude can then ask for one by purpose with start_browser."
       }
     ]
   },
