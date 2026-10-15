@@ -203,6 +203,48 @@
           </div>
           <img src="screenshots/crop-crash-toast.png" class="crop crop-narrow zoomable" tabindex="0" width="360" height="121" loading="lazy" alt="Toast: 550-au crashed 2 times in 5 minutes, exit 1, with the Vite error that port 3210 is already in use and buttons Restart, Logs, Ask Claude and Dismiss">
         </div>
+        <div class="feature-row reveal">
+          <div class="feature-copy">
+            <h3>Both, as they happen</h3>
+            <p>A blocked port resolved in two clicks: the first arms the button, the second stops the holder and starts your app. Then a crash, its toast, and Ask Claude sending the stderr to the session that started the app.</p>
+          </div>
+          <div>
+            <img src="media/conflict-resolve.webp" class="crop zoomable" tabindex="0" width="900" height="558" loading="lazy" alt="Animation: alight is blocked by solaisoft on port 3007, the first click arms the button, the second stops solaisoft and starts alight">
+            <img src="media/crash-ask-claude.webp" class="crop crop-stack zoomable" tabindex="0" width="900" height="558" loading="lazy" alt="Animation: 550-au crashes, a toast shows the stderr tail, and Ask Claude sends the crash to the session that started it">
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Browsers and debug ports -->
+    <section class="section" id="browsers" aria-labelledby="browsers-heading">
+      <div class="container">
+        <div class="section-head">
+          <h2 id="browsers-heading">Browsers and debug ports</h2>
+          <p>A debug port is how a program drives a Chromium browser. Give each profile its own, and PortPilot hands the right one to Claude.</p>
+        </div>
+        <div class="feature-row reveal">
+          <div class="feature-copy">
+            <h3>One profile, one port, its own sign-ins</h3>
+            <p>A browser opens with <code>--remote-debugging-port=&lt;n&gt;</code>, and anything that can reach <code>127.0.0.1:&lt;n&gt;</code> can read its tabs and click in them. A PortPilot profile is a named browser with its own sign-ins and its own port, so <code>google</code> stays signed in to Search Console while <code>github</code> stays signed in to GitHub. Nothing picks a port by chance. If another program holds a profile's port, the row says which one.</p>
+          </div>
+          <img src="demo/screenshots/browsers-1440.png" class="crop zoomable" tabindex="0" width="1440" height="900" loading="lazy" alt="The Browsers tab: six profiles, google and github running with their open tabs, reddit, facebook and upwork stopped, and stripe flagged because another program holds its port">
+        </div>
+        <div class="feature-row reveal">
+          <div class="feature-copy">
+            <h3>Start and Stop</h3>
+            <p>In the Browsers tab, or the VS Code Browsers view, Start opens the profile's own Brave or Chrome on its port. Stop closes it and frees the port.</p>
+          </div>
+          <img src="media/browsers-start-stop.webp" class="crop zoomable" tabindex="0" width="900" height="581" loading="lazy" alt="Animation: the google profile is stopped, Start opens it on port 9232 with its tabs, Stop closes it and frees the port">
+        </div>
+        <div class="feature-row reveal">
+          <div class="feature-copy">
+            <h3>Claude asks by purpose</h3>
+            <p>Label each profile with what it is for and the sites it logs into. Claude calls <code>start_browser</code> with <code>for</code> set to the site and gets the matching profile and its <code>cdpUrl</code>. A session that started a profile holds it until the session ends; other sessions are told it is in use and steered to a free one.</p>
+          </div>
+          <img src="media/claude-browser.webp" class="crop zoomable" tabindex="0" width="900" height="368" loading="lazy" alt="Animation: Claude asks for Google Search Console, PortPilot starts the google profile and returns its debug port, and a second session is told the profile is in use">
+        </div>
+        <p class="install-note">The Claude Code clip is a terminal frame rendered around the plugin's real output, not a capture of the Claude Code app.</p>
       </div>
     </section>
 

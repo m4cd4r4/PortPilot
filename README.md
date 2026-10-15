@@ -34,13 +34,13 @@ Four surfaces, one config file and one run record. An app you add in one shows u
 
 ![Web portal in a browser showing the same Apps view](docs/demo/screenshots/web-apps-1440.png)
 
-**VS Code extension.** The sidebar tree, a status bar item and a crash toast, without leaving the editor. Running apps come first, stopped ones fold away, and a ✦ marks anything Claude started. Pick it if you live in VS Code.
+**VS Code extension.** The sidebar tree, a status bar item and a crash toast, without leaving the editor. Running apps come first, stopped ones fold away, and a ✦ marks anything Claude started. Pick it if you live in VS Code. A Browsers view lists your named browser profiles with Start and Stop, and expands a running one to its open tabs.
 
 ![PortPilot sidebar in VS Code with running apps first, two crashed apps and a crash toast](docs/screenshots/vscode-overview.png)
 
 **Claude Code.** Install the plugin and Claude sees what you see: a status line, a guard that points a second start at the running server, a crash band with Fix it, and the 26 MCP tools such as `find_run`. Pick it when Claude is the one starting your servers.
 
-![Claude Code turning away a second pnpm dev because examworthy-web is already up on :3000](docs/demo/screenshots/claude-guard.png)
+![Animation: Claude Code is turned away from a second pnpm dev because examworthy-web is already up on :3000, and reuses that server](docs/media/claude-guard.webp)
 
 <details>
 <summary><b>More Claude Code views</b></summary>
@@ -96,6 +96,24 @@ The plugin does most of this on its own: the dev-server guard routes starts thro
 
 Then label each browser profile in the Browsers tab (what it is for, which sites it logs into), because Claude can only match what you wrote. Other MCP assistants have no plugin, so put the same text in their instructions file.
 
+## Browsers and debug ports
+
+A **debug port** is how a program drives a Chromium browser. The browser opens with `--remote-debugging-port=<n>`, and anything that can reach `127.0.0.1:<n>` can then read its tabs and click in them. A **browser profile** in PortPilot is a named browser with its own sign-ins and its own debug port, so a `google` profile stays signed in to Search Console while a `github` profile stays signed in to GitHub. Nothing picks a port by chance: you give each profile one, and PortPilot hands that port to Claude.
+
+![Browsers tab: six profiles, google and github running with their tabs, stripe flagged because another program holds its port](docs/demo/screenshots/browsers-1440.png)
+
+- **Start and Stop.** In the Browsers tab, or in the VS Code Browsers view, Start opens the profile's own Brave or Chrome on its port and Stop closes it and frees the port.
+
+  ![Animation: starting the google profile on :9232, then stopping it](docs/media/browsers-start-stop.webp)
+
+- **Claude asks by purpose.** Label each profile with what it is for and the sites it logs into. Claude calls `start_browser` with `for` set to the site, gets the matching profile and its `cdpUrl`, and a session that started a profile holds it until the session ends.
+
+  ![Animation: Claude asks for Google Search Console, PortPilot starts the google profile and returns its debug port, a second session is told the profile is in use](docs/media/claude-browser.webp)
+
+- **A blocked port is reported, not worked around.** If another program holds a profile's port, the row says which one.
+
+The Claude Code clips on this page are terminal frames rendered around the plugin's real output, not captures of the Claude Code app.
+
 ## New in the desktop app (3.4 and 3.5)
 
 Each row now tells you what is happening and who did it.
@@ -108,9 +126,13 @@ Each row now tells you what is happening and who did it.
 
 ![Conflict strip on a blocked app row](docs/screenshots/crop-conflict.png)
 
+![Animation: alight is blocked by solaisoft on :3007, the first click arms the button, the second stops solaisoft and starts alight](docs/media/conflict-resolve.webp)
+
 **Crash toast with Ask Claude.** A crash raises a sticky toast with the stderr tail. Ask Claude appears when the session that started the app is still open, and sends it the crash. Repeat crashes group into one toast.
 
 <img src="docs/screenshots/crop-crash-toast.png" alt="Crash toast with the stderr tail and an Ask Claude button" width="420">
+
+![Animation: 550-au crashes, a toast shows the stderr tail, Ask Claude sends the crash to the session that started it](docs/media/crash-ask-claude.webp)
 
 **History tab.** Every run is recorded with the git state it ran from, including uncommitted changes. Search by app, branch, file or SHA, open the page a run served while it is still up, copy its SHA, or pin it so it is never pruned. **Re-run this version** puts that exact commit and its uncommitted files in a new sibling worktree, installs from the lockfile and starts it on a free port. Claude finds the same runs with `find_run`.
 
