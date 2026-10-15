@@ -47,7 +47,7 @@ Four surfaces, one config file and one run record. An app you add in one shows u
 
 Status line, worst state first, ✦ on apps Claude started:
 
-![Claude Code status line: 1 crashed, 6 up](docs/demo/screenshots/claude-statusline.png)
+![Claude Code status line: 1 crashed, 7 up](docs/demo/screenshots/claude-statusline.png)
 
 Crash band with Fix it, Restart, Logs and Dismiss:
 
@@ -74,7 +74,7 @@ The MCP server is bundled, so there is no `npm install`. One install gives Claud
 
 - **Status line.** Every session shows what is up, worst state first. A ✦ marks apps Claude started.
   ```text
-  ⚓ 1 crashed · 6 up · :3000 examworthy-web
+  ⚓ 1 crashed · 7 up · :3000 examworthy-web
   ```
 - **Dev-server guard.** A start on a busy port is turned away with the URL to reuse. A clean start goes through PortPilot. If the guard can't tell what a command does, it lets it run.
 - **Crash band with Fix it.** When an app Claude started crashes, the session gets a band with Restart, Logs and Fix it. Fix it hands Claude the crash and the stderr tail.
