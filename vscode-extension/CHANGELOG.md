@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+## [3.9.1] - 2026-10-15
+
+- A + in the Browsers view adds a browser profile, and Remove in the profile menu removes one.
+
 ## [3.9.0] - 2026-10-15
 
 ## [3.8.2] - 2026-10-14
