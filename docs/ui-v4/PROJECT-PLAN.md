@@ -26,8 +26,8 @@ The sidebar is the status board: every item carries a live count and a health do
 | 4 | Ports: dev / other / system, gated kill, conflicts | done (#120) |
 | 5 | Browsers | done (#121) |
 | 6 | History | done (#122) |
-| 7 | Settings and modals (add app, delete, detect, group, share, logs) | in PR |
-| 8 | Surfaces outside the route list: tray, crash toast, command palette, VS Code panel, web portal, docs screenshots and README demo | todo |
+| 7 | Settings and modals (add app, delete, detect, group, share, logs) | done (#123) |
+| 8 | Surfaces outside the route list: tray, crash toast, command palette, VS Code panel, web portal, docs screenshots and README demo | 8a in PR: crash toast and palette checked (token-driven, no CSS needed), tray and VS Code panel are native (no restyle), web portal pinned to v3. 8b todo: docs screenshots and README demo |
 | 9 | Flip default on once every screen has a slice; remove flag after one release | todo |
 
 ## Does NOT cover

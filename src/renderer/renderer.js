@@ -2656,6 +2656,8 @@ let systemThemeQuery = null;
 // with it off nothing in styles-v4.css matches and this file behaves exactly as before.
 const UI_V4 = (() => {
   try {
+    // The web portal strips the v4 scripts (sidebar, home, inspector), so it stays on v3 until it gets them.
+    if (document.querySelector('meta[name="pp-token"]')) return false;
     const q = new URLSearchParams(location.search).get('ui');
     if (q === 'v4' || q === 'v3') localStorage.setItem('portpilot-ui', q);
     const on = localStorage.getItem('portpilot-ui') === 'v4';
