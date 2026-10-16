@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PortPilot v4 Canvas</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0c0d10;color:#d8dae0;font:14px/1.45 -apple-system,'Segoe UI',Roboto,sans-serif;padding:20px 16px 60px}
+.page{max-width:1700px;margin:0 auto}
+h1{font-size:20px;margin-bottom:4px}
+.lede{color:#9097a3;max-width:80ch;margin-bottom:14px}
+.tabs,.states{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.tabs button,.states button{background:#1a1c21;color:#9097a3;border:1px solid #2b2e36;padding:7px 13px;border-radius:8px;font:inherit;cursor:pointer}
+.tabs button[aria-selected=true],.states button[aria-selected=true]{background:#e8e9ec;color:#0c0d10;font-weight:600}
+.sig{background:#15171b;border:1px solid #2b2e36;border-radius:10px;padding:10px 14px;margin-bottom:14px;max-width:110ch}
+.sig b{color:#fff}
+.frames{display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap}
+.cap{font-size:12px;color:#6c7380;margin-bottom:6px}
+.frame{border-radius:12px;overflow:hidden;border:1px solid #2b2e36;flex:none}
+.desk{width:1200px;height:760px}
+.mob{width:390px;height:760px}
+.frame>div{width:100%;height:100%}
+/* shared bits */
+.dot{width:9px;height:9px;border-radius:50%;display:inline-block;flex:none}
+.run{background:var(--ok)}.stop{background:transparent;border:1.5px solid var(--mut)}
+.bad{background:var(--bad);border-radius:2px;transform:rotate(45deg) scale(.85)}
+.warn{background:var(--warn);clip-path:polygon(50% 0,100% 100%,0 100%);border-radius:0;width:10px;height:9px}
+.mono{font-family:ui-monospace,'Cascadia Code',Consolas,monospace}
+button.b{font:inherit;cursor:pointer;border-radius:var(--r);padding:6px 12px;border:1px solid var(--bd);background:transparent;color:var(--tx)}
+button.b.p{background:var(--acc);color:var(--onacc);border-color:var(--acc);font-weight:600}
+button.b.d{color:var(--bad);border-color:color-mix(in srgb,var(--bad) 40%,transparent)}
+/* ===== A Ledger ===== */
+.A{--bg:#13151a;--pn:#1a1d23;--pn2:#21252d;--bd:#2a2f38;--tx:#e6e8ec;--tx2:#9aa1ad;--mut:#5f6773;--acc:#4ade9e;--onacc:#06231a;--ok:#4ade9e;--bad:#ff6b7a;--warn:#f4c15d;--r:7px;background:var(--bg);color:var(--tx);display:flex}
+.A .side{width:220px;background:var(--pn);border-right:1px solid var(--bd);padding:14px 10px;display:flex;flex-direction:column;gap:2px}
+.A .brand{font-weight:700;letter-spacing:.2px;padding:4px 10px 14px;display:flex;align-items:center;gap:8px}
+.A .brand i{width:22px;height:22px;border-radius:6px;background:var(--acc);display:inline-block}
+.A .nav{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:7px;color:var(--tx2);cursor:pointer}
+.A .nav.on{background:var(--pn2);color:var(--tx)}
+.A .nav .n{margin-left:auto;font-size:12px;color:var(--mut)}
+.A .nav .n.hot{background:var(--bad);color:#2a0a0e;border-radius:9px;padding:0 7px;font-weight:700}
+.A .sp{flex:1}
+.A .kbd{margin:6px 10px;color:var(--mut);font-size:12px;border:1px solid var(--bd);border-radius:6px;padding:6px 8px;display:flex;justify-content:space-between}
+.A .main{flex:1;display:flex;flex-direction:column;min-width:0}
+.A .top{padding:16px 22px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:14px}
+.A .top h2{font-size:17px}
+.A .top .sub{color:var(--tx2)}
+.A .top .sp{flex:1}
+.A .list{flex:1;overflow:auto;padding:6px 14px 20px}
+.A .grp{display:flex;align-items:center;gap:8px;padding:14px 8px 6px;font-size:12px;letter-spacing:.6px;text-transform:uppercase;color:var(--mut)}
+.A .row{display:flex;align-items:center;gap:12px;padding:10px 10px;border-radius:8px;cursor:pointer}
+.A .row:hover,.A .row.sel{background:var(--pn2)}
+.A .row .nm{font-weight:600}
+.A .row .meta{color:var(--tx2);font-size:12.5px}
+.A .row .sp{flex:1}
+.A .row .port{color:var(--tx2)}
+.A .insp{width:340px;border-left:1px solid var(--bd);background:var(--pn);padding:18px;display:flex;flex-direction:column;gap:14px}
+.A .prev{height:150px;border-radius:9px;background:linear-gradient(135deg,var(--pn2),color-mix(in srgb,var(--acc) 10%,var(--pn2)));border:1px solid var(--bd);display:flex;align-items:center;justify-content:center;color:var(--mut);font-size:12px}
+.A .kv{display:grid;grid-template-columns:84px 1fr;gap:6px 10px;font-size:13px}
+.A .kv span:nth-child(odd){color:var(--mut)}
+.A .callout{background:color-mix(in srgb,var(--bad) 12%,transparent);border:1px solid color-mix(in srgb,var(--bad) 35%,transparent);border-radius:9px;padding:10px 12px;font-size:13px}
+.A .calm{background:color-mix(in srgb,var(--ok) 10%,transparent);border:1px solid color-mix(in srgb,var(--ok) 30%,transparent);border-radius:9px;padding:10px 12px}
+.A .empty{margin:auto;text-align:center;max-width:380px}
+.A .empty h3{font-size:18px;margin-bottom:6px}.A .empty p{color:var(--tx2);margin-bottom:16px}
+.A.mobile{flex-direction:column}
+.A .tabbar{display:flex;border-top:1px solid var(--bd);background:var(--pn)}
+.A .tabbar div{flex:1;text-align:center;padding:10px 0 12px;color:var(--mut);font-size:12px}
+.A .tabbar .on{color:var(--acc)}
+/* ===== B Launchpad ===== */
+.B{--bg:#f5f2ea;--pn:#fffdf8;--bd:#e3ddcf;--tx:#1d1b24;--tx2:#5e5a66;--mut:#a29c92;--acc:#4338ca;--onacc:#fff;--ok:#16a34a;--bad:#c2410c;--warn:#b7791f;--r:10px;background:var(--bg);color:var(--tx);display:flex;font-family:'Segoe UI',system-ui,sans-serif}
+.B .rail{width:60px;background:var(--pn);border-right:1px solid var(--bd);display:flex;flex-direction:column;align-items:center;padding:14px 0;gap:10px}
+.B .rail .ic{width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;color:var(--mut);font-size:12px;font-weight:700}
+.B .rail .ic.on{background:color-mix(in srgb,var(--acc) 14%,var(--pn));color:var(--acc)}
+.A.light{--bg:#f3f4f6;--pn:#ffffff;--pn2:#eaecf0;--bd:#dcdfe5;--tx:#15171c;--tx2:#566072;--mut:#8a91a0;--acc:#0d9467;--onacc:#fff;--ok:#0d9467;--bad:#d4344a;--warn:#a96a0a}
+.B.dark{--bg:#14131a;--pn:#1d1c26;--bd:#2d2b3a;--tx:#ecebf3;--tx2:#a29eb3;--mut:#6c687c;--acc:#8c84ff;--onacc:#12102a;--ok:#4ade80;--bad:#fb923c;--warn:#f4c15d}
+.B .rail .logo{background:var(--acc);color:#fff;margin-bottom:8px}
+.B .rail .sp{flex:1}
+.B .main{flex:1;padding:26px 34px;overflow:auto}
+.B .hello{font-size:26px;font-weight:700;letter-spacing:-.4px}
+.B .hello small{display:block;font-size:14px;font-weight:400;color:var(--tx2);margin-top:2px;letter-spacing:0}
+.B .cmd{margin:18px 0 22px;display:flex;align-items:center;gap:10px;background:var(--pn);border:1px solid var(--bd);border-radius:14px;padding:13px 16px;color:var(--mut);box-shadow:0 1px 0 #fff inset,0 6px 20px -12px rgba(40,30,80,.25)}
+.B .cmd kbd{margin-left:auto;border:1px solid var(--bd);border-radius:6px;padding:1px 7px;font-size:12px}
+.B .sec{font-size:12px;letter-spacing:.7px;text-transform:uppercase;color:var(--mut);margin:20px 0 10px}
+.B .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.B .tile{background:var(--pn);border:1px solid var(--bd);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:10px}
+.B .tile .hd{display:flex;align-items:center;gap:8px}
+.B .tile .nm{font-weight:700;font-size:15px}
+.B .tile .mt{color:var(--tx2);font-size:13px}
+.B .tile .big{margin-top:auto;display:flex;gap:8px}
+.B .tile .big button{flex:1;padding:9px}
+.B .tile.t-run{border-color:color-mix(in srgb,var(--ok) 32%,var(--bd));background:color-mix(in srgb,var(--ok) 7%,var(--pn))}
+.B .tile.t-bad{border-color:color-mix(in srgb,var(--bad) 35%,var(--bd));background:color-mix(in srgb,var(--bad) 7%,var(--pn))}
+.B .alert{display:flex;align-items:center;gap:12px;background:color-mix(in srgb,var(--bad) 9%,var(--pn));border:1px solid color-mix(in srgb,var(--bad) 35%,var(--bd));border-radius:12px;padding:11px 14px;margin-bottom:6px}
+.B .alert .sp{flex:1}
+.B .empty{text-align:center;margin:70px auto;max-width:420px}
+.B .empty h3{font-size:24px;margin-bottom:8px}.B .empty p{color:var(--tx2);margin-bottom:18px}
+.B .empty .steps{display:grid;gap:8px;text-align:left;margin-top:22px}
+.B .empty .steps div{background:var(--pn);border:1px solid var(--bd);border-radius:10px;padding:10px 14px}
+.B.mobile{flex-direction:column}
+.B.mobile .main{padding:18px 16px}
+.B.mobile .grid{grid-template-columns:1fr}
+.B.mobile .rail{width:100%;flex-direction:row;padding:8px 10px;border-right:0;border-top:1px solid var(--bd);order:2;justify-content:space-around}
+/* ===== C Mission map ===== */
+.C{--bg:#0b1220;--pn:#111a2c;--pn2:#17233a;--bd:#22304d;--tx:#e8edf7;--tx2:#8ea0bf;--mut:#556584;--acc:#f5b041;--onacc:#2a1a00;--ok:#38d6a0;--bad:#ff5d73;--warn:#f5b041;--r:8px;background:var(--bg);color:var(--tx);display:flex;flex-direction:column}
+.C .bar{display:flex;align-items:center;gap:16px;padding:12px 20px;border-bottom:1px solid var(--bd);background:var(--pn)}
+.C .bar b{letter-spacing:.3px}
+.C .bar .seg{display:flex;background:var(--bg);border:1px solid var(--bd);border-radius:9px;padding:3px}
+.C .bar .seg span{padding:4px 12px;border-radius:7px;color:var(--tx2);font-size:13px}
+.C .bar .seg .on{background:var(--pn2);color:var(--tx)}
+.C .bar .sp{flex:1}
+.C .body{flex:1;display:flex;min-height:0}
+.C .map{flex:1;position:relative;background:radial-gradient(circle at 1px 1px,#1b2842 1px,transparent 0) 0 0/22px 22px}
+.C .map svg{position:absolute;inset:0;width:100%;height:100%}
+.C .node{position:absolute;width:210px;background:var(--pn);border:1px solid var(--bd);border-radius:12px;padding:10px 12px;cursor:pointer}
+.C .node.sel{border-color:var(--acc);box-shadow:0 0 0 3px color-mix(in srgb,var(--acc) 22%,transparent)}
+.C .node.badn{border-color:var(--bad)}
+.C .node .nm{font-weight:700;display:flex;align-items:center;gap:8px}
+.C .node .mt{color:var(--tx2);font-size:12px;margin-top:3px}
+.C .pp{position:absolute;right:20px;width:150px;background:var(--pn2);border:1px solid var(--bd);border-radius:10px;padding:7px 10px;font-size:12.5px}
+.C .pp.sys{opacity:.45}
+.C .pp b{color:var(--acc)}
+.C .legend{position:absolute;left:16px;bottom:14px;display:flex;gap:14px;color:var(--mut);font-size:12px}
+.C .sheet{width:330px;border-left:1px solid var(--bd);background:var(--pn);padding:18px;display:flex;flex-direction:column;gap:14px}
+.C .sheet .tabs2{display:flex;gap:14px;border-bottom:1px solid var(--bd);color:var(--tx2);font-size:13px}
+.C .sheet .tabs2 span{padding-bottom:7px}.C .sheet .tabs2 .on{color:var(--acc);border-bottom:2px solid var(--acc)}
+.C .hist{display:flex;align-items:center;gap:8px;background:var(--pn2);border:1px solid var(--bd);border-radius:9px;padding:8px 10px;font-size:12.5px}
+.C .pill{font-size:11px;border-radius:5px;padding:1px 6px;background:var(--bd);color:var(--tx2)}
+.C .fix{background:color-mix(in srgb,var(--bad) 12%,transparent);border:1px solid color-mix(in srgb,var(--bad) 40%,transparent);border-radius:10px;padding:11px 12px;font-size:13px}
+.C .emptyc{margin:auto;text-align:center;max-width:380px}
+.C .emptyc h3{font-size:19px;margin-bottom:6px}.C .emptyc p{color:var(--tx2);margin-bottom:16px}
+.C.mobile .body{flex-direction:column}
+.C.mobile .cardl{padding:14px;display:flex;flex-direction:column;gap:10px;overflow:auto}
+.C.mobile .cardl .node{position:static;width:auto}
+</style>
+</head>
+<body>
+<div class="page">
+<h1>PortPilot v4: three directions</h1>
+<p class="lede">Demo data only (no client projects). Pick by the screen you would rather open every morning. Toggle the state; each direction has its own palette.</p>
+<div class="tabs" id="tabs"></div>
+<div class="states" id="states"></div>
+<div class="sig" id="sig"></div>
+<div class="frames" id="frames"></div>
+</div>
+<script>
+const apps=[
+ {id:'examworthy',nm:'examworthy',br:'main',port:3000,st:'run',up:'2h 14m',by:'You',cmd:'next dev',grp:'Sites'},
+ {id:'azureprep',nm:'azureprep',br:'main',port:3001,st:'run',up:'48m',by:'Claude',cmd:'npm run dev',grp:'Sites'},
+ {id:'azureprep-redis',nm:'azureprep',br:'feat/redis',port:3011,st:'run',up:'6m',by:'Claude',cmd:'npm run dev',grp:'Sites',wt:1},
+ {id:'statewise',nm:'statewise',br:'main',port:3002,st:'bad',up:'crashed 4m ago',by:'You',cmd:'next dev',grp:'Sites',err:'EADDRINUSE: address already in use :::3002'},
+ {id:'cosmos',nm:'cosmos-collective',br:'main',port:3000,st:'warn',up:'wants :3000',by:'',cmd:'vite',grp:'Sites',clash:'examworthy'},
+ {id:'solaisoft',nm:'solaisoft',br:'main',port:3003,st:'stop',up:'',by:'',cmd:'next dev',grp:'Sites'},
+ {id:'550au',nm:'550-au',br:'main',port:3004,st:'stop',up:'',by:'',cmd:'next dev',grp:'Sites'},
+ {id:'alight',nm:'alight',br:'main',port:5173,st:'stop',up:'',by:'',cmd:'vite',grp:'Sites'}];
+const ports=[[3000,'node','examworthy'],[3001,'node','azureprep'],[3011,'node','azureprep:feat/redis'],[3002,'node','pid 18244, not yours'],[5432,'postgres',''],[6379,'redis',''],[135,'svchost','system'],[445,'System','system']];
+let dir='A',state='home';
+const TH={A:'',B:''}; // A: '' = dark, 'light'; B: '' = light, 'dark'
+const THEMES={A:[['','Dark'],['light','Light']],B:[['','Light'],['dark','Dark']]};
+const DIRS={A:'A. Ledger',B:'B. Launchpad',C:'C. Mission map'};
+const SIG={A:'<b>Signature move: the sidebar is the status board.</b> Every nav item carries a live count and a health dot, so "is anything wrong" is answered before you click. Palette: graphite + mint. References: Linear three-column, Supabase status block, incident.io calm "all clear".',
+B:'<b>Signature move: one big Start.</b> Apps are tiles, each with a single large action, and the command bar is the first thing you see. Calm for 3 to 5 apps; power lives behind Ctrl+K and a slim rail. Palette: warm paper (light first) + indigo. References: Render overview, Raycast, Arc.',
+C:'<b>Signature move: ports as a map.</b> Apps are nodes, ports are the wires, a conflict is a visibly crossed red wire, and selecting a node opens a Railway-style side sheet. Palette: deep ink + amber. References: Railway canvas, Docker Desktop.'};
+const run=apps.filter(a=>a.st==='run'),needs=apps.filter(a=>a.st==='bad'||a.st==='warn'),stopped=apps.filter(a=>a.st==='stop');
+const D=(c)=>`<span class="dot ${c}"></span>`;
+const stDot=s=>D(s==='run'?'run':s==='stop'?'stop':s==='bad'?'bad':'warn');
+function pick(){const a=state==='empty'?[]:state==='clean'?apps.filter(x=>x.st!=='bad'&&x.st!=='warn'):apps;return a}
+/* ---------- A ---------- */
+function A(m){
+ const L=pick(),r=L.filter(a=>a.st==='run'),n=L.filter(a=>a.st==='bad'||a.st==='warn'),s=L.filter(a=>a.st==='stop');
+ const sel=n[0]||r[0];
+ const row=a=>`<div class="row ${sel&&a.id===sel.id?'sel':''}">${stDot(a.st)}<div><div class="nm">${a.nm}${a.wt?' <span class="meta mono">⎇ '+a.br+'</span>':''}</div><div class="meta">${a.st==='bad'?a.up:a.st==='warn'?'Needs a port: '+a.up:a.st==='run'?'up '+a.up+(a.by?' · started by '+a.by:''):'Stopped'}</div></div><span class="sp"></span><span class="port mono">:${a.port}</span><button class="b ${a.st==='run'?'':'p'}">${a.st==='run'?'Stop':a.st==='bad'?'Fix':a.st==='warn'?'Resolve':'Start'}</button></div>`;
+ const nav=(l,c,on,hot)=>`<div class="nav ${on?'on':''}">${l}<span class="n ${hot?'hot':''}">${c}</span></div>`;
+ const side=`<div class="side"><div class="brand"><i></i>PortPilot</div>${nav('Running',r.length,1)}${nav('Needs attention',n.length,0,n.length)}${nav('Apps',L.length)}${nav('Ports',L.length?27:0)}${nav('Browsers',L.length?3:0)}${nav('History','')}<span class="sp"></span><div class="kbd"><span>Search or run…</span><span>Ctrl K</span></div>${nav('Settings','')}</div>`;
+ let center;
+ if(!L.length) center=`<div class="empty"><h3>Add your first app</h3><p>Point PortPilot at a project folder. It finds the start command and a free port for you.</p><button class="b p">Add app</button> <button class="b">Detect projects</button></div>`;
+ else center=`<div class="top"><h2>Running</h2><span class="sub">${r.length} of ${L.length} apps</span><span class="sp"></span><button class="b">Stop all</button><button class="b p">Add app</button></div><div class="list">${n.length?`<div class="grp">Needs attention · ${n.length}</div>${n.map(row).join('')}`:`<div class="calm" style="margin:12px 8px">All clear. ${r.length} apps running, no port conflicts.</div>`}<div class="grp">Running · ${r.length}</div>${r.map(row).join('')}<div class="grp">Stopped · ${s.length}</div>${s.map(row).join('')}</div>`;
+ let insp='';
+ if(L.length&&sel&&!m) insp=`<div class="insp"><div class="prev">${sel.st==='run'?'live preview · :'+sel.port:'no preview'}</div><div><div style="font-size:17px;font-weight:700">${sel.nm}</div><div class="meta" style="color:var(--tx2)">${sel.br} · ${sel.cmd}</div></div>${sel.err?`<div class="callout"><b>Port 3002 is taken.</b><br>${sel.err}<br><br>Another process holds it. Free it, or move this app to :3005.</div>`:sel.clash?`<div class="callout"><b>:3000 is held by ${sel.clash}.</b><br>Start on :3005 instead (one click), or stop ${sel.clash}.</div>`:''}<div class="kv"><span>Status</span><span>${sel.st==='run'?'Running, '+sel.up:sel.st==='bad'?'Crashed':'Blocked'}</span><span>Port</span><span class="mono">:${sel.port}</span><span>Started by</span><span>${sel.by||'-'}</span><span>Folder</span><span class="mono">…/${sel.nm}</span></div><div style="display:flex;gap:8px;margin-top:auto">${sel.err||sel.clash?'<button class="b p" style="flex:1">'+(sel.err?'Kill holder and restart':'Use :3005')+'</button>':'<button class="b p" style="flex:1">Open</button>'}<button class="b">Logs</button><button class="b">Ask Claude</button></div></div>`;
+ if(m) return `<div class="A ${TH.A} mobile" style="display:flex;flex-direction:column"><div class="top"><h2>Running</h2><span class="sub">${r.length}/${L.length}</span><span class="sp"></span><button class="b p">Add</button></div><div class="list" style="flex:1;overflow:auto">${L.length?(n.length?`<div class="grp">Needs attention · ${n.length}</div>${n.map(row).join('')}`:'')+`<div class="grp">Running · ${r.length}</div>${r.map(row).join('')}<div class="grp">Stopped</div>${s.map(row).join('')}`:`<div class="empty" style="margin-top:120px"><h3>Add your first app</h3><p>Point PortPilot at a project folder.</p><button class="b p">Add app</button></div>`}</div><div class="tabbar"><div class="on">Running</div><div>Apps</div><div>Ports</div><div>Browsers</div><div>History</div></div></div>`;
+ return `<div class="A ${TH.A}">${side}<div class="main">${center}</div>${insp}</div>`;
+}
+/* ---------- B ---------- */
+function B(m){
+ const L=pick(),r=L.filter(a=>a.st==='run'),n=L.filter(a=>a.st==='bad'||a.st==='warn');
+ const tile=a=>`<div class="tile ${a.st==='run'?'t-run':a.st==='bad'||a.st==='warn'?'t-bad':''}"><div class="hd">${stDot(a.st)}<span class="nm">${a.nm}</span><span class="mt mono" style="margin-left:auto">:${a.port}</span></div><div class="mt">${a.st==='run'?'Running '+a.up:a.st==='bad'?a.up:a.st==='warn'?'Port :3000 is busy':'Ready'}${a.wt?' · ⎇ '+a.br:''}</div><div class="big">${a.st==='run'?'<button class="b">Open</button><button class="b">Stop</button>':a.st==='bad'?'<button class="b p">Fix and restart</button>':a.st==='warn'?'<button class="b p">Start on :3005</button>':'<button class="b p">Start</button>'}</div></div>`;
+ const alert=n.map(a=>`<div class="alert">${D(a.st)}<span><b>${a.nm}</b> ${a.st==='bad'?'crashed: port :3002 is taken.':'cannot start: :3000 is held by examworthy.'}</span><span class="sp"></span><button class="b p">${a.st==='bad'?'Free the port':'Use :3005'}</button><button class="b">Ask Claude</button></div>`).join('');
+ const rail=`<div class="rail"><div class="ic logo">P</div><div class="ic on">Run</div><div class="ic">Port</div><div class="ic">Web</div><div class="ic">Hist</div><div class="sp"></div><div class="ic">⚙</div></div>`;
+ let body;
+ if(!L.length) body=`<div class="empty"><h3>Welcome to PortPilot</h3><p>Your dev servers, one tap each. Add a project to begin.</p><button class="b p">Add a project folder</button><div class="steps"><div><b>1.</b> Pick a folder. We detect the start command.</div><div><b>2.</b> We choose a free port. No more clashes.</div><div><b>3.</b> Press Start. Claude can start it too.</div></div></div>`;
+ else body=`<div class="hello">${n.length?'2 things need you':'All good'}<small>${r.length} running · ${L.length-r.length-n.length} ready${n.length?' · '+n.length+' blocked':''}</small></div><div class="cmd">⌕ Start, stop, find a port, ask Claude…<kbd>Ctrl K</kbd></div>${alert}<div class="sec">Running</div><div class="grid">${r.map(tile).join('')}</div>${n.length?'<div class="sec">Blocked</div><div class="grid">'+n.map(tile).join('')+'</div>':''}<div class="sec">Ready to start</div><div class="grid">${L.filter(a=>a.st==='stop').map(tile).join('')}</div>`;
+ return `<div class="B ${TH.B} ${m?'mobile':''}">${rail}<div class="main">${body}</div></div>`;
+}
+/* ---------- C ---------- */
+function C(m){
+ const L=pick();
+ if(m){const n=L.filter(a=>a.st==='bad'||a.st==='warn');
+  return `<div class="C mobile"><div class="bar"><b>PortPilot</b><span class="sp"></span><button class="b p">Add</button></div><div class="cardl">${L.length?L.map(a=>`<div class="node">${'<div class="nm">'+stDot(a.st)+a.nm+'<span class="mono" style="margin-left:auto;color:var(--acc)">:'+a.port+'</span></div><div class="mt">'+(a.st==='bad'?a.up+' · port taken':a.st==='warn'?'wants :3000, held by '+a.clash:a.st==='run'?'up '+a.up:'stopped')+'</div>'}</div>`).join(''):`<div class="emptyc" style="margin-top:130px"><h3>Nothing on the map yet</h3><p>Add an app and it appears here with its port.</p><button class="b p">Add app</button></div>`}</div></div>`}
+ const pos={examworthy:[30,40],azureprep:[30,150],'azureprep-redis':[250,205],statewise:[30,330],cosmos:[250,95],solaisoft:[30,470],'550au':[250,470],alight:[250,560]};
+ const portY={3000:70,3001:135,3011:200,3002:255,5432:320,6379:372,135:500,445:545};
+ const nodes=L.map(a=>{const p=pos[a.id];return `<div class="node ${a.id==='statewise'?'sel':''} ${a.st==='bad'||a.st==='warn'?'badn':''}" style="left:${p[0]+60}px;top:${p[1]}px;${a.wt?'width:190px':''}"><div class="nm">${stDot(a.st)}${a.nm}</div><div class="mt">${a.wt?'⎇ '+a.br+' · ':''}${a.st==='run'?'up '+a.up:a.st==='bad'?'crashed':a.st==='warn'?'blocked':'stopped'} · ${a.by||'idle'}</div></div>`}).join('');
+ const pp=L.length?ports.map(p=>`<div class="pp ${p[2]==='system'?'sys':''}" style="top:${portY[p[0]]}px"><b class="mono">:${p[0]}</b> ${p[1]}<div style="color:var(--mut);font-size:11px">${p[2]||'not yours'}</div></div>`).join(''):'';
+ const wire=(a,y,bad)=>{const p=pos[a.id];return `<path d="M${p[0]+60+(a.wt?190:210)} ${p[1]+25} C 640 ${p[1]+25}, 640 ${y+22}, 780 ${y+22}" fill="none" stroke="${bad?'#ff5d73':'#38d6a0'}" stroke-width="${bad?2.5:1.8}" ${bad?'stroke-dasharray="6 5"':''} opacity=".85"/>`};
+ let wires='';
+ if(L.length){ wires=L.filter(a=>a.st==='run').map(a=>wire(a,portY[a.port]||70,0)).join('');
+  if(state==='home'){ wires+=wire(apps[4],portY[3000],1)+wire(apps[3],portY[3002],1)}}
+ const sheet=state==='home'?`<div class="sheet"><div><div style="font-size:17px;font-weight:700">statewise</div><div style="color:var(--tx2);font-size:12.5px">main · next dev · :3002</div></div><div class="tabs2"><span class="on">Overview</span><span>Logs</span><span>Runs</span><span>Settings</span></div><div class="fix"><b>Crashed 4m ago.</b><br>Port :3002 is already in use. Move to :3005, or free :3002 (held by node, pid 18244).</div><div style="display:flex;gap:8px"><button class="b p" style="flex:1">Use :3005 and restart</button><button class="b d">Kill :3002</button></div><div class="mt" style="color:var(--mut);font-size:12px;text-transform:uppercase;letter-spacing:.6px">Recent runs</div><div class="hist">${D('bad')} 4m ago <span class="pill">crashed</span><span class="sp" style="flex:1"></span>by You</div><div class="hist">${D('run')} 3h ago <span class="pill">2h 41m</span><span style="flex:1"></span>by Claude</div></div>`:'';
+ const map=L.length?`<div class="map"><svg>${wires}</svg>${nodes}${pp}<div class="legend"><span>${D('run')} running</span><span>${D('bad')} crashed</span><span>${D('warn')} blocked</span><span>━ wire = port in use</span><span style="color:#ff5d73">╌ crossed = conflict</span></div></div>`:`<div class="map" style="display:flex"><div class="emptyc"><h3>Nothing on the map yet</h3><p>Add an app and it appears here, wired to its port. Conflicts show as crossed red wires.</p><button class="b p">Add app</button> <button class="b">Detect projects</button></div></div>`;
+ return `<div class="C"><div class="bar"><b>PortPilot</b><div class="seg"><span class="on">Map</span><span>List</span><span>Browsers</span><span>History</span></div><span class="sp"></span><span style="color:var(--tx2);font-size:13px">Ctrl K</span><button class="b p">Add app</button></div><div class="body">${map}${sheet}</div></div>`;
+}
+function render(){
+ document.getElementById('tabs').innerHTML=Object.keys(DIRS).map(k=>`<button aria-selected="${k===dir}" data-d="${k}">${DIRS[k]}</button>`).join('');
+ document.getElementById('states').innerHTML=[['home','Conflict + crash'],['clean','All clear'],['empty','First run (empty)']].map(s=>`<button aria-selected="${s[0]===state}" data-s="${s[0]}">${s[1]}</button>`).join('');
+ if(THEMES[dir]) document.getElementById('states').innerHTML+=THEMES[dir].map(t=>`<button aria-selected="${TH[dir]===t[0]}" data-t="${t[0]}" style="margin-left:${t[0]===THEMES[dir][0][0]?'18px':'0'}">${t[1]} mode</button>`).join('');
+ document.getElementById('sig').innerHTML=SIG[dir];
+ const f={A,B,C}[dir];
+ document.getElementById('frames').innerHTML=`<div><div class="cap">Desktop 1200 wide (scaled view of 1440 layout)</div><div class="frame desk">${f(0)}</div></div><div><div class="cap">Phone 390</div><div class="frame mob">${f(1)}</div></div>`;
+}
+document.addEventListener('click',e=>{const t=e.target.closest('button[data-d],button[data-s],button[data-t]');if(!t)return;if(t.dataset.t!==undefined)TH[dir]=t.dataset.t;if(t.dataset.d)dir=t.dataset.d;if(t.dataset.s)state=t.dataset.s;render()});
+const q=new URLSearchParams(location.search);if(q.get('d'))dir=q.get('d');if(q.get('s'))state=q.get('s');if(q.get('t'))TH[dir]=q.get('t');
+render();
+</script>
+</body>
+</html>

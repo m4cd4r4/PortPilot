@@ -2639,7 +2639,29 @@ const RETIRED_THEMES = {
 
 let systemThemeQuery = null;
 
+// v4 flag (slice 0): localStorage portpilot-ui = v4, or ?ui=v4 to try it. Off by default;
+// with it off nothing in styles-v4.css matches and this file behaves exactly as before.
+const UI_V4 = (() => {
+  try {
+    const q = new URLSearchParams(location.search).get('ui');
+    if (q === 'v4' || q === 'v3') localStorage.setItem('portpilot-ui', q);
+    const on = localStorage.getItem('portpilot-ui') === 'v4';
+    if (on) document.documentElement.setAttribute('data-ui', 'v4');
+    return on;
+  } catch { return false; }
+})();
+
+// v4 ships Dark and Light only: Light and light-OS map to v4-light, everything else to v4-dark.
+function resolveThemeV4(choice) {
+  if (choice === 'auto') {
+    const prefersLight = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
+    return prefersLight ? 'v4-light' : 'v4-dark';
+  }
+  return choice === 'light' ? 'v4-light' : 'v4-dark';
+}
+
 function resolveTheme(choice) {
+  if (UI_V4) return resolveThemeV4(choice);
   if (choice === 'auto') {
     const prefersLight = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
     return prefersLight ? 'light' : 'tokyonight';

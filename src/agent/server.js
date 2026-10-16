@@ -166,6 +166,7 @@ function createAgent({ configStore, port = DEFAULT_PORT, token = crypto.randomBy
       if (req.url === '/portpilot-web.js') return serveStatic(res, 'portpilot-web.js', PUBLIC_DIR);
       if (req.url === '/renderer.js') return serveStatic(res, 'renderer.js', RENDERER_DIR);
       if (req.url === '/styles.css') return serveStatic(res, 'styles.css', RENDERER_DIR);
+      if (req.url === '/styles-v4.css') return serveStatic(res, 'styles-v4.css', RENDERER_DIR);
       // There is no icon to serve; 204 stops the browser logging a 404 console error on every load.
       if (req.url === '/favicon.ico') return send(res, 204, '');
       // The renderer loads the shared status/classification model as a browser

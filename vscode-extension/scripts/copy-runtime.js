@@ -46,6 +46,7 @@ const FILES = [
   'renderer/index.html',
   'renderer/renderer.js',
   'renderer/styles.css',
+  'renderer/styles-v4.css',
 ];
 
 fs.rmSync(outRoot, { recursive: true, force: true });
