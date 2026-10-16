@@ -425,3 +425,20 @@ html[data-ui="v4"] .preview-tag { color: var(--text-secondary); background: var(
   /* Port and fallback stack, so the port field is wide enough to read its placeholder. */
   html[data-ui="v4"] #modal-app .form-row { grid-template-columns: 1fr; gap: 0; }
 }
+
+/* Ready list past eight apps: quiet rows, mint only on hover; the logo reads on both themes. */
+html[data-ui="v4"] .v4-rows { max-width: 820px; display: flex; flex-direction: column; border: var(--border-width) solid var(--border-color); border-radius: var(--radius-card); background: var(--bg-secondary); overflow: hidden; }
+html[data-ui="v4"] .v4-ready-row { display: flex; align-items: center; gap: 10px; padding: 7px 12px; }
+html[data-ui="v4"] .v4-ready-row + .v4-ready-row { border-top: var(--border-width) solid var(--border-color); }
+html[data-ui="v4"] .v4-ready-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+html[data-ui="v4"] .v4-ready-row .btn { flex: none; }
+html[data-ui="v4"] .v4-ready-start { background: transparent; border-color: var(--border-color); color: var(--text-secondary); }
+html[data-ui="v4"] .v4-ready-start:hover:not(:disabled) { background: var(--accent-primary); border-color: var(--accent-primary); color: var(--v4-on-accent); }
+html[data-ui="v4"] .v4-brand-mark { width: 24px; height: 24px; border-radius: 0; background: none; }
+html[data-ui="v4"] .v4-logo-tile { fill: var(--bg-tertiary); }
+html[data-ui="v4"] .v4-logo-p { fill: var(--text-primary); }
+html[data-ui="v4"] .v4-logo-p-ring { stroke: var(--text-primary); }
+html[data-ui="v4"] .v4-logo-light { fill: var(--accent-primary); }
+/* An empty group keeps its header (it is a drop target and carries Delete) but drops the extra line. */
+html[data-ui="v4"] .app-section:has(.group-empty) { opacity: 0.6; }
+html[data-ui="v4"] .app-section:has(.group-empty) .group-empty { display: none; }

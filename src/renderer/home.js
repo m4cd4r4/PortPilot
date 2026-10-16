@@ -32,6 +32,17 @@
       </span></div>`;
   }
 
+  const COMPACT_AFTER = 8;
+  function rowHtml(app) {
+    const port = app.preferredPort ? `<span class="app-port-badge">:${esc(app.preferredPort)}</span>` : '';
+    const branch = app.branch ? `<span class="v4-tile-branch">${icon('branch', 11)}${esc(app.branch)}</span>` : '';
+    return `<div class="v4-ready-row" data-app="${esc(app.id)}">
+      <span class="v4-ready-name">${esc(app.name)}</span>${branch}${port}
+      <button class="btn btn-secondary btn-small v4-ready-start" data-act="startApp" data-id="${esc(app.id)}" aria-label="Start ${esc(app.name)}">${icon('play', 11)} Start</button>
+      <button class="btn btn-secondary btn-small" data-act="openDrawer" data-id="${esc(app.id)}">Details</button>
+    </div>`;
+  }
+
   function tileHtml(app) {
     const port = app.preferredPort ? `<span class="app-port-badge">:${esc(app.preferredPort)}</span>` : '';
     const branch = app.branch ? `<span class="v4-tile-branch">${icon('branch', 11)}${esc(app.branch)}</span>` : '';
@@ -81,8 +92,10 @@
     const idle = _filterApps(sum.ready.map((id) => byId.get(id)).filter(Boolean));
     if (!idle.length) { ready.hidden = true; ready.innerHTML = ''; return; }
     ready.hidden = false;
+    // A few apps get big tiles; a long list gets quiet rows so fifty Start buttons do not shout.
+    const compact = idle.length > COMPACT_AFTER;
     ready.innerHTML = `<div class="v4-sec"><span>Ready to start</span><span class="v4-sec-count">${idle.length}</span></div>
-      <div class="v4-tiles">${idle.map(tileHtml).join('')}</div>`;
+      ${compact ? `<div class="v4-rows">${idle.map(rowHtml).join('')}</div>` : `<div class="v4-tiles">${idle.map(tileHtml).join('')}</div>`}`;
     reapplyArmed(top);
   }
 

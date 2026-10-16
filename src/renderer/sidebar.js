@@ -46,7 +46,7 @@
     const activeId = M.activeId(view, focus);
     nav.hidden = false;
     nav.innerHTML = `
-      <div class="v4-brand"><span class="v4-brand-mark" aria-hidden="true"></span><span class="v4-brand-name">PortPilot</span></div>
+      <div class="v4-brand"><svg class="v4-brand-mark" viewBox="0 0 64 64" aria-hidden="true"><rect x="2" y="2" width="60" height="60" rx="15" class="v4-logo-tile"/><rect x="16" y="13" width="9" height="39" rx="4.5" class="v4-logo-p"/><circle cx="33.5" cy="27.5" r="11" fill="none" stroke-width="9" class="v4-logo-p-ring"/><circle cx="33.5" cy="27.5" r="4.5" class="v4-logo-light"/></svg><span class="v4-brand-name">PortPilot</span></div>
       <div class="v4-nav-list">${M.items(counts()).map((it) => itemHtml(it, activeId)).join('')}</div>
       <div class="v4-nav-foot">
         <button type="button" class="v4-nav-item" data-section="palette" aria-label="Search or run a command"><span class="v4-nav-glyph" aria-hidden="true">${icon('search', 14)}</span><span class="v4-nav-label">Search or run</span><kbd class="v4-kbd">Ctrl K</kbd></button>
