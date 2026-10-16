@@ -1,0 +1,88 @@
+/* ============ PortPilot v4 design tokens (slice 0) ============
+   Graphite + mint, Dark and Light. Decided 2026-10-16 (docs/ui-v4/PROJECT-PLAN.md).
+
+   Flag-off proof: every rule in this file is scoped under html[data-ui="v4"], which
+   only renderer.js sets (localStorage portpilot-ui = v4, or ?ui=v4). With the flag off
+   nothing here matches, so the v3 UI is untouched. tests/v4-tokens.test.cjs enforces
+   the scoping and WCAG AA on the text pairs.
+
+   The v3 variable names are reused so existing components pick up the palette without
+   edits; the --v4-* names are new and are what v4 components use. */
+
+html[data-ui="v4"] body[data-theme="v4-dark"] {
+  color-scheme: dark;
+  --bg-primary: #13151a;
+  --bg-secondary: #1a1d23;
+  --bg-tertiary: #21252d;
+  --text-primary: #e6e8ec;
+  --text-secondary: #9aa1ad;
+  --text-muted: #8590a0;
+  --accent-primary: #4ade9e;
+  --accent-green: #4ade9e;
+  --accent-red: #ff6b7a;
+  --accent-yellow: #f4c15d;
+  --accent-purple: #a78bfa;
+  --accent-cyan: #5ccfe6;
+  --border-color: #2a2f38;
+  --shadow: 0 4px 10px -2px rgba(0, 0, 0, 0.45);
+  --radius: 7px;
+  --radius-sm: 4px;
+  --radius-card: 10px;
+  --elev-card: 0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 22px -12px rgba(0, 0, 0, 0.6);
+  --preview-aspect: 16 / 9;
+  --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --border-width: 1px;
+  --card-bg: #1a1d23;
+  --card-blur: none;
+  --card-border: #2a2f38;
+  --v4-on-accent: #06231a;
+  --v4-hover: #21252d;
+  --v4-selected: #21252d;
+  --v4-focus-ring: rgba(74, 222, 158, 0.45);
+  --v4-danger-bg: rgba(255, 107, 122, 0.12);
+  --v4-ok-bg: rgba(74, 222, 158, 0.1);
+  --v4-warn-bg: rgba(244, 193, 93, 0.12);
+}
+
+html[data-ui="v4"] body[data-theme="v4-light"] {
+  color-scheme: light;
+  --bg-primary: #f3f4f6;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #eaecf0;
+  --text-primary: #15171c;
+  --text-secondary: #566072;
+  --text-muted: #667085;
+  --accent-primary: #0b7f58;
+  --accent-green: #0b7f58;
+  --accent-red: #c42b40;
+  --accent-yellow: #8f5a05;
+  --accent-purple: #6d4fd1;
+  --accent-cyan: #0a7ea4;
+  --border-color: #dcdfe5;
+  --shadow: 0 2px 8px -2px rgba(21, 23, 28, 0.14);
+  --radius: 7px;
+  --radius-sm: 4px;
+  --radius-card: 10px;
+  --elev-card: 0 1px 2px rgba(21, 23, 28, 0.08), 0 10px 22px -14px rgba(21, 23, 28, 0.25);
+  --preview-aspect: 16 / 9;
+  --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --border-width: 1px;
+  --card-bg: #ffffff;
+  --card-blur: none;
+  --card-border: #dcdfe5;
+  --v4-on-accent: #ffffff;
+  --v4-hover: #eaecf0;
+  --v4-selected: #eaecf0;
+  --v4-focus-ring: rgba(11, 127, 88, 0.4);
+  --v4-danger-bg: rgba(196, 43, 64, 0.09);
+  --v4-ok-bg: rgba(11, 127, 88, 0.09);
+  --v4-warn-bg: rgba(143, 90, 5, 0.1);
+}
+
+/* Settings (slice 7 rebuilds this): v4 has only Auto / Light / Dark, so the retired
+   themes' buttons are hidden. TokyoNight stays as the "Dark" choice until then. */
+html[data-ui="v4"] .theme-btn[data-theme="nord"],
+html[data-ui="v4"] .theme-btn[data-theme="dracula"],
+html[data-ui="v4"] .theme-btn[data-theme="glass"] {
+  display: none;
+}
