@@ -13,7 +13,7 @@ let localhostWatcher = null; // records every localhost dev server into the run 
 // title bar (it is already a drag region) and the OS draws only the window buttons over its
 // right edge, coloured to match the theme (renderer: syncTitleBar, IPC window:setTitleBar).
 const OVERLAY_TITLE_BAR = process.platform === 'win32';
-const TITLE_BAR_DEFAULT = { color: '#24283b', symbolColor: '#c0caf5', height: 48 }; // TokyoNight header
+const TITLE_BAR_DEFAULT = { color: '#1a1d23', symbolColor: '#e6e8ec', height: 48 }; // v4 dark header; the renderer sends the live theme's colours once it loads
 
 /** Keyboard shortcuts the removed default menu used to carry (Ctrl+R stays Scan in the app). */
 function installMenuShortcuts(win) {
@@ -45,7 +45,7 @@ function createWindow(configStore) {
     height: 700,
     minWidth: 600,
     minHeight: 400,
-    backgroundColor: '#1a1a1a', // Dark background to match app theme
+    backgroundColor: '#13151a', // v4 dark page colour, so there is no flash before the renderer paints
     ...(OVERLAY_TITLE_BAR ? { titleBarStyle: 'hidden', titleBarOverlay: TITLE_BAR_DEFAULT } : {}),
     webPreferences: {
       nodeIntegration: false,
