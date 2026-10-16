@@ -4,6 +4,7 @@
 import { createRequire } from 'module';
 import { fileURLToPath, pathToFileURL } from 'url';
 import path from 'path';
+import { goSection } from './lib.mjs';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repo = path.resolve(here, '..', '..', '..');
 const require = createRequire(path.join(repo, 'package.json'));
@@ -17,8 +18,8 @@ for (const width of w.split(',').map(Number)) {
   page.on('console', (m) => { if (m.type() === 'error') problems.push(`console: ${m.text()}`); });
   await page.addInitScript({ path: path.join(repo, 'docs', 'demo', 'demo-seed.js') });
   await page.goto(pathToFileURL(path.join(repo, 'src', 'renderer', 'index.html')).href);
-  await page.waitForSelector('.view-tab[data-view="history"]');
-  await page.click('.view-tab[data-view="history"]');
+  await page.waitForSelector('.v4-nav-item[data-section="history"]');
+  await goSection(page, 'history');
   await page.waitForSelector('.hrow .hthumb img');
   await page.waitForTimeout(500);
   // The seed fires an Apps-view crash toast and a conflict toast; they are not part of this view.

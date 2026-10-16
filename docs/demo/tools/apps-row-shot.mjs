@@ -6,6 +6,7 @@ import { createRequire } from 'module';
 import { fileURLToPath, pathToFileURL } from 'url';
 import path from 'path';
 import assert from 'assert';
+import { goSection } from './lib.mjs';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repo = path.resolve(here, '..', '..', '..');
 const require = createRequire(path.join(repo, 'package.json'));
@@ -20,6 +21,7 @@ for (const width of w.split(',').map(Number)) {
   await page.addInitScript({ path: path.join(repo, 'docs', 'demo', 'demo-seed.js') });
   await page.goto(pathToFileURL(path.join(repo, 'src', 'renderer', 'index.html')).href + '?home=classic');
   // At <= 600 px the preview is hidden by CSS (the port chip needs the room), but still rendered.
+  await goSection(page, 'apps');
   await page.waitForSelector('.app-card .row-thumb img', { state: 'attached' });
   await page.waitForTimeout(500);
   // The seed fires a crash toast and a conflict toast; they are not part of this view.

@@ -28,7 +28,7 @@ Four surfaces, one config file and one run record. An app you add in one shows u
 
 **Desktop app.** The full view: apps, ports, conflicts, crashes and the History tab. Pick it when you want everything on one screen, or a tray icon that keeps your servers alive after you close the window.
 
-![Desktop app, Apps tab, with grouped apps, two port conflicts and a crashed app](docs/demo/screenshots/desktop-apps-1440.png)
+![Desktop app, Running home: two port conflicts and a crashed app on top, live apps with page previews below](docs/demo/screenshots/desktop-apps-1440.png)
 
 **Web portal.** The same Apps view in your browser, from `npm run agent` or from VS Code. It binds `127.0.0.1` only and needs a per-session token. Pick it on a machine where you cannot install the desktop app. The History and Browsers tabs, row previews and crash toasts are not in the portal yet.
 
