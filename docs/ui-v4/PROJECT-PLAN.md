@@ -28,7 +28,8 @@ The sidebar is the status board: every item carries a live count and a health do
 | 6 | History | done (#122) |
 | 7 | Settings and modals (add app, delete, detect, group, share, logs) | done (#123) |
 | 8 | Surfaces outside the route list: tray, crash toast, command palette, VS Code panel, web portal, docs screenshots and README demo | 8a in PR: crash toast and palette checked (token-driven, no CSS needed), tray and VS Code panel are native (no restyle), web portal pinned to v3. 8b todo: docs screenshots and README demo |
-| 9 | Flip default on once every screen has a slice; remove flag after one release | todo |
+| 9 | Flip default on once every screen has a slice; remove flag after one release | default flipped in PR (`?ui=v3` is the way back for one release; e2e harness pins v3). Flag removal waits for the next release |
+| 8b | Docs screenshots and README demo regenerated on v4 (moved after the flip so the shot scripts target the shipped default) | todo |
 
 ## Does NOT cover
 
