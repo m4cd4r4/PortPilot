@@ -274,3 +274,35 @@ html[data-ui="v4"] .v4-insp-preview-empty { display: flex; align-items: center; 
   }
   html[data-ui="v4"] #app:has(.app-drawer:not(.hidden)) main.content { margin-right: 340px; }
 }
+
+/* ============ Ports (slice 4) ============
+   The Ports screen is a calm ledger: the collapsible header becomes a static heading, the
+   dev / other / system groups are always listed (system stays folded by its own header), and
+   every listener appears with the owning app tagged. Kill keeps its inline "Confirm kill?". */
+html[data-ui="v4"] .content[data-v4-focus="ports"] #ports-section.collapsed #ports-list { display: block; }
+html[data-ui="v4"] .content[data-v4-focus="ports"] #ports-section-toggle { pointer-events: none; background: transparent; border-color: transparent; padding-left: 2px; }
+html[data-ui="v4"] .content[data-v4-focus="ports"] #ports-section-toggle .section-chevron { display: none; }
+html[data-ui="v4"] #ports-section-toggle .section-label { font-size: 1.1rem; letter-spacing: 0; text-transform: none; color: var(--text-primary); }
+html[data-ui="v4"] .port-row { padding: 7px 10px; border-radius: var(--radius); }
+html[data-ui="v4"] .port-row:hover { background: var(--v4-hover); border-color: transparent; }
+html[data-ui="v4"] .port-link { color: var(--accent-primary); }
+html[data-ui="v4"] .port-owner {
+  margin-left: 6px; padding: 0 6px;
+  font-size: 0.68rem; color: var(--text-secondary);
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-sm);
+}
+html[data-ui="v4"] .port-group[data-portgroup="system"] .port-row { opacity: 0.7; }
+
+@media (max-width: 700px) {
+  /* No hover on a phone: each row carries its actions on a second line. */
+  html[data-ui="v4"] .port-row { grid-template-columns: 14px auto minmax(0, 1fr); row-gap: 4px; }
+  html[data-ui="v4"] .port-row-actions {
+    position: static; transform: none; pointer-events: auto; opacity: 1;
+    grid-column: 1 / -1; justify-content: flex-start; gap: 6px;
+    background: transparent; box-shadow: none;
+  }
+  html[data-ui="v4"] .port-row-actions .btn,
+  html[data-ui="v4"] .port-row-actions .btn-slot { width: 36px; height: 30px; }
+  html[data-ui="v4"] .port-row-actions .btn { border-color: var(--border-color); }
+}

@@ -565,7 +565,17 @@ function renderPorts() {
   for (const detected of Object.values(state.detectedApps)) {
     if (detected && detected.port) matchedPorts.add(detected.port);
   }
-  let ports = state.ports.filter(p => !matchedPorts.has(p.port));
+  // v4 lists every listener, tagging the ones a registered app owns, so the sidebar count
+  // and this list agree; v3 leaves app-owned ports to the Apps rows.
+  const isV4 = document.documentElement.getAttribute('data-ui') === 'v4';
+  const ownerByPort = new Map();
+  if (isV4) {
+    for (const [id, detected] of Object.entries(state.detectedApps)) {
+      const owner = detected && detected.port ? state.apps.find(x => x.id === id) : null;
+      if (owner) ownerByPort.set(detected.port, owner.name);
+    }
+  }
+  let ports = isV4 ? state.ports.slice() : state.ports.filter(p => !matchedPorts.has(p.port));
 
   if (state.globalSearch) {
     const q = state.globalSearch.toLowerCase();
@@ -597,7 +607,7 @@ function renderPorts() {
 
   dom.portsList.innerHTML = S.GROUP_ORDER
     .filter(key => buckets[key].length > 0)
-    .map(key => renderPortGroup(key, S.GROUPS[key], buckets[key]))
+    .map(key => renderPortGroup(key, S.GROUPS[key], buckets[key], ownerByPort))
     .join('');
   reapplyArmed(dom.portsList);
 }
@@ -636,7 +646,7 @@ function showPortsRow(port) {
   flashInto(row);
 }
 
-function renderPortGroup(key, meta, rows) {
+function renderPortGroup(key, meta, rows, ownerByPort = new Map()) {
   const expanded = state.portGroupExpanded[key] !== false;
   const chev = expanded
     ? icon('chevron', 10)
@@ -649,12 +659,12 @@ function renderPortGroup(key, meta, rows) {
         <span class="section-count">${rows.length}</span>
       </div>
       <div class="port-group-rows ${expanded ? '' : 'collapsed'}">
-        ${rows.map(p => renderPortRow(p, key)).join('')}
+        ${rows.map(p => renderPortRow(p, key, ownerByPort.get(p.port))).join('')}
       </div>
     </div>`;
 }
 
-function renderPortRow(p, group) {
+function renderPortRow(p, group, owner = '') {
   const S = window.PortPilotStatus;
   // Active listening ports are, by definition, running. Other states
   // (conflict / error / starting) arrive once apps are merged in.
@@ -666,7 +676,7 @@ function renderPortRow(p, group) {
   const exposed = addr && !(addr.includes('127.0.0.1') || addr.includes('[::1]') || addr.includes('localhost'));
   // Adopt promotes an unregistered running port into a managed app. System
   // ports (svchost et al) are never adoption candidates.
-  const canAdopt = group !== 'system';
+  const canAdopt = group !== 'system' && !owner;
   // A missing action leaves an empty slot, so every row has the same five columns
   // and Kill sits at the same x on every row.
   const slot = '<span class="btn-slot" aria-hidden="true"></span>';
@@ -678,7 +688,7 @@ function renderPortRow(p, group) {
         <a class="port-link" data-act="openPortInBrowser" data-port="${p.port}" title="Open localhost:${p.port}">:${p.port}</a>
         ${exposed ? `<span class="port-exposed" title="Listening on all interfaces - network accessible">${icon('globe', 10)}</span>` : ''}
       </span>
-      <span class="port-proc" title="${escapeHtml(proc)}${p.pid ? ` (PID ${p.pid})` : ''}${cmdLine ? `\n${escapeHtml(cmdLine)}` : ''}">${escapeHtml(proc)}</span>
+      <span class="port-proc" title="${escapeHtml(proc)}${p.pid ? ` (PID ${p.pid})` : ''}${cmdLine ? `\n${escapeHtml(cmdLine)}` : ''}">${escapeHtml(proc)}${owner ? ` <span class="port-owner" title="Belongs to the registered app ${escapeHtml(owner)}">${escapeHtml(owner)}</span>` : ''}</span>
       <span class="port-cmd" title="${escapeHtml(cmdLine)}">${escapeHtml(cmdLine)}</span>
       <span class="port-pid" title="PID ${p.pid || ''}">${p.pid || ''}</span>
       <span class="port-row-actions">
