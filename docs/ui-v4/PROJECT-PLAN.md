@@ -23,8 +23,8 @@ The sidebar is the status board: every item carries a live count and a health do
 | 1 | Shell: sidebar with live counts and health dots, content region, Ctrl+K kept | done (#117) |
 | 2 | Running home: B tiles, blocked strip with prescriptive fixes (Use :3005, Free the port, Ask Claude), first-run empty state | done (#118) |
 | 3 | Apps list + inspector (A): grouped, worktrees nested, preview, logs, share | done (#119) |
-| 4 | Ports: dev / other / system, gated kill, conflicts | in PR |
-| 5 | Browsers | todo |
+| 4 | Ports: dev / other / system, gated kill, conflicts | done (#120) |
+| 5 | Browsers | in PR |
 | 6 | History | todo |
 | 7 | Settings and modals (add app, delete, detect, group, share, logs) | todo |
 | 8 | Surfaces outside the route list: tray, crash toast, command palette, VS Code panel, web portal, docs screenshots and README demo | todo |

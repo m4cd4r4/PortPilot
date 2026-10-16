@@ -306,3 +306,43 @@ html[data-ui="v4"] .port-group[data-portgroup="system"] .port-row { opacity: 0.7
   html[data-ui="v4"] .port-row-actions .btn-slot { width: 36px; height: 30px; }
   html[data-ui="v4"] .port-row-actions .btn { border-color: var(--border-color); }
 }
+
+/* ============ Browsers (slice 5) ============
+   Profiles become a ledger like Apps: borderless rows with a hover wash, the mode switch as a
+   mint segmented control, the Claude claim as a quiet chip. Behaviour is unchanged. */
+html[data-ui="v4"] .browsers-head { align-items: center; margin-bottom: 14px; }
+html[data-ui="v4"] .browsers-intro p { font-size: 0.86rem; color: var(--text-secondary); }
+html[data-ui="v4"] .browsers-summary { font-family: inherit; font-size: 0.75rem; letter-spacing: 0.4px; color: var(--text-muted); }
+html[data-ui="v4"] .browsers-list { gap: 2px; }
+html[data-ui="v4"] .brow {
+  gap: 4px; padding: 10px 12px;
+  background: transparent; border-color: transparent;
+  border-radius: var(--radius-card); box-shadow: none;
+}
+html[data-ui="v4"] .brow:hover { background: var(--v4-hover); }
+html[data-ui="v4"] .brow .happ { font-size: 0.95rem; }
+html[data-ui="v4"] .brow .hline { align-items: center; gap: 8px; }
+html[data-ui="v4"] .bmodes { background: var(--bg-tertiary); border-color: var(--border-color); border-radius: var(--radius); padding: 2px; gap: 2px; }
+html[data-ui="v4"] .bmode { background: transparent; border-right: 0; border-radius: var(--radius-sm); padding: 3px 10px; font-size: 0.72rem; }
+html[data-ui="v4"] .bmode[aria-pressed="true"] { background: var(--accent-primary); color: var(--v4-on-accent); }
+html[data-ui="v4"] .bmode:focus-visible { outline-color: var(--accent-primary); }
+html[data-ui="v4"] .bclaim { color: var(--text-secondary); background: var(--bg-tertiary); border-color: transparent; }
+html[data-ui="v4"] .bwarn { padding: 4px 8px; background: var(--v4-warn-bg); border-radius: var(--radius-sm); color: var(--accent-yellow); }
+html[data-ui="v4"] .bpurpose .bsub-item { color: var(--text-secondary); }
+html[data-ui="v4"] .brow .hactions { margin-top: 4px; }
+html[data-ui="v4"] .bhist { border-top-color: var(--border-color); }
+html[data-ui="v4"] .bhist-tabs { border-left-color: var(--border-color); }
+html[data-ui="v4"] .bwindow > summary:focus-visible { outline-color: var(--accent-primary); }
+html[data-ui="v4"] .browsers-foot { margin-top: 16px; padding: 0 2px; }
+
+@media (max-width: 700px) {
+  html[data-ui="v4"] .brow { padding: 12px 10px; border-color: var(--border-color); background: var(--bg-secondary); }
+  html[data-ui="v4"] .browsers-list { gap: 8px; }
+  html[data-ui="v4"] .brow .hactions { flex-wrap: wrap; gap: 6px; }
+}
+html[data-ui="v4"] .brow .hactions .btn-secondary:not(.btn-primary) { background: transparent; border-color: var(--border-color); color: var(--text-secondary); }
+html[data-ui="v4"] .brow .hactions .btn-secondary:hover:not(:disabled) { background: var(--bg-tertiary); color: var(--text-primary); }
+@media (min-width: 701px) {
+  html[data-ui="v4"] .brow { border-radius: 0; border-bottom: var(--border-width) solid var(--border-color); }
+  html[data-ui="v4"] .brow:last-child { border-bottom-color: transparent; }
+}

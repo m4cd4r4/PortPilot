@@ -416,6 +416,8 @@
       else if (e.key === 'Enter' && e.target.tagName === 'INPUT') { e.preventDefault(); submitDialog(); }
     });
     document.addEventListener('portpilot:view', (e) => onView(e.detail.view));
+    // v4: the sidebar shows a Browsers count from the first paint, so read the profiles once at startup.
+    if (document.documentElement.getAttribute('data-ui') === 'v4') load();
   });
 
   window.PortPilotBrowsers = { load, toggle, profiles: () => b.rows.map((r) => ({ name: r.name, state: r.state })) };
