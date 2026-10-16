@@ -39,7 +39,7 @@ The sidebar is the status board: every item carries a live count and a health do
 ## Open items
 
 - Name B's dark and A's light as the default per OS theme? Assumed: follow the system theme, user can override.
-- Which palette the hybrid uses for its Dark and Light sets: A's graphite + mint, or B's paper + indigo (assumed: graphite + mint dark, a light variant of the same; confirm in slice 0).
+- Palette decided (Macdara, 2026-10-16): graphite + mint for both Dark and Light (the A tokens from canvas.html). B's paper + indigo is dropped.
 
 ## Decision: the six old themes are retired (Macdara, 2026-10-16)
 
