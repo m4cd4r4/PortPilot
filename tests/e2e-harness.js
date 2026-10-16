@@ -85,6 +85,10 @@ async function launch(world, { width = 1440, height = 900 } = {}) {
   const isUi = (w) => /index\.html/.test(w.url());
   const win = await until(() => app.windows().find(isUi), 20000, 'the PortPilot window').then(() => app.windows().find(isUi));
   await win.waitForLoadState('domcontentloaded');
+  // These specs drive the v3 DOM (view tabs, topbar). v4 is the default, so pin v3 and reload.
+  await win.evaluate(() => localStorage.setItem('portpilot-ui', 'v3'));
+  await win.reload();
+  await win.waitForLoadState('domcontentloaded');
   await win.setViewportSize({ width, height });
   const userData = await app.evaluate(({ app: a }) => a.getPath('userData'));
   assert.strictEqual(path.resolve(userData), path.resolve(world.configDir), 'app is using the throwaway dir, not the real config');
