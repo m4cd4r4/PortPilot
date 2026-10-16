@@ -464,7 +464,7 @@ function setupEventListeners() {
 
   // Theme selector
   document.querySelectorAll('.theme-btn').forEach(btn => {
-    btn.addEventListener('click', () => setTheme(btn.dataset.theme));
+    btn.addEventListener('click', () => setTheme(themeOf(btn)));
   });
 
   // Keyboard shortcuts
@@ -2717,16 +2717,34 @@ function syncTitleBar() {
 }
 window.addEventListener('resize', () => { clearTimeout(syncTitleBar.t); syncTitleBar.t = setTimeout(syncTitleBar, 150); });
 
+// v4 offers Auto / Light / Dark. "Dark" is the stored value 'tokyonight' (so flag-off v3 keeps
+// working); the other v3 themes are not offered, and a saved one reads as Auto without being
+// overwritten, so trying ?ui=v4 never loses a v3 choice.
+const V4_THEMES = ['auto', 'light', 'tokyonight'];
+const themeOf = (btn) => btn.dataset.theme || btn.dataset.choice;
+if (UI_V4) THEME_LABELS.tokyonight = 'Dark';
+
 function loadTheme() {
   let saved = localStorage.getItem('portpilot-theme') || 'tokyonight';
   if (RETIRED_THEMES[saved]) saved = RETIRED_THEMES[saved];
+  if (UI_V4) {
+    // The v3 palettes are keyed on [data-theme=...], which also matches these buttons and would
+    // paint each one in its own v3 colours. v4 moves the key to data-choice.
+    document.querySelectorAll('.theme-btn').forEach((btn) => {
+      if (!btn.dataset.theme) return;
+      btn.dataset.choice = btn.dataset.theme;
+      btn.removeAttribute('data-theme');
+      if (btn.dataset.choice === 'tokyonight') btn.textContent = 'Dark';
+    });
+    if (!V4_THEMES.includes(saved)) { setTheme('auto', false, false); return; }
+  }
   setTheme(saved, false);
 }
 
-function setTheme(choice, showNotification = true) {
+function setTheme(choice, showNotification = true, persist = true) {
   if (RETIRED_THEMES[choice]) choice = RETIRED_THEMES[choice];
   state.theme = choice;
-  localStorage.setItem('portpilot-theme', choice);
+  if (persist) localStorage.setItem('portpilot-theme', choice);
   document.body.setAttribute('data-theme', resolveTheme(choice));
 
   if (systemThemeQuery) systemThemeQuery.onchange = null;
@@ -2736,7 +2754,7 @@ function setTheme(choice, showNotification = true) {
   }
 
   document.querySelectorAll('.theme-btn').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.theme === choice);
+    btn.classList.toggle('active', themeOf(btn) === choice);
   });
   syncTitleBar();
 

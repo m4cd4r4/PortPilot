@@ -81,9 +81,9 @@ html[data-ui="v4"] body[data-theme="v4-light"] {
 
 /* Settings (slice 7 rebuilds this): v4 has only Auto / Light / Dark, so the retired
    themes' buttons are hidden. TokyoNight stays as the "Dark" choice until then. */
-html[data-ui="v4"] .theme-btn[data-theme="nord"],
-html[data-ui="v4"] .theme-btn[data-theme="dracula"],
-html[data-ui="v4"] .theme-btn[data-theme="glass"] {
+html[data-ui="v4"] .theme-btn[data-choice="nord"],
+html[data-ui="v4"] .theme-btn[data-choice="dracula"],
+html[data-ui="v4"] .theme-btn[data-choice="glass"] {
   display: none;
 }
 
@@ -385,4 +385,43 @@ html[data-ui="v4"] .history-footer { margin-top: 14px; padding: 0 2px; font-size
   html[data-ui="v4"] .history-filters select { flex: 1 1 40%; min-width: 0; }
   html[data-ui="v4"] .history-field { flex: 1 1 40%; }
   html[data-ui="v4"] .history-field .history-date { flex: 1; min-width: 0; }
+}
+
+/* ============ Settings and modals (slice 7) ============
+   Theme is Auto / Light / Dark (renderer.js relabels TokyoNight as Dark and hides the other
+   v3 themes, slice 0). The panel and every dialog share one calm card: sentence-case titles,
+   quiet section labels, mint focus and checkboxes. Behaviour is unchanged. */
+html[data-ui="v4"] input[type="checkbox"],
+html[data-ui="v4"] input[type="radio"] { accent-color: var(--accent-primary); }
+
+html[data-ui="v4"] .settings-panel { box-shadow: var(--shadow); border-left-color: var(--border-color); }
+html[data-ui="v4"] .settings-header { padding: 14px 18px; }
+html[data-ui="v4"] .btn-close { color: var(--text-secondary); }
+html[data-ui="v4"] .btn-close:hover { color: var(--text-primary); }
+html[data-ui="v4"] .settings-header h2,
+html[data-ui="v4"] .modal-header h2 { font-size: 1.05rem; text-transform: none; letter-spacing: -0.1px; }
+html[data-ui="v4"] .settings-body { padding: 8px 18px 18px; }
+html[data-ui="v4"] .settings-section { margin-bottom: 14px; padding-bottom: 12px; }
+html[data-ui="v4"] .settings-section h3 { color: var(--text-muted); font-size: 0.72rem; letter-spacing: 0.7px; margin-bottom: 6px; }
+html[data-ui="v4"] .setting-row { padding: 8px 0; font-size: 0.86rem; gap: 12px; }
+html[data-ui="v4"] .setting-row span { color: var(--text-primary); }
+html[data-ui="v4"] .input-small { background: var(--bg-tertiary); }
+html[data-ui="v4"] .input-small:focus,
+html[data-ui="v4"] .form-group input:focus,
+html[data-ui="v4"] .form-group select:focus { border-color: var(--accent-primary); box-shadow: 0 0 0 3px var(--v4-focus-ring); }
+
+html[data-ui="v4"] .theme-selector { display: inline-flex; flex-wrap: nowrap; gap: 2px; padding: 2px; background: var(--bg-tertiary); border: var(--border-width) solid var(--border-color); border-radius: var(--radius); }
+html[data-ui="v4"] .theme-btn { background: transparent; border-color: transparent; border-radius: var(--radius-sm); padding: 5px 16px; font-size: 0.8rem; }
+html[data-ui="v4"] .theme-btn:hover { border-color: transparent; color: var(--text-primary); }
+html[data-ui="v4"] .theme-btn.active { background: var(--accent-primary); border-color: transparent; color: var(--v4-on-accent); font-weight: 600; }
+html[data-ui="v4"] .theme-btn:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 1px; }
+
+html[data-ui="v4"] .modal-content { border-radius: var(--radius-card); box-shadow: var(--elev-card); padding: 22px; }
+html[data-ui="v4"] .modal-danger { border-color: color-mix(in srgb, var(--accent-red) 45%, var(--border-color)); }
+html[data-ui="v4"] .form-group label { text-transform: none; letter-spacing: 0; font-size: 0.8rem; font-weight: 600; }
+html[data-ui="v4"] .modal-footer { border-top-color: var(--border-color); }
+html[data-ui="v4"] .preview-tag { color: var(--text-secondary); background: var(--bg-tertiary); border-color: transparent; }
+@media (max-width: 700px) {
+  /* Port and fallback stack, so the port field is wide enough to read its placeholder. */
+  html[data-ui="v4"] #modal-app .form-row { grid-template-columns: 1fr; gap: 0; }
 }
