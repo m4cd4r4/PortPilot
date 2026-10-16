@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Diagnose, inside the app.** The crash toast has a Diagnose button that runs a read-only Claude Code session on the crashed app and shows the cause, the evidence and the fix in a panel, with Cancel. It uses your own installed Claude Code and its sign-in (or `ANTHROPIC_API_KEY`), so PortPilot never handles a credential. Claude can only read files (Read, Grep, Glob); keys and passwords in the crash output are masked before it is sent, and the first use asks for your consent. No Claude Code installed or not signed in shows a clear message. Ask Claude (hand the crash to a live session) is unchanged.
+
 ### Fixed
 - **start_app checks the port the command pins.** A command with `--port 3007` (or `-p 3007`) is verified on 3007 even when the app's preferred port says 3002, so a healthy start is no longer reported as "port never came up".
 

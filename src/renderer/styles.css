@@ -2749,3 +2749,77 @@ body {
   .palette-kind { flex-basis: 48px; }
   .palette-hint { max-width: 34%; }
 }
+
+/* ---- Diagnose panel (in-app read-only Claude run on a crashed app) ---- */
+.diag-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 400;   /* under the toast container (500) so the crash toast stays visible */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.diag-card {
+  width: min(680px, 100%);
+  max-height: 82vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border: var(--border-width) solid var(--border-color);
+  border-radius: var(--radius-card, var(--radius));
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+}
+
+.diag-head, .diag-foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+}
+
+.diag-head { border-bottom: var(--border-width) solid var(--border-color); }
+.diag-foot { border-top: var(--border-width) solid var(--border-color); }
+.diag-title { font-weight: 600; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.diag-body {
+  padding: 12px 14px;
+  overflow-y: auto;
+  min-height: 80px;
+}
+
+.diag-msg { margin: 0 0 8px; line-height: 1.5; }
+.diag-msg.dim { color: var(--text-secondary); font-size: 0.86rem; }
+.diag-msg.error { color: var(--accent-red); }
+.diag-status { color: var(--text-secondary); font-size: 0.84rem; margin-bottom: 8px; }
+
+.diag-activity {
+  max-height: 96px;
+  overflow-y: auto;
+  margin-bottom: 8px;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.74rem;
+  color: var(--text-muted);
+}
+
+.diag-tool { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.diag-answer { white-space: pre-wrap; line-height: 1.55; user-select: text; }
+
+.diag-btn {
+  padding: 4px 12px;
+  border-radius: var(--radius);
+  border: var(--border-width) solid var(--border-color);
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.diag-btn:hover { border-color: var(--text-secondary); }
+.diag-btn.primary { background: var(--accent-primary); border-color: var(--accent-primary); color: var(--bg-primary); }
+.diag-btn.ghost { background: transparent; color: var(--text-secondary); }

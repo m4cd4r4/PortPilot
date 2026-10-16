@@ -88,6 +88,19 @@ contextBridge.exposeInMainWorld('portpilot', {
     askClaude: (appId, sessionId) => ipcRenderer.invoke('crash:askClaude', { appId, sessionId })
   },
 
+  // In-app diagnosis: a read-only headless Claude run on a crashed app
+  diagnose: {
+    status: (appId) => ipcRenderer.invoke('diagnose:status', appId),
+    consent: () => ipcRenderer.invoke('diagnose:consent'),
+    start: (appId) => ipcRenderer.invoke('diagnose:start', appId),
+    cancel: (appId) => ipcRenderer.invoke('diagnose:cancel', appId),
+    onEvent: (cb) => {
+      const handler = (_e, ev) => cb(ev);
+      ipcRenderer.on('diagnose-event', handler);
+      return () => ipcRenderer.removeListener('diagnose-event', handler);
+    }
+  },
+
   // Port reservation
   reserve: {
     enable: (appId) => ipcRenderer.invoke('reserve:enable', appId),

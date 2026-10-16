@@ -8,7 +8,8 @@ const os = require('os');
 const { probe } = require('./healthCheck');
 const { shareInfo } = require('./shareInfo');
 const reserver = require('./portReserver');
-const { recordStart, recordStop, readRuntime, liveSessions, sendToSession } = require('../core/configFile');
+const { recordStart, recordStop, readRuntime, liveSessions, sendToSession, readLogTail } = require('../core/configFile');
+const { createRunner, findClaude } = require('./diagnoseRunner');
 const { makeStartedBy, shortSession } = require('../core/status');
 
 // Read the Peacock window colour from a worktree's .vscode/settings.json so a
@@ -570,6 +571,56 @@ function setupIpcHandlers(ipcMain, configStore) {
       return { success: false, error: error.message };
     }
   });
+
+  // ---- In-app diagnosis: a headless `claude -p` run, read-only, opt-in ----
+  const diagnoseSenders = new Map();   // appId -> webContents that asked
+  const diagnoseRunner = createRunner({
+    send: (ev) => { const wc = diagnoseSenders.get(ev.appId); if (wc && !wc.isDestroyed()) wc.send('diagnose-event', ev); },
+  });
+
+  process.once('exit', () => diagnoseRunner.cancelAll());
+
+  ipcMain.handle('diagnose:status', async (_, appId) => {
+    try {
+      return {
+        success: true,
+        cli: !!findClaude(),
+        consent: configStore.getSettings().aiDiagnoseConsent === true,
+        running: diagnoseRunner.isRunning(appId),
+      };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('diagnose:consent', async () => {
+    try {
+      configStore.updateSettings({ aiDiagnoseConsent: true });
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('diagnose:start', async (event, appId) => {
+    try {
+      const app = appId && configStore.getApp(appId);
+      if (!app) return { success: false, error: 'Unknown app' };
+      if (configStore.getSettings().aiDiagnoseConsent !== true) return { success: false, code: 'NO_CONSENT', error: 'Diagnosis has not been allowed yet' };
+      const crashed = readRuntime(configStore.configPath).apps[appId]?.crashed || null;
+      const tail = (crashed && crashed.errorTail) || readLogTail(configStore.configPath, appId) || '';
+      diagnoseSenders.set(appId, event.sender);
+      return diagnoseRunner.start({
+        appId, name: app.name, command: app.command, cwd: app.cwd,
+        port: (crashed && crashed.port) || app.preferredPort || null,
+        exitCode: crashed ? crashed.exitCode : null, tail,
+      });
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('diagnose:cancel', async (_, appId) => ({ success: diagnoseRunner.cancel(appId) }));
 
   ipcMain.handle('process:logs', async (_, appId) => {
     try {

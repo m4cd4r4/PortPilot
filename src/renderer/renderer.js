@@ -2923,6 +2923,7 @@ function showCrashToast(p) {
   };
   button('Restart', '', () => { dismiss(); window.startApp(p.appId); });
   button('Logs', '', () => viewLogs(p.appId));
+  button('Diagnose', '', () => window.openDiagnose && window.openDiagnose(p.appId, p.name), 'Read-only Claude diagnosis of this crash, shown here');
   if (p.session && p.session.id) {
     const why = { owner: 'the session that started it', folder: 'a session in its folder', recent: 'the most recent session' }[p.session.reason] || 'a live session';
     const ask = button(`Ask Claude (${p.session.short})`, 'primary', async () => {
