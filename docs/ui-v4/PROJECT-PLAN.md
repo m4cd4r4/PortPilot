@@ -19,7 +19,7 @@ The sidebar is the status board: every item carries a live count and a health do
 
 | # | Slice | Status |
 |---|---|---|
-| 0 | Tokens and system only: new `styles-v4.css` beside the old one, flag `ui.v4`, graphite+mint (dark and light) and paper+indigo token sets | todo |
+| 0 | Tokens and system only: new `styles-v4.css` beside the old one, flag `ui.v4`, two token sets (Dark, Light) plus System; no old-theme port | todo |
 | 1 | Shell: sidebar with live counts and health dots, content region, Ctrl+K kept | todo |
 | 2 | Running home: B tiles, blocked strip with prescriptive fixes (Use :3005, Free the port, Ask Claude), first-run empty state | todo |
 | 3 | Apps list + inspector (A): grouped, worktrees nested, preview, logs, share | todo |
@@ -39,4 +39,10 @@ The sidebar is the status board: every item carries a live count and a health do
 ## Open items
 
 - Name B's dark and A's light as the default per OS theme? Assumed: follow the system theme, user can override.
-- Which of the six existing themes survive as v4 token sets (assumed: all six, ported in slice 0).
+- Which palette the hybrid uses for its Dark and Light sets: A's graphite + mint, or B's paper + indigo (assumed: graphite + mint dark, a light variant of the same; confirm in slice 0).
+
+## Decision: the six old themes are retired (Macdara, 2026-10-16)
+
+- v4 ships exactly two token sets, Dark and Light, plus "System" (follows the OS). No theme picker beyond that.
+- The old look and its six themes stay available in the last v3.x release, which remains downloadable for anyone who prefers it. v4 does not port them.
+- Consequences: Settings > Theme shrinks to a three-way switch; stored theme values from v3 map to System on first v4 launch; `ui.v4` becomes a build-time switch removed at slice 9 rather than a long-lived user setting.
