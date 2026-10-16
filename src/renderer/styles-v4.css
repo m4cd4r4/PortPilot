@@ -346,3 +346,43 @@ html[data-ui="v4"] .brow .hactions .btn-secondary:hover:not(:disabled) { backgro
   html[data-ui="v4"] .brow { border-radius: 0; border-bottom: var(--border-width) solid var(--border-color); }
   html[data-ui="v4"] .brow:last-child { border-bottom-color: transparent; }
 }
+
+/* ============ History (slice 6) ============
+   Runs become a ledger like Apps and Browsers: borderless rows with hairline dividers and a
+   hover wash, filters as one calm toolbar, the "detected" tag as a quiet chip. Behaviour is
+   unchanged (history.js). */
+html[data-ui="v4"] .history-filters { gap: 8px; margin-bottom: 14px; padding-bottom: 12px; border-bottom: var(--border-width) solid var(--border-color); }
+html[data-ui="v4"] .history-field { font-size: 0.78rem; color: var(--text-secondary); }
+html[data-ui="v4"] .history-date { background: var(--bg-tertiary); font-size: 0.78rem; padding: 4px 6px; }
+html[data-ui="v4"] .hrow {
+  padding: 10px 12px; gap: 14px;
+  background: transparent; border-color: transparent;
+  border-radius: var(--radius-card); box-shadow: none;
+}
+html[data-ui="v4"] .hrow:hover { background: var(--v4-hover); }
+html[data-ui="v4"] .hthumb { border-radius: var(--radius-sm); }
+html[data-ui="v4"] .hline { align-items: center; }
+html[data-ui="v4"] .happ { font-size: 0.95rem; }
+html[data-ui="v4"] .hwhen { color: var(--text-muted); font-size: 0.75rem; }
+html[data-ui="v4"] .hdetected { color: var(--text-secondary); background: var(--bg-tertiary); border-color: transparent; }
+html[data-ui="v4"] .hpin { color: var(--accent-yellow); }
+html[data-ui="v4"] .hprog { color: var(--accent-primary); }
+html[data-ui="v4"] .hrow .hactions { margin-top: 4px; gap: 6px; }
+html[data-ui="v4"] .hrow .hactions .btn-secondary:not(.btn-primary) { background: transparent; border-color: var(--border-color); color: var(--text-secondary); }
+html[data-ui="v4"] .hrow .hactions .btn-secondary:hover:not(:disabled) { background: var(--bg-tertiary); color: var(--text-primary); }
+html[data-ui="v4"] .history-footer { margin-top: 14px; padding: 0 2px; font-size: 0.78rem; }
+
+@media (min-width: 701px) {
+  html[data-ui="v4"] .hrow { border-radius: 0; border-bottom: var(--border-width) solid var(--border-color); }
+}
+@media (max-width: 700px) {
+  html[data-ui="v4"] .history-list { gap: 8px; }
+  html[data-ui="v4"] .hrow { background: var(--bg-secondary); border-color: var(--border-color); }
+}
+@media (max-width: 700px) {
+  html[data-ui="v4"] .hrow .hmain > .hline:first-child { flex-wrap: wrap; row-gap: 2px; }
+  html[data-ui="v4"] .hrow .hwhen { margin-left: 0; flex-basis: 100%; white-space: normal; }
+  html[data-ui="v4"] .history-filters select { flex: 1 1 40%; min-width: 0; }
+  html[data-ui="v4"] .history-field { flex: 1 1 40%; }
+  html[data-ui="v4"] .history-field .history-date { flex: 1; min-width: 0; }
+}
