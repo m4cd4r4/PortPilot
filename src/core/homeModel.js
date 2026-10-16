@@ -40,5 +40,12 @@
     };
   }
 
-  return { summarise };
+  /** The app the inspector opens on: the first blocked one, else the first running, else the first. */
+  function pickInspected(rows) {
+    const list = Array.isArray(rows) ? rows : [];
+    const hit = list.find((r) => BLOCKED.has(r.state)) || list.find((r) => r.state === 'running') || list[0];
+    return hit ? hit.id : null;
+  }
+
+  return { summarise, pickInspected };
 });

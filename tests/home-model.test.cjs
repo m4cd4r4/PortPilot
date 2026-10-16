@@ -28,4 +28,11 @@ assert.deepStrictEqual(many.blocked, ['x', 'y', 'z']);
 // A blocked app is never also counted as ready.
 assert.deepStrictEqual(many.ready, []);
 
-console.log('home-model: headline, tally and blocked/running/ready split ok');
+// The inspector opens on the first blocked app, else the first running, else the first.
+const { pickInspected } = require('../src/core/homeModel.js');
+assert.strictEqual(pickInspected([{ id: 'a', state: 'stopped' }, { id: 'b', state: 'running' }, { id: 'c', state: 'crashed' }]), 'c');
+assert.strictEqual(pickInspected([{ id: 'a', state: 'stopped' }, { id: 'b', state: 'running' }]), 'b');
+assert.strictEqual(pickInspected([{ id: 'a', state: 'stopped' }]), 'a');
+assert.strictEqual(pickInspected([]), null);
+
+console.log('home-model: headline, tally, blocked/running/ready split and inspector pick ok');
