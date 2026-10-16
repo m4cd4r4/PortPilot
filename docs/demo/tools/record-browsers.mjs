@@ -3,16 +3,16 @@
 import path from 'path';
 import fs from 'fs';
 import { pathToFileURL } from 'url';
-import { launch, newPage, repo, seedPath } from './lib.mjs';
+import { launch, newPage, repo, seedPath, goSection } from './lib.mjs';
 import { addOverlay, caption, clickWithCursor, startRecording, encodeWebp, mediaDir, sleep } from './record-lib.mjs';
 
 const browser = await launch();
 const page = await newPage(browser, 960, 620);
 await page.addInitScript({ path: seedPath });
 await page.goto(pathToFileURL(path.join(repo, 'src', 'renderer', 'index.html')).href);
-await page.waitForSelector('.app-card');
+await page.waitForSelector('.now-card, .app-card');
 await page.evaluate(() => window.portpilot.browsers.stop('google'));
-await page.click('.view-tab[data-view="browsers"]');
+await goSection(page, 'browsers');
 await page.waitForSelector('.brow');
 // Three profiles are enough for the story: a running one, the one we start and stop, and a held port.
 await page.addStyleTag({ content: '.toast.error{display:none} .brow[data-name="facebook"],.brow[data-name="reddit"],.brow[data-name="upwork"]{display:none}' });
