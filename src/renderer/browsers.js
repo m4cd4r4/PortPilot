@@ -132,6 +132,7 @@
       await Promise.all([...b.expanded].filter((k) => rowOf(k)).map((k) => loadHistory(rowOf(k).name)));
       if (mine !== b.loadSeq) return;
       render();
+      if (window.PortPilotSidebar) window.PortPilotSidebar.render();
     } catch (err) {
       if (mine !== b.loadSeq) return;
       $('browsers-list').innerHTML = `<div class="empty-state">Could not read the browser profiles: ${esc(err.message)}</div>`;

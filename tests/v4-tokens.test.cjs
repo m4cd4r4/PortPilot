@@ -7,13 +7,16 @@ const assert = require('assert');
 const root = path.join(__dirname, '..', 'src', 'renderer');
 const css = fs.readFileSync(path.join(root, 'styles-v4.css'), 'utf8');
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
-const stripped = css.replace(/\/\*[\s\S]*?\*\//g, '');
+// Drop @media openers so the rules inside are checked like any other; the stray closing
+// braces they leave behind are skipped by the rule regex.
+const stripped = css.replace(/\/\*[\s\S]*?\*\//g, '').replace(/@media[^{]*\{/g, '');
 
 // 1. Flag-off proof: every selector in the file is scoped under the flag.
 const rules = [...stripped.matchAll(/([^{}]+)\{[^{}]*\}/g)];
 assert.ok(rules.length >= 3, 'expected at least the two theme blocks and the settings rule');
 for (const [, sel] of rules) {
-  for (const one of sel.split(',')) {
+  // Split on commas outside parentheses so :has(a, b) stays in one selector.
+  for (const one of sel.split(/,(?![^(]*\))/)) {
     assert.ok(one.trim().startsWith('html[data-ui="v4"]'), `unscoped selector: ${one.trim()}`);
   }
 }
