@@ -13,10 +13,11 @@ const diagnose = require('../core/diagnose');
 function findClaude({ platform = process.platform, env = process.env, exists = fs.existsSync } = {}) {
   const names = platform === 'win32' ? ['claude.exe', 'claude.cmd'] : ['claude'];
   const dirs = String(env.PATH || env.Path || '').split(platform === 'win32' ? ';' : ':').filter(Boolean);
+  const p = platform === 'win32' ? path.win32 : path.posix;   // follow the platform asked about, not the host
   for (const dir of dirs) {
-    if (!path.isAbsolute(dir)) continue;   // a relative entry would resolve inside the app folder
+    if (!p.isAbsolute(dir)) continue;   // a relative entry would resolve inside the app folder
     for (const name of names) {
-      const full = path.join(dir, name);
+      const full = p.join(dir, name);
       try { if (exists(full)) return full; } catch { /* next */ }
     }
   }
