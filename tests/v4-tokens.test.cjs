@@ -63,3 +63,9 @@ for (const [name, set] of [['dark', dark], ['light', light]]) {
 }
 
 console.log(`v4-tokens: ${rules.length} scoped rules, ${Object.keys(dark).length} tokens x 2 themes, ${PAIRS.length * 2} AA pairs ok`);
+
+// 4. The web portal strips the v4 scripts, so the flag must stay off whenever the portal's token meta is present.
+const rendererSrc = fs.readFileSync(path.join(__dirname, '..', 'src', 'renderer', 'renderer.js'), 'utf8');
+const flagBlock = rendererSrc.slice(rendererSrc.indexOf('const UI_V4 = (() => {'));
+assert.ok(flagBlock.indexOf(`meta[name="pp-token"]`) > -1 && flagBlock.indexOf(`meta[name="pp-token"]`) < flagBlock.indexOf('localStorage.setItem'),
+  'UI_V4 must return false in the web portal before it reads or writes the flag');
