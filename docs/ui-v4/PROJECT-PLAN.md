@@ -24,8 +24,8 @@ The sidebar is the status board: every item carries a live count and a health do
 | 2 | Running home: B tiles, blocked strip with prescriptive fixes (Use :3005, Free the port, Ask Claude), first-run empty state | done (#118) |
 | 3 | Apps list + inspector (A): grouped, worktrees nested, preview, logs, share | done (#119) |
 | 4 | Ports: dev / other / system, gated kill, conflicts | done (#120) |
-| 5 | Browsers | in PR |
-| 6 | History | todo |
+| 5 | Browsers | done (#121) |
+| 6 | History | in PR |
 | 7 | Settings and modals (add app, delete, detect, group, share, logs) | todo |
 | 8 | Surfaces outside the route list: tray, crash toast, command palette, VS Code panel, web portal, docs screenshots and README demo | todo |
 | 9 | Flip default on once every screen has a slice; remove flag after one release | todo |
