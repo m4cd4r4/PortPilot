@@ -620,6 +620,17 @@ function detachedCommand(platform, command, logPath) {
 }
 
 /**
+ * The port an app will actually bind: a --port / -p flag in its command wins over
+ * preferredPort (a command that pins --port 3007 ignores the PORT env var), so
+ * start checks look where the server really listens.
+ */
+function expectedPort(app) {
+  const m = /(?:^|\s)(?:--port|-p)(?:=|\s+)(\d{2,5})(?=\s|$)/.exec(String(app.command || ''));
+  const n = m ? Number(m[1]) : 0;
+  return n >= 1 && n <= 65535 ? n : app.preferredPort || null;
+}
+
+/**
  * Start an app and report an HONEST result. When the app has a preferredPort we
  * poll for it to come up (so a command that fails immediately reports failure
  * instead of a misleading success). Without a port we can only confirm the
@@ -630,8 +641,9 @@ function startApp(app, logPath = null) {
     let settled = false;
     const done = (res) => { if (!settled) { settled = true; resolve(res); } };
     try {
+      const port = expectedPort(app);
       const env = { ...process.env, ...app.env };
-      if (app.preferredPort) env.PORT = String(app.preferredPort);
+      if (port) env.PORT = String(port);
 
       const options = { cwd: app.cwd, env, detached: true, stdio: 'ignore', shell: true, windowsHide: true };
       const child = exec(detachedCommand(os.platform(), app.command, prepareLog(logPath)), options);
@@ -639,16 +651,16 @@ function startApp(app, logPath = null) {
       child.on('error', (err) => done({ success: false, error: err.message }));
       if (typeof child.unref === 'function') child.unref();
 
-      if (app.preferredPort) {
+      if (port) {
         let tries = 0;
         const iv = setInterval(() => {
           tries++;
-          if (checkPort(app.preferredPort)) {
+          if (checkPort(port)) {
             clearInterval(iv);
-            done({ success: true, verified: true, message: `Started ${app.name}; port ${app.preferredPort} is up` });
+            done({ success: true, verified: true, message: `Started ${app.name}; port ${port} is up` });
           } else if (tries >= 6) {
             clearInterval(iv);
-            done({ success: false, verified: true, error: `Started ${app.name} but port ${app.preferredPort} never came up within ~6s - check the command, cwd, or its logs` });
+            done({ success: false, verified: true, error: `Started ${app.name} but port ${port} never came up within ~6s - check the command, cwd, or its logs` });
           }
         }, 1000);
       } else {
@@ -667,8 +679,9 @@ function startApp(app, logPath = null) {
  * stamp a start (and open a run) for a process Claude never launched.
  */
 function alreadyRunning(app, check = checkPort) {
-  if (!app.preferredPort || !check(app.preferredPort)) return null;
-  return { success: true, alreadyRunning: true, verified: true, message: `${app.name} is already running on port ${app.preferredPort}; left as it is` };
+  const port = expectedPort(app);
+  if (!port || !check(port)) return null;
+  return { success: true, alreadyRunning: true, verified: true, message: `${app.name} is already running on port ${port}; left as it is` };
 }
 
 /**
@@ -1483,4 +1496,4 @@ async function main() {
 const isMain = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
 if (isMain) main().catch(console.error);
 
-export { matchRunning, findRuns, rerunSteps, alreadyRunning,normPath, appAtCwd, cmdSafe, startRefusal, observedDuplicate,pickColor, resolveWorktreeGit, registerWorktree, stampStart, detachedCommand, prepareLog };
+export { matchRunning, findRuns, rerunSteps, alreadyRunning, expectedPort,normPath, appAtCwd, cmdSafe, startRefusal, observedDuplicate,pickColor, resolveWorktreeGit, registerWorktree, stampStart, detachedCommand, prepareLog };
