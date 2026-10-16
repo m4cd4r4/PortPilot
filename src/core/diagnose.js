@@ -15,14 +15,22 @@ const RUN_TIMEOUT_MS = 3 * 60 * 1000;
 /** Patterns that look like secrets, each replaced before text is sent anywhere. */
 const SECRET_PATTERNS = [
   [/-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?-----END [A-Z ]*PRIVATE KEY-----/g, '[redacted private key]'],
-  [/\bsk-[A-Za-z0-9_-]{16,}/g, '[redacted key]'],
+  [/\b[sr]k[-_](?:live|test|ant)?[-_]?[A-Za-z0-9_-]{16,}/g, '[redacted key]'],
+  [/\bAIza[0-9A-Za-z_-]{30,}/g, '[redacted key]'],
+  [/\bnpm_[A-Za-z0-9]{30,}/g, '[redacted token]'],
+  [/\bglpat-[A-Za-z0-9_-]{16,}/g, '[redacted token]'],
+  [/\bSG\.[A-Za-z0-9_-]{16,}\.[A-Za-z0-9_-]{16,}/g, '[redacted key]'],
+  [/(\b(?:sig|signature|sas)=)[A-Za-z0-9%+/=_-]{16,}/gi, '$1[redacted]'],
+  [/\b(https?:\/\/)[A-Za-z0-9]{16,}@/g, '$1[redacted]@'],
+  [/(--?(?:password|passwd|pass|token|secret|api-?key|auth)(?:=|\s+))("[^"\n]*"|'[^'\n]*'|[^\s"']+)/gi, '$1[redacted]'],
+  [/(["'](?:[\w-]*(?:key|secret|token|password|passwd|pass|auth|credential)[\w-]*)["']\s*:\s*)("[^"\n]*"|'[^'\n]*')/gi, '$1"[redacted]"'],
   [/\b(?:ghp|gho|ghu|ghs|github_pat)_[A-Za-z0-9_]{20,}/g, '[redacted token]'],
   [/\bAKIA[0-9A-Z]{16}\b/g, '[redacted key]'],
   [/\bxox[abprs]-[A-Za-z0-9-]{10,}/g, '[redacted token]'],
   [/\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}/g, '[redacted jwt]'],
   [/\b(Bearer|Basic)\s+[A-Za-z0-9._~+/=-]{12,}/gi, '$1 [redacted]'],
   [/\b([a-z][a-z0-9+.-]*:\/\/[^\s:/@]+:)[^\s@/]+@/gi, '$1[redacted]@'],
-  [/\b([A-Z0-9_]*(?:KEY|SECRET|TOKEN|PASSWORD|PASSWD|PWD|CREDENTIAL)[A-Z0-9_]*)\s*[=:]\s*("[^"\n]*"|'[^'\n]*'|[^\s"',;]+)/gi, '$1=[redacted]'],
+  [/\b([A-Z0-9_]*(?:KEY|SECRET|TOKEN|PASSWORD|PASSWD|PASS|PWD|AUTH|CREDENTIAL)[A-Z0-9_]*)\s*[=:]\s*("[^"\n]*"|'[^'\n]*'|[^\s"',;]+)/gi, '$1=[redacted]'],
 ];
 
 /** The text with anything that looks like a secret replaced. */
@@ -71,9 +79,12 @@ function claudeArgs() {
     '-p',
     '--output-format', 'stream-json',
     '--verbose',
-    '--allowedTools', 'Read', 'Grep', 'Glob',
-    '--disallowedTools', 'Bash', 'Edit', 'Write', 'NotebookEdit', 'WebFetch', 'WebSearch',
-    '--strict-mcp-config',   // no MCP servers from the user's config: only the three file-read tools
+    // Restricted: no code-running tools, user/project/local settings and their hooks ignored, file tools
+    // confined to the app folder. --tools and dontAsk pin the set so a bypassPermissions setting cannot widen it.
+    '--restricted',
+    '--tools', 'Read,Grep,Glob',
+    '--permission-mode', 'dontAsk',
+    '--strict-mcp-config',
     '--max-turns', String(MAX_TURNS),
   ];
 }
@@ -114,8 +125,11 @@ function friendlyError({ code = null, stderr = '', timedOut = false, cancelled =
   if (cancelled) return 'Cancelled.';
   if (timedOut) return 'Stopped after 3 minutes without an answer.';
   const s = String(stderr);
-  if (/not logged in|please run .*login|invalid api key|authentication|unauthorized|401/i.test(s)) {
+  if (/not logged in|please run .*login|invalid api key|authentication|unauthorized|http 401|status:? ?401/i.test(s)) {
     return 'Claude Code is not signed in. Run `claude` in a terminal and sign in, or set ANTHROPIC_API_KEY, then try again.';
+  }
+  if (/unknown option|unrecognized option|unknown argument/i.test(s)) {
+    return 'This version of Claude Code is too old for Diagnose. Update it (npm i -g @anthropic-ai/claude-code, or claude update) and try again.';
   }
   if (/rate limit|usage limit|quota/i.test(s)) return 'Your Claude usage limit is reached. Try again after it resets.';
   const first = redact(s).split(/\r?\n/).map((l) => l.trim()).filter(Boolean).slice(-1)[0];

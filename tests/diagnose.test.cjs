@@ -37,6 +37,33 @@ t('redacts common secret shapes', () => {
   }
 });
 
+t('redacts JSON keys, space-separated flags and vendor prefixes', () => {
+  const cases = [
+    [j('{"pass', 'word":"hunter2pass"}'), 'hunter2pass'],
+    [j('{"api_', 'key": "zzzz1111yyyy2222"}'), 'zzzz1111yyyy2222'],
+    [j('node app.js --pass', 'word hunter2pass'), 'hunter2pass'],
+    [j('run --api-', 'key zzzz1111yyyy2222'), 'zzzz1111yyyy2222'],
+    [j('sk', '_live_', 'abcdefghijklmnopqrstuv'), 'abcdefghijklmnopqrstuv'],
+    [j('AI', 'za', 'SyA1234567890abcdefghijklmnopqrstuvw'), 'SyA1234567890abcdefghijklmnopqrstuvw'],
+    [j('npm', '_', 'abcdefghijklmnopqrstuvwxyz0123456789'), 'abcdefghijklmnopqrstuvwxyz0123456789'],
+    [j('DB_PA', 'SS=hunter2pass'), 'hunter2pass'],
+    [j('https://', 'abcdef0123456789abcdef', '@o1.ingest.example.io/1'), 'abcdef0123456789abcdef'],
+  ];
+  for (const [input, secret] of cases) {
+    const out = d.redact(input);
+    assert.ok(!out.includes(secret), `${secret} survived in: ${out}`);
+  }
+});
+
+t('a 401 in a path or port is not read as an auth failure', () => {
+  assert.doesNotMatch(d.friendlyError({ code: 1, stderr: 'at server.js:401:12\nlistening on 4010' }), /not signed in/);
+  assert.match(d.friendlyError({ code: 1, stderr: 'HTTP 401 Unauthorized' }), /not signed in/);
+});
+
+t('an old CLI that rejects the flags says to update', () => {
+  assert.match(d.friendlyError({ code: 1, stderr: "error: unknown option '--restricted'" }), /Update it/);
+});
+
 t('leaves ordinary crash output alone', () => {
   const s = "Error: Cannot find module 'react/jsx-runtime'\n    at Module._resolveFilename (node:internal/modules/cjs/loader:1420:15)";
   assert.strictEqual(d.redact(s), s);
@@ -68,10 +95,12 @@ t('no output says so', () => {
 t('args are read-only, stream-json, and never carry the prompt', () => {
   const a = d.claudeArgs();
   assert.ok(a.includes('-p') && a.includes('stream-json'));
-  const allowed = a.slice(a.indexOf('--allowedTools') + 1, a.indexOf('--disallowedTools'));
-  assert.deepStrictEqual(allowed, ['Read', 'Grep', 'Glob']);
-  for (const x of ['Bash', 'Edit', 'Write']) assert.ok(a.includes(x), `${x} must be disallowed`);
+  assert.ok(a.includes('--restricted'), 'restricted mode: no code tools, user/project settings and hooks ignored');
+  assert.strictEqual(a[a.indexOf('--tools') + 1], 'Read,Grep,Glob');
+  assert.strictEqual(a[a.indexOf('--permission-mode') + 1], 'dontAsk');
   assert.ok(a.includes('--strict-mcp-config'), "the user's MCP servers must not load");
+  assert.ok(!a.includes('bypassPermissions') && !a.includes('--dangerously-skip-permissions'));
+  assert.ok(a.every((x) => !/[\s"&|<>^%]/.test(x)), 'args are shell-safe: they may be joined into one cmd line');
 });
 
 t('parseEvent: text and tool blocks become events', () => {

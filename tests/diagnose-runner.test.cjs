@@ -73,7 +73,7 @@ const line = (o) => Buffer.from(JSON.stringify(o) + '\n');
     assert.ok(child.stdinData.includes('web'));
     assert.ok(!child.stdinData.includes('supersecretvalue1'));
     const { args, opts } = calls.spawn[0];
-    assert.ok(args.includes('--allowedTools') && !args.some((a) => a.includes('web')));
+    assert.ok(args.includes('--restricted') && args.includes('--tools') && !args.some((a) => a.includes('web')));
     assert.strictEqual(opts.cwd, 'C:/x');
   });
 
@@ -141,6 +141,23 @@ const line = (o) => Buffer.from(JSON.stringify(o) + '\n');
     assert.ok(win && /claude\.cmd$/.test(win));
     assert.strictEqual(findClaude({ platform: 'linux', env: { PATH: '/x:/y' }, exists: () => false }), null);
     assert.ok(findClaude({ platform: 'linux', env: { PATH: '/x:/y' }, exists: (p) => /[\\/]y[\\/]/.test(p) }).includes('claude'));
+  });
+
+  await t('relative PATH entries are skipped (they would resolve inside the crashed repo)', async () => {
+    const seen = [];
+    const found = findClaude({ platform: 'linux', env: { PATH: '.:node_modules/.bin:/abs/bin' }, exists: (p) => { seen.push(p); return true; } });
+    assert.ok(found && /abs/.test(found));
+    assert.ok(seen.every((p) => /abs/.test(p)), `only absolute dirs are probed: ${seen.join(', ')}`);
+  });
+
+  await t('a stdin error after the child exits early does not throw', async () => {
+    const { child, calls, runner } = setup();
+    child.stdin = new EventEmitter();
+    child.stdin.end = () => {};
+    runner.start(ctx);
+    child.stdin.emit('error', new Error('EPIPE'));   // an unhandled 'error' event would throw here
+    child.emit('close', 1);
+    assert.ok(calls.events.some((e) => e.kind === 'end'));
   });
 
   console.log(`\n${pass} passed, ${fail} failed`);

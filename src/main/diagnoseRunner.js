@@ -14,6 +14,7 @@ function findClaude({ platform = process.platform, env = process.env, exists = f
   const names = platform === 'win32' ? ['claude.exe', 'claude.cmd'] : ['claude'];
   const dirs = String(env.PATH || env.Path || '').split(platform === 'win32' ? ';' : ':').filter(Boolean);
   for (const dir of dirs) {
+    if (!path.isAbsolute(dir)) continue;   // a relative entry would resolve inside the app folder
     for (const name of names) {
       const full = path.join(dir, name);
       try { if (exists(full)) return full; } catch { /* next */ }
@@ -72,8 +73,10 @@ function createRunner({
     if (run.timer && typeof run.timer.unref === 'function') run.timer.unref();
 
     let buf = '';
+    if (child.stdout.setEncoding) child.stdout.setEncoding('utf8');
+    if (child.stderr.setEncoding) child.stderr.setEncoding('utf8');
     child.stdout.on('data', (chunk) => {
-      buf += chunk.toString('utf8');
+      buf += chunk.toString();
       let nl;
       while ((nl = buf.indexOf('\n')) >= 0) {
         const line = buf.slice(0, nl).trim();
@@ -85,7 +88,7 @@ function createRunner({
         }
       }
     });
-    child.stderr.on('data', (chunk) => { run.stderr = (run.stderr + chunk.toString('utf8')).slice(-4000); });
+    child.stderr.on('data', (chunk) => { run.stderr = (run.stderr + chunk.toString()).slice(-4000); });
     child.on('error', (err) => {
       if (!run.finished) { run.finished = true; emit({ kind: 'error', text: `Could not run Claude: ${err.message}` }); }
     });
@@ -98,6 +101,7 @@ function createRunner({
       emit({ kind: 'end' });
     });
 
+    if (child.stdin.on) child.stdin.on('error', () => { /* the child exited first; close reports why */ });
     try { child.stdin.end(prompt); } catch { /* close handles it */ }
     return { success: true };
   }

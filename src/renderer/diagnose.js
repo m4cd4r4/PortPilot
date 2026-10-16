@@ -87,7 +87,7 @@
   async function askConsent() {
     panel.body.replaceChildren(
       el('p', 'diag-msg', 'Diagnose sends this app\'s last crash output and folder path to your own Claude Code, using your own sign-in or API key and your usage.'),
-      el('p', 'diag-msg dim', 'Claude can only read files in the app folder (no commands, no edits). Keys and passwords in the output are masked first. You can cancel at any time.'),
+      el('p', 'diag-msg dim', 'Claude can only read files in the app folder (no commands, no edits, your Claude Code settings and hooks are not used). Keys and passwords in the crash output are masked first, but files it reads, such as a .env, are sent as they are. You can cancel at any time.'),
     );
     setFoot(
       button('Allow and diagnose', 'primary', async () => {

@@ -575,7 +575,11 @@ function setupIpcHandlers(ipcMain, configStore) {
   // ---- In-app diagnosis: a headless `claude -p` run, read-only, opt-in ----
   const diagnoseSenders = new Map();   // appId -> webContents that asked
   const diagnoseRunner = createRunner({
-    send: (ev) => { const wc = diagnoseSenders.get(ev.appId); if (wc && !wc.isDestroyed()) wc.send('diagnose-event', ev); },
+    send: (ev) => {
+      const wc = diagnoseSenders.get(ev.appId);
+      if (wc && !wc.isDestroyed()) wc.send('diagnose-event', ev);
+      if (ev.kind === 'end') diagnoseSenders.delete(ev.appId);
+    },
   });
 
   process.once('exit', () => diagnoseRunner.cancelAll());
@@ -609,12 +613,15 @@ function setupIpcHandlers(ipcMain, configStore) {
       if (configStore.getSettings().aiDiagnoseConsent !== true) return { success: false, code: 'NO_CONSENT', error: 'Diagnosis has not been allowed yet' };
       const crashed = readRuntime(configStore.configPath).apps[appId]?.crashed || null;
       const tail = (crashed && crashed.errorTail) || readLogTail(configStore.configPath, appId) || '';
+      if (diagnoseRunner.isRunning(appId)) return { success: false, error: 'A diagnosis is already running for this app' };
       diagnoseSenders.set(appId, event.sender);
-      return diagnoseRunner.start({
+      const started = diagnoseRunner.start({
         appId, name: app.name, command: app.command, cwd: app.cwd,
         port: (crashed && crashed.port) || app.preferredPort || null,
         exitCode: crashed ? crashed.exitCode : null, tail,
       });
+      if (!started.success) diagnoseSenders.delete(appId);
+      return started;
     } catch (error) {
       return { success: false, error: error.message };
     }
