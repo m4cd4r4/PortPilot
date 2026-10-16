@@ -2958,6 +2958,7 @@ window.killPort = killPort;
 window.copyPort = copyPort;
 window.copyCmdPath = copyCmdPath;
 window.startApp = startApp;
+window.showCrashToast = showCrashToast; // the demo recorder replays a crash
 window.stopApp = stopApp;
 window.openPortInBrowser = openPortInBrowser;
 window.openAppFolder = openAppFolder;

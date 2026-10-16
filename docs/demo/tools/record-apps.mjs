@@ -13,7 +13,7 @@ async function open() {
   const page = await newPage(browser, 1000, 620);
   await page.addInitScript({ path: seedPath });
   await page.goto(pathToFileURL(path.join(repo, 'src', 'renderer', 'index.html')).href);
-  await page.waitForSelector('.app-card');
+  await page.waitForSelector('.now-card, .app-card');
   await page.waitForSelector('.crash-toast');
   await page.waitForTimeout(1200);
   await page.evaluate(() => { for (const t of document.querySelectorAll('.toast')) t.remove(); });
@@ -30,11 +30,6 @@ async function finish(page, rec, name, width = 900) {
 
 if (which === 'all' || which === 'conflict') {
   const page = await open();
-  // Put the alight row near the top of the frame.
-  await page.evaluate(() => {
-    const row = [...document.querySelectorAll('.app-row, .app-card')].find((c) => c.innerText.includes('alight') && !c.innerText.includes('cosmos'));
-    row.scrollIntoView({ block: 'center' });
-  });
   await addOverlay(page);
   const btn = '[data-confirm-key="kill-start:a_admin"]';
   const rec = startRecording(page);
@@ -47,19 +42,6 @@ if (which === 'all' || which === 'conflict') {
   await clickWithCursor(page, btn, { pause: 400 });
   await page.waitForSelector('.toast:has-text("alight started")', { timeout: 8000 });
   await sleep(900);
-  // The page scrolls inside a container, not the window: find it from any list row.
-  console.log('scrolled to top:', await page.evaluate(() => new Promise((done) => {
-    let el = document.querySelector('.app-card');
-    while (el && el !== document.body && !(/(auto|scroll)/.test(getComputedStyle(el).overflowY) && el.scrollHeight > el.clientHeight)) el = el.parentElement;
-    const sc = el && el !== document.body ? el : document.scrollingElement;
-    const from = sc.scrollTop, t0 = performance.now();
-    const step = (t) => {
-      const k = Math.min(1, (t - t0) / 700);
-      sc.scrollTop = from * (1 - (k * k * (3 - 2 * k)));
-      if (k < 1) requestAnimationFrame(step); else done(sc.scrollTop === 0);
-    };
-    requestAnimationFrame(step);
-  })));
   await caption(page, '<b>solaisoft</b> stopped, <b>alight</b> is running on <b>:3007</b> and joins Now running');
   await sleep(3200);
   await finish(page, rec, 'conflict-resolve.webp');
