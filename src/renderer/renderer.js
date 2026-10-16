@@ -981,6 +981,7 @@ const isListedApp = (app) => !isStripLayout() || !isLiveApp(app);
 function renderApps() {
   // The strip first: the early returns below (empty list, no search match) still owe it a redraw.
   if (window.PortPilotStripView) window.PortPilotStripView.render();
+  if (window.PortPilotSidebar) window.PortPilotSidebar.render();
   if (state.apps.length === 0 && state.groups.length === 0) {
     dom.appsList.innerHTML = `<div class="empty-state">
       No apps registered. Click "Add App" to register your first app.

@@ -86,3 +86,89 @@ html[data-ui="v4"] .theme-btn[data-theme="dracula"],
 html[data-ui="v4"] .theme-btn[data-theme="glass"] {
   display: none;
 }
+
+/* ============ Sidebar shell (slice 1) ============
+   The left sidebar replaces the Apps / History / Browsers tabs and the header title.
+   src/renderer/sidebar.js builds it; with the flag off it stays `hidden` and unstyled. */
+html[data-ui="v4"] .view-tabs,
+html[data-ui="v4"] .header-title { display: none; }
+
+html[data-ui="v4"] #app { padding-left: 220px; }
+
+html[data-ui="v4"] .v4-sidebar:not([hidden]) {
+  position: fixed;
+  top: 0; left: 0; bottom: 0;
+  width: 220px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 10px;
+  background: var(--bg-secondary);
+  border-right: var(--border-width) solid var(--border-color);
+  z-index: 50;
+}
+html[data-ui="v4"] .v4-brand {
+  display: flex; align-items: center; gap: 9px;
+  padding: 4px 10px 14px;
+  font-weight: 700; letter-spacing: 0.2px; font-size: 0.95rem;
+  color: var(--text-primary);
+  -webkit-app-region: drag;
+}
+html[data-ui="v4"] .v4-brand-mark { width: 20px; height: 20px; border-radius: 6px; background: var(--accent-primary); flex: none; }
+html[data-ui="v4"] .v4-nav-list { display: flex; flex-direction: column; gap: 2px; }
+html[data-ui="v4"] .v4-nav-foot { margin-top: auto; display: flex; flex-direction: column; gap: 2px; }
+
+html[data-ui="v4"] .v4-nav-item {
+  display: flex; align-items: center; gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0; border-radius: var(--radius);
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit; font-size: 0.86rem;
+  text-align: left; cursor: pointer;
+}
+html[data-ui="v4"] .v4-nav-item:hover { background: var(--v4-hover); color: var(--text-primary); }
+html[data-ui="v4"] .v4-nav-item.on { background: var(--v4-selected); color: var(--text-primary); }
+html[data-ui="v4"] .v4-nav-item:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: -2px; }
+html[data-ui="v4"] .v4-nav-glyph { display: inline-flex; flex: none; color: var(--text-muted); }
+html[data-ui="v4"] .v4-nav-item.on .v4-nav-glyph { color: var(--accent-primary); }
+html[data-ui="v4"] .v4-nav-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+html[data-ui="v4"] .v4-nav-count { font-size: 0.75rem; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+html[data-ui="v4"] .v4-kbd { font: inherit; font-size: 0.7rem; color: var(--text-muted); border: var(--border-width) solid var(--border-color); border-radius: var(--radius-sm); padding: 0 5px; }
+
+/* Health: green only for a calm "Running", red only for "Needs attention". */
+html[data-ui="v4"] .v4-nav-item[data-tone="ok"] .v4-nav-count { color: var(--accent-green); }
+html[data-ui="v4"] .v4-nav-item[data-section="attention"][data-tone="ok"] .v4-nav-glyph { color: var(--accent-green); }
+html[data-ui="v4"] .v4-nav-item[data-tone="bad"] .v4-nav-glyph { color: var(--accent-red); }
+html[data-ui="v4"] .v4-nav-item[data-tone="bad"] .v4-nav-count {
+  background: var(--accent-red); color: var(--bg-primary);
+  border-radius: 9px; padding: 0 7px; font-weight: 700;
+}
+
+/* Apps-family items are focus modes of the Apps view until slices 2 to 4 give them screens. */
+html[data-ui="v4"] .content[data-v4-focus="running"] #apps-list,
+html[data-ui="v4"] .content[data-v4-focus="running"] #apps-section .section-toolbar,
+html[data-ui="v4"] .content[data-v4-focus="running"] #ports-section,
+html[data-ui="v4"] .content[data-v4-focus="apps"] #now-strip,
+html[data-ui="v4"] .content[data-v4-focus="apps"] #ports-section,
+html[data-ui="v4"] .content[data-v4-focus="attention"] #now-strip,
+html[data-ui="v4"] .content[data-v4-focus="attention"] #ports-section,
+html[data-ui="v4"] .content[data-v4-focus="ports"] #apps-section { display: none; }
+html[data-ui="v4"] .content[data-v4-focus="attention"] .app-card:not(:has(.state-conflict, .state-crashed, .state-error)) { display: none; }
+
+@media (max-width: 700px) {
+  html[data-ui="v4"] #app { padding-left: 0; padding-bottom: 58px; }
+  html[data-ui="v4"] .v4-sidebar:not([hidden]) {
+    top: auto; width: 100%; height: 58px;
+    flex-direction: row; gap: 0; padding: 4px 6px;
+    border-right: 0; border-top: var(--border-width) solid var(--border-color);
+  }
+  html[data-ui="v4"] .v4-brand,
+  html[data-ui="v4"] .v4-nav-foot { display: none; }
+  html[data-ui="v4"] .v4-nav-list { flex-direction: row; flex: 1; gap: 0; }
+  html[data-ui="v4"] .v4-nav-item { flex: 1; flex-direction: column; justify-content: center; gap: 2px; padding: 4px 2px; font-size: 0.64rem; position: relative; }
+  html[data-ui="v4"] .v4-nav-label { flex: none; max-width: 100%; }
+  html[data-ui="v4"] .v4-nav-count { position: absolute; top: 1px; right: 4px; font-size: 0.62rem; }
+  html[data-ui="v4"] .v4-nav-item[data-tone="bad"] .v4-nav-count { padding: 0 5px; }
+}
