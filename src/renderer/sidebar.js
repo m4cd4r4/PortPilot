@@ -17,7 +17,9 @@
   const TRIANGLE = (size) => `<svg width="${size}" height="${size}" viewBox="0 0 16 16" fill="currentColor"><path d="M8 2l7 12H1L8 2z"/></svg>`;
   const BAD = new Set(['conflict', 'crashed', 'error']);
 
-  let focus = 'apps';
+  // v4 opens on the Running home; the other Apps-family items are focus modes of the same view.
+  content.dataset.v4Focus = 'running';
+  let focus = 'running';
 
   function counts() {
     const live = (a) => !!(state.runningApps.find((r) => r.id === a.id && r.running) || state.detectedApps[a.id]);

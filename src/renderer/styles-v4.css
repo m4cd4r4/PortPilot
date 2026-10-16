@@ -172,3 +172,60 @@ html[data-ui="v4"] .content[data-v4-focus="attention"] .app-card:not(:has(.state
   html[data-ui="v4"] .v4-nav-count { position: absolute; top: 1px; right: 4px; font-size: 0.62rem; }
   html[data-ui="v4"] .v4-nav-item[data-tone="bad"] .v4-nav-count { padding: 0 5px; }
 }
+
+/* ============ Running home (slice 2) ============
+   src/renderer/home.js fills #v4-home-top (greeting, blocked strip, first-run welcome) and
+   #v4-home-ready (Ready to start tiles). They show only on the Running focus; the running
+   tiles are the existing Now running strip, restyled below. */
+html[data-ui="v4"] .content:not([data-v4-focus="running"]) .v4-home { display: none; }
+html[data-ui="v4"] .content[data-v4-empty] #apps-section,
+html[data-ui="v4"] .content[data-v4-empty] #ports-section { display: none; }
+
+html[data-ui="v4"] .v4-hello { padding: 6px 2px 14px; }
+html[data-ui="v4"] .v4-hello h2 { margin: 0; font-size: 1.6rem; font-weight: 700; letter-spacing: -0.3px; color: var(--text-primary); }
+html[data-ui="v4"] .v4-hello[data-tone="bad"] h2 { color: var(--accent-red); }
+html[data-ui="v4"] .v4-hello p { margin: 2px 0 0; color: var(--text-secondary); font-size: 0.9rem; }
+
+html[data-ui="v4"] .v4-alerts { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+html[data-ui="v4"] .v4-alert {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 6px 14px;
+  padding: 11px 14px;
+  background: var(--v4-danger-bg);
+  border: var(--border-width) solid color-mix(in srgb, var(--accent-red) 35%, var(--border-color));
+  border-radius: var(--radius-card);
+}
+html[data-ui="v4"] .v4-alert-name { font-weight: 700; color: var(--text-primary); }
+html[data-ui="v4"] .v4-alert-why { flex: 1 1 200px; color: var(--text-secondary); font-size: 0.82rem; }
+html[data-ui="v4"] .v4-alert-actions { display: inline-flex; flex-wrap: wrap; gap: 6px; margin-left: auto; }
+html[data-ui="v4"] .v4-alert .conflict-strip { flex: 1 1 320px; font-size: 0.8rem; border: 0; padding: 0; }
+html[data-ui="v4"] .v4-alert .conflict-strip .btn { font-size: 0.8rem; padding: 7px 12px; }
+
+/* Running tiles: the Now running strip as an auto-fill grid (no sideways scroll at 390). */
+html[data-ui="v4"] .now-row { display: grid; overflow: visible; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 14px; }
+html[data-ui="v4"] .now-card { flex: none; border-color: color-mix(in srgb, var(--accent-green) 30%, var(--border-color)); }
+
+html[data-ui="v4"] .v4-sec { display: flex; align-items: center; gap: 8px; margin: 22px 2px 10px; font-size: 0.75rem; letter-spacing: 0.7px; text-transform: uppercase; color: var(--text-muted); }
+html[data-ui="v4"] .v4-sec-count { font-variant-numeric: tabular-nums; }
+html[data-ui="v4"] .v4-tiles { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); }
+html[data-ui="v4"] .v4-tile {
+  display: flex; flex-direction: column; gap: 10px;
+  padding: 14px;
+  background: var(--bg-secondary);
+  border: var(--border-width) solid var(--border-color);
+  border-radius: var(--radius-card);
+  box-shadow: var(--elev-card);
+}
+html[data-ui="v4"] .v4-tile-head { display: flex; align-items: center; gap: 8px; }
+html[data-ui="v4"] .v4-tile-name { font-weight: 700; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+html[data-ui="v4"] .v4-tile-meta { color: var(--text-secondary); font-size: 0.8rem; }
+html[data-ui="v4"] .v4-tile-branch { display: inline-flex; align-items: center; gap: 4px; }
+html[data-ui="v4"] .v4-tile-actions { display: flex; gap: 8px; margin-top: auto; }
+html[data-ui="v4"] .v4-tile-actions .v4-start { flex: 1; padding: 10px; font-size: 0.9rem; }
+
+html[data-ui="v4"] .v4-empty { max-width: 460px; margin: 56px auto; text-align: center; }
+html[data-ui="v4"] .v4-empty h2 { margin: 0 0 6px; font-size: 1.7rem; letter-spacing: -0.3px; }
+html[data-ui="v4"] .v4-empty p { margin: 0 0 18px; color: var(--text-secondary); }
+html[data-ui="v4"] .v4-empty-actions { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+html[data-ui="v4"] .v4-steps { list-style: none; margin: 24px 0 0; padding: 0; display: grid; gap: 8px; text-align: left; }
+html[data-ui="v4"] .v4-steps li { padding: 10px 14px; background: var(--bg-secondary); border: var(--border-width) solid var(--border-color); border-radius: var(--radius-card); color: var(--text-secondary); }
+html[data-ui="v4"] .v4-steps b { color: var(--text-primary); }

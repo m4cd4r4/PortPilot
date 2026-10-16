@@ -74,6 +74,9 @@
         <div class="browsers-foot">Each profile has its own folder, so sign-ins stay separate. PortPilot never copies cookies or passwords between profiles: sign in once in each.</div>
       </section>
 
+      <!-- v4 Running home (slice 2): hidden and empty unless the v4 flag is on -->
+      <section id="v4-home-top" class="v4-home" hidden></section>
+
       <!-- Apps Section -->
       <section id="apps-section" class="section">
         <div class="section-toolbar">
@@ -94,6 +97,8 @@
           <div class="empty-state">No apps registered. Click "Add App" to get started.</div>
         </div>
       </section>
+
+      <section id="v4-home-ready" class="v4-home" hidden></section>
 
       <!-- Active Ports Section (grouped: dev / other / system) -->
       <section id="ports-section" class="section collapsible">
@@ -509,6 +514,7 @@
   <script src="../core/titleBar.js"></script>
   <script src="../core/palette.js"></script>
   <script src="../core/sidebarModel.js"></script>
+  <script src="../core/homeModel.js"></script>
   <script src="renderer.js"></script>
   <script src="history.js"></script>
   <script src="browsers.js"></script>
@@ -516,5 +522,6 @@
   <script src="nowStrip.js"></script>
   <script src="palette.js"></script>
   <script src="sidebar.js"></script>
+  <script src="home.js"></script>
 </body>
 </html>
