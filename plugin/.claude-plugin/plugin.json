@@ -1,6 +1,6 @@
 {
   "name": "portpilot",
-  "version": "4.0.0",
+  "version": "4.0.1",
   "description": "Start and stop dev servers through PortPilot, so Claude reuses a running server instead of starting a second one on a taken port.",
   "author": {
     "name": "Macdara Ó Murchú"

@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+## [4.0.1] - 2026-10-16
+
+- Version bump to match the desktop app. The extension itself is unchanged.
+
 ## [4.0.0] - 2026-10-16
 
 - Version bump to match the desktop app. The extension itself is unchanged.

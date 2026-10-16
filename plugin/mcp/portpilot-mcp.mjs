@@ -24354,7 +24354,7 @@ function rerunSteps(run, exists = fs.existsSync) {
 function createServer2() {
   const server = new McpServer({
     name: "portpilot",
-    version: "4.0.0"
+    version: "4.0.1"
   });
   server.tool(
     "get_status",
