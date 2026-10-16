@@ -217,6 +217,16 @@ t('getRunningApps exposes a boolean crashed field', () => {
     await pm.cleanupAllProcesses(cfg);
     t('app quit records a stop for every tracked app', () => assert.equal(cf.readRuntime(cfg).apps['quit-clean'], undefined));
     t('app quit is not a crash', () => assert.ok(!crashes.includes('quit-clean')));
+
+    // Dead on arrival: still a failed start, but flagged so the desktop can raise a crash for it.
+    const dead = await pm.startApp({ id: 'dead-on-arrival', name: 'dead-on-arrival', command: `node -e "console.error('no config');process.exit(2)"` });
+    t('a process dead inside the start window fails the start and says it exited', () => {
+      assert.equal(dead.success, false);
+      assert.equal(dead.exited, true);
+      assert.equal(dead.exitCode, 2);
+    });
+    t('a dead-on-arrival start carries its output as errorTail', () => assert.ok(/no config/.test(dead.errorTail || ''), dead.errorTail));
+    t('a dead-on-arrival start is not announced as a crash by processManager itself', () => assert.ok(!crashes.includes('dead-on-arrival')));
   } catch (e) {
     console.log('❌ process fixtures -', e.message); failed++;
   }

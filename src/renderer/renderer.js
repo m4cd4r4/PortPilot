@@ -1429,7 +1429,8 @@ async function startApp(appId, { confirmed = false } = {}) {
       const delay = detectStartupDelay(app);
       startPortReadinessCheck(appId, app.preferredPort, delay);
     }
-  } else {
+  } else if (!result.crashRaised) {
+    // crashRaised: main already sent the crash toast (with Diagnose) for this one.
     showToast(`Failed to start: ${result.error}`, 'error');
   }
   await loadApps();
@@ -1512,7 +1513,8 @@ async function startOnFreePort(appId) {
   if (result.success) {
     showToast(`${app.name} started on ${freePort} (PID ${result.pid})`, 'success');
     startPortReadinessCheck(appId, freePort, detectStartupDelay(app));
-  } else {
+  } else if (!result.crashRaised) {
+    // crashRaised: main already sent the crash toast (with Diagnose) for this one.
     showToast(`Failed to start: ${result.error}`, 'error');
   }
   await loadApps();

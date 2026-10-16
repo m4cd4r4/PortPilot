@@ -120,10 +120,15 @@ async function startApp(appConfig) {
       setTimeout(() => {
         if (childProcess.killed || childProcess.exitCode !== null) {
           runningProcesses.delete(id); // Clean up failed start
+          const exited = childProcess.exitCode !== null;
           resolve({
             success: false,
             error: errorOutput || 'Process exited immediately',
-            exitCode: childProcess.exitCode
+            exitCode: childProcess.exitCode,
+            // Dead on arrival: the desktop Start handler turns this into a crash
+            // (toast, Diagnose, Ask Claude) so it is not just a one-line error.
+            exited,
+            errorTail: exited ? ((errorOutput || output).slice(-2000) || null) : null
           });
         } else {
           const info = runningProcesses.get(id);
@@ -312,5 +317,6 @@ module.exports = {
   getAppLogs,
   cleanupAllProcesses,
   onAppCrash,
+  emitCrash,
   isCrashed
 };
