@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.0.3] - 2026-10-17
+
 ### Fixed
 - **Diagnose now reaches apps that die at launch.** An app that exits within the start window (a missing module or config, a bad command) used to give a one-line "Failed to start" toast with no Diagnose button. It now raises the same crash toast as any crash, with Restart, Logs, Diagnose and Ask Claude, and the row reads Crashed.
 - **Diagnose answers are formatted.** Code blocks and `inline code` render as code instead of showing raw backticks and fences.

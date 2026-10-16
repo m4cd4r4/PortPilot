@@ -1,6 +1,6 @@
 {
   "name": "portpilot",
-  "version": "4.0.2",
+  "version": "4.0.3",
   "description": "Localhost port and app manager for developers",
   "main": "src/main/main.js",
   "author": {
