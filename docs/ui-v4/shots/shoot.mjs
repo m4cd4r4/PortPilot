@@ -13,11 +13,14 @@ ws.onmessage = m => { const d = JSON.parse(m.data); if (d.id && pend.has(d.id)) 
 const send = (method, params = {}) => new Promise(r => { const i = ++id; pend.set(i, r); ws.send(JSON.stringify({ id: i, method, params })); });
 await send('Page.enable');
 await send('Emulation.setDeviceMetricsOverride', { width: 1700, height: 1000, deviceScaleFactor: 1, mobile: false });
-for (const d of ['A', 'B', 'C']) for (const s of ['home', 'clean', 'empty']) {
-  await send('Page.navigate', { url: `${canvas}?d=${d}&s=${s}` });
+const combos = [];
+for (const d of ['A', 'B', 'C']) for (const s of ['home', 'clean', 'empty']) combos.push([d, s, '']);
+for (const s of ['home', 'clean', 'empty']) { combos.push(['A', s, 'light']); combos.push(['B', s, 'dark']); }
+for (const [d, s, t] of combos) {
+  await send('Page.navigate', { url: `${canvas}?d=${d}&s=${s}${t ? '&t=' + t : ''}` });
   await new Promise(r => setTimeout(r, 700));
   const shot = await send('Page.captureScreenshot', { format: 'png', clip: { x: 0, y: 150, width: 1700, height: 830, scale: 1 } });
-  fs.writeFileSync(path.join(here, `${d}-${s}.png`), Buffer.from(shot.result.data, 'base64'));
+  fs.writeFileSync(path.join(here, `${d}-${s}${t ? '-' + t : ''}.png`), Buffer.from(shot.result.data, 'base64'));
   console.log('saved', d, s);
 }
 await fetch(base + '/json/close/' + tgt.id);

@@ -55,7 +55,7 @@ button.b.d{color:var(--bad);border-color:color-mix(in srgb,var(--bad) 40%,transp
 .A .row .sp{flex:1}
 .A .row .port{color:var(--tx2)}
 .A .insp{width:340px;border-left:1px solid var(--bd);background:var(--pn);padding:18px;display:flex;flex-direction:column;gap:14px}
-.A .prev{height:150px;border-radius:9px;background:linear-gradient(135deg,#232a33,#1a2a2b);border:1px solid var(--bd);display:flex;align-items:center;justify-content:center;color:var(--mut);font-size:12px}
+.A .prev{height:150px;border-radius:9px;background:linear-gradient(135deg,var(--pn2),color-mix(in srgb,var(--acc) 10%,var(--pn2)));border:1px solid var(--bd);display:flex;align-items:center;justify-content:center;color:var(--mut);font-size:12px}
 .A .kv{display:grid;grid-template-columns:84px 1fr;gap:6px 10px;font-size:13px}
 .A .kv span:nth-child(odd){color:var(--mut)}
 .A .callout{background:color-mix(in srgb,var(--bad) 12%,transparent);border:1px solid color-mix(in srgb,var(--bad) 35%,transparent);border-radius:9px;padding:10px 12px;font-size:13px}
@@ -70,7 +70,9 @@ button.b.d{color:var(--bad);border-color:color-mix(in srgb,var(--bad) 40%,transp
 .B{--bg:#f5f2ea;--pn:#fffdf8;--bd:#e3ddcf;--tx:#1d1b24;--tx2:#5e5a66;--mut:#a29c92;--acc:#4338ca;--onacc:#fff;--ok:#16a34a;--bad:#c2410c;--warn:#b7791f;--r:10px;background:var(--bg);color:var(--tx);display:flex;font-family:'Segoe UI',system-ui,sans-serif}
 .B .rail{width:60px;background:var(--pn);border-right:1px solid var(--bd);display:flex;flex-direction:column;align-items:center;padding:14px 0;gap:10px}
 .B .rail .ic{width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;color:var(--mut);font-size:12px;font-weight:700}
-.B .rail .ic.on{background:#e9e7fb;color:var(--acc)}
+.B .rail .ic.on{background:color-mix(in srgb,var(--acc) 14%,var(--pn));color:var(--acc)}
+.A.light{--bg:#f3f4f6;--pn:#ffffff;--pn2:#eaecf0;--bd:#dcdfe5;--tx:#15171c;--tx2:#566072;--mut:#8a91a0;--acc:#0d9467;--onacc:#fff;--ok:#0d9467;--bad:#d4344a;--warn:#a96a0a}
+.B.dark{--bg:#14131a;--pn:#1d1c26;--bd:#2d2b3a;--tx:#ecebf3;--tx2:#a29eb3;--mut:#6c687c;--acc:#8c84ff;--onacc:#12102a;--ok:#4ade80;--bad:#fb923c;--warn:#f4c15d}
 .B .rail .logo{background:var(--acc);color:#fff;margin-bottom:8px}
 .B .rail .sp{flex:1}
 .B .main{flex:1;padding:26px 34px;overflow:auto}
@@ -86,9 +88,9 @@ button.b.d{color:var(--bad);border-color:color-mix(in srgb,var(--bad) 40%,transp
 .B .tile .mt{color:var(--tx2);font-size:13px}
 .B .tile .big{margin-top:auto;display:flex;gap:8px}
 .B .tile .big button{flex:1;padding:9px}
-.B .tile.t-run{border-color:#bfe3cb;background:linear-gradient(#fff,#f2fbf5)}
-.B .tile.t-bad{border-color:#f0c2ad;background:linear-gradient(#fff,#fff6f1)}
-.B .alert{display:flex;align-items:center;gap:12px;background:#fff1ea;border:1px solid #f0c2ad;border-radius:12px;padding:11px 14px;margin-bottom:6px}
+.B .tile.t-run{border-color:color-mix(in srgb,var(--ok) 32%,var(--bd));background:color-mix(in srgb,var(--ok) 7%,var(--pn))}
+.B .tile.t-bad{border-color:color-mix(in srgb,var(--bad) 35%,var(--bd));background:color-mix(in srgb,var(--bad) 7%,var(--pn))}
+.B .alert{display:flex;align-items:center;gap:12px;background:color-mix(in srgb,var(--bad) 9%,var(--pn));border:1px solid color-mix(in srgb,var(--bad) 35%,var(--bd));border-radius:12px;padding:11px 14px;margin-bottom:6px}
 .B .alert .sp{flex:1}
 .B .empty{text-align:center;margin:70px auto;max-width:420px}
 .B .empty h3{font-size:24px;margin-bottom:8px}.B .empty p{color:var(--tx2);margin-bottom:18px}
@@ -152,6 +154,8 @@ const apps=[
  {id:'alight',nm:'alight',br:'main',port:5173,st:'stop',up:'',by:'',cmd:'vite',grp:'Sites'}];
 const ports=[[3000,'node','examworthy'],[3001,'node','azureprep'],[3011,'node','azureprep:feat/redis'],[3002,'node','pid 18244, not yours'],[5432,'postgres',''],[6379,'redis',''],[135,'svchost','system'],[445,'System','system']];
 let dir='A',state='home';
+const TH={A:'',B:''}; // A: '' = dark, 'light'; B: '' = light, 'dark'
+const THEMES={A:[['','Dark'],['light','Light']],B:[['','Light'],['dark','Dark']]};
 const DIRS={A:'A. Ledger',B:'B. Launchpad',C:'C. Mission map'};
 const SIG={A:'<b>Signature move: the sidebar is the status board.</b> Every nav item carries a live count and a health dot, so "is anything wrong" is answered before you click. Palette: graphite + mint. References: Linear three-column, Supabase status block, incident.io calm "all clear".',
 B:'<b>Signature move: one big Start.</b> Apps are tiles, each with a single large action, and the command bar is the first thing you see. Calm for 3 to 5 apps; power lives behind Ctrl+K and a slim rail. Palette: warm paper (light first) + indigo. References: Render overview, Raycast, Arc.',
@@ -172,8 +176,8 @@ function A(m){
  else center=`<div class="top"><h2>Running</h2><span class="sub">${r.length} of ${L.length} apps</span><span class="sp"></span><button class="b">Stop all</button><button class="b p">Add app</button></div><div class="list">${n.length?`<div class="grp">Needs attention · ${n.length}</div>${n.map(row).join('')}`:`<div class="calm" style="margin:12px 8px">All clear. ${r.length} apps running, no port conflicts.</div>`}<div class="grp">Running · ${r.length}</div>${r.map(row).join('')}<div class="grp">Stopped · ${s.length}</div>${s.map(row).join('')}</div>`;
  let insp='';
  if(L.length&&sel&&!m) insp=`<div class="insp"><div class="prev">${sel.st==='run'?'live preview · :'+sel.port:'no preview'}</div><div><div style="font-size:17px;font-weight:700">${sel.nm}</div><div class="meta" style="color:var(--tx2)">${sel.br} · ${sel.cmd}</div></div>${sel.err?`<div class="callout"><b>Port 3002 is taken.</b><br>${sel.err}<br><br>Another process holds it. Free it, or move this app to :3005.</div>`:sel.clash?`<div class="callout"><b>:3000 is held by ${sel.clash}.</b><br>Start on :3005 instead (one click), or stop ${sel.clash}.</div>`:''}<div class="kv"><span>Status</span><span>${sel.st==='run'?'Running, '+sel.up:sel.st==='bad'?'Crashed':'Blocked'}</span><span>Port</span><span class="mono">:${sel.port}</span><span>Started by</span><span>${sel.by||'-'}</span><span>Folder</span><span class="mono">…/${sel.nm}</span></div><div style="display:flex;gap:8px;margin-top:auto">${sel.err||sel.clash?'<button class="b p" style="flex:1">'+(sel.err?'Kill holder and restart':'Use :3005')+'</button>':'<button class="b p" style="flex:1">Open</button>'}<button class="b">Logs</button><button class="b">Ask Claude</button></div></div>`;
- if(m) return `<div class="A mobile" style="display:flex;flex-direction:column"><div class="top"><h2>Running</h2><span class="sub">${r.length}/${L.length}</span><span class="sp"></span><button class="b p">Add</button></div><div class="list" style="flex:1;overflow:auto">${L.length?(n.length?`<div class="grp">Needs attention · ${n.length}</div>${n.map(row).join('')}`:'')+`<div class="grp">Running · ${r.length}</div>${r.map(row).join('')}<div class="grp">Stopped</div>${s.map(row).join('')}`:`<div class="empty" style="margin-top:120px"><h3>Add your first app</h3><p>Point PortPilot at a project folder.</p><button class="b p">Add app</button></div>`}</div><div class="tabbar"><div class="on">Running</div><div>Apps</div><div>Ports</div><div>Browsers</div><div>History</div></div></div>`;
- return `<div class="A">${side}<div class="main">${center}</div>${insp}</div>`;
+ if(m) return `<div class="A ${TH.A} mobile" style="display:flex;flex-direction:column"><div class="top"><h2>Running</h2><span class="sub">${r.length}/${L.length}</span><span class="sp"></span><button class="b p">Add</button></div><div class="list" style="flex:1;overflow:auto">${L.length?(n.length?`<div class="grp">Needs attention · ${n.length}</div>${n.map(row).join('')}`:'')+`<div class="grp">Running · ${r.length}</div>${r.map(row).join('')}<div class="grp">Stopped</div>${s.map(row).join('')}`:`<div class="empty" style="margin-top:120px"><h3>Add your first app</h3><p>Point PortPilot at a project folder.</p><button class="b p">Add app</button></div>`}</div><div class="tabbar"><div class="on">Running</div><div>Apps</div><div>Ports</div><div>Browsers</div><div>History</div></div></div>`;
+ return `<div class="A ${TH.A}">${side}<div class="main">${center}</div>${insp}</div>`;
 }
 /* ---------- B ---------- */
 function B(m){
@@ -184,7 +188,7 @@ function B(m){
  let body;
  if(!L.length) body=`<div class="empty"><h3>Welcome to PortPilot</h3><p>Your dev servers, one tap each. Add a project to begin.</p><button class="b p">Add a project folder</button><div class="steps"><div><b>1.</b> Pick a folder. We detect the start command.</div><div><b>2.</b> We choose a free port. No more clashes.</div><div><b>3.</b> Press Start. Claude can start it too.</div></div></div>`;
  else body=`<div class="hello">${n.length?'2 things need you':'All good'}<small>${r.length} running · ${L.length-r.length-n.length} ready${n.length?' · '+n.length+' blocked':''}</small></div><div class="cmd">⌕ Start, stop, find a port, ask Claude…<kbd>Ctrl K</kbd></div>${alert}<div class="sec">Running</div><div class="grid">${r.map(tile).join('')}</div>${n.length?'<div class="sec">Blocked</div><div class="grid">'+n.map(tile).join('')+'</div>':''}<div class="sec">Ready to start</div><div class="grid">${L.filter(a=>a.st==='stop').map(tile).join('')}</div>`;
- return `<div class="B ${m?'mobile':''}">${rail}<div class="main">${body}</div></div>`;
+ return `<div class="B ${TH.B} ${m?'mobile':''}">${rail}<div class="main">${body}</div></div>`;
 }
 /* ---------- C ---------- */
 function C(m){
@@ -206,12 +210,13 @@ function C(m){
 function render(){
  document.getElementById('tabs').innerHTML=Object.keys(DIRS).map(k=>`<button aria-selected="${k===dir}" data-d="${k}">${DIRS[k]}</button>`).join('');
  document.getElementById('states').innerHTML=[['home','Conflict + crash'],['clean','All clear'],['empty','First run (empty)']].map(s=>`<button aria-selected="${s[0]===state}" data-s="${s[0]}">${s[1]}</button>`).join('');
+ if(THEMES[dir]) document.getElementById('states').innerHTML+=THEMES[dir].map(t=>`<button aria-selected="${TH[dir]===t[0]}" data-t="${t[0]}" style="margin-left:${t[0]===THEMES[dir][0][0]?'18px':'0'}">${t[1]} mode</button>`).join('');
  document.getElementById('sig').innerHTML=SIG[dir];
  const f={A,B,C}[dir];
  document.getElementById('frames').innerHTML=`<div><div class="cap">Desktop 1200 wide (scaled view of 1440 layout)</div><div class="frame desk">${f(0)}</div></div><div><div class="cap">Phone 390</div><div class="frame mob">${f(1)}</div></div>`;
 }
-document.addEventListener('click',e=>{const t=e.target.closest('button[data-d],button[data-s]');if(!t)return;if(t.dataset.d)dir=t.dataset.d;if(t.dataset.s)state=t.dataset.s;render()});
-const q=new URLSearchParams(location.search);if(q.get('d'))dir=q.get('d');if(q.get('s'))state=q.get('s');
+document.addEventListener('click',e=>{const t=e.target.closest('button[data-d],button[data-s],button[data-t]');if(!t)return;if(t.dataset.t!==undefined)TH[dir]=t.dataset.t;if(t.dataset.d)dir=t.dataset.d;if(t.dataset.s)state=t.dataset.s;render()});
+const q=new URLSearchParams(location.search);if(q.get('d'))dir=q.get('d');if(q.get('s'))state=q.get('s');if(q.get('t'))TH[dir]=q.get('t');
 render();
 </script>
 </body>
