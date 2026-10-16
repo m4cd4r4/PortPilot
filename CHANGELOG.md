@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.0.1] - 2026-10-16
+
+### Fixed
+- **Running home at scale.** With more than 8 ready apps the page-preview tiles become quiet one-line rows, so 51 apps no longer fill the screen with big green Start buttons.
+- **Sidebar logo** is the real PortPilot porthole mark, not a placeholder.
+- **Empty groups** are dimmed and no longer show a "No apps in this group" line.
+
 ## [4.0.0] - 2026-10-16
 
 ### Changed
