@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+## [4.0.0] - 2026-10-16
+
+- Version bump to match the desktop app. The extension itself is unchanged.
+
 ## [3.9.1] - 2026-10-15
 
 - A + in the Browsers view adds a browser profile, and Remove in the profile menu removes one.

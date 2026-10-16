@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.0.0] - 2026-10-16
+
+### Changed
+- **New look: graphite and mint, with a left sidebar.** Running, Needs attention, Apps, Ports, Browsers and History are sections in a sidebar (a bottom bar at phone width) with live counts and a health dot. The Running home puts what needs you first: a blocked strip with the fix on the button (Use :3008 instead, Stop solaisoft and start), then crashed apps, then page-preview tiles for what is up.
+- **Apps and Ports.** Apps are grouped with worktrees nested, and an inspector docks beside the list. Ports lists every listener with its owning app, split into dev, other and system, with a second click to kill.
+- **Browsers and History** are ledger rows: one line per profile or run, mode switch in mint, filters on one line at phone width.
+- **Settings and dialogs** are one card. **Theme is Auto, Light or Dark.** The six older themes are retired; a saved older theme reads as Auto and is not overwritten.
+- The crash toast and the Ctrl+K palette take the new colours with no behaviour change.
+- README and website screenshots and demos show the new UI.
+
+### Notes
+- **Back to the old UI for one release:** open the app with `?ui=v3` (web) or set `portpilot-ui` to `v3` in local storage. `?ui=v4` returns. The switch is removed in the next release.
+- The web portal stays on the old layout for now. The VS Code extension has no UI change.
+- Ask Claude on a crashed app row (outside the crash toast) is not in the new UI yet.
+
 ## [3.9.1] - 2026-10-15
 
 ### Added
