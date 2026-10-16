@@ -24195,6 +24195,11 @@ function detachedCommand(platform, command, logPath) {
   const q = (v) => `'${String(v).replace(/'/g, `'\\''`)}'`;
   return `nohup sh -c ${q(command)} > ${logPath ? q(logPath) : "/dev/null"} 2>&1 &`;
 }
+function expectedPort(app) {
+  const m = /(?:^|\s)(?:--port|-p)(?:=|\s+)(\d{2,5})(?=\s|$)/.exec(String(app.command || ""));
+  const n = m ? Number(m[1]) : 0;
+  return n >= 1 && n <= 65535 ? n : app.preferredPort || null;
+}
 function startApp(app, logPath = null) {
   return new Promise((resolve) => {
     let settled = false;
@@ -24205,22 +24210,23 @@ function startApp(app, logPath = null) {
       }
     };
     try {
+      const port = expectedPort(app);
       const env = { ...process.env, ...app.env };
-      if (app.preferredPort) env.PORT = String(app.preferredPort);
+      if (port) env.PORT = String(port);
       const options = { cwd: app.cwd, env, detached: true, stdio: "ignore", shell: true, windowsHide: true };
       const child = exec(detachedCommand(os.platform(), app.command, prepareLog(logPath)), options);
       child.on("error", (err) => done({ success: false, error: err.message }));
       if (typeof child.unref === "function") child.unref();
-      if (app.preferredPort) {
+      if (port) {
         let tries = 0;
         const iv = setInterval(() => {
           tries++;
-          if (checkPort(app.preferredPort)) {
+          if (checkPort(port)) {
             clearInterval(iv);
-            done({ success: true, verified: true, message: `Started ${app.name}; port ${app.preferredPort} is up` });
+            done({ success: true, verified: true, message: `Started ${app.name}; port ${port} is up` });
           } else if (tries >= 6) {
             clearInterval(iv);
-            done({ success: false, verified: true, error: `Started ${app.name} but port ${app.preferredPort} never came up within ~6s - check the command, cwd, or its logs` });
+            done({ success: false, verified: true, error: `Started ${app.name} but port ${port} never came up within ~6s - check the command, cwd, or its logs` });
           }
         }, 1e3);
       } else {
@@ -24232,8 +24238,9 @@ function startApp(app, logPath = null) {
   });
 }
 function alreadyRunning(app, check2 = checkPort) {
-  if (!app.preferredPort || !check2(app.preferredPort)) return null;
-  return { success: true, alreadyRunning: true, verified: true, message: `${app.name} is already running on port ${app.preferredPort}; left as it is` };
+  const port = expectedPort(app);
+  if (!port || !check2(port)) return null;
+  return { success: true, alreadyRunning: true, verified: true, message: `${app.name} is already running on port ${port}; left as it is` };
 }
 function stampStart(configPath, app, sessionId) {
   if (!app || !app.id) return false;
@@ -24925,6 +24932,7 @@ export {
   appAtCwd,
   cmdSafe,
   detachedCommand,
+  expectedPort,
   findRuns,
   matchRunning,
   normPath,

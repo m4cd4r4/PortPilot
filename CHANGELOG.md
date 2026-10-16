@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **start_app checks the port the command pins.** A command with `--port 3007` (or `-p 3007`) is verified on 3007 even when the app's preferred port says 3002, so a healthy start is no longer reported as "port never came up".
+
 ## [4.0.1] - 2026-10-16
 
 ### Fixed
