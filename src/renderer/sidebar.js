@@ -71,6 +71,7 @@
     }
     content.scrollTop = 0;
     render();
+    if (it.focus === 'apps' && window.PortPilotInspector) window.PortPilotInspector.autoSelect();
   }
 
   nav.addEventListener('click', (e) => {

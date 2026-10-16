@@ -229,3 +229,48 @@ html[data-ui="v4"] .v4-empty-actions { display: flex; gap: 8px; justify-content:
 html[data-ui="v4"] .v4-steps { list-style: none; margin: 24px 0 0; padding: 0; display: grid; gap: 8px; text-align: left; }
 html[data-ui="v4"] .v4-steps li { padding: 10px 14px; background: var(--bg-secondary); border: var(--border-width) solid var(--border-color); border-radius: var(--radius-card); color: var(--text-secondary); }
 html[data-ui="v4"] .v4-steps b { color: var(--text-primary); }
+
+/* ============ Apps list and inspector (slice 3) ============
+   Rows and group headers lose their boxes (A's ledger look); the selected row gets a wash and
+   an accent rail. From 1000px the details drawer docks as a right-hand inspector instead of
+   sliding over the list; below that it stays a slide-over. src/renderer/inspector.js adds the
+   preview and the first selection. */
+html[data-ui="v4"] .app-card {
+  min-height: 38px; padding: 6px 10px;
+  background: transparent; border-color: transparent;
+  backdrop-filter: none; -webkit-backdrop-filter: none;
+}
+html[data-ui="v4"] .app-card:hover { background: var(--v4-hover); border-color: transparent; }
+html[data-ui="v4"] .app-card.drawer-open { background: var(--v4-selected); border-color: transparent; box-shadow: inset 3px 0 0 var(--accent-primary); }
+html[data-ui="v4"] .app-card.selected { background: var(--v4-selected); border-color: var(--accent-primary); }
+html[data-ui="v4"] .app-card.has-conflict { background: var(--v4-warn-bg); }
+html[data-ui="v4"] .section-header {
+  background: transparent; border-color: transparent;
+  backdrop-filter: none; -webkit-backdrop-filter: none;
+  padding: 12px 8px 4px;
+  font-size: 0.72rem; letter-spacing: 0.6px; text-transform: uppercase; color: var(--text-muted);
+}
+html[data-ui="v4"] .section-header:hover { border-color: transparent; color: var(--text-secondary); }
+
+html[data-ui="v4"] .v4-insp-preview {
+  aspect-ratio: var(--preview-aspect);
+  background: var(--bg-tertiary);
+  border: var(--border-width) solid var(--border-color);
+  border-radius: var(--radius-card);
+  overflow: hidden;
+  flex: none;
+}
+html[data-ui="v4"] .v4-insp-preview img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: top left; }
+html[data-ui="v4"] .v4-insp-preview-empty { display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: 0.8rem; text-align: center; padding: 8px; }
+
+@media (min-width: 1000px) {
+  html[data-ui="v4"] .drawer-backdrop { display: none; }
+  html[data-ui="v4"] .app-drawer {
+    top: var(--v4-header-h, 48px);
+    width: 340px;
+    box-shadow: none;
+    animation: none;
+    z-index: 40;
+  }
+  html[data-ui="v4"] #app:has(.app-drawer:not(.hidden)) main.content { margin-right: 340px; }
+}

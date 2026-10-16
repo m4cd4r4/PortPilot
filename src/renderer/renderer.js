@@ -1806,6 +1806,7 @@ function openAppDrawer(appId) {
     : '';
 
   document.getElementById('app-drawer-body').innerHTML = `
+    ${window.PortPilotInspector ? window.PortPilotInspector.preview(app, isRunning) : ''}
     ${staleBanner}
     <div class="drawer-actions-primary">${primary}</div>
     <div class="drawer-fields">${fields}</div>
