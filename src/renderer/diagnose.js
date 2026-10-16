@@ -23,6 +23,17 @@
     return b;
   }
 
+  /** Rebuilds the answer from its text: paragraphs, `inline code` and fenced blocks, all as textContent. */
+  function renderAnswer() {
+    const blocks = window.PortPilotAnswerBlocks.parse(panel.answerText);
+    panel.answer.replaceChildren(...blocks.map((b) => {
+      if (b.type === 'code') return el('pre', 'diag-code', b.text);
+      const p = el('p', 'diag-p');
+      b.runs.forEach((r) => p.appendChild(el(r.code ? 'code' : 'span', null, r.text)));
+      return p;
+    }));
+  }
+
   function close() {
     if (!panel) return;
     if (panel.running) api().cancel(panel.appId).catch(() => {});
@@ -45,7 +56,8 @@
       panel.activity.appendChild(el('div', 'diag-tool', ev.label));
       panel.activity.scrollTop = panel.activity.scrollHeight;
     } else if (ev.kind === 'text') {
-      panel.answer.textContent += (panel.answer.textContent ? '\n\n' : '') + ev.text;
+      panel.answerText += (panel.answerText ? '\n\n' : '') + ev.text;
+      renderAnswer();
       panel.status.textContent = 'Writing the answer...';
     } else if (ev.kind === 'error') {
       panel.error = ev.text;
@@ -60,7 +72,7 @@
         panel.status.textContent = 'Done. Claude only read files; nothing was changed.';
       }
       setFoot(
-        button('Copy answer', '', () => navigator.clipboard.writeText(panel.answer.textContent).catch(() => {})),
+        button('Copy answer', '', () => navigator.clipboard.writeText(panel.answerText).catch(() => {})),
         button('Close', 'ghost', close),
       );
     }
@@ -72,6 +84,7 @@
     panel.done = false;
     panel.activity = el('div', 'diag-activity');
     panel.answer = el('div', 'diag-answer');
+    panel.answerText = '';
     panel.status = el('div', 'diag-status', 'Reading the crash output and project files...');
     panel.body.replaceChildren(panel.status, panel.activity, panel.answer);
     setFoot(button('Cancel', '', () => { api().cancel(panel.appId).catch(() => {}); }));

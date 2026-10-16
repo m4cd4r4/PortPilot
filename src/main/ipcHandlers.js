@@ -1,6 +1,6 @@
 const { scanPorts, checkPort, findAvailablePort, parseTasklistCsv } = require('./portScanner');
 const { ownedPidsByApp } = require('./processTree');
-const { startApp, stopApp, killProcess, killByPort, getRunningApps, getAppLogs } = require('./processManager');
+const { startApp, stopApp, killProcess, killByPort, getRunningApps, getAppLogs, emitCrash } = require('./processManager');
 const path = require('path');
 const fs = require('fs');
 const { exec, execSync } = require('child_process');
@@ -497,6 +497,14 @@ function setupIpcHandlers(ipcMain, configStore) {
       if (result && result.success && appConfig && appConfig.id) {
         recordStart(configStore.configPath, appConfig.id, makeStartedBy({ kind: 'human', surface: 'desktop' }),
           { pid: result.pid, port: appConfig.preferredPort });
+      } else if (result && result.exited && appConfig && appConfig.id) {
+        // Dead within the start window (missing module or config, bad command):
+        // record it as a run that crashed so the crash toast, Diagnose and Ask
+        // Claude work for it, and tell the renderer not to show a bare error.
+        recordStart(configStore.configPath, appConfig.id, makeStartedBy({ kind: 'human', surface: 'desktop' }),
+          { pid: null, port: appConfig.preferredPort });
+        emitCrash({ id: appConfig.id, name: appConfig.name, code: result.exitCode, errorTail: result.errorTail });
+        return { ...result, crashRaised: true };
       }
       return result;
     } catch (error) {
