@@ -32,3 +32,11 @@ export async function newPage(browser, width, height) {
   page.on('console', (m) => { if (m.type() === 'error') page.problems.push(`console: ${m.text()}`); });
   return page;
 }
+
+// v4 navigation: the sidebar (bottom bar at phone width) carries one button per section.
+export async function goSection(page, id) {
+  // Toasts sit over the phone-width nav bar; let the click through without hiding them from a shot.
+  await page.addStyleTag({ content: '#toast-container{pointer-events:none!important}' });
+  await page.click(`.v4-nav-item[data-section="${id}"]`);
+  await page.waitForTimeout(300);
+}
