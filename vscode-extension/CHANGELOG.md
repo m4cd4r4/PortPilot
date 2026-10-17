@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+## [4.0.4] - 2026-10-17
+
+- Marketplace page: new screenshots of the 4.0.3 build, now including the History and Browsers views. No code change.
+
 ## [4.0.3] - 2026-10-17
 
 - Version bump to match the desktop app. The extension itself is unchanged.
