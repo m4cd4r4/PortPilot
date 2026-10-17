@@ -5,8 +5,7 @@
  *
  * Starts a profile through the Browsers tab, opens a page on a local test server (the page address
  * carries a fake token), stops, then asserts the history entry, its redacted tab URL, the History
- * expander with its Open again button, that Open again really reopens the page in a fresh browser,
- * and that the dev-server run the page belongs to reads "tested in <profile>" in the History tab.
+ * expander with its Open again button, and that Open again really reopens the page in a fresh browser.
  * Browser and page ports are free OS ports, never 9222-9240; nothing here touches the real config.
  */
 const { spawn } = require('child_process');
@@ -73,11 +72,8 @@ async function main() {
     await json(browserPort, `/json/new?${encodeURIComponent(pageUrl)}`, { method: 'PUT' });
     await until(async () => (await tabsOn(browserPort)).some((t) => t.url.includes(`:${pagePort}/`) && t.title === 'Shop demo'), 15000, 'the page loaded in the browser');
 
-    // The sampler reads the tab without anyone stopping the browser, and links the dev-server run.
+    // The sampler reads the tab without anyone stopping the browser.
     await until(() => JSON.parse(fs.readFileSync(historyFile, 'utf8')).runs[0].tabs.some((t) => t.url.includes(`:${pagePort}/`)), 15000, 'a sample with the page');
-    const runs = () => JSON.parse(fs.readFileSync(path.join(historyDir, 'runs.json'), 'utf8')).runs;
-    await until(() => (runs()[0].testedIn || []).length > 0, 15000, 'testedIn on the run');
-    check('the sampler links the dev-server run to the profile it was tested in', runs()[0].testedIn[0].profile === 'hist-qa', JSON.stringify(runs()[0].testedIn));
 
     // Stop through the UI: the closing entry has the tab, redacted.
     await win.click(toggle);
@@ -119,10 +115,6 @@ async function main() {
     await win.screenshot({ path: path.join(SHOTS || h.os.tmpdir(), 'browsers-history-390.png') });
     await win.setViewportSize({ width: 1440, height: 900 });
 
-    // The History tab shows where the dev server was tested
-    await win.click('.view-tab[data-view="history"]');
-    await until(async () => (await win.$$('.hrow')).length > 0, 15000, 'history rows');
-    check('the History tab reads "tested in hist-qa" on the dev-server run', (await win.textContent('.hrow')).includes('tested in hist-qa'), (await win.textContent('.hrow')).replace(/\s+/g, ' ').slice(0, 200));
     check('no renderer console errors', errors.length === 0, errors.slice(0, 3).join(' | '));
   } finally {
     const w = app.windows()[0];

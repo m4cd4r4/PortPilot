@@ -145,7 +145,7 @@ export function activate(context: vscode.ExtensionContext) {
 
   async function showCrash(app: PortPilotApp, stamp: CrashStamp) {
     const why = stamp.exitCode != null ? ` (exit ${stamp.exitCode})` : '';
-    const who = stamp.startedBy?.kind === 'claude' ? ' Claude Code started it.' : '';
+    const who = stamp.startedBy?.kind === 'claude' ? ' An AI assistant started it.' : '';
     const choice = await vscode.window.showErrorMessage(`${app.name} crashed${why}.${who}`, 'Restart', 'Logs');
     if (choice === 'Restart') {
       startApp(app);

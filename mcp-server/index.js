@@ -689,15 +689,15 @@ function alreadyRunning(app, check = checkPort) {
 }
 
 /**
- * Record that Claude started `app` through this server, so every surface shows
- * "claude <session>". Best-effort: returns false (never throws) on a bad
+ * Record that an AI assistant started `app` through this server, so every surface shows
+ * "claude <session>", or `client` (the MCP client's own name, e.g. "cursor") when it is not Claude. Best-effort: returns false (never throws) on a bad
  * session id or a failed write - the start itself already succeeded.
  */
-function stampStart(configPath, app, sessionId) {
+function stampStart(configPath, app, sessionId, client) {
   if (!app || !app.id) return false;
   let startedBy;
   try {
-    startedBy = status.makeStartedBy({ kind: 'claude', surface: 'mcp', sessionId });
+    startedBy = status.makeStartedBy({ kind: 'claude', surface: 'mcp', sessionId, label: client });
   } catch {
     return false;
   }
@@ -841,6 +841,10 @@ function createServer() {
     version: '4.0.3',
   });
 
+  // The connected client's own name from the MCP handshake ("cursor-vscode", "claude-code"), so a
+  // start by another assistant is not stamped as Claude. Empty before the handshake completes.
+  const clientName = () => { try { return (server.server.getClientVersion() || {}).name || ''; } catch { return ''; } };
+
   // --- Status ---
 
   server.tool(
@@ -955,7 +959,7 @@ function createServer() {
       if (refused) return { content: [{ type: 'text', text: refused }], isError: true };
       const up = alreadyRunning(app);
       const result = up || await startApp(app, configFile.logPathFor(getConfigPath(), app.id));
-      if (result.success && !up) stampStart(getConfigPath(), app, sessionId);
+      if (result.success && !up) stampStart(getConfigPath(), app, sessionId, clientName());
       return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }], isError: !result.success };
     }
   );
@@ -999,7 +1003,7 @@ function createServer() {
         if (refused) return { name: a.name, success: false, error: refused };
         const up = alreadyRunning(a);
         const result = up || await startApp(a, configFile.logPathFor(getConfigPath(), a.id));
-        if (result.success && !up) stampStart(getConfigPath(), a, sessionId);
+        if (result.success && !up) stampStart(getConfigPath(), a, sessionId, clientName());
         return { name: a.name, ...result };
       }));
       const ok = results.filter(r => r.success).length;

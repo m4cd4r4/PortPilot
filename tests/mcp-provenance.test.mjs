@@ -50,6 +50,18 @@ t('stamps without a session id (reads as plain "claude")', () => {
   assert.equal(provenanceOf(entry.startedBy).word, 'claude');
 });
 
+t('another assistant is named by its own client name, Claude clients stay "claude"', () => {
+  const cfg = tmpConfig();
+  assert.equal(stampStart(cfg, app, 'a3f29b1c-0000', 'cursor-vscode'), true);
+  const sb = readRuntime(cfg).apps.app_web.startedBy;
+  assert.equal(sb.kind, 'claude');
+  const p = provenanceOf(sb);
+  assert.equal(p.word, 'cursor-vscode a3f2');
+  assert.ok(p.title.startsWith('Started by cursor-vscode'), p.title);
+  assert.equal(provenanceOf({ ...sb, label: 'claude-code' }).word, 'claude a3f2');
+  assert.equal(provenanceOf({ ...sb, label: '' }).word, 'claude a3f2');
+});
+
 t('returns false for an app with no id', () => {
   assert.equal(stampStart(tmpConfig(), { name: 'nameless' }, 's1'), false);
 });

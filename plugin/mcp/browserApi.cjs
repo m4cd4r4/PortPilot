@@ -1165,6 +1165,11 @@ var require_status = __commonJS({
       function shortSession(id) {
         return id ? String(id).replace(/[^A-Za-z0-9]/g, "").slice(0, 4).toLowerCase() : "";
       }
+      function agentName(label) {
+        const clean = String(label || "").replace(/[^A-Za-z0-9 ._-]/g, "").trim().slice(0, 30);
+        if (!clean || /claude/i.test(clean)) return { word: "claude", title: "Claude", other: false };
+        return { word: clean.toLowerCase(), title: clean, other: true };
+      }
       function provenanceOf(startedBy) {
         const s = startedBy || null;
         if (!s || s.kind === "external" || !PROVENANCE_KINDS.includes(s.kind)) {
@@ -1175,12 +1180,13 @@ var require_status = __commonJS({
           return { kind: "human", word: "you", glyph: "", title: `Started by you from ${s.surface}${when}` };
         }
         const short = shortSession(s.sessionId);
-        const session = s.sessionId ? ` (session ${s.sessionId}${s.label ? `, ${s.label}` : ""})` : "";
+        const agent = agentName(s.label);
+        const session = s.sessionId ? ` (session ${s.sessionId}${s.label && !agent.other ? `, ${s.label}` : ""})` : "";
         return {
           kind: "claude",
-          word: short ? `claude ${short}` : "claude",
+          word: short ? `${agent.word} ${short}` : agent.word,
           glyph: CLAUDE_GLYPH,
-          title: `Started by Claude${session} via ${s.surface}${when}`
+          title: `Started by ${agent.title}${session} via ${s.surface}${when}`
         };
       }
       const ROW_WORDS = { error: "Not responding", conflict: "Port blocked" };
@@ -1705,7 +1711,6 @@ var require_browserHistory = __commonJS({
     var MAX_TABS = 50;
     var MAX_TITLE = 200;
     var MAX_URL = 1e3;
-    var MAX_TESTED_IN = 5;
     var SAMPLE_MS = Math.max(500, Number(process.env.PORTPILOT_BROWSER_SAMPLE_MS) || 3e4);
     var MISSES_TO_CLOSE = 2;
     var SHOWN_PROTOCOLS = /* @__PURE__ */ new Set(["http:", "https:", "file:"]);
@@ -1713,9 +1718,7 @@ var require_browserHistory = __commonJS({
     var SECRET_EXACT_RE = /^(sid|sig)$/i;
     var looksSecret = (name) => SECRET_NAME_RE.test(name) || SECRET_EXACT_RE.test(name);
     var historyPathFor = (configPath) => path2.join(path2.dirname(configPath), "history", "browser-runs.json");
-    var runsPathFor = (configPath) => path2.join(path2.dirname(configPath), "history", "runs.json");
     var emptyHistory = () => ({ v: 1, runs: [] });
-    var emptyRuns = () => ({ v: 1, runs: [] });
     var lower2 = (s) => String(s).toLowerCase();
     function redactPairs(str) {
       return str.split("&").map((pair) => {
@@ -1873,33 +1876,6 @@ var require_browserHistory = __commonJS({
     function getSession(configPath, id) {
       return readAll(configPath).find((r) => r.id === id) || null;
     }
-    function localhostPort(url) {
-      let u;
-      try {
-        u = new URL(String(url));
-      } catch {
-        return null;
-      }
-      if (u.protocol !== "http:" && u.protocol !== "https:") return null;
-      if (!/^(localhost|127\.0\.0\.1|\[::1\])$/i.test(u.hostname)) return null;
-      const port = Number(u.port) || (u.protocol === "https:" ? 443 : 80);
-      return port;
-    }
-    function linkTestedRuns(configPath, profile, tabs, now = Date.now()) {
-      const ports = new Set((Array.isArray(tabs) ? tabs : []).map((t) => localhostPort(t && t.url)).filter((p) => p));
-      if (!ports.size) return [];
-      const wants = (data) => (Array.isArray(data.runs) ? data.runs : []).filter((r) => !r.stoppedAt && ports.has(Number(r.port)) && !(Array.isArray(r.testedIn) && r.testedIn.some((x) => lower2(x.profile) === lower2(profile))));
-      if (!wants(configFile2.readJson(runsPathFor(configPath), emptyRuns)).length) return [];
-      const { result } = configFile2.updateJson(runsPathFor(configPath), (data) => {
-        const stamped = [];
-        for (const r of wants(data)) {
-          r.testedIn = [...Array.isArray(r.testedIn) ? r.testedIn : [], { profile: String(profile), at: new Date(now).toISOString() }].slice(-MAX_TESTED_IN);
-          stamped.push(r.id);
-        }
-        return stamped;
-      }, emptyRuns);
-      return result;
-    }
     async function sampleOnce(configPath, d, { misses = /* @__PURE__ */ new Map(), now = Date.now() } = {}) {
       const out = { sampled: 0, closed: 0 };
       for (const e of readAll(configPath).filter((r) => !r.stoppedAt)) {
@@ -1925,7 +1901,6 @@ var require_browserHistory = __commonJS({
         } catch {
         }
         sampleSession(configPath, e.profile, tabs, now);
-        linkTestedRuns(configPath, e.profile, tabs, now);
         out.sampled += 1;
       }
       return out;
@@ -1955,7 +1930,6 @@ var require_browserHistory = __commonJS({
       historyPathFor,
       redactUrl,
       cleanTabs,
-      localhostPort,
       parseSince,
       trim,
       openSession,
@@ -1964,7 +1938,6 @@ var require_browserHistory = __commonJS({
       closeSession,
       listSessions,
       getSession,
-      linkTestedRuns,
       sampleOnce,
       startSampler
     };
