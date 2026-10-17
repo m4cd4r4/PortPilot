@@ -1,8 +1,8 @@
 # PortPilot for VS Code
 
-**Every dev server and port in your sidebar, with crash alerts and the servers Claude Code started marked.**
+**Every dev server and port in your sidebar, with crash alerts and the servers your AI assistant started marked.**
 
-PortPilot lists your registered apps and every listening port in the VS Code sidebar. Running apps come first, crashes get a badge and a toast, and a ✦ marks anything a Claude Code session started. It shares one config with the [PortPilot desktop app](https://github.com/m4cd4r4/PortPilot) and its MCP server, so the editor, the desktop app and Claude all see the same state.
+PortPilot lists your registered apps and every listening port in the VS Code sidebar. Running apps come first, crashes get a badge and a toast, and a ✦ marks anything an AI assistant started through PortPilot. It shares one config with the [PortPilot desktop app](https://github.com/m4cd4r4/PortPilot) and its MCP server, so the editor, the desktop app and Claude all see the same state.
 
 ![PortPilot sidebar in VS Code: apps grouped with running first, a crashed app, the History list below, the badge on the activity bar and a crash toast](https://raw.githubusercontent.com/m4cd4r4/PortPilot/master/docs/screenshots/vscode-v4-overview.png)
 

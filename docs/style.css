@@ -140,6 +140,9 @@ p code, li code {
   font-weight: 750; margin-bottom: 18px; text-wrap: balance;
 }
 .lede { font-size: 1.12rem; color: var(--text-secondary); margin-bottom: 28px; max-width: 34em; }
+.hero-text .lede { max-width: 24em; }
+/* The terminal card overlaps the right edge of the text column on two-column layouts. */
+@media (min-width: 901px) { .hero-text { padding-right: 28px; } }
 .cta-row { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
 .note { font-size: 0.88rem; color: var(--text-muted); }
 
