@@ -185,57 +185,10 @@ const T0 = Date.parse('2026-10-13T00:00:00Z');
     assert.strictEqual(h.getSession(cfg, 'nope'), null);
   });
 
-  console.log('\n=== browser history: dev server link ===\n');
-
-  const writeRuns = (cfg, runs) => {
-    const p = path.join(path.dirname(cfg), 'history', 'runs.json');
-    fs.mkdirSync(path.dirname(p), { recursive: true });
-    fs.writeFileSync(p, JSON.stringify({ v: 1, runs }));
-    return p;
-  };
-
-  await t('localhostPort reads localhost, 127.0.0.1 and [::1] only', () => {
-    assert.strictEqual(h.localhostPort('http://localhost:3000/x'), 3000);
-    assert.strictEqual(h.localhostPort('http://127.0.0.1:5173/'), 5173);
-    assert.strictEqual(h.localhostPort('http://[::1]:8080/'), 8080);
-    assert.strictEqual(h.localhostPort('https://example.com:3000/'), null);
-    assert.strictEqual(h.localhostPort('http://localhost.evil.test:3000/'), null);
-    assert.strictEqual(h.localhostPort('chrome://x'), null);
-  });
-
-  await t('a tab on a dev server port stamps the open run with testedIn, once per profile; other fields are untouched', () => {
-    const cfg = newCfg();
-    const p = writeRuns(cfg, [
-      { id: 'r_open', appId: 'a', port: 3000, startedAt: '2026-10-13T00:00:00Z', stoppedAt: null, pinned: true, page: { title: 'T' } },
-      { id: 'r_closed', appId: 'b', port: 3000, startedAt: '2026-10-12T00:00:00Z', stoppedAt: '2026-10-12T01:00:00Z' },
-      { id: 'r_other', appId: 'c', port: 4000, startedAt: '2026-10-13T00:00:00Z', stoppedAt: null },
-    ]);
-    const tabs = [{ url: 'http://localhost:3000/dash', title: 'Dash' }, { url: 'https://example.com:4000/', title: 'no' }];
-    assert.deepStrictEqual(h.linkTestedRuns(cfg, 'shop-a', tabs, T0), ['r_open']);
-    assert.deepStrictEqual(h.linkTestedRuns(cfg, 'shop-a', tabs, T0 + 1000), [], 'already recorded for that profile');
-    assert.deepStrictEqual(h.linkTestedRuns(cfg, 'blog-qa', [{ url: 'http://127.0.0.1:3000/', title: '' }], T0 + 2000), ['r_open']);
-    const runs = JSON.parse(fs.readFileSync(p, 'utf8')).runs;
-    const open = runs.find((r) => r.id === 'r_open');
-    assert.deepStrictEqual(open.testedIn.map((x) => x.profile), ['shop-a', 'blog-qa']);
-    assert.strictEqual(open.testedIn[0].at, '2026-10-13T00:00:00.000Z');
-    assert.strictEqual(open.pinned, true);
-    assert.deepStrictEqual(open.page, { title: 'T' });
-    assert.strictEqual(runs.find((r) => r.id === 'r_closed').testedIn, undefined, 'a closed run is not stamped');
-    assert.strictEqual(runs.find((r) => r.id === 'r_other').testedIn, undefined);
-  });
-
-  await t('no runs.json and no localhost tab: nothing is created', () => {
-    const cfg = newCfg();
-    assert.deepStrictEqual(h.linkTestedRuns(cfg, 'shop-a', [{ url: 'http://localhost:3000/', title: '' }]), []);
-    assert.deepStrictEqual(h.linkTestedRuns(cfg, 'shop-a', [{ url: 'https://example.com/', title: '' }]), []);
-    assert.ok(!fs.existsSync(path.join(path.dirname(cfg), 'history', 'runs.json')));
-  });
-
   console.log('\n=== browser history: sampler ===\n');
 
-  await t('sampleOnce stores the tabs of an open entry, links the dev server and leaves a closed entry alone', async () => {
+  await t('sampleOnce stores the tabs of an open entry and leaves a closed entry alone', async () => {
     const cfg = newCfg();
-    writeRuns(cfg, [{ id: 'r1', appId: 'a', port: 3000, startedAt: '2026-10-13T00:00:00Z', stoppedAt: null }]);
     h.openSession(cfg, { ...base, now: T0 });
     h.openSession(cfg, { ...base, profile: 'done', port: 9301, now: T0 });
     h.closeSession(cfg, 'done', { endedBy: { kind: 'human', surface: 'desktop' }, now: T0 + 1 });
@@ -248,8 +201,6 @@ const T0 = Date.parse('2026-10-13T00:00:00Z');
     assert.deepStrictEqual(out, { sampled: 1, closed: 0 });
     assert.deepStrictEqual(asked, [9300], 'only the open entry is probed');
     assert.deepStrictEqual(read(cfg).find((r) => r.profile === 'shop-a').tabs.map((x) => x.url), ['http://localhost:3000/', 'https://x.test/?token=***']);
-    const runs = JSON.parse(fs.readFileSync(path.join(path.dirname(cfg), 'history', 'runs.json'), 'utf8')).runs;
-    assert.strictEqual(runs[0].testedIn[0].profile, 'shop-a');
   });
 
   await t('a browser that stops answering is closed as closed outside PortPilot after two misses, keeping its last tabs', async () => {

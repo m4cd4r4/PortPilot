@@ -2,7 +2,7 @@
   "name": "portpilot",
   "displayName": "PortPilot",
   "description": "See every dev server and port from the sidebar, with crash alerts and the servers your AI assistant started marked.",
-  "version": "4.0.5",
+  "version": "4.0.6",
   "publisher": "macdara",
   "engines": {
     "vscode": "^1.85.0"
@@ -575,7 +575,7 @@
       },
       {
         "view": "portpilot.browsers",
-        "contents": "No browser profiles yet. Each one is a named browser with its own debug port and sign-ins.\n[Add a profile](command:portpilot.addBrowserProfile)\nClaude can then ask for one by purpose with start_browser."
+        "contents": "No browser profiles yet. Each one is a named browser with its own debug port and sign-ins.\n[Add a profile](command:portpilot.addBrowserProfile)\nYour AI assistant can then ask for one by purpose with start_browser."
       }
     ]
   },

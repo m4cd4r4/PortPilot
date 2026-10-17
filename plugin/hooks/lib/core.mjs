@@ -204,6 +204,11 @@ var require_status = __commonJS({
       function shortSession(id) {
         return id ? String(id).replace(/[^A-Za-z0-9]/g, "").slice(0, 4).toLowerCase() : "";
       }
+      function agentName(label) {
+        const clean = String(label || "").replace(/[^A-Za-z0-9 ._-]/g, "").trim().slice(0, 30);
+        if (!clean || /claude/i.test(clean)) return { word: "claude", title: "Claude", other: false };
+        return { word: clean.toLowerCase(), title: clean, other: true };
+      }
       function provenanceOf2(startedBy) {
         const s = startedBy || null;
         if (!s || s.kind === "external" || !PROVENANCE_KINDS.includes(s.kind)) {
@@ -214,12 +219,13 @@ var require_status = __commonJS({
           return { kind: "human", word: "you", glyph: "", title: `Started by you from ${s.surface}${when}` };
         }
         const short = shortSession(s.sessionId);
-        const session = s.sessionId ? ` (session ${s.sessionId}${s.label ? `, ${s.label}` : ""})` : "";
+        const agent = agentName(s.label);
+        const session = s.sessionId ? ` (session ${s.sessionId}${s.label && !agent.other ? `, ${s.label}` : ""})` : "";
         return {
           kind: "claude",
-          word: short ? `claude ${short}` : "claude",
+          word: short ? `${agent.word} ${short}` : agent.word,
           glyph: CLAUDE_GLYPH2,
-          title: `Started by Claude${session} via ${s.surface}${when}`
+          title: `Started by ${agent.title}${session} via ${s.surface}${when}`
         };
       }
       const ROW_WORDS = { error: "Not responding", conflict: "Port blocked" };

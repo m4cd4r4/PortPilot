@@ -12,10 +12,6 @@
  * whose name looks like a secret (token, key, code, auth, session, password ...) becomes `***`.
  * Only http, https and file pages are kept; chrome://, devtools:// and about:blank are not history.
  *
- * Also here: linking a dev server to the profile it was tested in. A tab on localhost:<port>
- * whose port belongs to a run that is open in runs.json stamps that run with
- * `testedIn: [{ profile, at }]` (additive; the History tab shows it).
- *
  * Nothing here talks to a browser: the sampler is handed `deps` ({ version, pageTabs }) so tests
  * run against a fake. Reading a page is limited to /json on the profile's own loopback port; no
  * page is ever navigated or evaluated. Zero dependencies.
@@ -28,7 +24,6 @@ const DEFAULT_MAX_ENTRIES = 500;
 const MAX_TABS = 50;
 const MAX_TITLE = 200;
 const MAX_URL = 1000;
-const MAX_TESTED_IN = 5;
 // PORTPILOT_BROWSER_SAMPLE_MS is for the end-to-end test, which cannot wait 30 s per sample.
 const SAMPLE_MS = Math.max(500, Number(process.env.PORTPILOT_BROWSER_SAMPLE_MS) || 30000);
 // A browser that stops answering for this many samples in a row is recorded as closed.
@@ -41,10 +36,7 @@ const SECRET_EXACT_RE = /^(sid|sig)$/i;
 const looksSecret = (name) => SECRET_NAME_RE.test(name) || SECRET_EXACT_RE.test(name);
 
 const historyPathFor = (configPath) => path.join(path.dirname(configPath), 'history', 'browser-runs.json');
-// runs.json lives next to it; written here without runHistory.js, which cannot be bundled into the plugin.
-const runsPathFor = (configPath) => path.join(path.dirname(configPath), 'history', 'runs.json');
 const emptyHistory = () => ({ v: 1, runs: [] });
-const emptyRuns = () => ({ v: 1, runs: [] });
 const lower = (s) => String(s).toLowerCase();
 
 // ---- URL redaction -----------------------------------------------------------
@@ -244,45 +236,10 @@ function getSession(configPath, id) {
   return readAll(configPath).find((r) => r.id === id) || null;
 }
 
-// ---- Dev server -> profile link ------------------------------------------------
-
-/** The port of a tab on localhost, 127.0.0.1 or [::1]; null for anything else. */
-function localhostPort(url) {
-  let u;
-  try { u = new URL(String(url)); } catch { return null; }
-  if (u.protocol !== 'http:' && u.protocol !== 'https:') return null;
-  if (!/^(localhost|127\.0\.0\.1|\[::1\])$/i.test(u.hostname)) return null;
-  const port = Number(u.port) || (u.protocol === 'https:' ? 443 : 80);
-  return port;
-}
-
-/**
- * Stamp the open dev-server runs whose port a tab is on with testedIn: [{ profile, at }].
- * Best effort and additive: a run keeps every other field, and a profile is listed once.
- * @returns {string[]} ids of the runs that were stamped
- */
-function linkTestedRuns(configPath, profile, tabs, now = Date.now()) {
-  const ports = new Set((Array.isArray(tabs) ? tabs : []).map((t) => localhostPort(t && t.url)).filter((p) => p));
-  if (!ports.size) return [];
-  const wants = (data) => (Array.isArray(data.runs) ? data.runs : []).filter((r) => !r.stoppedAt && ports.has(Number(r.port))
-    && !(Array.isArray(r.testedIn) && r.testedIn.some((x) => lower(x.profile) === lower(profile))));
-  // Read first: a sample that finds nothing new must not take the runs.json lock.
-  if (!wants(configFile.readJson(runsPathFor(configPath), emptyRuns)).length) return [];
-  const { result } = configFile.updateJson(runsPathFor(configPath), (data) => {
-    const stamped = [];
-    for (const r of wants(data)) {
-      r.testedIn = [...(Array.isArray(r.testedIn) ? r.testedIn : []), { profile: String(profile), at: new Date(now).toISOString() }].slice(-MAX_TESTED_IN);
-      stamped.push(r.id);
-    }
-    return stamped;
-  }, emptyRuns);
-  return result;
-}
-
 // ---- Sampler -------------------------------------------------------------------
 
 /**
- * One pass over every open entry: read its tabs, store them, link dev servers, and close an entry
+ * One pass over every open entry: read its tabs, store them, and close an entry
  * whose browser has stopped answering for MISSES_TO_CLOSE passes. `misses` is the caller's Map(id -> count).
  * @param {object} d { version(port), pageTabs(port) }
  */
@@ -305,7 +262,6 @@ async function sampleOnce(configPath, d, { misses = new Map(), now = Date.now() 
     let tabs = [];
     try { tabs = await d.pageTabs(e.port); } catch { /* keep what we had */ }
     sampleSession(configPath, e.profile, tabs, now);
-    linkTestedRuns(configPath, e.profile, tabs, now);
     out.sampled += 1;
   }
   return out;
@@ -330,7 +286,7 @@ function startSampler(configPath, d, { intervalMs = SAMPLE_MS } = {}) {
 
 module.exports = {
   DEFAULT_MAX_ENTRIES, MAX_TABS, SAMPLE_MS, MISSES_TO_CLOSE,
-  historyPathFor, redactUrl, cleanTabs, localhostPort, parseSince, trim,
+  historyPathFor, redactUrl, cleanTabs, parseSince, trim,
   openSession, openEntryFor, sampleSession, closeSession, listSessions, getSession,
-  linkTestedRuns, sampleOnce, startSampler,
+  sampleOnce, startSampler,
 };

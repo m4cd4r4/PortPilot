@@ -16,9 +16,9 @@ PortPilot lists your registered apps and every listening port in the VS Code sid
 
 <img src="https://raw.githubusercontent.com/m4cd4r4/PortPilot/master/docs/screenshots/vscode-v4-ports.png" alt="Active Ports listing app names, with a star on the ports Claude Code started" width="420">
 
-**Crash alerts.** When an app crashes, the PortPilot icon gets a count badge and a toast says which app crashed, its exit code and whether Claude Code started it. Restart brings it back; Logs opens its output with the stderr tail. A crash from before the window opened shows in the badge without a toast. The status bar switches from `PP: 6 running` to `PP: 550-au crashed`.
+**Crash alerts.** When an app crashes, the PortPilot icon gets a count badge and a toast says which app crashed, its exit code and whether an AI assistant started it. Restart brings it back; Logs opens its output with the stderr tail. A crash from before the window opened shows in the badge without a toast. The status bar switches from `PP: 6 running` to `PP: 550-au crashed`.
 
-<img src="https://raw.githubusercontent.com/m4cd4r4/PortPilot/master/docs/screenshots/vscode-v4-crash-toast.png" alt="Crash toast: 550-au crashed (exit 1). Claude Code started it. With Restart and Logs buttons" width="560">
+<img src="https://raw.githubusercontent.com/m4cd4r4/PortPilot/master/docs/screenshots/vscode-v4-crash-toast.png" alt="Crash toast: 550-au crashed (exit 1). An AI assistant started it. With Restart and Logs buttons" width="560">
 
 **History: go back to a page from last week.** The `History` view lists past localhost pages from PortPilot's local run history, newest first: Today, Yesterday, then one group per day for a week, then a collapsed `Earlier`. Each row shows the app, start time and port, with an icon for running, stopped, crashed or ended-unseen. Hover for the page title, URL, git branch and commit, and the page thumbnail. Servers PortPilot found without you registering them carry a `detected` marker once the desktop app records them.
 
@@ -50,7 +50,7 @@ The portal binds `127.0.0.1` only and needs a per-session token. It runs on the 
 
 ## Use it with Claude Code
 
-The ✦ marks and the "Claude Code started it" line come from the PortPilot plugin for Claude Code. It gives Claude the same view: a status line, a guard that reuses a running server instead of starting a second copy, and a crash band with Fix it.
+The ✦ marks and the "An AI assistant started it" line appear for any app an MCP assistant started through PortPilot. The PortPilot plugin for Claude Code adds the same view inside Claude: a status line, a guard that reuses a running server instead of starting a second copy, and a crash band with Fix it.
 
 ```text
 /plugin marketplace add m4cd4r4/PortPilot

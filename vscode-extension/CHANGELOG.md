@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+## [4.0.6] - 2026-10-17
+
+- Wording is no longer Claude-only: crash toasts and tooltips say an AI assistant started an app, and the description and README lead with the product, not one assistant.
+- An app started by another MCP assistant (for example Cursor) is now labelled with that assistant's own name instead of "claude".
+- Removed the "tested in <profile>" line on History rows and the link that wrote it. Browser sessions and their tabs are still recorded.
+
 ## [4.0.5] - 2026-10-17
 
 - Fixed apps showing as stopped, or with no page preview, when another app's name shares a word with their server path (for example `roofing-clone` taking `glancehawk-web`'s port because of the word "clone"). Exact port matching now runs before fuzzy name matching.

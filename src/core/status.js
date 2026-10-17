@@ -139,7 +139,8 @@
   // (configFile.recordStart) by whichever surface started it, so every
   // surface shows the same answer. One vocabulary everywhere:
   //   human    -> "you"          (any surface)
-  //   claude   -> "claude a3f2"  (short session id; full id in the title)
+  //   claude   -> "claude a3f2"  (an AI assistant; short session id, full id in the title; the
+  //                             word is the assistant's own name when startedBy.label names one)
   //   external -> "external"     (found running, not started by PortPilot)
   const PROVENANCE_KINDS = ['human', 'claude', 'external'];
   const SURFACES = ['desktop', 'web', 'vscode', 'claude-code', 'mcp'];
@@ -165,6 +166,13 @@
     return id ? String(id).replace(/[^A-Za-z0-9]/g, '').slice(0, 4).toLowerCase() : '';
   }
 
+  /** Who a startedBy label names: Claude unless it is the name of another assistant. */
+  function agentName(label) {
+    const clean = String(label || '').replace(/[^A-Za-z0-9 ._-]/g, '').trim().slice(0, 30);
+    if (!clean || /claude/i.test(clean)) return { word: 'claude', title: 'Claude', other: false };
+    return { word: clean.toLowerCase(), title: clean, other: true };
+  }
+
   /**
    * How to show a startedBy record: { kind, word, glyph, title }. `word` is the
    * text every surface shows; `glyph` is for tight spaces and is only set for
@@ -180,12 +188,15 @@
       return { kind: 'human', word: 'you', glyph: '', title: `Started by you from ${s.surface}${when}` };
     }
     const short = shortSession(s.sessionId);
-    const session = s.sessionId ? ` (session ${s.sessionId}${s.label ? `, ${s.label}` : ''})` : '';
+    // kind 'claude' is the stored name for "an AI assistant started it" (renaming it would orphan
+    // every stamp already on disk). A label that names another assistant ("cursor") is shown instead.
+    const agent = agentName(s.label);
+    const session = s.sessionId ? ` (session ${s.sessionId}${s.label && !agent.other ? `, ${s.label}` : ''})` : '';
     return {
       kind: 'claude',
-      word: short ? `claude ${short}` : 'claude',
+      word: short ? `${agent.word} ${short}` : agent.word,
       glyph: CLAUDE_GLYPH,
-      title: `Started by Claude${session} via ${s.surface}${when}`,
+      title: `Started by ${agent.title}${session} via ${s.surface}${when}`,
     };
   }
 

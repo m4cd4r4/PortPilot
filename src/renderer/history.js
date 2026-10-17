@@ -109,7 +109,7 @@
     </div>
     <div class="hline hline-sub">
       <span class="state-cell state-${esc(st.state)}" style="--state-color: var(${esc(st.token)})"><span class="state-glyph" aria-hidden="true">${esc(st.glyph)}</span><span class="state-word">${esc(st.word)}</span>${st.reason ? `<span class="state-meta">${esc(st.reason)}</span>` : ''}</span>
-      ${run.detected ? '' : `<span class="hby">${esc(RV.startedByWord(run))}</span>`}${run.rerunOf ? '<span class="hby">re-run</span>' : ''}${RV.testedInLine(run) ? `<span class="hby htested" title="A browser profile had this page open">${esc(RV.testedInLine(run))}</span>` : ''}
+      ${run.detected ? '' : `<span class="hby">${esc(RV.startedByWord(run))}</span>`}${run.rerunOf ? '<span class="hby">re-run</span>' : ''}
     </div>
     ${prog ? `<div class="hprog" role="status">${esc(prog)}</div>` : ''}
     ${err ? `<div class="herr" role="alert">${esc(err)}</div>` : ''}

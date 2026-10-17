@@ -62,7 +62,7 @@ class PortTreeItem extends vscode.TreeItem {
             `Process: ${activePort.processName}`,
             `PID: ${activePort.pid}`,
             matchedAppName ? `App: ${matchedAppName}` : '',
-            byClaude ? 'Started by Claude Code' : ''
+            byClaude ? 'Started by an AI assistant' : ''
         ].filter(Boolean).join('\n');
     }
 }
