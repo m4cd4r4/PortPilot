@@ -231,8 +231,7 @@ const NOT_A_SERVER = /^(brave|chrome|chromium|msedge|firefox|opera|vivaldi|code|
 function matchRunning(apps, ports) {
     const matched = new Set();
     const result = new Map();
-    // Phase 1: high-confidence CWD match in the command line, then folder/name
-    // keyword evidence on any still-unmatched port.
+    // Phase 1: high-confidence CWD match in the command line.
     for (const app of apps) {
         if (!app.cwd)
             continue;
@@ -248,9 +247,23 @@ function matchRunning(apps, ports) {
                 break;
             }
         }
-        if (result.has(app.id))
+    }
+    // Phase 2: explicit preferredPort match (config is a strong signal).
+    for (const app of apps) {
+        if (result.has(app.id) || !app.preferredPort)
             continue;
-        const folder = cwd.split(/[\\/]/).filter(Boolean).pop() || '';
+        const p = ports.find(x => x.port === app.preferredPort);
+        if (!p || matched.has(p.port))
+            continue;
+        result.set(app.id, p);
+        matched.add(p.port);
+    }
+    // Phase 3: folder-name / app-name keyword evidence, last, on ports no stronger evidence claimed.
+    // Generic words ("clone") in a name must not take another app's port ahead of its preferredPort.
+    for (const app of apps) {
+        if (result.has(app.id) || !app.cwd)
+            continue;
+        const folder = app.cwd.toLowerCase().split(/[\\/]/).filter(Boolean).pop() || '';
         const keywords = [folder, ...app.name.toLowerCase().split(/[^a-z0-9]+/)].filter(k => k.length > 3);
         for (const p of ports) {
             if (matched.has(p.port) || NOT_A_SERVER.test(p.processName))
@@ -262,16 +275,6 @@ function matchRunning(apps, ports) {
                 break;
             }
         }
-    }
-    // Phase 2: explicit preferredPort match (config is a strong signal).
-    for (const app of apps) {
-        if (result.has(app.id) || !app.preferredPort)
-            continue;
-        const p = ports.find(x => x.port === app.preferredPort);
-        if (!p || matched.has(p.port))
-            continue;
-        result.set(app.id, p);
-        matched.add(p.port);
     }
     return result;
 }

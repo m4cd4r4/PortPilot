@@ -24134,8 +24134,17 @@ function matchRunning(apps, ports) {
         break;
       }
     }
-    if (result.has(app.id)) continue;
-    const folder = cwd.split(/[\\/]/).filter(Boolean).pop() || "";
+  }
+  for (const app of apps) {
+    if (result.has(app.id) || !app.preferredPort) continue;
+    const p = ports.find((x) => x.port === app.preferredPort);
+    if (!p || matched.has(p.port)) continue;
+    result.set(app.id, p);
+    matched.add(p.port);
+  }
+  for (const app of apps) {
+    if (result.has(app.id) || !app.cwd) continue;
+    const folder = app.cwd.toLowerCase().split(/[\\/]/).filter(Boolean).pop() || "";
     const keywords = [folder, ...app.name.toLowerCase().split(/[^a-z0-9]+/)].filter((k) => k.length > 3);
     for (const p of ports) {
       if (matched.has(p.port) || NOT_A_SERVER.test(p.processName || "")) continue;
@@ -24146,13 +24155,6 @@ function matchRunning(apps, ports) {
         break;
       }
     }
-  }
-  for (const app of apps) {
-    if (result.has(app.id) || !app.preferredPort) continue;
-    const p = ports.find((x) => x.port === app.preferredPort);
-    if (!p || matched.has(p.port)) continue;
-    result.set(app.id, p);
-    matched.add(p.port);
   }
   return result;
 }

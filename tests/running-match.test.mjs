@@ -32,6 +32,19 @@ for (const [label, matchRunning] of Object.entries(impls)) {
   const editor = { port: 24106, pid: 3, processName: 'Code.exe', commandLine: '"C:\\Program Files\\Microsoft VS Code\\Code.exe" I:\\Scratch\\ssf-site' };
   const agent = { port: 50823, pid: 4, processName: 'claude.exe', commandLine: 'claude.exe --add-dir I:\\Scratch\\ssf-site' };
   assert.strictEqual(matchRunning([ssf], [editor, agent]).has('s'), false, `${label}: an editor or an agent with the folder open is not the server`);
+
+  // A generic word in one app's name ("clone") appears in another app's server path. Fuzzy keywords must
+  // not claim that port before the other app's own preferredPort gets its turn.
+  const roofing = { id: 'r', name: 'roofing-clone', cwd: 'i:\\Scratch\\solaisoft\\demos\\roofing-clone', preferredPort: 4577 };
+  const hawk = { id: 'g', name: 'glancehawk-web', cwd: 'I:/Scratch/clone-outrank-experiment/web', preferredPort: 3420 };
+  const hawkServer = {
+    port: 3420, pid: 5, processName: 'node.exe',
+    commandLine: '"C:\\Program Files\\nodejs\\node.exe" I:\\Scratch\\clone-outrank-experiment\\web\\node_modules\\next\\dist\\server\\lib\\start-server.js',
+  };
+  const roofingServer = { port: 4577, pid: 6, processName: 'python.exe', commandLine: 'python -m http.server 4577' };
+  const both = matchRunning([roofing, hawk], [hawkServer, roofingServer]);
+  assert.strictEqual(both.get('g') && both.get('g').port, 3420, `${label}: glancehawk-web keeps its own port`);
+  assert.strictEqual(both.get('r') && both.get('r').port, 4577, `${label}: roofing-clone is not given glancehawk's port`);
 }
 
 console.log('running-match: ok');
