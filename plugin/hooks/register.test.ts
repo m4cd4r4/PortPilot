@@ -211,6 +211,17 @@ test('session start sets the status line and refreshes it on the timer', async (
   expect(statuses.length).toBe(2)
 })
 
+test('status_line off: no status line, at start or on the timer', { options: { status_line: false } }, async ($, on) => {
+  const statuses: (string | undefined)[] = []
+  const clock = mock.clock(on)
+  world(on, { statuses })
+  on('session.start', async (_$, e) => ({ cwd: e.cwd }))
+  await $.session.start({ cwd: 'C:/work', surface: 'terminal', isInteractive: true })
+  await clock.settle()
+  await clock.advance(15_000)
+  expect(statuses).toEqual([])
+})
+
 // ---- crash band (C4) --------------------------------------------------------
 
 const NOW = Date.parse('2026-10-07T07:00:00Z')
