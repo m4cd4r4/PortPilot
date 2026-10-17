@@ -204,8 +204,7 @@ export function matchRunning(
   const matched = new Set<number>();
   const result = new Map<string, ActivePort>();
 
-  // Phase 1: high-confidence CWD match in the command line, then folder/name
-  // keyword evidence on any still-unmatched port.
+  // Phase 1: high-confidence CWD match in the command line.
   for (const app of apps) {
     if (!app.cwd) continue;
     const cwd = app.cwd.toLowerCase();
@@ -214,18 +213,6 @@ export function matchRunning(
       if (matched.has(p.port) || NOT_A_SERVER.test(p.processName)) continue;
       const cl = p.commandLine.toLowerCase();
       if (cl && (cl.includes(cwd) || cl.includes(cwdAlt))) {
-        result.set(app.id, p);
-        matched.add(p.port);
-        break;
-      }
-    }
-    if (result.has(app.id)) continue;
-    const folder = cwd.split(/[\\/]/).filter(Boolean).pop() || '';
-    const keywords = [folder, ...app.name.toLowerCase().split(/[^a-z0-9]+/)].filter(k => k.length > 3);
-    for (const p of ports) {
-      if (matched.has(p.port) || NOT_A_SERVER.test(p.processName)) continue;
-      const cl = p.commandLine.toLowerCase();
-      if (cl && keywords.some(k => cl.includes(k))) {
         result.set(app.id, p);
         matched.add(p.port);
         break;
@@ -240,6 +227,23 @@ export function matchRunning(
     if (!p || matched.has(p.port)) continue;
     result.set(app.id, p);
     matched.add(p.port);
+  }
+
+  // Phase 3: folder-name / app-name keyword evidence, last, on ports no stronger evidence claimed.
+  // Generic words ("clone") in a name must not take another app's port ahead of its preferredPort.
+  for (const app of apps) {
+    if (result.has(app.id) || !app.cwd) continue;
+    const folder = app.cwd.toLowerCase().split(/[\\/]/).filter(Boolean).pop() || '';
+    const keywords = [folder, ...app.name.toLowerCase().split(/[^a-z0-9]+/)].filter(k => k.length > 3);
+    for (const p of ports) {
+      if (matched.has(p.port) || NOT_A_SERVER.test(p.processName)) continue;
+      const cl = p.commandLine.toLowerCase();
+      if (cl && keywords.some(k => cl.includes(k))) {
+        result.set(app.id, p);
+        matched.add(p.port);
+        break;
+      }
+    }
   }
 
   return result;
