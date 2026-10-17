@@ -114,7 +114,7 @@ A **debug port** is how a program drives a Chromium browser. The browser opens w
 
 The Claude Code clips on this page are terminal frames rendered around the plugin's real output, not captures of the Claude Code app.
 
-## New in the desktop app (3.4 and 3.5)
+## New in the desktop app
 
 Each row now tells you what is happening and who did it.
 
@@ -261,7 +261,7 @@ npm start
 
 **Manual entry.** Click Add App and fill in Name, Command (for example `npm run dev`), Working Directory, Preferred Port, and an optional Fallback Range (for example `3001-3010`).
 
-**Port conflicts.** When another process holds an app's port, the row shows a conflict strip with Use free port, Kill & start and Show process. See [New in the desktop app](#new-in-the-desktop-app-34).
+**Port conflicts.** When another process holds an app's port, the row shows a conflict strip with Use free port, Kill & start and Show process. See [New in the desktop app](#new-in-the-desktop-app).
 
 </details>
 
