@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [4.0.5] - 2026-10-17
+
 - Fixed apps showing as stopped, or with no page preview, when another app's name shares a word with their server path (for example `roofing-clone` taking `glancehawk-web`'s port because of the word "clone"). Exact port matching now runs before fuzzy name matching.
 
 ## [4.0.4] - 2026-10-17
