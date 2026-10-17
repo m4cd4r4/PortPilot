@@ -4,9 +4,9 @@
 
 # PortPilot
 
-**You and Claude Code, one view of what's running.**
+**See every dev server on your machine, and who started it.**
 
-PortPilot runs your local dev servers. With the Claude Code plugin, Claude sees the same apps, ports and crashes you do, and reuses a running server instead of starting a second copy.
+PortPilot runs your local dev servers and shows every port, every crash and who started each one. Connect an AI assistant (Claude Code, Cursor, Windsurf, Cline or any MCP client) and it sees the same apps you do, and reuses a running server instead of starting a second copy. It works on its own; the assistant link is optional.
 
 [![Version](https://img.shields.io/badge/version-4.0.3-blue.svg)](https://github.com/m4cd4r4/PortPilot/releases/tag/v4.0.3)
 [![Tests](https://img.shields.io/badge/tests-Playwright%20E2E-blue.svg)](tests/)
@@ -14,7 +14,7 @@ PortPilot runs your local dev servers. With the Claude Code plugin, Claude sees 
 [![MCP](https://img.shields.io/badge/MCP-26%20tools-purple.svg)](mcp-server/README.md)
 [![VS Code Marketplace](https://vsmarketplacebadges.dev/version-short/macdara.portpilot.svg)](https://marketplace.visualstudio.com/items?itemName=macdara.portpilot)
 
-**[Download v4.0.3](#install)** &nbsp;&middot;&nbsp; **[Add the Claude Code plugin](#use-it-with-claude-code)** &nbsp;&middot;&nbsp; **[Website](https://m4cd4r4.github.io/PortPilot/)**
+**[Download v4.0.3](#install)** &nbsp;&middot;&nbsp; **[Connect an AI assistant](#any-mcp-assistant)** &nbsp;&middot;&nbsp; **[Website](https://m4cd4r4.github.io/PortPilot/)**
 
 </div>
 

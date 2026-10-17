@@ -1,7 +1,7 @@
 {
   "name": "portpilot",
   "displayName": "PortPilot",
-  "description": "See every dev server and port from the sidebar, with crash alerts and the servers Claude Code started marked.",
+  "description": "See every dev server and port from the sidebar, with crash alerts and the servers your AI assistant started marked.",
   "version": "4.0.5",
   "publisher": "macdara",
   "engines": {
