@@ -28,6 +28,7 @@ const SHIM = path.join(W, 'shim');
 const CDP_PORT = 9345; // the EDH window's own remote-debugging port, used to photograph it
 const STRIPE_PORT = 9237; // stands in for the seed's :9231 so a real Brave on his pool is never probed
 
+const profileDir = (name) => path.join(W, 'profiles', name);
 const write = (file, data) => { fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, data); };
 
 async function loadSeed() {
@@ -53,7 +54,7 @@ async function stage() {
   const runtime = JSON.parse(JSON.stringify(s.runtime));
   const browserProfiles = s.browsers.map((p) => ({
     name: p.name, port: p.state === 'blocked' ? STRIPE_PORT : p.port, browser: 'brave', mode: p.mode,
-    url: p.url || '', note: '', purpose: p.purpose, sites: p.sites,
+    url: p.url || '', note: '', purpose: p.purpose, sites: p.sites, userDataDir: profileDir(p.name),
   }));
   write(path.join(CONFIG_DIR, 'portpilot-config.json'), JSON.stringify({
     apps: s.apps, groups: s.groups, settings: { theme: 'tokyonight' }, browserProfiles,
@@ -107,24 +108,43 @@ function listen(port, handler) {
   });
 }
 
+const cdp = (port, tabs) => listen(port, (req, res) => {
+  res.setHeader('content-type', 'application/json');
+  if (req.url === '/json/version') return res.end(JSON.stringify({ Browser: 'Chrome/130.0.0.0', 'Protocol-Version': '1.3' }));
+  if (req.url === '/json' || req.url === '/json/list') {
+    return res.end(JSON.stringify(tabs.map((t, i) => ({ id: `${port}-tab${i}`, type: 'page', title: t.title, url: t.url, webSocketDebuggerUrl: `ws://127.0.0.1:${port}/devtools/page/${i}` }))));
+  }
+  res.statusCode = 404; res.end('{}');
+});
+
 async function serve() {
   const { s } = await stage();
   const servers = [];
-  const cdp = (port, tabs) => listen(port, (req, res) => {
-    res.setHeader('content-type', 'application/json');
-    if (req.url === '/json/version') return res.end(JSON.stringify({ Browser: 'Chrome/130.0.0.0', 'Protocol-Version': '1.3' }));
-    if (req.url === '/json' || req.url === '/json/list') {
-      return res.end(JSON.stringify(tabs.map((t, i) => ({ id: `${port}-tab${i}`, type: 'page', title: t.title, url: t.url, webSocketDebuggerUrl: `ws://127.0.0.1:${port}/devtools/page/${i}` }))));
-    }
-    res.statusCode = 404; res.end('{}');
-  });
+  // The core calls a port "held" unless its listener is a browser process started with that profile's
+  // own --user-data-dir, so each fake debug port runs in a copy of node named brave.exe with the flag.
+  const bin = path.join(W, 'bin');
+  fs.mkdirSync(bin, { recursive: true });
+  const fakeBrave = path.join(bin, 'brave.exe');
+  fs.copyFileSync(process.execPath, fakeBrave);
+  const kids = [];
   for (const p of s.browsers) {
-    if (p.state === 'up') servers.push(await cdp(p.port, p.tabs));
+    if (p.state !== 'up') continue;
+    const tabsFile = path.join(bin, `tabs-${p.port}.json`);
+    write(tabsFile, JSON.stringify(p.tabs));
+    kids.push(spawn(fakeBrave, [fileURLToPath(import.meta.url), 'cdp', tabsFile, String(p.port), `--user-data-dir=${profileDir(p.name)}`], { stdio: 'ignore', windowsHide: true }));
   }
+  process.on('exit', () => kids.forEach((k) => k.kill()));
   // The held port: something answers, but it is not a browser.
   servers.push(await listen(STRIPE_PORT, (req, res) => { res.setHeader('content-type', 'text/plain'); res.statusCode = 404; res.end('not found'); }));
-  console.log(`staged in ${W}; fake debug ports up: ${servers.map((x) => x.address().port).join(', ')}. Ctrl+C to stop.`);
+  console.log(`staged in ${W}; fake debug ports up: ${s.browsers.filter((p) => p.state === 'up').map((p) => p.port).concat(STRIPE_PORT).join(', ')}. Ctrl+C to stop.`);
   process.on('SIGINT', () => process.exit(0));
+  setInterval(() => {}, 1 << 30);
+}
+
+async function fakeBrowser() {
+  // argv: cdp <tabsFile> <port> --user-data-dir=...
+  const [, , , tabsFile, port] = process.argv;
+  await cdp(Number(port), JSON.parse(fs.readFileSync(tabsFile, 'utf8')));
   setInterval(() => {}, 1 << 30);
 }
 
@@ -170,4 +190,5 @@ function launch() {
 if (cmd === 'serve') await serve();
 else if (cmd === 'launch') launch();
 else if (cmd === 'crash') crash();
+else if (cmd === 'cdp') await fakeBrowser();
 else { console.error('unknown command'); process.exit(2); }

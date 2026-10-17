@@ -4,23 +4,25 @@
 
 PortPilot lists your registered apps and every listening port in the VS Code sidebar. Running apps come first, crashes get a badge and a toast, and a ✦ marks anything a Claude Code session started. It shares one config with the [PortPilot desktop app](https://github.com/m4cd4r4/PortPilot) and its MCP server, so the editor, the desktop app and Claude all see the same state.
 
-![PortPilot sidebar in VS Code: apps grouped with running first, two crashed apps, the badge on the activity bar and a crash toast](https://raw.githubusercontent.com/m4cd4r4/PortPilot/master/docs/screenshots/vscode-overview.png)
+![PortPilot sidebar in VS Code: apps grouped with running first, a crashed app, the History list below, the badge on the activity bar and a crash toast](https://raw.githubusercontent.com/m4cd4r4/PortPilot/master/docs/screenshots/vscode-v4-overview.png)
 
 ## What's in the sidebar
 
 **Apps, running first.** Each app shows its port, its state, how long it has been in that state and who started it: you, or a Claude Code session. Stopped apps fold into a collapsed `Stopped (N)` node at the end of each group, so the running ones stay on screen. Worktree branches sit under their app.
 
-<img src="https://raw.githubusercontent.com/m4cd4r4/PortPilot/master/docs/screenshots/vscode-apps.png" alt="Apps view with running apps first, a crashed app and stopped apps folded" width="420">
+<img src="https://raw.githubusercontent.com/m4cd4r4/PortPilot/master/docs/screenshots/vscode-v4-apps.png" alt="Apps view with running apps first, a crashed app and stopped apps folded" width="420">
 
 **Ports that name their app.** Active Ports shows the app that owns each port where PortPilot knows it, and the process and PID where it does not. A ✦ marks a server Claude Code started.
 
-<img src="https://raw.githubusercontent.com/m4cd4r4/PortPilot/master/docs/screenshots/vscode-ports.png" alt="Active Ports listing app names, with a star on the ports Claude Code started" width="420">
+<img src="https://raw.githubusercontent.com/m4cd4r4/PortPilot/master/docs/screenshots/vscode-v4-ports.png" alt="Active Ports listing app names, with a star on the ports Claude Code started" width="420">
 
-**Crash alerts.** When an app crashes, the PortPilot icon gets a count badge and a toast says which app crashed, its exit code and whether Claude Code started it. Restart brings it back; Logs opens its output with the stderr tail. A crash from before the window opened shows in the badge without a toast. The status bar switches from `PP: 6 running` to `PP: anchor-jobs crashed`.
+**Crash alerts.** When an app crashes, the PortPilot icon gets a count badge and a toast says which app crashed, its exit code and whether Claude Code started it. Restart brings it back; Logs opens its output with the stderr tail. A crash from before the window opened shows in the badge without a toast. The status bar switches from `PP: 6 running` to `PP: 550-au crashed`.
 
-<img src="https://raw.githubusercontent.com/m4cd4r4/PortPilot/master/docs/screenshots/vscode-crash-toast.png" alt="Crash toast: beacon-gateway crashed (exit 1). Claude Code started it. With Restart and Logs buttons" width="560">
+<img src="https://raw.githubusercontent.com/m4cd4r4/PortPilot/master/docs/screenshots/vscode-v4-crash-toast.png" alt="Crash toast: 550-au crashed (exit 1). Claude Code started it. With Restart and Logs buttons" width="560">
 
 **History: go back to a page from last week.** The `History` view lists past localhost pages from PortPilot's local run history, newest first: Today, Yesterday, then one group per day for a week, then a collapsed `Earlier`. Each row shows the app, start time and port, with an icon for running, stopped, crashed or ended-unseen. Hover for the page title, URL, git branch and commit, and the page thumbnail. Servers PortPilot found without you registering them carry a `detected` marker once the desktop app records them.
+
+<img src="https://raw.githubusercontent.com/m4cd4r4/PortPilot/master/docs/screenshots/vscode-v4-history.png" alt="History view: pages grouped by day, with running, stopped, crashed and ended-unseen icons and a pinned run" width="420">
 
 - **Click** a running page to open it in your browser. Click a closed one to start it again: it needs a recorded folder and start command, and PortPilot waits for the port to answer before opening the page. Without those it says why.
 - **Row buttons and menu:** open or start again, copy URL, pin or unpin (pinned runs are never pruned), open folder.
@@ -29,6 +31,8 @@ PortPilot lists your registered apps and every listening port in the VS Code sid
 The view reads `history/runs.json` beside your PortPilot config and re-reads it only when it changes. Thumbnails are read from that folder and never leave your machine.
 
 **Browsers: manage your debug-port browsers without leaving the editor.** The `Browsers` view lists the named browser profiles from the PortPilot app's Browsers tab (or created by Claude with `start_browser`): one row each with `:port · mode · browser`, running first, then port held, then stopped. A running profile expands to its open tabs (title and URL, the first 30). Hover for the note, start URL, profile folder and, when a Claude session has leased the profile, who has it.
+
+<img src="https://raw.githubusercontent.com/m4cd4r4/PortPilot/master/docs/screenshots/vscode-v4-browsers.png" alt="Browsers view: running profiles expanded to their open tabs, a port held by another process, stopped profiles" width="420">
 
 - **Row buttons and menu:** Start, Stop, Set mode (headed, offscreen or headless; it applies the next time the profile starts), Open URL in this profile, Copy CDP URL (`http://127.0.0.1:<port>`), Copy port.
 - **Click a tab** to bring it to the front inside its browser.
