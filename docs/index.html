@@ -91,9 +91,9 @@
         <span class="nav-toggle-bar"></span>
       </button>
       <div class="nav-links" id="nav-menu">
+        <a href="#mcp" class="nav-link">Assistants</a>
         <a href="#claude" class="nav-link">Claude Code</a>
         <a href="#new" class="nav-link">What's new</a>
-        <a href="#mcp" class="nav-link">MCP</a>
         <a href="#features" class="nav-link">Features</a>
         <a href="#security" class="nav-link">Security</a>
         <a href="#download" class="nav-link nav-link-download">Download</a>
@@ -135,17 +135,37 @@
       </div>
     </header>
 
+    <!-- MCP -->
+    <section class="section" id="mcp" aria-labelledby="mcp-heading">
+      <div class="container mcp-grid">
+        <div>
+          <h2 id="mcp-heading">Any MCP assistant</h2>
+          <p class="mcp-lede">The PortPilot MCP server gives your assistant 26 tools: list, start, stop, scan, kill, group and more.</p>
+          <ul class="chips" aria-label="Works with">
+            <li>Claude Code</li><li>Claude Desktop</li><li>Cursor</li><li>Windsurf</li><li>Cline</li>
+          </ul>
+          <a href="https://github.com/m4cd4r4/PortPilot/tree/master/mcp-server" class="text-link" rel="noopener">MCP setup guide</a>
+        </div>
+        <ul class="asks" aria-label="Example requests">
+          <li class="reveal">"What's running on :3000?"</li>
+          <li class="reveal">"Start statewise"</li>
+          <li class="reveal">"Kill whatever is on port 8000"</li>
+          <li class="reveal">"Start all my favourites"</li>
+        </ul>
+      </div>
+    </section>
+
     <!-- Claude Code plugin -->
-    <section class="section" id="claude" aria-labelledby="claude-heading">
+    <section class="section section-alt" id="claude" aria-labelledby="claude-heading">
       <div class="container">
         <div class="section-head">
-          <h2 id="claude-heading">The Claude Code plugin</h2>
-          <p>One install gives Claude the PortPilot tools, a status line, a guard on dev-server starts and a crash band.</p>
+          <h2 id="claude-heading">Go deeper with Claude Code</h2>
+          <p>Any assistant can drive PortPilot through MCP (above). Claude Code also gets a plugin: the PortPilot tools, a status line, a guard on dev-server starts and a crash band.</p>
         </div>
         <div class="card-grid three">
           <article class="card reveal">
             <h3>Status line</h3>
-            <p>Every session shows what is up, worst state first. A <span class="t-cyan">&#10022;</span> marks apps Claude started.</p>
+            <p>Every Claude Code session shows what is up, worst state first. A <span class="t-cyan">&#10022;</span> marks apps an AI assistant started.</p>
             <code class="snip">&#9875; 1 crashed &middot; 7 up &middot; :3000 examworthy-web</code>
           </article>
           <article class="card reveal">
@@ -155,7 +175,7 @@
           </article>
           <article class="card reveal">
             <h3>Crash band with Fix it</h3>
-            <p>When an app Claude started crashes, the session gets a band with Restart, Logs and Fix it. Fix it hands Claude the crash and the stderr tail.</p>
+            <p>When an app an assistant started crashes, the session gets a band with Restart, Logs and Fix it. Fix it hands the crash and the stderr tail to Claude.</p>
             <code class="snip"><span class="t-red">&#10005; 550-au</span> &middot; exit 1</code>
           </article>
         </div>
@@ -169,7 +189,7 @@
     </section>
 
     <!-- What's new in the desktop app -->
-    <section class="section section-alt" id="new" aria-labelledby="new-heading">
+    <section class="section" id="new" aria-labelledby="new-heading">
       <div class="container">
         <div class="section-head">
           <h2 id="new-heading">New in the desktop app</h2>
@@ -221,14 +241,14 @@
       <div class="container">
         <div class="section-head">
           <h2 id="browsers-heading">Browsers and debug ports</h2>
-          <p>A debug port is how a program drives a Chromium browser. Give each profile its own, and PortPilot hands the right one to Claude.</p>
+          <p>A debug port is how a program drives a Chromium browser. Give each profile its own, and PortPilot hands the right one to your AI assistant.</p>
         </div>
         <div class="feature-row reveal">
           <div class="feature-copy">
             <h3>One profile, one port, its own sign-ins</h3>
             <p>A browser opens with <code>--remote-debugging-port=&lt;n&gt;</code>, and anything that can reach <code>127.0.0.1:&lt;n&gt;</code> can read its tabs and click in them. A PortPilot profile is a named browser with its own sign-ins and its own port, so <code>google</code> stays signed in to Search Console while <code>github</code> stays signed in to GitHub. Nothing picks a port by chance. If another program holds a profile's port, the row says which one.</p>
           </div>
-          <img src="demo/screenshots/browsers-1440.png" class="crop zoomable" tabindex="0" width="1440" height="900" loading="lazy" alt="The Browsers tab: six profiles, google and github running with their open tabs, reddit, facebook and upwork stopped, and stripe flagged because another program holds its port">
+          <img src="demo/screenshots/browsers-1440.png" class="crop zoomable" tabindex="0" width="1440" height="838" loading="lazy" alt="The Browsers tab: google and github running with their open tabs, reddit and facebook stopped, and stripe flagged because another program holds its port">
         </div>
         <div class="feature-row reveal">
           <div class="feature-copy">
@@ -245,26 +265,6 @@
           <img src="media/claude-browser.webp" class="crop zoomable" tabindex="0" width="900" height="368" loading="lazy" alt="Animation: Claude asks for Google Search Console, PortPilot starts the google profile and returns its debug port, and a second session is told the profile is in use">
         </div>
         <p class="install-note">The Claude Code clip is a terminal frame rendered around the plugin's real output, not a capture of the Claude Code app.</p>
-      </div>
-    </section>
-
-    <!-- MCP -->
-    <section class="section" id="mcp" aria-labelledby="mcp-heading">
-      <div class="container mcp-grid">
-        <div>
-          <h2 id="mcp-heading">Any MCP assistant</h2>
-          <p class="mcp-lede">The PortPilot MCP server gives your assistant 26 tools: list, start, stop, scan, kill, group and more.</p>
-          <ul class="chips" aria-label="Works with">
-            <li>Claude Code</li><li>Claude Desktop</li><li>Cursor</li><li>Windsurf</li><li>Cline</li>
-          </ul>
-          <a href="https://github.com/m4cd4r4/PortPilot/tree/master/mcp-server" class="text-link" rel="noopener">MCP setup guide</a>
-        </div>
-        <ul class="asks" aria-label="Example requests">
-          <li class="reveal">"What's running on :3000?"</li>
-          <li class="reveal">"Start statewise"</li>
-          <li class="reveal">"Kill whatever is on port 8000"</li>
-          <li class="reveal">"Start all my favourites"</li>
-        </ul>
       </div>
     </section>
 
