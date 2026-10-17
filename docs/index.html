@@ -91,9 +91,9 @@
         <span class="nav-toggle-bar"></span>
       </button>
       <div class="nav-links" id="nav-menu">
+        <a href="#mcp" class="nav-link">Assistants</a>
         <a href="#claude" class="nav-link">Claude Code</a>
         <a href="#new" class="nav-link">What's new</a>
-        <a href="#mcp" class="nav-link">MCP</a>
         <a href="#features" class="nav-link">Features</a>
         <a href="#security" class="nav-link">Security</a>
         <a href="#download" class="nav-link nav-link-download">Download</a>
@@ -135,12 +135,32 @@
       </div>
     </header>
 
+    <!-- MCP -->
+    <section class="section" id="mcp" aria-labelledby="mcp-heading">
+      <div class="container mcp-grid">
+        <div>
+          <h2 id="mcp-heading">Any MCP assistant</h2>
+          <p class="mcp-lede">The PortPilot MCP server gives your assistant 26 tools: list, start, stop, scan, kill, group and more.</p>
+          <ul class="chips" aria-label="Works with">
+            <li>Claude Code</li><li>Claude Desktop</li><li>Cursor</li><li>Windsurf</li><li>Cline</li>
+          </ul>
+          <a href="https://github.com/m4cd4r4/PortPilot/tree/master/mcp-server" class="text-link" rel="noopener">MCP setup guide</a>
+        </div>
+        <ul class="asks" aria-label="Example requests">
+          <li class="reveal">"What's running on :3000?"</li>
+          <li class="reveal">"Start statewise"</li>
+          <li class="reveal">"Kill whatever is on port 8000"</li>
+          <li class="reveal">"Start all my favourites"</li>
+        </ul>
+      </div>
+    </section>
+
     <!-- Claude Code plugin -->
-    <section class="section" id="claude" aria-labelledby="claude-heading">
+    <section class="section section-alt" id="claude" aria-labelledby="claude-heading">
       <div class="container">
         <div class="section-head">
           <h2 id="claude-heading">Go deeper with Claude Code</h2>
-          <p>Any assistant can drive PortPilot through <a href="#mcp">MCP</a>. Claude Code also gets a plugin: the PortPilot tools, a status line, a guard on dev-server starts and a crash band.</p>
+          <p>Any assistant can drive PortPilot through MCP (above). Claude Code also gets a plugin: the PortPilot tools, a status line, a guard on dev-server starts and a crash band.</p>
         </div>
         <div class="card-grid three">
           <article class="card reveal">
@@ -169,7 +189,7 @@
     </section>
 
     <!-- What's new in the desktop app -->
-    <section class="section section-alt" id="new" aria-labelledby="new-heading">
+    <section class="section" id="new" aria-labelledby="new-heading">
       <div class="container">
         <div class="section-head">
           <h2 id="new-heading">New in the desktop app</h2>
@@ -245,26 +265,6 @@
           <img src="media/claude-browser.webp" class="crop zoomable" tabindex="0" width="900" height="368" loading="lazy" alt="Animation: Claude asks for Google Search Console, PortPilot starts the google profile and returns its debug port, and a second session is told the profile is in use">
         </div>
         <p class="install-note">The Claude Code clip is a terminal frame rendered around the plugin's real output, not a capture of the Claude Code app.</p>
-      </div>
-    </section>
-
-    <!-- MCP -->
-    <section class="section" id="mcp" aria-labelledby="mcp-heading">
-      <div class="container mcp-grid">
-        <div>
-          <h2 id="mcp-heading">Any MCP assistant</h2>
-          <p class="mcp-lede">The PortPilot MCP server gives your assistant 26 tools: list, start, stop, scan, kill, group and more.</p>
-          <ul class="chips" aria-label="Works with">
-            <li>Claude Code</li><li>Claude Desktop</li><li>Cursor</li><li>Windsurf</li><li>Cline</li>
-          </ul>
-          <a href="https://github.com/m4cd4r4/PortPilot/tree/master/mcp-server" class="text-link" rel="noopener">MCP setup guide</a>
-        </div>
-        <ul class="asks" aria-label="Example requests">
-          <li class="reveal">"What's running on :3000?"</li>
-          <li class="reveal">"Start statewise"</li>
-          <li class="reveal">"Kill whatever is on port 8000"</li>
-          <li class="reveal">"Start all my favourites"</li>
-        </ul>
       </div>
     </section>
 
