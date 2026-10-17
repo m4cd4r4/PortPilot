@@ -157,12 +157,15 @@ async function snapshot($: EngineInterface): Promise<Snapshot> {
   return { config, runtime, listeners }
 }
 
+// The status_line option; register sets it on every load
+let showStatus = true
+
 async function refresh($: EngineInterface) {
   try {
     const { config, runtime, listeners } = await snapshot($)
     // A failed scan keeps the last line rather than claiming "0 up".
     if (config && !listeners) return
-    $.ui.status(listeners ? statusLine(config, runtime, listeners) : undefined)
+    if (showStatus) $.ui.status(listeners ? statusLine(config, runtime, listeners) : undefined)
     if (listeners) await refreshCrashes($, config, runtime, listeners)
     if (config && listeners) await checkObserved($, { config, runtime, listeners })
     if (config && listeners) await beatAndReadInbox($, config, runtime, listeners)
@@ -262,7 +265,8 @@ async function fixIt($: EngineInterface, crash: Crash & { tail: string }) {
   await $.prompt.submit({ text: fixPrompt(crash, crash.tail) })
 }
 
-export const register: Register = (on) => {
+export const register: Register = (on, options) => {
+  showStatus = options.status_line !== false
   on('session.start', async ($, e, next) => {
     const started = await next(e)
     const now = await $.clock.now()
