@@ -24363,7 +24363,7 @@ function rerunSteps(run, exists = fs.existsSync) {
 function createServer2() {
   const server = new McpServer({
     name: "portpilot",
-    version: "4.0.3"
+    version: "4.0.4"
   });
   const clientName = () => {
     try {
