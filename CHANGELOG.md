@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.0.4] - 2026-10-18
+
+### Added
+- **Claude Code plugin: `status_line` option.** On by default, so nothing changes unless you turn it off. Off, the plugin draws no status line; the start guard, crash band, inbox and MCP tools work as before. Set it on the install screen or in `/config`.
+
+### Fixed
+- **MCP server: an app's own port wins over a fuzzy name match.** Two apps whose paths shared a word could swap ports, so one read as stopped. Matching now checks the folder in the command line, then `preferredPort`, then keywords.
+
 ## [4.0.3] - 2026-10-17
 
 ### Fixed

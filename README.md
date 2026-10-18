@@ -8,13 +8,13 @@
 
 PortPilot runs your local dev servers and shows every port, every crash and who started each one. Connect an AI assistant (Claude Code, Cursor, Windsurf, Cline or any MCP client) and it sees the same apps you do, and reuses a running server instead of starting a second copy. It works on its own; the assistant link is optional.
 
-[![Version](https://img.shields.io/badge/version-4.0.3-blue.svg)](https://github.com/m4cd4r4/PortPilot/releases/tag/v4.0.3)
+[![Version](https://img.shields.io/badge/version-4.0.4-blue.svg)](https://github.com/m4cd4r4/PortPilot/releases/tag/v4.0.4)
 [![Tests](https://img.shields.io/badge/tests-Playwright%20E2E-blue.svg)](tests/)
 [![Licence](https://img.shields.io/badge/licence-MIT-green.svg)](LICENSE)
 [![MCP](https://img.shields.io/badge/MCP-26%20tools-purple.svg)](mcp-server/README.md)
 [![VS Code Marketplace](https://vsmarketplacebadges.dev/version-short/macdara.portpilot.svg)](https://marketplace.visualstudio.com/items?itemName=macdara.portpilot)
 
-**[Download v4.0.3](#install)** &nbsp;&middot;&nbsp; **[Connect an AI assistant](#any-mcp-assistant)** &nbsp;&middot;&nbsp; **[Website](https://m4cd4r4.github.io/PortPilot/)**
+**[Download v4.0.4](#install)** &nbsp;&middot;&nbsp; **[Connect an AI assistant](#any-mcp-assistant)** &nbsp;&middot;&nbsp; **[Website](https://m4cd4r4.github.io/PortPilot/)**
 
 </div>
 
@@ -238,10 +238,10 @@ claude mcp list   # portpilot: ... - ✓ Connected
 
 | Platform | Download |
 |----------|----------|
-| Windows installer | [PortPilot-4.0.3-x64.exe](https://github.com/m4cd4r4/PortPilot/releases/download/v4.0.3/PortPilot-4.0.3-x64.exe) (113 MB) |
-| Windows portable | [PortPilot-4.0.3-portable.exe](https://github.com/m4cd4r4/PortPilot/releases/download/v4.0.3/PortPilot-4.0.3-portable.exe) (113 MB) |
-| Linux AppImage | [PortPilot-4.0.3-x86_64.AppImage](https://github.com/m4cd4r4/PortPilot/releases/download/v4.0.3/PortPilot-4.0.3-x86_64.AppImage) (123 MB) |
-| Debian / Ubuntu | [PortPilot-4.0.3-amd64.deb](https://github.com/m4cd4r4/PortPilot/releases/download/v4.0.3/PortPilot-4.0.3-amd64.deb) (86 MB) |
+| Windows installer | [PortPilot-4.0.4-x64.exe](https://github.com/m4cd4r4/PortPilot/releases/download/v4.0.4/PortPilot-4.0.4-x64.exe) (113 MB) |
+| Windows portable | [PortPilot-4.0.4-portable.exe](https://github.com/m4cd4r4/PortPilot/releases/download/v4.0.4/PortPilot-4.0.4-portable.exe) (113 MB) |
+| Linux AppImage | [PortPilot-4.0.4-x86_64.AppImage](https://github.com/m4cd4r4/PortPilot/releases/download/v4.0.4/PortPilot-4.0.4-x86_64.AppImage) (123 MB) |
+| Debian / Ubuntu | [PortPilot-4.0.4-amd64.deb](https://github.com/m4cd4r4/PortPilot/releases/download/v4.0.4/PortPilot-4.0.4-amd64.deb) (86 MB) |
 
 macOS: build from source; it is supported but not officially tested. Install it, click Scan, then add your projects. Older builds are on [Releases](https://github.com/m4cd4r4/PortPilot/releases).
 
