@@ -7,6 +7,7 @@ import { Banner } from './components/Banner';
 import { Palette } from './components/Palette';
 import { Localhost } from './components/Localhost';
 import { History } from './components/History';
+import { Browsers } from './components/Browsers';
 import { useThumbs } from './useThumbs';
 
 const EMPTY: Snapshot = { apps: [], groups: [], running: {}, crashed: {}, conflicts: [], profiles: [], ports: [] };
@@ -52,19 +53,14 @@ export function App({ host }: { host: Host }) {
 
   return (
     <div className="shell">
-      <TopBar view={view} onView={setView} onSearch={() => setPaletteOpen(true)} />
+      <TopBar view={view} onView={setView} onSearch={() => setPaletteOpen(true)} onClassic={() => host.switchToClassic()} />
       <Banner warnings={t.warnings} onFix={() => setPaletteOpen(true)} />
       <main className="main" id="main">
         {error && <p className="notice" role="alert">Could not read PortPilot state: {error}</p>}
         {view === 'home' && <Home t={t} loaded={loaded} onView={setView} snap={snap} thumbs={thumbs} />}
         {view === 'localhost' && <Localhost host={host} snap={snap} thumbs={thumbs} onDone={refresh} />}
         {view === 'history' && <History host={host} />}
-        {view === 'browsers' && (
-          <section className="placeholder" aria-label={view}>
-            <h2>Browsers</h2>
-            <p>This screen is built in a later wave.</p>
-          </section>
-        )}
+        {view === 'browsers' && <Browsers host={host} snap={snap} onDone={refresh} />}
       </main>
       <Palette open={paletteOpen} onClose={() => setPaletteOpen(false)} host={host} snap={snap}
         view={view} onView={setView} onDone={refresh} />

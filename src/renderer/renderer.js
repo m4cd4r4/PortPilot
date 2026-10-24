@@ -367,6 +367,10 @@ function setupEventListeners() {
 
   // Settings panel
   document.getElementById('btn-settings').addEventListener('click', openSettings);
+  document.getElementById('btn-new-ui').addEventListener('click', async () => {
+    const r = await window.portpilot.ui.switch('new');
+    if (!r.success) showToast(r.error || 'Could not switch to the new view', 'error');
+  });
   document.getElementById('settings-close').addEventListener('click', closeSettings);
   document.getElementById('settings-backdrop').addEventListener('click', closeSettings);
 

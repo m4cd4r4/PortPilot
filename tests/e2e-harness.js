@@ -77,6 +77,8 @@ async function launch(world, { width = 1440, height = 900 } = {}) {
       // The localhost watcher must not record (or thumbnail) the developer's real servers: port 1 is
       // below anything it tracks, so a spec that is not about detection sees none. desktop-detect sets its own.
       PORTPILOT_DETECT_ONLY_PORTS: process.env.PORTPILOT_DETECT_ONLY_PORTS || '1',
+      // The classic v4 UI is what the older specs drive; the redesign specs set PORTPILOT_NEW_UI=1 themselves.
+      PORTPILOT_NEW_UI: process.env.PORTPILOT_NEW_UI || '0',
     },
   });
   // firstWindow() can return the hidden offscreen window the thumbnail watcher opens at startup when a

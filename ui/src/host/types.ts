@@ -1,6 +1,20 @@
 export interface AppRec { id: string; name: string; preferredPort?: number; branch?: string; parentId?: string; groupId?: string; command?: string }
 export interface Conflict { appId?: string; appName?: string; port: number; occupiedBy?: { processName?: string; pid?: number } }
-export interface Profile { name: string; state?: string; port?: number; url?: string; note?: string }
+export interface Account { platform?: string; username?: string; note?: string }
+export interface Lease { by: string; session?: string; since?: string; starting?: boolean }
+export type SignIn = 'in' | 'out' | 'unknown';
+/** One browser profile as browser:list returns it (src/core/browserApi.js list_browser_profiles rows). */
+export interface Profile {
+  name: string; state?: string; port?: number; url?: string; note?: string;
+  mode?: string; browser?: string; purpose?: string; sites?: string[]; accounts?: Account[];
+  leasedTo?: Lease | null; free?: boolean; tabs?: Array<{ title?: string; url?: string }>; warning?: string;
+}
+/** The fields the edit drawer sends to browser:save. */
+export interface ProfileFields {
+  name?: string; port?: number | string; browser?: string; mode?: string; url?: string; note?: string; purpose?: string;
+  sites?: string[]; accounts?: Account[];
+}
+export interface ArtRef { source: string; at: number }
 export interface Group { id: string; name: string }
 
 export interface Snapshot {
@@ -39,7 +53,24 @@ export interface Host {
   openUrl(url: string): Promise<void>;
   startBrowser(name: string): Promise<void>;
   stopBrowser(name: string): Promise<void>;
+  /** End a lease; the browser keeps running. */
+  releaseBrowser(name: string): Promise<void>;
+  /** Add (original null) or edit a profile. Rejects with the host's plain-English reason. */
+  saveBrowser(original: string | null, fields: ProfileFields): Promise<void>;
+  removeBrowser(name: string): Promise<void>;
+  /** Cheap index of profiles that have a picture, then the pixels by name. */
+  browserArtIndex(): Promise<Record<string, ArtRef>>;
+  browserArt(names: string[]): Promise<Record<string, string>>;
+  /** Fetch the site's own picture; true when the profile now has one. */
+  refreshBrowserArt(name: string, force?: boolean): Promise<boolean>;
+  /** Let the user pick an image file; false when they cancel. */
+  chooseBrowserArt(name: string): Promise<boolean>;
+  clearBrowserArt(name: string): Promise<void>;
+  /** Sign-in state of running profiles; stopped ones are 'unknown'. */
+  browserSignIns(names: string[]): Promise<Record<string, SignIn>>;
   killPort(port: number): Promise<void>;
+  /** Reload the window as the classic v4 UI; it comes back on the next launch too. */
+  switchToClassic(): Promise<void>;
   thumbIndex(): Promise<Record<string, ThumbRef>>;
   thumbs(keys: string[]): Promise<Record<string, string>>;
   /** Ask for a fresh screenshot; the host throttles (one per app per 10 s, one in flight). */
