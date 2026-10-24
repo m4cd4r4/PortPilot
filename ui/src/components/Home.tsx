@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Host, Run, Scene, Snapshot } from '../host';
 import { ago, cards, groupOf, hueOf, type Card, type Tally, type View } from '../model';
 import { sceneSummary, startScene } from '../scenes';
@@ -87,6 +87,17 @@ export function Home({ host, t, loaded, onView, snap, thumbs, onDone }: Props) {
     [snap.profiles],
   );
   const scene = scenes[0];
+
+  // A running app with no picture yet gets one capture, hero first; the host throttles and a failed try is not repeated.
+  const tried = useRef(new Set<string>());
+  const missing = all.filter((c) => c.state === 'running' && c.port && !thumbs.byApp[c.app.id] && !tried.current.has(c.app.id))
+    .sort((x, y) => Number(y.app.id === hero?.app.id) - Number(x.app.id === hero?.app.id));
+  const nextShot = missing[0];
+  useEffect(() => {
+    if (!nextShot) return;
+    tried.current.add(nextShot.app.id);
+    thumbs.capture(nextShot.app.id, nextShot.port!).catch(() => { /* the card keeps its gradient */ });
+  }, [nextShot, thumbs]);
 
   const heroLast = hero ? lastRunText(recent.get(hero.app.id)) : '';
   const heroSetUp = hero?.app.createdAt && Number.isFinite(Date.parse(hero.app.createdAt))
