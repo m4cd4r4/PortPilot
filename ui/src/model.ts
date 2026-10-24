@@ -1,4 +1,4 @@
-import type { AppRec, Snapshot } from './host';
+import type { AppRec, Profile, Snapshot } from './host';
 
 export type View = 'home' | 'localhost' | 'browsers' | 'history';
 /** The three sections in the segmented control; History has its own top-bar button. */
@@ -79,3 +79,50 @@ export function grouped(s: Snapshot, list: Card[]): Array<{ id: string; name: st
 }
 
 export const STALE_MS = 5 * 60 * 1000;
+
+export type BrowserGroup = 'inuse' | 'open' | 'blocked' | 'stopped';
+export interface BrowserCard { profile: Profile; group: BrowserGroup }
+export const BROWSER_GROUPS: Array<{ id: BrowserGroup; label: string }> = [
+  { id: 'inuse', label: 'In use' },
+  { id: 'open', label: 'Open' },
+  { id: 'blocked', label: 'Port blocked' },
+  { id: 'stopped', label: 'Stopped' },
+];
+
+/** Where a profile sits: leased to a session, running free, its port held by something else, or stopped. */
+export function browserGroup(p: Profile): BrowserGroup {
+  if (p.state === 'up') return p.leasedTo ? 'inuse' : 'open';
+  return p.state === 'blocked' ? 'blocked' : 'stopped';
+}
+
+const B_RANK: Record<BrowserGroup, number> = { inuse: 0, open: 1, blocked: 2, stopped: 3 };
+
+/** One card per profile, filtered by every word of the query against its text, running first then by name. */
+export function browserCards(s: Snapshot, query = ''): BrowserCard[] {
+  const words = query.toLowerCase().split(/\s+/).filter(Boolean);
+  const out: BrowserCard[] = [];
+  for (const p of s.profiles) {
+    const hay = [p.name, p.port, p.purpose, p.note, p.url, ...(p.sites || []), ...(p.accounts || []).flatMap((a) => [a.platform, a.username])]
+      .filter(Boolean).join(' ').toLowerCase();
+    if (words.every((w) => hay.includes(w))) out.push({ profile: p, group: browserGroup(p) });
+  }
+  return out.sort((a, b) => B_RANK[a.group] - B_RANK[b.group] || a.profile.name.localeCompare(b.profile.name));
+}
+
+/** A stable hue 0-359 from the profile name, for the gradient behind a card with no picture. */
+export function hueOf(name: string): number {
+  let h = 0;
+  for (const ch of name) h = (h * 31 + ch.charCodeAt(0)) % 360;
+  return h;
+}
+
+/** "3m", "2h", "5d": how long ago an ISO time was; empty when it is missing or in the future. */
+export function ago(iso: string | undefined, now = Date.now()): string {
+  const t = iso ? Date.parse(iso) : NaN;
+  if (!Number.isFinite(t) || t > now) return '';
+  const m = Math.floor((now - t) / 60000);
+  if (m < 1) return 'just now';
+  if (m < 60) return `${m}m`;
+  if (m < 1440) return `${Math.floor(m / 60)}h`;
+  return `${Math.floor(m / 1440)}d`;
+}

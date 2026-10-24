@@ -1087,6 +1087,7 @@ function setupIpcHandlers(ipcMain, configStore) {
   require('./historyIpc').setupHistoryIpc(ipcMain, configStore);
   require('./thumbIpc').setupThumbIpc(ipcMain, configStore);
   require('./browserIpc').setupBrowserIpc(ipcMain, configStore);
+  require('./browserExtraIpc').setupBrowserExtraIpc(ipcMain, configStore);
 }
 
 module.exports = { setupIpcHandlers, matchPortsToApps, matchPortsWithOwnership, getProcessDetails, detectWorktrees, detectStaleWorktrees };

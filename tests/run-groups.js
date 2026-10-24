@@ -3,6 +3,8 @@
  * Tests create, rename, delete, assign app to group, move selected to group
  */
 const { _electron: electron } = require('playwright');
+// These drive the classic v4 UI; the redesign specs pin their own.
+process.env.PORTPILOT_NEW_UI = process.env.PORTPILOT_NEW_UI || '0';
 const path = require('path');
 const os = require('os');
 const fs = require('fs');

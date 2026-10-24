@@ -3,6 +3,8 @@
  * Tests all major functionality including the port killing fix
  */
 const { _electron: electron } = require('playwright');
+// These drive the classic v4 UI; the redesign specs pin their own.
+process.env.PORTPILOT_NEW_UI = process.env.PORTPILOT_NEW_UI || '0';
 const path = require('path');
 const { execSync } = require('child_process');
 

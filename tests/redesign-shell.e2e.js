@@ -57,7 +57,7 @@ async function main() {
 
     console.log('step: segmented control');
     await win.click('role=tab[name="Browsers"]');
-    check('Browsers tab opens its screen', (await tabOn()) === 'Browsers' && (await win.locator('.placeholder h2').textContent()) === 'Browsers');
+    check('Browsers tab opens its screen', (await tabOn()) === 'Browsers' && (await win.locator('.gallery-view[aria-label="Browsers"]').count()) === 1);
     await win.click('role=tab[name="Home"]');
 
     console.log('step: palette');

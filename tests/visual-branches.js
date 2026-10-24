@@ -8,6 +8,8 @@
  * Output: docs/ui-redesign/slice8-branches.png
  */
 const { _electron: electron } = require('playwright');
+// These drive the classic v4 UI; the redesign specs pin their own.
+process.env.PORTPILOT_NEW_UI = process.env.PORTPILOT_NEW_UI || '0';
 const fs = require('fs');
 const path = require('path');
 

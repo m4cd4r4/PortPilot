@@ -31,6 +31,9 @@ const RESERVED_RE = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/i;
 
 const PURPOSE_MAX = 200;
 const SITES_MAX = 20;
+// Account labels (which login lives in a profile). Labels only: a password is never stored here.
+const ACCOUNTS_MAX = 10;
+const ACCOUNT_LIMITS = { platform: 40, username: 120, note: 200 };
 // A saved window placement: every field optional, each inside sane bounds.
 const WINDOW_LIMITS = { left: [-10000, 10000], top: [-10000, 10000], width: [200, 8000], height: [200, 8000] };
 
@@ -101,6 +104,31 @@ function cleanSites(value) {
 }
 
 /**
+ * The `accounts` field: up to ACCOUNTS_MAX { platform, username, note } labels, nothing else kept.
+ * A row with no platform and no username is blank form input and is dropped; an over-long text is
+ * refused rather than quietly cut.
+ */
+function cleanAccounts(value) {
+  if (value == null || value === '') return [];
+  const bad = (msg) => new ProfileError('BAD_ACCOUNTS', msg);
+  if (!Array.isArray(value)) throw bad('accounts must be a list of { platform, username, note }');
+  const out = [];
+  for (const raw of value) {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw bad('each account must be { platform, username, note }');
+    const row = {};
+    for (const [key, max] of Object.entries(ACCOUNT_LIMITS)) {
+      const v = raw[key] == null ? '' : String(raw[key]).replace(/\s+/g, ' ').trim();
+      if (v.length > max) throw bad(`account ${key} must be at most ${max} characters`);
+      if (v) row[key] = v;
+    }
+    if (!row.platform && !row.username) continue;
+    out.push(row);
+  }
+  if (out.length > ACCOUNTS_MAX) throw bad(`at most ${ACCOUNTS_MAX} accounts per profile`);
+  return out;
+}
+
+/**
  * The `window` field: { left?, top?, width?, height?, front? } or null when nothing is set.
  * Numbers may arrive as numeric strings (the form); blank means "not set".
  */
@@ -159,11 +187,13 @@ function validateProfile(fields, others = []) {
   const purpose = f.purpose == null ? '' : String(f.purpose).replace(/\s+/g, ' ').trim();
   if (purpose.length > PURPOSE_MAX) throw new ProfileError('BAD_PURPOSE', `purpose must be at most ${PURPOSE_MAX} characters`);
   const sites = cleanSites(f.sites);
+  const accounts = cleanAccounts(f.accounts);
   const win = cleanWindow(f.window);
 
   const out = { name, port, browser, mode, url, note };
   if (purpose) out.purpose = purpose;
   if (sites.length) out.sites = sites;
+  if (accounts.length) out.accounts = accounts;
   if (win) out.window = win;
   if (f.userDataDir != null && f.userDataDir !== '') {
     if (typeof f.userDataDir !== 'string' || !path.isAbsolute(f.userDataDir)) {

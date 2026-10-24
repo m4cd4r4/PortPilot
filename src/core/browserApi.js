@@ -379,6 +379,7 @@ const TOOLS = {
       if (p.note) row.note = p.note;
       if (p.purpose) row.purpose = p.purpose;
       if (p.sites && p.sites.length) row.sites = p.sites;
+      if (p.accounts && p.accounts.length) row.accounts = p.accounts;
       if (p.window) row.window = p.window;
       if (ranked) { const m = ranked.get(st.name); row.match = { rank: m.rank, score: m.score, reason: m.reason }; }
       if (st.tabs && st.tabs.length) row.tabs = st.tabs.slice(0, 5).map((t) => ({ title: t.title, url: t.url }));

@@ -613,6 +613,8 @@ var require_browserProfiles = __commonJS({
     var RESERVED_RE = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/i;
     var PURPOSE_MAX = 200;
     var SITES_MAX = 20;
+    var ACCOUNTS_MAX = 10;
+    var ACCOUNT_LIMITS = { platform: 40, username: 120, note: 200 };
     var WINDOW_LIMITS = { left: [-1e4, 1e4], top: [-1e4, 1e4], width: [200, 8e3], height: [200, 8e3] };
     var ProfileError = class extends Error {
       constructor(code, message) {
@@ -665,6 +667,25 @@ var require_browserProfiles = __commonJS({
       if (out.length > SITES_MAX) throw new ProfileError("BAD_SITES", `at most ${SITES_MAX} sites per profile`);
       return out;
     }
+    function cleanAccounts(value) {
+      if (value == null || value === "") return [];
+      const bad = (msg) => new ProfileError("BAD_ACCOUNTS", msg);
+      if (!Array.isArray(value)) throw bad("accounts must be a list of { platform, username, note }");
+      const out = [];
+      for (const raw of value) {
+        if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw bad("each account must be { platform, username, note }");
+        const row = {};
+        for (const [key, max] of Object.entries(ACCOUNT_LIMITS)) {
+          const v = raw[key] == null ? "" : String(raw[key]).replace(/\s+/g, " ").trim();
+          if (v.length > max) throw bad(`account ${key} must be at most ${max} characters`);
+          if (v) row[key] = v;
+        }
+        if (!row.platform && !row.username) continue;
+        out.push(row);
+      }
+      if (out.length > ACCOUNTS_MAX) throw bad(`at most ${ACCOUNTS_MAX} accounts per profile`);
+      return out;
+    }
     function cleanWindow(value) {
       if (value == null || value === "") return null;
       if (typeof value !== "object" || Array.isArray(value)) throw new ProfileError("BAD_WINDOW", "window must be an object: { left, top, width, height, front }");
@@ -710,10 +731,12 @@ var require_browserProfiles = __commonJS({
       const purpose = f.purpose == null ? "" : String(f.purpose).replace(/\s+/g, " ").trim();
       if (purpose.length > PURPOSE_MAX) throw new ProfileError("BAD_PURPOSE", `purpose must be at most ${PURPOSE_MAX} characters`);
       const sites = cleanSites(f.sites);
+      const accounts = cleanAccounts(f.accounts);
       const win = cleanWindow(f.window);
       const out = { name, port, browser, mode, url, note };
       if (purpose) out.purpose = purpose;
       if (sites.length) out.sites = sites;
+      if (accounts.length) out.accounts = accounts;
       if (win) out.window = win;
       if (f.userDataDir != null && f.userDataDir !== "") {
         if (typeof f.userDataDir !== "string" || !path2.isAbsolute(f.userDataDir)) {
@@ -2310,6 +2333,7 @@ var TOOLS = {
       if (p.note) row.note = p.note;
       if (p.purpose) row.purpose = p.purpose;
       if (p.sites && p.sites.length) row.sites = p.sites;
+      if (p.accounts && p.accounts.length) row.accounts = p.accounts;
       if (p.window) row.window = p.window;
       if (ranked) {
         const m = ranked.get(st.name);

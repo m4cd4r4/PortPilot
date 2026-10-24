@@ -3,6 +3,9 @@ const path = require('path');
 const fs = require('fs');
 const { setupIpcHandlers } = require('./ipcHandlers');
 const { ConfigStore } = require('./configStore');
+const { chooseUi } = require('../core/uiChoice');
+const { readJson } = require('../core/configFile');
+const { getConfigPath } = require('../core/configPath');
 
 let mainWindow = null;
 let tray = null;
@@ -40,17 +43,19 @@ function installMenuShortcuts(win) {
 }
 
 /**
- * The redesign bundle (ui/, built to src/ui-dist) loads only when PORTPILOT_NEW_UI=1 and it has
- * been built; otherwise the v4 renderer stays the default until the Wave 3 cutover.
+ * The redesign bundle (ui/, built to src/ui-dist) is the default window. The v4 renderer stays one
+ * click away ("Switch to classic view", setting ui = classic) until every v4 screen has a new
+ * equivalent, and PORTPILOT_NEW_UI=0 or 1 pins one for tests. Rules: src/core/uiChoice.js.
  */
-function rendererEntry() {
-  if (process.env.PORTPILOT_NEW_UI === '1') {
-    const built = path.join(__dirname, '../ui-dist/index.html');
-    if (fs.existsSync(built)) return built;
-    console.warn('PORTPILOT_NEW_UI=1 but src/ui-dist is missing; run "npm run build:ui". Loading the v4 UI.');
-  }
-  return path.join(__dirname, '../renderer/index.html');
+function rendererChoice() {
+  const built = path.join(__dirname, '../ui-dist/index.html');
+  let setting;
+  try { setting = readJson(getConfigPath(), () => ({})).settings?.ui; } catch { /* first run: no config yet */ }
+  const choice = chooseUi({ env: process.env.PORTPILOT_NEW_UI, setting, built: fs.existsSync(built) });
+  if (choice.missing) console.warn('The new UI is wanted but src/ui-dist is missing; run "npm run build:ui". Loading the classic UI.');
+  return { ...choice, file: choice.ui === 'new' ? built : path.join(__dirname, '../renderer/index.html') };
 }
+const rendererEntry = () => rendererChoice().file;
 
 /** Create the main application window */
 function createWindow(configStore) {
@@ -215,6 +220,18 @@ if (!gotTheLock) {
     configStore = new ConfigStore(window);
     createTray();
     setupIpcHandlers(ipcMain, configStore);
+
+    // Switch between the new and the classic window; both load the same preload and IPC.
+    ipcMain.handle('ui:switch', async (_, to) => {
+      if (to !== 'new' && to !== 'classic') return { success: false, error: 'Choose new or classic.' };
+      const before = rendererChoice();
+      if (before.forced) return { success: false, error: 'PORTPILOT_NEW_UI is set, so the view cannot be changed from here.' };
+      configStore.updateSettings({ ui: to });
+      const after = rendererChoice();
+      if (to === 'new' && after.ui !== 'new') return { success: false, error: 'The new view is not built in this copy of PortPilot.' };
+      if (mainWindow && !mainWindow.isDestroyed()) mainWindow.loadFile(after.file);
+      return { success: true, ui: after.ui };
+    });
 
     // Notify (OS notification + in-app toast) when a running app crashes.
     const { onAppCrash, getRunningApps } = require('./processManager');

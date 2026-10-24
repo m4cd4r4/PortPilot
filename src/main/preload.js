@@ -65,6 +65,11 @@ contextBridge.exposeInMainWorld('portpilot', {
     capture: (appId, port) => ipcRenderer.invoke('thumbs:capture', appId, port)
   },
 
+  // Which window loads: the redesign or the classic v4 renderer
+  ui: {
+    switch: (to) => ipcRenderer.invoke('ui:switch', to)
+  },
+
   // Browser profiles (Browsers tab)
   browsers: {
     list: () => ipcRenderer.invoke('browser:list'),
@@ -77,7 +82,15 @@ contextBridge.exposeInMainWorld('portpilot', {
     extensions: (name) => ipcRenderer.invoke('browser:extensions', name),
     history: (name) => ipcRenderer.invoke('browser:history', name),
     reopen: (id) => ipcRenderer.invoke('browser:reopen', id),
-    captureWindow: (name) => ipcRenderer.invoke('browser:captureWindow', name)
+    captureWindow: (name) => ipcRenderer.invoke('browser:captureWindow', name),
+    // Brand art, sign-in health and lease release (redesign Browsers screen)
+    artIndex: () => ipcRenderer.invoke('browser:art:index'),
+    artGet: (names) => ipcRenderer.invoke('browser:art:get', names),
+    artRefresh: (name, force) => ipcRenderer.invoke('browser:art:refresh', name, force),
+    artChoose: (name) => ipcRenderer.invoke('browser:art:choose', name),
+    artClear: (name) => ipcRenderer.invoke('browser:art:clear', name),
+    signIns: (names) => ipcRenderer.invoke('browser:health', names),
+    release: (name) => ipcRenderer.invoke('browser:release', name)
   },
 
   // Health probe
