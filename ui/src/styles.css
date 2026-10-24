@@ -281,3 +281,13 @@ pre.log.err { border-color: color-mix(in srgb, var(--warn) 45%, var(--bd)); }
   table.ports .row-acts { min-width: 0; }
   table.ports .row-acts button { padding: 4px 8px; }
 }
+
+/* Home first read, Localhost stopped cap. */
+.home.stale .tile-count, .home.stale .tile-sub { opacity: 0.5; }
+.home.loading .tile-count, .home.loading .tile-sub { min-height: 1.1em; border-radius: 6px; background: var(--pn2); color: transparent; }
+.home.loading .tile-count { width: 120px; }
+.home.loading .tile-sub { width: 160px; }
+.home.loading .tile-count small { visibility: hidden; }
+.show-all { text-align: center; margin: 16px 0 0; }
+.show-all button { background: var(--pn2); border: 1px solid var(--bd); border-radius: 8px; padding: 6px 16px; color: var(--tx); }
+.show-all button:hover { border-color: var(--acc); }

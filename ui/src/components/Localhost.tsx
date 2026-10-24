@@ -8,6 +8,8 @@ interface Props { host: Host; snap: Snapshot; thumbs: Thumbs; onDone: () => void
 const MODE_KEY = 'portpilot-localhost-mode';
 const HOVER_MS = 500;
 const SWEEP_MS = 30000;
+/** Stopped apps shown before "Show all"; running and blocked ones always show. */
+const STOPPED_SHOWN = 12;
 
 function loadMode(): Mode {
   try {
@@ -21,6 +23,7 @@ export function Localhost({ host, snap, thumbs, onDone }: Props) {
   const [mode, setMode] = useState<Mode>(loadMode);
   const [query, setQuery] = useState('');
   const [error, setError] = useState('');
+  const [allStopped, setAllStopped] = useState(false);
   const list = useMemo(() => cards(snap, query), [snap, query]);
 
   const pick = (m: Mode) => {
@@ -57,6 +60,10 @@ export function Localhost({ host, snap, thumbs, onDone }: Props) {
     stop: (c: Card) => act(() => host.stopApp(c.app.id)),
   };
 
+  const showAll = () => (
+    <p className="show-all"><button onClick={() => setAllStopped(true)}>Show all {list.filter((c) => c.state === 'stopped').length} stopped apps</button></p>
+  );
+
   const body = () => {
     if (!snap.apps.length) return <p className="empty-note">No apps yet. Add one from the Library, or start a dev server and PortPilot will notice it.</p>;
     if (!list.length) return <p className="empty-note">No app matches that filter.</p>;
@@ -68,7 +75,20 @@ export function Localhost({ host, snap, thumbs, onDone }: Props) {
         </section>
       ));
     }
-    return <div className={`cards ${mode}`}>{list.map((c) => <AppCard key={c.app.id} c={c} mode={mode} thumbs={thumbs} actions={actions} />)}</div>;
+    const active = list.filter((c) => c.state !== 'stopped');
+    const stopped = list.filter((c) => c.state === 'stopped');
+    const capped = !allStopped && !query && stopped.length > STOPPED_SHOWN;
+    const shown = capped ? stopped.slice(0, STOPPED_SHOWN) : stopped;
+    const grid = (rows: Card[]) => <div className={`cards ${mode}`}>{rows.map((c) => <AppCard key={c.app.id} c={c} mode={mode} thumbs={thumbs} actions={actions} />)}</div>;
+    if (!active.length || !stopped.length) return <>{grid(shown.length ? shown : active)}{capped && showAll()}</>;
+    return (
+      <>
+        {grid(active)}
+        <h3 className="group-h">Stopped<small>{stopped.length}</small></h3>
+        {grid(shown)}
+        {capped && showAll()}
+      </>
+    );
   };
 
   return (
