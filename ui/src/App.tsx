@@ -58,7 +58,7 @@ export function App({ host }: { host: Host }) {
   return (
     <div className="shell">
       <TopBar view={view} onView={setView} onSearch={() => setPaletteOpen(true)} onClassic={() => host.switchToClassic()} />
-      <Banner warnings={t.warnings} onFix={() => setPaletteOpen(true)} />
+      <Banner warnings={t.warnings} onFix={() => setView('ports')} />
       <main className="main" id="main">
         {error && <p className="notice" role="alert">Could not read PortPilot state: {error}</p>}
         {view === 'home' && <Home t={t} loaded={loaded} onView={setView} snap={snap} thumbs={thumbs} />}

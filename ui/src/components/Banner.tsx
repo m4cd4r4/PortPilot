@@ -1,6 +1,6 @@
 interface Props { warnings: string[]; onFix: () => void }
 
-/** One slim amber line, never red blocks. Fixes open in the palette until the Wave 2 popover exists. */
+/** One slim amber line, never red blocks. Every warning is a port conflict, so Fix opens Ports, where each blocked app has a Free button. */
 export function Banner({ warnings, onFix }: Props) {
   if (!warnings.length) return null;
   const more = warnings.length > 1 ? ` (+${warnings.length - 1} more)` : '';
