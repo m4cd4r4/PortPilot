@@ -27,6 +27,7 @@
    * @param {Object<string,{port?:number}>} s.running   appId -> live info, present only while the app is up
    * @param {Array<{port,pid?,processName?}>} s.ports   user-killable listeners (the renderer drops system ones)
    * @param {Array<{name,state}>} s.profiles            browser profiles; state 'up' means running
+   * @param {Array<{view,label}>} [s.views]              the "Go to" targets; defaults to the v4 renderer's tabs
    * @param {string} [s.view]                           the view on screen, left out of "Go to"
    */
   function buildCommands(s) {
@@ -59,7 +60,7 @@
       out.push({ id: `${up ? 'bstop' : 'bstart'}:${pr.name}`, kind: 'browser', label: `${up ? 'Stop' : 'Start'} browser ${pr.name}`, hint: up ? 'running' : 'stopped',
         keywords: `${pr.name} browser profile ${up ? 'stop' : 'start'}`, action: { type: up ? 'stopBrowser' : 'startBrowser', name: pr.name } });
     }
-    for (const v of VIEWS) {
+    for (const v of s.views || VIEWS) {
       if (v.view === s.view) continue;
       out.push({ id: `view:${v.view}`, kind: 'view', label: v.label, hint: '', keywords: `${v.view} tab screen`, action: { type: 'view', view: v.view } });
     }

@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PortPilot redesign mock-up</title>
+<style>
+:root{--bg:#0a0b0f;--s1:#12141a;--s2:#191c24;--line:rgba(255,255,255,.07);--tx:#e8eaf0;--mut:#8a90a0;--acc:#6ef2a4;--warn:#f5b84a;--bad:#ff6b7d}
+*{box-sizing:border-box;margin:0}
+body{background:#050608;color:var(--tx);font:13px/1.4 "Segoe UI",system-ui,sans-serif;padding:24px;display:flex;flex-direction:column;align-items:center;gap:28px}
+.cap{color:var(--mut);font-size:12px;letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px}
+.win{width:1120px;height:760px;background:var(--bg);border:1px solid var(--line);border-radius:12px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 30px 80px rgba(0,0,0,.6)}
+.top{height:52px;display:flex;align-items:center;gap:14px;padding:0 16px;border-bottom:1px solid var(--line);background:rgba(18,20,26,.8);backdrop-filter:blur(12px);flex:none}
+.logo{font-weight:700;display:flex;align-items:center;gap:8px;margin-right:6px}
+.logo i{width:22px;height:22px;border-radius:6px;background:var(--acc);color:#04210f;display:grid;place-items:center;font-style:normal;font-weight:800;font-size:13px}
+.seg{display:flex;background:var(--s2);border-radius:9px;padding:3px;gap:2px}
+.seg a{padding:6px 14px;border-radius:7px;color:var(--mut);font-weight:600}
+.seg a.on{background:#262a35;color:var(--tx)}
+.srch{flex:1;max-width:340px;margin:0 auto 0 14px;background:var(--s2);border:1px solid var(--line);border-radius:9px;padding:7px 12px;color:var(--mut);display:flex;justify-content:space-between}
+kbd{font:11px monospace;background:#0003;border:1px solid var(--line);border-radius:5px;padding:1px 6px}
+.ib{width:32px;height:32px;border-radius:8px;display:grid;place-items:center;color:var(--mut);background:var(--s2);border:1px solid var(--line)}
+.btn{background:var(--acc);color:#04210f;font-weight:700;border-radius:8px;padding:7px 12px}
+.banner{flex:none;margin:12px 16px 0;padding:7px 12px;border-radius:9px;background:rgba(245,184,74,.1);border:1px solid rgba(245,184,74,.25);color:var(--warn);display:flex;gap:10px;align-items:center;font-size:12.5px}
+.banner b{color:var(--tx);font-weight:600}.banner .sp{flex:1}.banner u{text-decoration:none;color:var(--tx);border:1px solid var(--line);border-radius:6px;padding:2px 9px}
+.body{flex:1;overflow:hidden;padding:18px 16px}
+h2{font-size:15px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:10px}h2 small{color:var(--mut);font-weight:500}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.tile{background:var(--s1);border:1px solid var(--line);border-radius:16px;padding:16px;height:420px;display:flex;flex-direction:column}
+.tile h3{font-size:18px}.tile p{color:var(--mut);margin:2px 0 14px}
+.tile .stack{flex:1;position:relative}
+.thumb{position:absolute;border-radius:12px;border:1px solid var(--line);box-shadow:0 14px 30px rgba(0,0,0,.5);overflow:hidden}
+.t1{inset:0 90px 70px 0;z-index:3}.t2{inset:34px 40px 36px 50px;z-index:2;opacity:.85}.t3{inset:68px 0 0 100px;z-index:1;opacity:.6}
+.g1{background:linear-gradient(135deg,#1a2a2a,#0c1218 60%),radial-gradient(circle at 80% 20%,#f5c542,transparent 40%)}
+.g2{background:linear-gradient(135deg,#2a1a3a,#0c0c18)}.g3{background:linear-gradient(135deg,#102a40,#08101c)}
+.g4{background:linear-gradient(135deg,#3a2012,#150c08)}.g5{background:linear-gradient(135deg,#0e3a2c,#08140f)}.g6{background:linear-gradient(135deg,#2a2a14,#12120a)}
+.mini{position:absolute;inset:0;padding:12px}.mini i{display:block;height:7px;border-radius:4px;background:#fff2;margin-bottom:7px;width:60%}.mini i.h{height:16px;width:78%;background:#fff5}.mini i.s{width:40%}
+.foot{display:flex;justify-content:space-between;align-items:center;margin-top:14px}
+.pill{display:inline-flex;align-items:center;gap:6px;background:var(--s2);border-radius:99px;padding:3px 10px;color:var(--mut);font-size:12px}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--acc);box-shadow:0 0 8px var(--acc)}.dot.off{background:#555;box-shadow:none}.dot.w{background:var(--warn);box-shadow:0 0 8px var(--warn)}
+.chips{display:flex;gap:-6px}.chips b{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;color:#fff;font-size:13px;margin-right:-6px;border:2px solid var(--s1)}
+.strip{margin-top:16px;display:flex;gap:12px;align-items:center;color:var(--mut)}
+.bar{display:flex;align-items:center;gap:10px;margin-bottom:14px}.bar .sp{flex:1}
+.vw{display:flex;background:var(--s2);border-radius:8px;padding:2px}.vw span{padding:4px 9px;border-radius:6px;color:var(--mut)}.vw span.on{background:#262a35;color:var(--tx)}
+.chip{background:var(--s2);border:1px solid var(--line);border-radius:99px;padding:4px 12px;color:var(--mut)}.chip.on{color:var(--acc);border-color:rgba(110,242,164,.4);background:rgba(110,242,164,.08)}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.card{background:var(--s1);border:1px solid var(--line);border-radius:14px;overflow:hidden;position:relative}
+.card .im{height:150px;position:relative}.card.off .im{filter:grayscale(.9) brightness(.6)}
+.card .meta{padding:10px 12px}.card .nm{font-weight:650;display:flex;justify-content:space-between;align-items:center}
+.card .sub{color:var(--mut);font-size:12px;margin-top:3px;display:flex;gap:8px;align-items:center}
+.port{font:12px monospace;color:var(--tx);background:var(--s2);border-radius:5px;padding:1px 6px}
+.acts{position:absolute;right:8px;top:8px;display:flex;gap:6px}.acts span{background:#000a;border-radius:7px;padding:4px 9px;font-size:12px;font-weight:600}.acts .st{background:rgba(255,107,125,.9);color:#2a050a}
+.badge{position:absolute;left:8px;top:8px;background:rgba(245,184,74,.95);color:#2a1d02;border-radius:99px;padding:2px 9px;font-size:11.5px;font-weight:700}
+.sec{color:var(--mut);font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;margin:16px 0 8px}
+.pgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.prof{border-radius:16px;overflow:hidden;border:1px solid var(--line);background:var(--s1);position:relative}
+.prof .hero{height:112px;position:relative;display:flex;align-items:flex-end;padding:12px}
+.prof .ic{width:48px;height:48px;border-radius:13px;display:grid;place-items:center;font-weight:800;font-size:21px;color:#fff;border:2px solid #0006;box-shadow:0 6px 16px #0006;position:absolute;left:14px;bottom:-22px}
+.prof .hd{padding:30px 14px 12px}.prof .nm{font-weight:700;font-size:15px;display:flex;justify-content:space-between}
+.prof .sub{color:var(--mut);font-size:12px;margin:2px 0 8px}
+.acc{display:flex;gap:6px;flex-wrap:wrap}.acc span{background:var(--s2);border-radius:99px;padding:2px 9px 2px 4px;font-size:12px;display:flex;align-items:center;gap:6px}.acc span em{width:16px;height:16px;border-radius:50%;background:#556;font-style:normal;font-size:9px;display:grid;place-items:center;color:#fff}
+.prof .ft{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-top:1px solid var(--line)}
+.sm{border-radius:7px;padding:4px 11px;font-weight:700;font-size:12px;background:var(--acc);color:#04210f}.sm.g{background:var(--s2);color:var(--tx)}
+.lease{color:#9ab8ff;font-size:11.5px}
+.prof .hero .pill{position:absolute;top:10px;right:10px}
+.tile{height:480px!important}
+.hov{position:absolute;right:20px;bottom:44px;width:290px;background:#1b1e27;border:1px solid var(--line);border-radius:12px;padding:12px;box-shadow:0 20px 50px #000a}
+.hov a{display:flex;justify-content:space-between;color:#9ab8ff;padding:5px 0;text-decoration:none}
+.sb{height:30px;flex:none;border-top:1px solid var(--line);display:flex;align-items:center;justify-content:flex-end;padding:0 14px;color:var(--mut);font-size:12px;gap:14px}
+</style></head><body>
+
+<!-- 1 HOME -->
+<div><div class="cap">1 · Home (landing)</div>
+<div class="win" id="w1">
+ <div class="top"><div class="logo"><i>P</i>PortPilot</div>
+  <div class="seg"><a class="on">Home</a><a>Localhost</a><a>Browsers</a></div>
+  <div class="srch"><span>Search apps, ports, profiles…</span><kbd>Ctrl K</kbd></div>
+  <div class="ib" title="History">⟲</div><div class="ib">⚙</div><div class="btn">+ Add</div></div>
+ <div class="banner"><span>▲</span><span><b>:3000</b> is held by Code.exe (17h) - Examworthy Web can't start</span><span class="sp"></span><u>Use :3002</u><u>Kill &amp; start</u></div>
+ <div class="body">
+  <div class="tiles">
+   <div class="tile"><h3>Localhost</h3><p>3 running · 101 ready</p>
+    <div class="stack"><div class="thumb t3 g3"><div class="mini"><i class="h"></i><i></i></div></div><div class="thumb t2 g2"><div class="mini"><i class="h"></i><i></i></div></div><div class="thumb t1 g1"><div class="mini"><i class="h"></i><i></i><i class="s"></i></div></div></div>
+    <div class="foot"><span class="pill"><span class="dot"></span>m4cd4r4 · :3041</span><span class="btn">Open gallery →</span></div></div>
+   <div class="tile"><h3>Browsers</h3><p>1 running · 13 profiles</p>
+    <div class="stack" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;align-content:start">
+     <div style="aspect-ratio:1;border-radius:16px;background:#1877f2;display:grid;place-items:center;font-size:30px;font-weight:800;position:relative">f<span class="dot" style="position:absolute;top:8px;right:8px"></span></div>
+     <div style="aspect-ratio:1;border-radius:16px;background:#fff;color:#4285f4;display:grid;place-items:center;font-size:30px;font-weight:800">G</div>
+     <div style="aspect-ratio:1;border-radius:16px;background:#ff4500;display:grid;place-items:center;font-size:30px;font-weight:800">r</div>
+     <div style="aspect-ratio:1;border-radius:16px;background:#635bff;display:grid;place-items:center;font-size:30px;font-weight:800">S</div>
+     <div style="aspect-ratio:1;border-radius:16px;background:#24292f;display:grid;place-items:center;font-size:28px;font-weight:800">gh</div>
+     <div style="aspect-ratio:1;border-radius:16px;background:#d97757;display:grid;place-items:center;font-size:30px;font-weight:800">✺</div>
+     <div style="aspect-ratio:1;border-radius:16px;background:#0a66c2;display:grid;place-items:center;font-size:26px;font-weight:800">in</div>
+     <div style="aspect-ratio:1;border-radius:16px;background:var(--s2);color:var(--mut);display:grid;place-items:center;font-size:18px">+6</div></div>
+    <div class="foot"><span class="pill"><span class="dot"></span>facebook · :9227 · signed in</span><span class="btn">Open profiles →</span></div></div>
+  </div>
+  <div class="strip"><span class="cap" style="margin:0">Recent</span><span class="pill">⟲ SSF Site · 09:29 today</span><span class="pill">⟲ session-compass-landing · yesterday</span><span class="pill">⟲ SSF inbody feedback · yesterday</span></div>
+ </div>
+ <div class="sb"><span class="pill"><span class="dot"></span>3 running</span><span>PortPilot ▴</span></div>
+</div></div>
+
+<!-- 2 GALLERY -->
+<div><div class="cap">2 · Localhost gallery (large cards, hover on a card shows actions)</div>
+<div class="win" id="w2">
+ <div class="top"><div class="logo"><i>P</i>PortPilot</div>
+  <div class="seg"><a>Home</a><a class="on">Localhost</a><a>Browsers</a></div>
+  <div class="srch"><span>Search apps, ports, profiles…</span><kbd>Ctrl K</kbd></div>
+  <div class="ib">⟲</div><div class="ib">⚙</div><div class="btn">+ Add</div></div>
+ <div class="body">
+  <div class="bar"><span class="chip on">Running 3</span><span class="chip">Favourites</span><span class="chip">All 105</span><span class="chip">Archived</span><span class="sp"></span><div class="vw"><span class="on">▦ Gallery</span><span>▪▪ Compact</span><span>☰ List</span><span>▤ Grouped</span></div></div>
+  <div class="grid">
+   <div class="card"><div class="im g1"><div class="mini"><i class="h"></i><i></i><i class="s"></i></div><div class="acts"><span>Open</span><span class="st">Stop</span></div></div><div class="meta"><div class="nm">m4cd4r4 personal site<span class="dot"></span></div><div class="sub"><span class="port">:3041</span>feat/mascot-and-site-identity</div></div></div>
+   <div class="card"><div class="im g2"><div class="mini"><i class="h"></i><i></i></div></div><div class="meta"><div class="nm">session-compass-landing<span class="dot"></span></div><div class="sub"><span class="port">:8767</span>main · up 3h</div></div></div>
+   <div class="card"><div class="im g4"><div class="mini"><i class="h"></i><i></i></div></div><div class="meta"><div class="nm">SSF Site (Next.js)<span class="dot"></span></div><div class="sub"><span class="port">:3052</span>main @ a222397</div></div></div>
+   <div class="card off"><div class="im g5"><span class="badge">▲ Port :3000 held</span><div class="mini"><i class="h"></i><i></i></div></div><div class="meta"><div class="nm">Examworthy Web<span class="dot w"></span></div><div class="sub"><span class="port">:3000</span>main · blocked</div></div></div>
+   <div class="card off"><div class="im g3"><div class="mini"><i class="h"></i></div></div><div class="meta"><div class="nm">Solaisoft<span class="dot off"></span></div><div class="sub"><span class="port">:3002</span>last run Fri 23 Oct</div></div></div>
+   <div class="card off"><div class="im g6"><div class="mini"><i class="h"></i></div></div><div class="meta"><div class="nm">Alight<span class="dot off"></span></div><div class="sub"><span class="port">:3300</span>last run Thu 22 Oct</div></div></div>
+  </div>
+ </div>
+ <div class="sb"><span class="pill"><span class="dot"></span>3 running</span><span>PortPilot ▴</span></div>
+</div></div>
+
+<!-- 3 BROWSERS -->
+<div><div class="cap">3 · Browsers (profile cards with brand art, accounts, health, lease) + footer hover card</div>
+<div class="win" id="w3" style="position:relative">
+ <div class="top"><div class="logo"><i>P</i>PortPilot</div>
+  <div class="seg"><a>Home</a><a>Localhost</a><a class="on">Browsers</a></div>
+  <div class="srch"><span>Search apps, ports, profiles…</span><kbd>Ctrl K</kbd></div>
+  <div class="ib">⟲</div><div class="ib">⚙</div><div class="btn">+ New profile</div></div>
+ <div class="body">
+  <div class="bar"><span class="chip on">All 14</span><span class="chip">Running 1</span><span class="chip">Social</span><span class="chip">Google</span><span class="chip">Dev</span><span class="chip">Work</span><span class="sp"></span><div class="vw"><span class="on">▦ Cards</span><span>▪▪ Icons</span><span>☰ List</span><span>▤ Grouped</span></div></div>
+  <div class="pgrid">
+   <div class="prof"><div class="hero" style="background:linear-gradient(135deg,#1877f2,#0b3a8a)"><span class="pill" style="background:#0007;color:#fff"><span class="dot"></span>Running</span><div class="ic" style="background:#1877f2">f</div></div>
+    <div class="hd"><div class="nm">facebook<span class="port">:9227</span></div><div class="sub">Buy Nothing Mosman Park · Headed</div><div class="acc"><span><em>M</em>macdara.work</span><span><em>+</em>add</span></div></div>
+    <div class="ft"><span style="color:var(--acc)">● Signed in</span><span class="sm g">Stop</span></div></div>
+   <div class="prof"><div class="hero" style="background:linear-gradient(135deg,#4285f4,#1a3d80 60%,#34a853)"><div class="ic" style="background:#fff;color:#4285f4">G</div></div>
+    <div class="hd"><div class="nm">google<span class="port">:9226</span></div><div class="sub">GSC, Analytics, Drive · Headed</div><div class="acc"><span><em>M</em>macdara@solaisoft</span><span><em>m</em>m4cd4r4@gmail</span><span><em>+</em>add</span></div></div>
+    <div class="ft"><span style="color:var(--warn)">● Session expired</span><span class="sm">Start</span></div></div>
+   <div class="prof"><div class="hero" style="background:linear-gradient(135deg,#ff4500,#7a1d00)"><div class="ic" style="background:#ff4500">r</div></div>
+    <div class="hd"><div class="nm">reddit<span class="port">:9230</span></div><div class="sub">reddit.com · Headed</div><div class="acc"><span><em>u</em>u/m4cd4r4</span><span><em>+</em>add</span></div></div>
+    <div class="ft"><span style="color:var(--mut)">● Signed out</span><span class="sm">Start</span></div></div>
+   <div class="prof"><div class="hero" style="background:linear-gradient(135deg,#d97757,#5a2c1a)"><div class="ic" style="background:#d97757">✺</div></div>
+    <div class="hd"><div class="nm">claude<span class="port">:9228</span></div><div class="sub">claude.ai / Claude Code web</div><div class="acc"><span><em>M</em>macdara.work</span></div><div class="lease" style="margin-top:6px">🔒 Leased by session 02c24be6 · <u>release</u></div></div>
+    <div class="ft"><span style="color:var(--acc)">● Signed in</span><span class="sm g">Stop</span></div></div>
+   <div class="prof"><div class="hero" style="background:linear-gradient(135deg,#30363d,#0d1117)"><div class="ic" style="background:#24292f">gh</div></div>
+    <div class="hd"><div class="nm">github<span class="port">:9240</span></div><div class="sub">user-attachments uploads</div><div class="acc"><span><em>m</em>m4cd4r4</span></div></div>
+    <div class="ft"><span style="color:var(--acc)">● Signed in</span><span class="sm">Start</span></div></div>
+   <div class="prof"><div class="hero" style="background:linear-gradient(135deg,#635bff,#2a2570)"><div class="ic" style="background:#635bff">S</div></div>
+    <div class="hd"><div class="nm">stripe<span class="port">:9231</span></div><div class="sub">dashboard.stripe.com</div><div class="acc"><span><em>S</em>Solaisoft</span><span><em>+</em>add</span></div></div>
+    <div class="ft"><span style="color:var(--acc)">● Signed in</span><span class="sm">Start</span></div></div>
+  </div>
+ </div>
+ <div class="hov"><div class="cap" style="margin-bottom:6px">This Claude session · 2 servers</div><a>SSF Site <span>localhost:3052 ↗</span></a><a>session-compass <span>localhost:8767 ↗</span></a><div style="color:var(--mut);margin-top:6px;border-top:1px solid var(--line);padding-top:6px">claude browser :9228 · leased</div></div>
+ <div class="sb"><span class="pill"><span class="dot"></span>3 running · hover for this session</span><span>PortPilot ▴</span></div>
+</div></div>
+</body></html>
