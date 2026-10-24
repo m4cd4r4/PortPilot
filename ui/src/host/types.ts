@@ -1,4 +1,24 @@
-export interface AppRec { id: string; name: string; preferredPort?: number; branch?: string; parentId?: string; groupId?: string; command?: string }
+export interface AppRec {
+  id: string; name: string; preferredPort?: number; branch?: string; parentId?: string; groupId?: string; command?: string;
+  cwd?: string; group?: string | null; description?: string | null; autoStart?: boolean; isFavorite?: boolean; reservePort?: boolean; healthPath?: string | null;
+}
+/** What the add/edit form sends to config:saveApp; the host merges it onto the stored record. */
+export interface AppFields {
+  id?: string; name: string; command: string; cwd?: string; preferredPort?: number | null; group?: string | null;
+  description?: string | null; autoStart?: boolean; healthPath?: string | null; reservePort?: boolean;
+}
+/** The keys of config.settings the Settings screen edits (src/main/configStore.js defaultConfig). */
+export interface Settings {
+  autoScan?: boolean; scanInterval?: number; closeToTray?: boolean; stopAppsOnQuit?: boolean; openAtLogin?: boolean;
+  autoResizeWindow?: boolean; notifyOnCrash?: boolean; autoTrackLocalhost?: boolean; autoRegister?: boolean; openDevTools?: boolean;
+  historySnapshots?: boolean; historyMaxRuns?: number; historyMaxMB?: number; rowPreviews?: boolean;
+  discovery?: { scanPaths?: string[]; maxDepth?: number; autoScanOnStartup?: boolean };
+}
+export interface ShareInfo { localUrl: string; lanUrl: string | null; qrDataUrl: string | null }
+export interface DiagnoseStatus { cli: boolean; consent: boolean; running: boolean }
+export interface DiagnoseEvent { appId: string; kind: 'tool' | 'text' | 'error' | 'done' | 'end'; label?: string; text?: string }
+export interface PortRow { port: number; pid?: number; processName?: string }
+export interface Detected { name?: string; command?: string; cwd?: string; port?: number; preferredPort?: number }
 export interface Conflict { appId?: string; appName?: string; port: number; occupiedBy?: { processName?: string; pid?: number } }
 export interface Account { platform?: string; username?: string; note?: string }
 export interface Lease { by: string; session?: string; since?: string; starting?: boolean }
@@ -27,7 +47,7 @@ export interface Snapshot {
   conflicts: Conflict[];
   profiles: Profile[];
   /** listeners on the machine, for the palette's "free port" commands */
-  ports: Array<{ port: number; pid?: number; processName?: string }>;
+  ports: PortRow[];
 }
 
 /** One entry of the cheap thumbnail index: the key names the pixels, `live` says it is a fresh capture. */
@@ -78,6 +98,28 @@ export interface Host {
   history(): Promise<HistoryData>;
   /** Restart a closed run; resolves to the URL once it answers (or null). */
   startAgain(runId: string): Promise<string | null>;
+  /** Saved settings (partial merge on write). */
+  getSettings(): Promise<Settings>;
+  updateSettings(patch: Settings): Promise<Settings>;
+  /** Add (no id) or update an app; resolves to the stored record. */
+  saveApp(fields: AppFields): Promise<AppRec>;
+  deleteApp(id: string): Promise<void>;
+  toggleFavorite(id: string): Promise<void>;
+  saveGroup(group: { id?: string; name: string }): Promise<Group>;
+  deleteGroup(id: string): Promise<void>;
+  /** Folder picker; null when the user cancels. */
+  browseDirectory(): Promise<string | null>;
+  /** Read a project's command and port from its folder; null when nothing is found. */
+  detectProject(dir: string): Promise<Detected | null>;
+  findFreePort(start?: number, end?: number): Promise<number>;
+  /** Output of an app PortPilot started; empty when it is not running. */
+  appLogs(id: string): Promise<{ stdout: string; stderr: string }>;
+  shareInfo(port: number): Promise<ShareInfo>;
+  diagnoseStatus(id: string): Promise<DiagnoseStatus>;
+  diagnoseConsent(): Promise<void>;
+  diagnoseStart(id: string): Promise<void>;
+  diagnoseCancel(id: string): Promise<void>;
+  onDiagnose(cb: (e: DiagnoseEvent) => void): () => void;
   /** Subscribe to "something changed, re-read the snapshot"; returns an unsubscribe. */
   onChange(cb: () => void): () => void;
 }

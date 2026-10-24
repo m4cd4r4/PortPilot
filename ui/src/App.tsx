@@ -8,6 +8,9 @@ import { Palette } from './components/Palette';
 import { Localhost } from './components/Localhost';
 import { History } from './components/History';
 import { Browsers } from './components/Browsers';
+import { Library } from './components/Library';
+import { Ports } from './components/Ports';
+import { Settings } from './components/Settings';
 import { useThumbs } from './useThumbs';
 
 const EMPTY: Snapshot = { apps: [], groups: [], running: {}, crashed: {}, conflicts: [], profiles: [], ports: [] };
@@ -60,6 +63,9 @@ export function App({ host }: { host: Host }) {
         {view === 'home' && <Home t={t} loaded={loaded} onView={setView} snap={snap} thumbs={thumbs} />}
         {view === 'localhost' && <Localhost host={host} snap={snap} thumbs={thumbs} onDone={refresh} />}
         {view === 'history' && <History host={host} />}
+        {view === 'library' && <Library host={host} snap={snap} onDone={refresh} />}
+        {view === 'ports' && <Ports host={host} snap={snap} onDone={refresh} />}
+        {view === 'settings' && <Settings host={host} onClassic={() => host.switchToClassic()} />}
         {view === 'browsers' && <Browsers host={host} snap={snap} onDone={refresh} />}
       </main>
       <Palette open={paletteOpen} onClose={() => setPaletteOpen(false)} host={host} snap={snap}

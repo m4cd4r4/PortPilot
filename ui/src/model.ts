@@ -1,11 +1,13 @@
 import type { AppRec, Profile, Snapshot } from './host';
 
-export type View = 'home' | 'localhost' | 'browsers' | 'history';
-/** The three sections in the segmented control; History has its own top-bar button. */
+export type View = 'home' | 'localhost' | 'browsers' | 'library' | 'ports' | 'history' | 'settings';
+/** The sections in the segmented control; History and Settings have their own top-bar buttons. */
 export const VIEWS: Array<{ view: View; label: string }> = [
   { view: 'home', label: 'Home' },
   { view: 'localhost', label: 'Localhost' },
   { view: 'browsers', label: 'Browsers' },
+  { view: 'library', label: 'Library' },
+  { view: 'ports', label: 'Ports' },
 ];
 
 export interface Tally { running: number; apps: number; profilesUp: number; profiles: number; warnings: string[] }
@@ -65,15 +67,18 @@ export function cards(s: Snapshot, query = ''): Card[] {
   return out.sort((a, b) => RANK[a.state] - RANK[b.state] || a.app.name.localeCompare(b.app.name));
 }
 
+/** The stored record calls it `group`; `groupId` is kept for older fixtures. */
+export const groupOf = (a: AppRec): string => a.group || a.groupId || '';
+
 /** Cards bucketed by app group, groups in config order, then the ungrouped ones. */
 export function grouped(s: Snapshot, list: Card[]): Array<{ id: string; name: string; cards: Card[] }> {
   const out: Array<{ id: string; name: string; cards: Card[] }> = [];
   for (const g of s.groups) {
-    const c = list.filter((x) => x.app.groupId === g.id);
+    const c = list.filter((x) => groupOf(x.app) === g.id);
     if (c.length) out.push({ id: g.id, name: g.name, cards: c });
   }
   const known = new Set(s.groups.map((g) => g.id));
-  const rest = list.filter((x) => !x.app.groupId || !known.has(x.app.groupId));
+  const rest = list.filter((x) => !groupOf(x.app) || !known.has(groupOf(x.app)));
   if (rest.length) out.push({ id: '', name: out.length ? 'Other' : 'All apps', cards: rest });
   return out;
 }

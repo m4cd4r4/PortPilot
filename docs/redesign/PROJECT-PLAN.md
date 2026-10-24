@@ -67,3 +67,13 @@ Cutover: the new UI is the default window (`src/core/uiChoice.js`). Settings > S
 Check: `npm run test:e2e:ui` (shell 15, localhost 22, browsers 35 checks, real Electron and real headless Brave) and `npm run test:unit`.
 
 Carried forward: Add App, Settings, port tools, duplicate profile, capture window bounds, per-profile session history and extensions list stay in classic until Wave 4. Light-theme screenshots were read at 390 only; 1440 light was captured but not read. Packaged builds were not opened this wave (`src/ui-dist` is built by the prebuild scripts and `files` includes `src/**/*`).
+
+## Wave 4 status (2026-10-24): core
+
+Library, Ports, Settings, the app drawer and the inspector, so daily use no longer needs the classic view. Library: filterable table with Start/Stop, Star, Details and Edit; the add/edit drawer (folder picker that reads the project and fills name, command and port, a free-port button, group, health path, description, auto-start, reserve port, delete with confirm); a Groups panel (add, rename, delete). Ports: filterable listener table with the owning PortPilot app, Open, Kill behind a second click (system processes are labelled), a blocked-apps strip with "Free :port", Find a free port, Rescan. Settings: window, apps, scanning and history toggles, scan interval and history limits (range-checked), theme (Dark, Light, System; kept in this view's own localStorage key because classic stores palette names), and the classic switch. Inspector: Logs (live while running), Share (local and LAN URL, QR), Diagnose (crashed apps; consent then the read-only Claude run). Reachable from the segmented control (Library, Ports), the Settings menu, and the palette ("Go to Settings").
+
+Fixed on the way: Wave 2's Grouped mode read `app.groupId`, but the stored field is `group`, so every app landed in "All apps" (`groupOf` in `model.ts`).
+
+Check: `npm run test:e2e:ui` (shell 15, localhost 22, browsers 35, wave4 22 checks, real Electron), `npm run typecheck:ui`, `npm run test:unit`. Screenshots read at 1440 and 390 (Library, Ports, Settings); the 390 tables were clipped on the first pass and now fit.
+
+Carried to Wave 5 and later: Scenes (net-new data model), tray quick-start menu fed from the new UI (`tray.update`), web portal on the new bundle, deleting `src/renderer`. Not rebuilt yet from classic: drag reorder, bulk delete, nested worktrees and stale-worktree cleanup, project discovery scan paths, config export/import, docker banner, port reserve toggle on the Ports screen, duplicate profile, capture window bounds, per-profile session history, extensions list, crash "Ask Claude". Packaged build not yet opened.

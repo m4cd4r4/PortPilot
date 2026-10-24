@@ -72,6 +72,23 @@ export function createElectronHost(): Host {
       return { runs: r.runs || [], live: r.live || [], startable: r.startable || [] };
     },
     async startAgain(runId) { return (await ok(api().history.startAgain(runId))).url || null; },
+    async getSettings() { return (await ok(api().config.getSettings())).settings || {}; },
+    async updateSettings(patch) { return (await ok(api().config.updateSettings(patch))).settings || {}; },
+    async saveApp(fields) { return (await ok(api().config.saveApp(fields))).app; },
+    async deleteApp(id) { await ok(api().config.deleteApp(id)); },
+    async toggleFavorite(id) { await ok(api().config.toggleFavorite(id)); },
+    async saveGroup(group) { return (await ok(api().config.saveGroup(group))).group; },
+    async deleteGroup(id) { await ok(api().config.deleteGroup(id)); },
+    async browseDirectory() { const r = await api().browseDirectory(); return r?.success ? r.path : null; },
+    async detectProject(dir) { const r = await api().discovery.detectProject(dir); return r?.success ? r.project : null; },
+    async findFreePort(start = 3000, end = 9000) { return (await ok(api().ports.findAvailable(start, end))).port; },
+    async appLogs(id) { const r = await api().process.logs(id); return { stdout: r?.stdout || '', stderr: r?.stderr || '' }; },
+    async shareInfo(port) { return ok(api().net.shareInfo(port)); },
+    async diagnoseStatus(id) { return ok(api().diagnose.status(id)); },
+    async diagnoseConsent() { await ok(api().diagnose.consent()); },
+    async diagnoseStart(id) { await ok(api().diagnose.start(id)); },
+    async diagnoseCancel(id) { await api().diagnose.cancel(id); },
+    onDiagnose(cb) { return api().diagnose.onEvent(cb); },
     onChange(cb) { wire(); listeners.add(cb); return () => listeners.delete(cb); },
   };
 }
