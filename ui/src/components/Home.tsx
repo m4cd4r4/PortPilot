@@ -83,7 +83,7 @@ export function Home({ host, t, loaded, onView, snap, thumbs, onDone }: Props) {
   }, [all, recent, hero]);
 
   const profiles = useMemo(
-    () => [...snap.profiles].sort((a, b) => Number(b.state === 'up') - Number(a.state === 'up') || a.name.localeCompare(b.name)).slice(0, 3),
+    () => [...snap.profiles].sort((a, b) => Number(b.state === 'up') - Number(a.state === 'up') || (Date.parse(b.lastUsed || '') || 0) - (Date.parse(a.lastUsed || '') || 0) || a.name.localeCompare(b.name)).slice(0, 3),
     [snap.profiles],
   );
   const scene = scenes[0];

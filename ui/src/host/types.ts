@@ -28,7 +28,7 @@ export type SignIn = 'in' | 'out' | 'unknown';
 export interface Profile {
   name: string; state?: string; port?: number; url?: string; note?: string;
   mode?: string; browser?: string; purpose?: string; sites?: string[]; accounts?: Account[];
-  leasedTo?: Lease | null; free?: boolean; tabs?: Array<{ title?: string; url?: string }>; warning?: string;
+  leasedTo?: Lease | null; free?: boolean; lastUsed?: string; tabs?: Array<{ title?: string; url?: string }>; warning?: string;
 }
 /** The fields the edit drawer sends to browser:save. */
 export interface ProfileFields {
