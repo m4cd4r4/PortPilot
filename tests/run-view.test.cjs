@@ -88,6 +88,19 @@ const run = (over = {}) => ({
     assert.deepStrictEqual(got, { a2: { id: 'r_two', thumb: 'thumbs/r_two.jpg', port: 3005 } });
     assert.deepStrictEqual(view.rowThumbs(null), {});
   });
+  await t('appThumbs: newest thumbnail per app, open or closed', () => {
+    const r = (id, appId, startedAt, thumb, stoppedAt = null) => run({ id, appId, startedAt, stoppedAt, page: thumb ? { thumb } : null });
+    const got = view.appThumbs([
+      r('r_a', 'a1', '2026-10-09T01:00:00Z', 'thumbs/r_a.jpg', '2026-10-09T01:30:00Z'),
+      r('r_b', 'a1', '2026-10-09T02:00:00Z', null),                  // newer but no thumb yet: keep the older page
+      r('r_c', 'a2', '2026-10-09T01:00:00Z', 'thumbs/r_c.jpg'),
+    ]);
+    assert.deepStrictEqual(Object.keys(got).sort(), ['a1', 'a2']);
+    assert.strictEqual(got.a1.id, 'r_a');
+    assert.strictEqual(got.a1.open, false);
+    assert.strictEqual(got.a2.open, true);
+    assert.deepStrictEqual(view.appThumbs(null), {});
+  });
   await t('formatting: when, git line, footer', () => {
     assert.match(view.formatWhen(run()), /^\w{3} \d{1,2} \w{3}, \d\d:\d\d - (\w{3} \d{1,2} \w{3}, )?\d\d:\d\d$/);
     assert.match(view.formatWhen(run({ stoppedAt: null })), / -$/);

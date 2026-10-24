@@ -58,6 +58,13 @@ contextBridge.exposeInMainWorld('portpilot', {
     startAgain: (runId) => ipcRenderer.invoke('history:startAgain', runId)
   },
 
+  // Localhost gallery thumbnails (redesign)
+  thumbs: {
+    index: () => ipcRenderer.invoke('thumbs:index'),
+    get: (keys) => ipcRenderer.invoke('thumbs:get', keys),
+    capture: (appId, port) => ipcRenderer.invoke('thumbs:capture', appId, port)
+  },
+
   // Browser profiles (Browsers tab)
   browsers: {
     list: () => ipcRenderer.invoke('browser:list'),

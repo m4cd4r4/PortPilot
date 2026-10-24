@@ -49,3 +49,9 @@ Each wave ends with unit tests green, e2e for the screens it adds, and a read sc
 Shipped in the shell PR: `ui/` (React 19 + Vite 7 + TS), output `src/ui-dist` (gitignored, built by `npm run build:ui`, run automatically before every `electron-builder` script), host adapter with the Electron IPC implementation, top bar, Home tiles with live counts, slim warning banner, Ctrl+K reusing `src/core/palette.js` (new optional `views` input). `PORTPILOT_NEW_UI=1` loads it; a missing build falls back to v4 with a console warning. Check: `npm run test:e2e:ui` (15 checks, real Electron) and `npm run typecheck:ui`.
 
 Known gaps carried to Wave 2: tiles have no live mini-previews or Recent strip yet (dead space below them), History and Settings are disabled placeholders, the banner's Fix opens the palette until the popover exists, and the native title-bar overlay colour is not yet synced to the new theme.
+
+## Wave 2 status (2026-10-24)
+
+Localhost gallery with four modes (gallery, compact, list, grouped; the choice is remembered), filter, card states (running, port held, crashed, stopped with the last screenshot dimmed), Start/Stop/Open on the card, hover live capture (the host throttles to one per app per 10 s and one in flight), a 30 s sweep that refreshes one stale running app at a time, Home tile previews, and the History timeline (day headings, page title, Start again, Open). New IPC: `thumbs:index`, `thumbs:get`, `thumbs:capture` (`src/main/thumbIpc.js`, `src/main/liveThumbs.js`). Check: `npm run test:e2e:ui` (shell 15 + localhost 22 checks).
+
+Carried forward: History has no pin, Re-run or date filters yet (v4 History stays the full tool until the Wave 3 cutover); no Recent strip on Home; the banner popover still opens the palette.

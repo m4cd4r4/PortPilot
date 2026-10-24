@@ -1,12 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Host, Snapshot } from './host';
-import { VIEWS, tally, type View } from './model';
+import { tally, type View } from './model';
 import { TopBar } from './components/TopBar';
 import { Home } from './components/Home';
 import { Banner } from './components/Banner';
 import { Palette } from './components/Palette';
+import { Localhost } from './components/Localhost';
+import { History } from './components/History';
+import { useThumbs } from './useThumbs';
 
-const EMPTY: Snapshot = { apps: [], running: {}, conflicts: [], profiles: [], ports: [] };
+const EMPTY: Snapshot = { apps: [], groups: [], running: {}, crashed: {}, conflicts: [], profiles: [], ports: [] };
 
 export function App({ host }: { host: Host }) {
   const [view, setView] = useState<View>('home');
@@ -45,6 +48,7 @@ export function App({ host }: { host: Host }) {
   }, []);
 
   const t = useMemo(() => tally(snap), [snap]);
+  const thumbs = useThumbs(host);
 
   return (
     <div className="shell">
@@ -52,10 +56,12 @@ export function App({ host }: { host: Host }) {
       <Banner warnings={t.warnings} onFix={() => setPaletteOpen(true)} />
       <main className="main" id="main">
         {error && <p className="notice" role="alert">Could not read PortPilot state: {error}</p>}
-        {view === 'home' && <Home t={t} loaded={loaded} onView={setView} />}
-        {view !== 'home' && (
+        {view === 'home' && <Home t={t} loaded={loaded} onView={setView} snap={snap} thumbs={thumbs} />}
+        {view === 'localhost' && <Localhost host={host} snap={snap} thumbs={thumbs} onDone={refresh} />}
+        {view === 'history' && <History host={host} />}
+        {view === 'browsers' && (
           <section className="placeholder" aria-label={view}>
-            <h2>{VIEWS.find((v) => v.view === view)!.label}</h2>
+            <h2>Browsers</h2>
             <p>This screen is built in a later wave.</p>
           </section>
         )}

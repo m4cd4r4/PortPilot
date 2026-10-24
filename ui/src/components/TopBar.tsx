@@ -16,7 +16,7 @@ export function TopBar({ view, onView, onSearch }: Props) {
         <span>Search apps, ports, profiles</span><kbd>Ctrl K</kbd>
       </button>
       <div className="actions">
-        <button className="icon" title="History (Wave 2)" aria-label="History" disabled>History</button>
+        <button className={`icon${view === 'history' ? ' on' : ''}`} title="History" aria-label="History" aria-pressed={view === 'history'} onClick={() => onView(view === 'history' ? 'home' : 'history')}>History</button>
         <button className="icon" title="Settings (Wave 4)" aria-label="Settings" disabled>Settings</button>
       </div>
     </header>
