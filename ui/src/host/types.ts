@@ -36,6 +36,9 @@ export interface ProfileFields {
 }
 export interface ArtRef { source: string; at: number }
 export interface Group { id: string; name: string }
+/** A saved set of apps (ids) and browser profiles (names) started together. */
+export interface Scene { id: string; name: string; apps: string[]; browsers: string[] }
+export type SceneFields = Omit<Scene, 'id'> & { id?: string };
 
 export interface Snapshot {
   apps: AppRec[];
@@ -120,6 +123,9 @@ export interface Host {
   diagnoseStart(id: string): Promise<void>;
   diagnoseCancel(id: string): Promise<void>;
   onDiagnose(cb: (e: DiagnoseEvent) => void): () => void;
+  scenes(): Promise<Scene[]>;
+  saveScene(fields: SceneFields): Promise<Scene>;
+  deleteScene(id: string): Promise<void>;
   /** Subscribe to "something changed, re-read the snapshot"; returns an unsubscribe. */
   onChange(cb: () => void): () => void;
 }

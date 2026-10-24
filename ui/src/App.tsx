@@ -10,6 +10,7 @@ import { History } from './components/History';
 import { Browsers } from './components/Browsers';
 import { Library } from './components/Library';
 import { Ports } from './components/Ports';
+import { Scenes } from './components/Scenes';
 import { Settings } from './components/Settings';
 import { useThumbs } from './useThumbs';
 
@@ -64,6 +65,7 @@ export function App({ host }: { host: Host }) {
         {view === 'localhost' && <Localhost host={host} snap={snap} thumbs={thumbs} onDone={refresh} />}
         {view === 'history' && <History host={host} />}
         {view === 'library' && <Library host={host} snap={snap} onDone={refresh} />}
+        {view === 'scenes' && <Scenes host={host} snap={snap} onDone={refresh} />}
         {view === 'ports' && <Ports host={host} snap={snap} onDone={refresh} />}
         {view === 'settings' && <Settings host={host} onClassic={() => host.switchToClassic()} />}
         {view === 'browsers' && <Browsers host={host} snap={snap} onDone={refresh} />}

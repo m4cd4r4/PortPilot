@@ -294,6 +294,28 @@ class ConfigStore {
     });
   }
 
+  /** Scenes: named sets of apps and browser profiles (see src/core/scenes.js) */
+  getScenes() {
+    return this.config.scenes || [];
+  }
+
+  saveScene(input) {
+    const { upsertScene } = require('../core/scenes');
+    return this.update((config) => {
+      const { scenes, scene } = upsertScene(config.scenes, input);
+      config.scenes = scenes;
+      return scene;
+    });
+  }
+
+  deleteScene(id) {
+    return this.update((config) => {
+      const before = (config.scenes || []).length;
+      config.scenes = (config.scenes || []).filter((s) => s.id !== id);
+      return config.scenes.length < before;
+    });
+  }
+
   /** Get all groups */
   getGroups() {
     return this.config.groups || [];
