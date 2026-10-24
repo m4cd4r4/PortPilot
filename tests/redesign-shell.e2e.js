@@ -54,6 +54,9 @@ async function main() {
     check('Home is the first screen', (await tabOn()) === 'Home');
     await until(() => win.evaluate(() => document.querySelector('.home .tile-sub')?.textContent.startsWith('3')), 15000, 'tile counts load');
     check('Localhost tile counts 0 running of 3 apps', await win.evaluate(() => document.querySelector('.home .tile .tile-count').textContent.startsWith('0')));
+    check('the hero names an app and offers Start', await win.evaluate(() => { const h = document.querySelector('.h-hero'); return !!h?.querySelector('h2')?.textContent && /Start/.test(h.textContent); }));
+    check('Home fits the window without scrolling', await win.evaluate(() => { const m = document.querySelector('.main'); return m.scrollHeight <= m.clientHeight + 1; }));
+    check('the Scene and Recently used cards are there', await win.evaluate(() => !!document.querySelector('.h-scene') && !!document.querySelector('.h-recent')));
 
     console.log('step: segmented control');
     await win.click('role=tab[name="Browsers"]');
@@ -81,6 +84,8 @@ async function main() {
     await until(() => running('app_shop'), 15000, 'shop running');
     await until(() => win.evaluate(() => document.querySelector('.home .tile .tile-count').textContent.startsWith('1')), 15000, 'tile shows 1 running');
     check('the Localhost tile now counts 1 running', true);
+    await until(() => win.evaluate(() => /Stop/.test(document.querySelector('.h-hero')?.textContent || '')), 15000, 'hero offers Stop');
+    check('the hero follows the running app and offers Stop', await win.evaluate(() => document.querySelector('.h-hero h2').textContent === 'shop'));
 
     await openPalette();
     await win.keyboard.type('stop shop');
