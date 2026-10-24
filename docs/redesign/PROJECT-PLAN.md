@@ -77,3 +77,13 @@ Fixed on the way: Wave 2's Grouped mode read `app.groupId`, but the stored field
 Check: `npm run test:e2e:ui` (shell 15, localhost 22, browsers 35, wave4 22 checks, real Electron), `npm run typecheck:ui`, `npm run test:unit`. Screenshots read at 1440 and 390 (Library, Ports, Settings); the 390 tables were clipped on the first pass and now fit.
 
 Carried to Wave 5 and later: Scenes (net-new data model), tray quick-start menu fed from the new UI (`tray.update`), web portal on the new bundle, deleting `src/renderer`. Not rebuilt yet from classic: drag reorder, bulk delete, nested worktrees and stale-worktree cleanup, project discovery scan paths, config export/import, docker banner, port reserve toggle on the Ports screen, duplicate profile, capture window bounds, per-profile session history, extensions list, crash "Ask Claude". Packaged build not yet opened.
+
+## Wave 5 status (2026-10-24): Scenes
+
+Scenes tab: a saved set of apps and browser profiles started together. Create with "Save what is running" (ticks what is up now) or New scene; edit and delete in the drawer (delete keeps the apps and profiles). Stored as `config.scenes` (`src/core/scenes.js`). Start runs each member in turn and reports Started, Already running and Blocked; a port held by another process is reported, never fatal. Stop stops only what that scene started (run record in this window's localStorage), so anything started by hand stays up. Start and Stop read a fresh snapshot at click time: the shared one polls every 5 seconds and made Stop skip an app started a moment earlier.
+
+Top bar at 390: six tabs no longer fit beside the brand, so they take their own full-width row.
+
+Check: `npm run test:e2e:ui` (scenes 15 checks, real Electron), `npm run test:unit` (scenes 6). Screenshots read at 1440 and 390.
+
+Still open: tray quick-start menu, palette commands for scenes, web portal on the new bundle, deleting `src/renderer`.

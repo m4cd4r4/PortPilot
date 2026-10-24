@@ -805,6 +805,22 @@ function setupIpcHandlers(ipcMain, configStore) {
 
   // ============ Group Operations ============
 
+  /** Scenes: list, save (create or update) and delete */
+  ipcMain.handle('scenes:list', async () => {
+    try { return { success: true, scenes: configStore.getScenes() }; }
+    catch (error) { return { success: false, error: error.message }; }
+  });
+  ipcMain.handle('scenes:save', async (_, scene) => {
+    try { return { success: true, scene: configStore.saveScene(scene) }; }
+    catch (error) { return { success: false, error: error.message }; }
+  });
+  ipcMain.handle('scenes:delete', async (_, id) => {
+    try {
+      const deleted = configStore.deleteScene(id);
+      return { success: deleted, error: deleted ? null : 'Scene not found' };
+    } catch (error) { return { success: false, error: error.message }; }
+  });
+
   /** Get all groups */
   ipcMain.handle('config:getGroups', async () => {
     try {

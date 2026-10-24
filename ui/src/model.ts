@@ -1,6 +1,6 @@
 import type { AppRec, Profile, Snapshot } from './host';
 
-export type View = 'home' | 'localhost' | 'browsers' | 'library' | 'ports' | 'history' | 'settings';
+export type View = 'home' | 'localhost' | 'browsers' | 'library' | 'ports' | 'scenes' | 'history' | 'settings';
 /** The sections in the segmented control; History and Settings have their own top-bar buttons. */
 export const VIEWS: Array<{ view: View; label: string }> = [
   { view: 'home', label: 'Home' },
@@ -8,6 +8,7 @@ export const VIEWS: Array<{ view: View; label: string }> = [
   { view: 'browsers', label: 'Browsers' },
   { view: 'library', label: 'Library' },
   { view: 'ports', label: 'Ports' },
+  { view: 'scenes', label: 'Scenes' },
 ];
 
 export interface Tally { running: number; apps: number; profilesUp: number; profiles: number; warnings: string[] }

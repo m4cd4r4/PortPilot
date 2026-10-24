@@ -42,6 +42,13 @@ contextBridge.exposeInMainWorld('portpilot', {
     deleteGroup: (groupId) => ipcRenderer.invoke('config:deleteGroup', groupId)
   },
 
+  // Scenes (saved sets of apps and browser profiles)
+  scenes: {
+    list: () => ipcRenderer.invoke('scenes:list'),
+    save: (scene) => ipcRenderer.invoke('scenes:save', scene),
+    delete: (id) => ipcRenderer.invoke('scenes:delete', id)
+  },
+
   // Worktree operations
   worktrees: {
     detect: (appId) => ipcRenderer.invoke('worktrees:detect', appId),

@@ -40,7 +40,7 @@ export function TopBar({ view, onView, onSearch, onClassic }: Props) {
           <div className="menu" role="menu">
             <button role="menuitem" onClick={() => { setMenu(false); onView('settings'); }}>Settings</button>
             <button role="menuitem" onClick={classic}>Switch to classic view</button>
-            <p>Scenes and the web portal are still on the classic view.</p>
+            <p>The web portal is still on the classic view.</p>
             {error && <p className="notice" role="alert">{error}</p>}
           </div>
         )}

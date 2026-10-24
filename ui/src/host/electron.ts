@@ -89,6 +89,9 @@ export function createElectronHost(): Host {
     async diagnoseStart(id) { await ok(api().diagnose.start(id)); },
     async diagnoseCancel(id) { await api().diagnose.cancel(id); },
     onDiagnose(cb) { return api().diagnose.onEvent(cb); },
+    async scenes() { return (await ok(api().scenes.list())).scenes || []; },
+    async saveScene(fields) { return (await ok(api().scenes.save(fields))).scene; },
+    async deleteScene(id) { await ok(api().scenes.delete(id)); },
     onChange(cb) { wire(); listeners.add(cb); return () => listeners.delete(cb); },
   };
 }
