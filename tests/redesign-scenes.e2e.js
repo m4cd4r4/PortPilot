@@ -79,6 +79,10 @@ async function main() {
     check('the held port is reported as Blocked', /Blocked: beta/.test(text), text);
     check('the blocked app was not started', !(await running()).includes('app_b'));
     await shot('started');
+    await win.click('.banner >> role=button[name="Fix"]');
+    await until(() => win.evaluate(() => document.querySelector('[role="tab"][aria-selected="true"]')?.textContent === 'Ports'), 10000, 'Ports tab');
+    check('Fix on the blocked banner opens Ports, not the palette', true);
+    await win.click('role=tab[name="Scenes"]');
 
     console.log('step: stop only what the scene started');
     await win.click(`article[data-scene="${sc.id}"] >> role=button[name="Stop"]`);
