@@ -35,11 +35,12 @@ export function TopBar({ view, onView, onSearch, onClassic }: Props) {
       </button>
       <div className="actions" ref={box}>
         <button className={`icon${view === 'history' ? ' on' : ''}`} title="History" aria-label="History" aria-pressed={view === 'history'} onClick={() => onView(view === 'history' ? 'home' : 'history')}>History</button>
-        <button className={`icon${menu ? ' on' : ''}`} title="Settings and views" aria-label="Settings" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu((m) => !m)}>Settings</button>
+        <button className={`icon${menu || view === 'settings' ? ' on' : ''}`} title="Settings and views" aria-label="Settings" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu((m) => !m)}>Settings</button>
         {menu && (
           <div className="menu" role="menu">
+            <button role="menuitem" onClick={() => { setMenu(false); onView('settings'); }}>Settings</button>
             <button role="menuitem" onClick={classic}>Switch to classic view</button>
-            <p>Add App, Settings and the port tools are in the classic view until they are rebuilt here.</p>
+            <p>Scenes and the web portal are still on the classic view.</p>
             {error && <p className="notice" role="alert">{error}</p>}
           </div>
         )}
