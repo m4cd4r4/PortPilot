@@ -367,10 +367,12 @@ const TOOLS = {
     const { rows, warnings } = await run.allStatus(configPath, stored, ctx.deps);
     const live = lease.liveSessionIds(configPath);
     const me = lease.cleanId(args.sessionId);
+    const used = safely('last used', () => history.lastUsedByProfile(configPath)) || new Map();
     const out = rows.map((st) => {
       const claim = claimFor(configPath, st);
       const l = lease.leaseOf(claim, st.state, live);
       const row = view(st, st.state === 'up' ? claim : null);
+      if (used.has(lower(st.name))) row.lastUsed = used.get(lower(st.name));
       row.free = lease.isFree(st, claim, l);
       row.leasedTo = leaseView(l);
       if (l && me && l.sessionId === me) row.mine = true;

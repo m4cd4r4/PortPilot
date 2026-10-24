@@ -1896,6 +1896,16 @@ var require_browserHistory = __commonJS({
       list = [...list].sort((a, b) => Date.parse(b.startedAt) - Date.parse(a.startedAt));
       return { total: list.length, entries: list.slice(0, Math.max(1, limit)) };
     }
+    function lastUsedByProfile(configPath) {
+      const out = /* @__PURE__ */ new Map();
+      for (const r of readAll(configPath)) {
+        const t = Math.max(Date.parse(r.startedAt) || 0, Date.parse(r.stoppedAt) || 0);
+        if (!t || !r.profile) continue;
+        const k = lower2(r.profile);
+        if (t > (out.get(k) || 0)) out.set(k, t);
+      }
+      return new Map([...out].map(([k, t]) => [k, new Date(t).toISOString()]));
+    }
     function getSession(configPath, id) {
       return readAll(configPath).find((r) => r.id === id) || null;
     }
@@ -1961,6 +1971,7 @@ var require_browserHistory = __commonJS({
       closeSession,
       listSessions,
       getSession,
+      lastUsedByProfile,
       sampleOnce,
       startSampler
     };
@@ -2321,10 +2332,12 @@ var TOOLS = {
     const { rows, warnings } = await run.allStatus(configPath, stored, ctx.deps);
     const live = lease.liveSessionIds(configPath);
     const me = lease.cleanId(args.sessionId);
+    const used = safely("last used", () => history.lastUsedByProfile(configPath)) || /* @__PURE__ */ new Map();
     const out = rows.map((st) => {
       const claim = claimFor(configPath, st);
       const l = lease.leaseOf(claim, st.state, live);
       const row = view(st, st.state === "up" ? claim : null);
+      if (used.has(lower(st.name))) row.lastUsed = used.get(lower(st.name));
       row.free = lease.isFree(st, claim, l);
       row.leasedTo = leaseView(l);
       if (l && me && l.sessionId === me) row.mine = true;

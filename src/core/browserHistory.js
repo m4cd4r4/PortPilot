@@ -232,6 +232,18 @@ function listSessions(configPath, { profile, since, limit = 10 } = {}) {
   return { total: list.length, entries: list.slice(0, Math.max(1, limit)) };
 }
 
+/** profile name (lower case) -> ISO time of its latest start or stop, for "last used" lists. */
+function lastUsedByProfile(configPath) {
+  const out = new Map();
+  for (const r of readAll(configPath)) {
+    const t = Math.max(Date.parse(r.startedAt) || 0, Date.parse(r.stoppedAt) || 0);
+    if (!t || !r.profile) continue;
+    const k = lower(r.profile);
+    if (t > (out.get(k) || 0)) out.set(k, t);
+  }
+  return new Map([...out].map(([k, t]) => [k, new Date(t).toISOString()]));
+}
+
 function getSession(configPath, id) {
   return readAll(configPath).find((r) => r.id === id) || null;
 }
@@ -287,6 +299,6 @@ function startSampler(configPath, d, { intervalMs = SAMPLE_MS } = {}) {
 module.exports = {
   DEFAULT_MAX_ENTRIES, MAX_TABS, SAMPLE_MS, MISSES_TO_CLOSE,
   historyPathFor, redactUrl, cleanTabs, parseSince, trim,
-  openSession, openEntryFor, sampleSession, closeSession, listSessions, getSession,
+  openSession, openEntryFor, sampleSession, closeSession, listSessions, getSession, lastUsedByProfile,
   sampleOnce, startSampler,
 };

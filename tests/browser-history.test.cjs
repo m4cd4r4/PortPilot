@@ -231,6 +231,17 @@ const T0 = Date.parse('2026-10-13T00:00:00Z');
     assert.strictEqual(read(cfg)[0].stoppedAt, null);
   });
 
+  await t('lastUsedByProfile gives each profile its latest start or stop, matched without case', () => {
+    const cfg = newCfg();
+    h.openSession(cfg, { ...base, profile: 'Shop-A', now: T0 });
+    h.closeSession(cfg, 'Shop-A', { now: T0 + 3600000 });
+    h.openSession(cfg, { ...base, profile: 'blog', port: 9301, now: T0 + 60000 });
+    const m = h.lastUsedByProfile(cfg);
+    assert.strictEqual(m.get('shop-a'), new Date(T0 + 3600000).toISOString());
+    assert.strictEqual(m.get('blog'), new Date(T0 + 60000).toISOString());
+    assert.strictEqual(m.has('nobody'), false);
+  });
+
   await t('startSampler returns a stop function and never keeps the process alive', () => {
     const cfg = newCfg();
     const stop = h.startSampler(cfg, { version: async () => null, pageTabs: async () => [] }, { intervalMs: 60000 });
