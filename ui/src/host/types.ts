@@ -1,6 +1,7 @@
 export interface AppRec {
   id: string; name: string; preferredPort?: number; branch?: string; parentId?: string; groupId?: string; command?: string;
   cwd?: string; group?: string | null; description?: string | null; autoStart?: boolean; isFavorite?: boolean; reservePort?: boolean; healthPath?: string | null;
+  createdAt?: string;
 }
 /** What the add/edit form sends to config:saveApp; the host merges it onto the stored record. */
 export interface AppFields {

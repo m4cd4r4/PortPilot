@@ -65,22 +65,59 @@ kbd { font: 11px var(--font); border: 1px solid var(--bd); border-radius: 5px; p
 .notice { color: var(--warn); }
 .placeholder { max-width: 640px; margin: 48px auto; color: var(--tx2); }
 
-/* Home tiles. */
-.home { display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 16px; max-width: 1100px; margin: 0 auto; }
+/* Home: the spotlight grid. Areas are named so DOM order stays Localhost-first. */
+.home {
+  display: grid; gap: 14px; max-width: 1180px; margin: 0 auto;
+  grid-template-columns: 1.7fr 1fr 1fr; grid-template-rows: 96px 96px 96px 64px 120px;
+  grid-template-areas: "hero browsers browsers" "hero browsers browsers" "hero scene local" "news news news" "recent recent recent";
+}
+.h-hero { grid-area: hero; } .h-browsers { grid-area: browsers; } .h-scene { grid-area: scene; }
+.h-local { grid-area: local; } .h-news { grid-area: news; } .h-recent { grid-area: recent; }
 .tile {
-  position: relative; overflow: hidden; min-height: 220px; text-align: left; display: flex; flex-direction: column; gap: 6px;
-  background: var(--pn); border: 1px solid var(--bd); border-radius: var(--r); padding: 20px;
+  position: relative; overflow: hidden; min-width: 0; text-align: left; display: flex; flex-direction: column; gap: 4px;
+  background: var(--pn); border: 1px solid var(--bd); border-radius: 14px; padding: 14px 16px;
 }
-.tile:hover { border-color: var(--acc); }
-.tile-title { color: var(--tx2); font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; }
-.tile-count { font-size: 44px; font-weight: 650; line-height: 1.1; }
-.tile-count small { font-size: 16px; font-weight: 400; color: var(--tx2); }
-.tile-sub { color: var(--tx2); }
-.tile-art {
-  position: absolute; inset: auto 0 0 0; height: 90px; pointer-events: none;
-  background: linear-gradient(135deg, color-mix(in srgb, var(--acc) 22%, transparent), transparent 70%);
+button.tile:hover { border-color: var(--acc); }
+.tile-title { color: var(--tx2); font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.1em; }
+.tile-count { font-size: 32px; font-weight: 650; line-height: 1.1; }
+.tile-count small { font-size: 14px; font-weight: 400; color: var(--tx2); }
+.tile-sub { color: var(--tx2); font-size: 13px; }
+.tile-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.link { background: none; border: 0; padding: 0; color: var(--tx2); font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.1em; }
+.tile-head .link:last-child { text-transform: none; letter-spacing: 0; font-size: 12.5px; color: var(--acc); }
+.link:hover { color: var(--tx); }
+
+.h-hero { border: 0; padding: 0; justify-content: flex-end; }
+.hero-shot { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: top; }
+.hero-shade { position: relative; padding: 56px 20px 18px; background: linear-gradient(transparent, rgba(5, 8, 12, 0.92) 45%); color: #fff; }
+.hero-shade h2 { margin: 0; font-size: 26px; }
+.hero-live { color: var(--acc); font-size: 12.5px; }
+.facts { display: flex; flex-wrap: wrap; gap: 2px 18px; margin: 8px 0 12px; font-size: 13px; color: #cdd2de; }
+.facts div { display: flex; gap: 6px; min-width: 0; } .facts dt { color: #aab1c0; } .facts dd { margin: 0; color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 260px; }
+.hero-actions { display: flex; gap: 6px; }
+.hero-actions button, .h-scene button.primary {
+  background: rgba(255, 255, 255, 0.12); border: 1px solid rgba(255, 255, 255, 0.22); border-radius: 8px; color: #fff; padding: 5px 14px;
 }
-.tile-art.alt { background: linear-gradient(135deg, color-mix(in srgb, #7c8cff 24%, transparent), transparent 70%); }
+.hero-actions button.primary, .h-scene button.primary { background: var(--acc); border-color: var(--acc); color: var(--onacc); font-weight: 600; }
+
+.mini { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 6px; min-height: 0; flex: 1; }
+.mini.five { grid-template-columns: repeat(5, 1fr); }
+.th-wrap { background: none; border: 0; padding: 0; min-width: 0; text-align: left; display: flex; flex-direction: column; gap: 3px; }
+.th { display: block; flex: 1; min-height: 0; border-radius: 8px; border: 1px solid var(--bd); background-size: cover; background-position: top; }
+.th.sel { outline: 2px solid var(--acc); outline-offset: 2px; }
+.th-wrap:hover .th { border-color: var(--acc); }
+.cap { font-size: 11.5px; color: var(--tx2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.h-scene { justify-content: center; } .h-scene b { font-size: 16px; }
+.h-scene button.primary { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); }
+.h-news ul { margin: 6px 0 0; padding: 0; list-style: none; display: flex; gap: 8px 24px; flex-wrap: wrap; font-size: 13px; }
+.tag { font-size: 11px; margin-right: 6px; color: var(--acc); } .tag.FIX { color: var(--warn); }
+
+@media (max-width: 899px) {
+  .home { grid-template-columns: 1fr; grid-template-rows: none; grid-auto-rows: auto; grid-template-areas: "hero" "browsers" "scene" "local" "news" "recent"; }
+  .h-hero { min-height: 320px; } .h-browsers .th, .h-recent .th { aspect-ratio: 16 / 10; flex: none; }
+  .mini.five { grid-template-columns: repeat(3, 1fr); } .h-scene { min-height: 72px; }
+}
 
 /* Palette. */
 .scrim { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5); display: flex; justify-content: center; align-items: flex-start; padding-top: 14vh; }
@@ -93,9 +130,6 @@ kbd { font: 11px var(--font); border: 1px solid var(--bd); border-radius: 5px; p
 .palette .empty { color: var(--mut); cursor: default; }
 .pal-status { margin: 0; padding: 8px 16px; border-top: 1px solid var(--bd); color: var(--warn); }
 
-/* Home tile previews. */
-.tile-previews { position: absolute; inset: auto 0 0 0; height: 110px; display: flex; gap: 8px; padding: 0 20px 0; pointer-events: none; }
-.tile-previews img { flex: 1; min-width: 0; height: 100%; object-fit: cover; object-position: top; border: 1px solid var(--bd); border-bottom: 0; border-radius: 8px 8px 0 0; }
 .icon.on { color: var(--tx); border-color: var(--acc); }
 
 /* Galleries (Localhost, History). */
