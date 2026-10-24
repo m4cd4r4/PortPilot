@@ -161,5 +161,20 @@
     return out;
   }
 
-  return { filterRuns, facets, labelOf, runStateOf, startedByWord, formatWhen, formatBytes, footerText, gitLine, rowThumbs };
+  /**
+   * The newest page thumbnail per registered app, whether its run is open or closed, so a stopped
+   * app can show its last screenshot. Returns { [appId]: { id, thumb, at, open } }.
+   */
+  function appThumbs(runs) {
+    const out = {};
+    for (const r of runs || []) {
+      if (!r || !r.appId || !r.page || !r.page.thumb) continue;
+      const at = Date.parse(r.startedAt) || 0;
+      const cur = out[r.appId];
+      if (!cur || at >= cur.at) out[r.appId] = { id: r.id, thumb: r.page.thumb, at, open: !r.stoppedAt };
+    }
+    return out;
+  }
+
+  return { appThumbs, filterRuns, facets, labelOf, runStateOf, startedByWord, formatWhen, formatBytes, footerText, gitLine, rowThumbs };
 });

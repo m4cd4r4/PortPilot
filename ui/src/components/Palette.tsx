@@ -25,7 +25,7 @@ function PaletteBody({ open, onClose, host, snap, view, onView, onDone }: Props)
     const p = palette();
     const cmds = p.buildCommands({
       apps: snap.apps.filter((a) => !a.parentId), running: snap.running, ports: snap.ports, profiles: snap.profiles,
-      views: VIEWS.map((v) => ({ view: v.view, label: `Go to ${v.label}` })),
+      views: [...VIEWS, { view: 'history', label: 'History' }].map((v) => ({ view: v.view, label: `Go to ${v.label}` })),
       view,
     });
     return p.rank(query, cmds);

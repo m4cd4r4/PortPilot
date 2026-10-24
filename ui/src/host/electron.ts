@@ -4,7 +4,7 @@ import type { AppRec, Host, Snapshot } from './types';
 type Api = any;
 const api = (): Api => (window as any).portpilot;
 
-async function ok<T extends { success?: boolean; error?: string }>(p: Promise<T>): Promise<T> {
+async function ok(p: Promise<any>): Promise<any> {
   const r = await p;
   if (r && r.success === false) throw new Error(r.error || 'Request failed');
   return r;
@@ -23,16 +23,23 @@ export function createElectronHost(): Host {
   return {
     kind: 'electron',
     async snapshot(): Promise<Snapshot> {
-      const [cfg, proc, scan, br] = await Promise.all([
-        api().config.getApps(), api().process.list(), api().ports.scanWithApps(), api().browsers.list(),
+      const [cfg, groups, proc, scan, br] = await Promise.all([
+        api().config.getApps(), api().config.getGroups(), api().process.list(), api().ports.scanWithApps(), api().browsers.list(),
       ]);
       const running: Snapshot['running'] = {};
-      for (const r of proc?.apps || []) if (r.running) running[r.id] = { port: r.port, pid: r.pid };
-      // An app another tool started still shows as up: the scan matched it by port.
-      for (const [id, m] of Object.entries<any>(scan?.matches || {})) running[id] ||= { port: m.port, pid: m.pid };
+      const crashed: Snapshot['crashed'] = {};
+      for (const r of proc?.apps || []) {
+        if (r.running) running[r.id] = { pid: r.pid };
+        else if (r.crashed) crashed[r.id] = { exitCode: r.exitCode };
+      }
+      // The scan knows the port an app is really on, and also finds apps another tool started.
+      for (const [id, m] of Object.entries<any>(scan?.matches || {})) running[id] = { ...running[id], port: m.port, pid: running[id]?.pid ?? m.pid };
+      for (const id of Object.keys(running)) delete crashed[id];
       return {
         apps: cfg?.apps || [],
+        groups: groups?.groups || [],
         running,
+        crashed,
         conflicts: scan?.unknownConflicts || [],
         ports: scan?.ports || [],
         profiles: br?.profiles || [],
@@ -44,6 +51,17 @@ export function createElectronHost(): Host {
     async startBrowser(name) { await ok(api().browsers.start(name)); },
     async stopBrowser(name) { await ok(api().browsers.stop(name)); },
     async killPort(port) { await ok(api().ports.kill(port)); },
+    async thumbIndex() { return (await ok(api().thumbs.index())).byApp || {}; },
+    async thumbs(keys) { return (await ok(api().thumbs.get(keys))).thumbs || {}; },
+    async captureThumb(appId, port) {
+      const r = await api().thumbs.capture(appId, port);
+      return r?.success ? { ok: true, key: r.key } : { ok: false, reason: r?.reason || 'failed' };
+    },
+    async history() {
+      const r = await ok(api().history.list());
+      return { runs: r.runs || [], live: r.live || [], startable: r.startable || [] };
+    },
+    async startAgain(runId) { return (await ok(api().history.startAgain(runId))).url || null; },
     onChange(cb) { wire(); listeners.add(cb); return () => listeners.delete(cb); },
   };
 }
