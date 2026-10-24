@@ -44,7 +44,7 @@ button:disabled { cursor: default; opacity: 0.45; }
   flex: 1; max-width: 420px; display: flex; justify-content: space-between; align-items: center; gap: 12px;
   background: var(--bg); border: 1px solid var(--bd); border-radius: 9px; padding: 6px 10px; color: var(--mut); text-align: left;
 }
-.search { min-width: 0; white-space: nowrap; }
+.search { min-width: 150px; white-space: nowrap; }
 .search span { overflow: hidden; text-overflow: ellipsis; }
 .search kbd { flex: none; }
 kbd { font: 11px var(--font); border: 1px solid var(--bd); border-radius: 5px; padding: 1px 6px; color: var(--tx2); }
@@ -217,6 +217,10 @@ button.primary:disabled { opacity: 0.6; }
 .cards.list .bcard .badge { display: none; }
 .cards.list .bcard .letter { font-size: 26px; }
 .toolbar, .toolbar-end { flex-wrap: wrap; }
+@media (max-width: 1180px) {
+  .topbar { flex-wrap: wrap; }
+  .search { order: 5; flex-basis: 100%; max-width: none; }
+}
 @media (max-width: 640px) {
   .topbar { padding-right: 16px; gap: 10px; flex-wrap: wrap; }
   .search { order: 5; flex-basis: 100%; max-width: none; }
