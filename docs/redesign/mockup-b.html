@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>PortPilot redesign mock-up B</title>
+<style>
+:root{--bg:#eef0f4;--card:#fff;--ink:#14161c;--mut:#6b7385;--line:rgba(20,22,28,.09);--acc:#12b76a;--warn:#c77d0a}
+*{box-sizing:border-box;margin:0}
+body{background:#cfd3dc;color:var(--ink);font:13px/1.4 "Segoe UI",system-ui,sans-serif;padding:24px;display:flex;flex-direction:column;align-items:center;gap:28px}
+.win{width:1120px;height:760px;background:var(--bg);border-radius:12px;overflow:hidden;display:flex;box-shadow:0 30px 70px rgba(20,22,28,.25);position:relative}
+.rail{width:68px;flex:none;background:#14161c;display:flex;flex-direction:column;align-items:center;padding:14px 0;gap:10px}
+.rail .lg{width:36px;height:36px;border-radius:11px;background:var(--acc);color:#04210f;font-weight:800;display:grid;place-items:center;margin-bottom:10px}
+.rail a{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;color:#8d94a6;font-size:17px;position:relative}
+.rail a.on{background:#262a35;color:#fff}.rail .sp{flex:1}
+.rail a em{position:absolute;top:5px;right:5px;width:9px;height:9px;border-radius:50%;background:#f5b84a;border:2px solid #14161c}
+.main{flex:1;display:flex;flex-direction:column;min-width:0}
+.top{height:58px;display:flex;align-items:center;gap:12px;padding:0 22px;flex:none}
+.top h1{font-size:20px;font-weight:750;letter-spacing:-.01em}
+.srch{margin-left:auto;width:320px;background:var(--card);border:1px solid var(--line);border-radius:11px;padding:8px 12px;color:var(--mut);display:flex;justify-content:space-between}
+kbd{font:11px monospace;background:#0000000a;border:1px solid var(--line);border-radius:5px;padding:1px 6px}
+.btn{background:var(--ink);color:#fff;font-weight:650;border-radius:10px;padding:8px 14px}
+.warn{margin:0 22px;padding:7px 12px;border-radius:10px;background:#fff4de;color:var(--warn);display:flex;gap:10px;font-size:12.5px;align-items:center}.warn b{color:var(--ink)}.warn .sp{flex:1}.warn u{text-decoration:none;color:var(--ink);background:#fff;border-radius:6px;padding:2px 9px}
+.body{padding:16px 22px;flex:1;overflow:hidden}
+.hero2{display:grid;grid-template-columns:1.25fr 1fr;gap:16px}
+.big{border-radius:22px;height:430px;position:relative;overflow:hidden;color:#fff;padding:20px;display:flex;flex-direction:column;justify-content:space-between}
+.big h2{font-size:26px;letter-spacing:-.02em}.big p{opacity:.8}
+.lh{background:linear-gradient(160deg,#16222c 0%,#0b1015 70%)}
+.bh{background:linear-gradient(160deg,#4f46e5 0%,#9333ea 55%,#db2777 100%)}
+.tabs span.sp{background:none;border:0;flex:1;padding:0}
+.shots{position:absolute;inset:130px 20px 70px 20px;display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.shot{border-radius:12px;background:linear-gradient(135deg,#243746,#0d141b);border:1px solid #fff2;padding:10px}.shot:nth-child(2){background:linear-gradient(135deg,#3a2150,#120c1c)}.shot:nth-child(3){background:linear-gradient(135deg,#4a2c14,#17100a)}.shot:nth-child(4){background:linear-gradient(135deg,#0e3a2c,#08140f)}
+.shot i{display:block;height:6px;border-radius:3px;background:#fff3;margin-bottom:6px;width:60%}.shot i.h{height:13px;width:80%;background:#fff6}
+.go{align-self:flex-start;background:#fff;color:var(--ink);font-weight:700;border-radius:10px;padding:8px 14px;position:relative;z-index:2}
+.logos{position:absolute;inset:130px 20px 70px;display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.logos b{border-radius:16px;display:grid;place-items:center;font-size:30px;color:#fff;font-weight:800;background:#fff3;backdrop-filter:blur(6px)}
+.live{display:inline-flex;gap:6px;align-items:center;background:#fff2;border-radius:99px;padding:2px 10px;font-size:12px}
+.dot{width:7px;height:7px;border-radius:50%;background:#4ade80;display:inline-block}
+.recent{margin-top:14px;display:flex;gap:10px;color:var(--mut);align-items:center}.recent span.rp{background:var(--card);border-radius:99px;padding:4px 12px;border:1px solid var(--line);color:var(--ink)}
+.tabs{display:flex;gap:6px;margin-bottom:14px;align-items:center}.tabs span{padding:6px 13px;border-radius:99px;background:var(--card);border:1px solid var(--line);color:var(--mut)}.tabs span.on{background:var(--ink);color:#fff;border-color:var(--ink)}.tabs .sp{flex:1}
+.vw{display:flex;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:2px}.vw span{border:0!important;background:none!important;padding:4px 9px!important;border-radius:8px!important;color:var(--mut)}.vw span.on{background:var(--ink)!important;color:#fff}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.c{border-radius:18px;height:218px;position:relative;overflow:hidden;color:#fff;display:flex;flex-direction:column;justify-content:flex-end;padding:12px}
+.c .mini{position:absolute;inset:0;padding:14px}.c .mini i{display:block;height:7px;border-radius:4px;background:#fff3;margin-bottom:7px;width:55%}.c .mini i.h{height:16px;width:75%;background:#fff6}
+.c .gl{position:relative;background:rgba(10,12,16,.55);backdrop-filter:blur(14px);border:1px solid #fff2;border-radius:12px;padding:8px 10px;display:flex;justify-content:space-between;align-items:center}
+.c .gl b{display:block;font-size:13.5px}.c .gl small{opacity:.7;font:11.5px monospace}
+.c.off{filter:grayscale(.85) brightness(.85)}
+.c .bg{position:absolute;top:10px;left:10px;background:#f5b84a;color:#2a1d02;border-radius:99px;padding:2px 9px;font-size:11.5px;font-weight:700;z-index:2}
+.c .ac{position:absolute;top:10px;right:10px;display:flex;gap:6px;z-index:2}.c .ac span{background:#fffe;color:var(--ink);border-radius:8px;padding:4px 10px;font-weight:650;font-size:12px}
+.pg{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.p{border-radius:20px;height:300px;color:#fff;position:relative;overflow:hidden;padding:16px;display:flex;flex-direction:column;justify-content:space-between}
+.p .ic{width:54px;height:54px;border-radius:16px;background:#fff;display:grid;place-items:center;font-weight:800;font-size:24px;box-shadow:0 8px 20px #0004}
+.p h3{font-size:19px;letter-spacing:-.01em}.p .s{opacity:.85;font-size:12px}
+.p .acc{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}.p .acc span{background:#0003;border-radius:99px;padding:3px 10px;font-size:12px}
+.p .row{display:flex;justify-content:space-between;align-items:center}
+.p .hl{background:#fffd;color:var(--ink);border-radius:99px;padding:3px 10px;font-weight:650;font-size:12px}
+.p .go2{background:#fff;color:var(--ink);border-radius:10px;padding:6px 14px;font-weight:700}
+.p .pt{position:absolute;top:16px;right:16px;font:12px monospace;background:#0003;border-radius:6px;padding:2px 7px}
+.p.q{opacity:.92}
+.hov{position:absolute;right:16px;bottom:16px;width:290px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px;box-shadow:0 20px 50px #0004;z-index:5}
+.hov a{display:flex;justify-content:space-between;color:#2f55d4;padding:5px 0}.hov small{color:var(--mut);text-transform:uppercase;letter-spacing:.08em;font-size:11px}
+</style></head><body>
+
+<div class="win" id="w1">
+ <div class="rail"><div class="lg">P</div><a class="on">⌂</a><a>▦</a><a>◉</a><a>⟲</a><div class="sp"></div><a>⌕</a><a>⚙<em></em></a></div>
+ <div class="main">
+  <div class="top"><h1>Good morning, Macdara</h1><div class="srch"><span>Search apps, ports, profiles…</span><kbd>Ctrl K</kbd></div><div class="btn">+ Add</div></div>
+  <div class="warn"><span>▲</span><span><b>:3000</b> is held by Code.exe (17h), so Examworthy Web can't start</span><span class="sp"></span><u>Use :3002</u><u>Kill &amp; start</u></div>
+  <div class="body">
+   <div class="hero2">
+    <div class="big lh"><div><span class="live"><span class="dot"></span>3 running</span><h2 style="margin-top:10px">Localhost</h2><p>101 more ready to start</p></div>
+     <div class="shots"><div class="shot"><i class="h"></i><i></i></div><div class="shot"><i class="h"></i><i></i></div><div class="shot"><i class="h"></i><i></i></div><div class="shot"><i class="h"></i><i></i></div></div>
+     <span class="go">Open gallery →</span></div>
+    <div class="big bh"><div><span class="live"><span class="dot"></span>1 running</span><h2 style="margin-top:10px">Browsers</h2><p>14 profiles · signed in to 9</p></div>
+     <div class="logos"><b style="background:#1877f2">f</b><b style="background:#fff;color:#4285f4">G</b><b style="background:#ff4500">r</b><b style="background:#635bff">S</b><b style="background:#24292f;font-size:24px">gh</b><b style="background:#0a66c2;font-size:24px">in</b></div>
+     <span class="go">Open profiles →</span></div>
+   </div>
+   <div class="recent"><span>Recent</span><span class="rp">⟲ SSF Site · 09:29</span><span class="rp">⟲ session-compass-landing</span><span class="rp">⟲ SSF inbody feedback</span></div>
+  </div>
+ </div>
+</div>
+
+<div class="win" id="w2">
+ <div class="rail"><div class="lg">P</div><a>⌂</a><a class="on">▦</a><a>◉</a><a>⟲</a><div class="sp"></div><a>⌕</a><a>⚙</a></div>
+ <div class="main">
+  <div class="top"><h1>Localhost</h1><div class="srch"><span>Search apps, ports, profiles…</span><kbd>Ctrl K</kbd></div><div class="btn">+ Add</div></div>
+  <div class="body">
+   <div class="tabs"><span class="on">Running 3</span><span>Favourites</span><span>All 105</span><span>Archived</span><span class="sp"></span><div class="vw"><span class="on">Gallery</span><span>Compact</span><span>List</span><span>Grouped</span></div></div>
+   <div class="grid">
+    <div class="c" style="background:linear-gradient(135deg,#1d4e5f,#0b1620)"><div class="mini"><i class="h"></i><i></i></div><div class="ac"><span>Open</span><span>Stop</span></div><div class="gl"><div><b>m4cd4r4 personal site</b><small>:3041 · feat/mascot</small></div><span class="dot"></span></div></div>
+    <div class="c" style="background:linear-gradient(135deg,#4a2a78,#150c24)"><div class="mini"><i class="h"></i><i></i></div><div class="gl"><div><b>session-compass-landing</b><small>:8767 · main · up 3h</small></div><span class="dot"></span></div></div>
+    <div class="c" style="background:linear-gradient(135deg,#8a4a1a,#1c0f06)"><div class="mini"><i class="h"></i><i></i></div><div class="gl"><div><b>SSF Site (Next.js)</b><small>:3052 · main @ a222397</small></div><span class="dot"></span></div></div>
+    <div class="c off" style="background:linear-gradient(135deg,#1a6a4c,#08140f)"><span class="bg">▲ :3000 held</span><div class="mini"><i class="h"></i></div><div class="gl"><div><b>Examworthy Web</b><small>:3000 · blocked</small></div><span class="dot" style="background:#f5b84a"></span></div></div>
+    <div class="c off" style="background:linear-gradient(135deg,#1f3a66,#080e1a)"><div class="mini"><i class="h"></i></div><div class="gl"><div><b>Solaisoft</b><small>:3002 · Fri 23 Oct</small></div><span class="dot" style="background:#777"></span></div></div>
+    <div class="c off" style="background:linear-gradient(135deg,#5a5a1a,#12120a)"><div class="mini"><i class="h"></i></div><div class="gl"><div><b>Alight</b><small>:3300 · Thu 22 Oct</small></div><span class="dot" style="background:#777"></span></div></div>
+   </div>
+  </div>
+ </div>
+</div>
+
+<div class="win" id="w3">
+ <div class="rail"><div class="lg">P</div><a>⌂</a><a>▦</a><a class="on">◉</a><a>⟲</a><div class="sp"></div><a>⌕</a><a>⚙</a></div>
+ <div class="main">
+  <div class="top"><h1>Browsers</h1><div class="srch"><span>Search apps, ports, profiles…</span><kbd>Ctrl K</kbd></div><div class="btn">+ New profile</div></div>
+  <div class="body">
+   <div class="tabs"><span class="on">All 14</span><span>Running 1</span><span>Social</span><span>Google</span><span>Dev</span><span class="sp"></span><div class="vw"><span class="on">Cards</span><span>Icons</span><span>List</span><span>Grouped</span></div></div>
+   <div class="pg">
+    <div class="p" style="background:linear-gradient(160deg,#1877f2,#0a2f73)"><span class="pt">:9227</span><div class="ic" style="color:#1877f2">f</div><div><h3>facebook</h3><div class="s">Buy Nothing Mosman Park</div><div class="acc"><span>macdara.work</span><span>+ add</span></div></div><div class="row"><span class="hl">● Signed in</span><span class="go2">Stop</span></div></div>
+    <div class="p" style="background:linear-gradient(160deg,#4285f4,#1a3a7a 60%,#188038)"><span class="pt">:9226</span><div class="ic" style="color:#4285f4">G</div><div><h3>google</h3><div class="s">GSC, Analytics, Drive</div><div class="acc"><span>macdara@solaisoft</span><span>m4cd4r4@gmail</span><span>+ add</span></div></div><div class="row"><span class="hl" style="color:#a05a00">● Session expired</span><span class="go2">Start</span></div></div>
+    <div class="p" style="background:linear-gradient(160deg,#ff5a1f,#7a1d00)"><span class="pt">:9230</span><div class="ic" style="color:#ff4500">r</div><div><h3>reddit</h3><div class="s">reddit.com</div><div class="acc"><span>u/m4cd4r4</span><span>+ add</span></div></div><div class="row"><span class="hl" style="color:#666">● Signed out</span><span class="go2">Start</span></div></div>
+    <div class="p" style="background:linear-gradient(160deg,#d97757,#5a2c1a)"><span class="pt">:9228</span><div class="ic" style="color:#d97757">✺</div><div><h3>claude</h3><div class="s">claude.ai · 🔒 leased by session 02c24be6</div><div class="acc"><span>macdara.work</span></div></div><div class="row"><span class="hl">● Signed in</span><span class="go2">Release</span></div></div>
+    <div class="p" style="background:linear-gradient(160deg,#3a4047,#0d1117)"><span class="pt">:9240</span><div class="ic" style="color:#24292f">gh</div><div><h3>github</h3><div class="s">user-attachments uploads</div><div class="acc"><span>m4cd4r4</span></div></div><div class="row"><span class="hl">● Signed in</span><span class="go2">Start</span></div></div>
+    <div class="p" style="background:linear-gradient(160deg,#635bff,#2a2570)"><span class="pt">:9231</span><div class="ic" style="color:#635bff">S</div><div><h3>stripe</h3><div class="s">dashboard.stripe.com</div><div class="acc"><span>Solaisoft</span><span>+ add</span></div></div><div class="row"><span class="hl">● Signed in</span><span class="go2">Start</span></div></div>
+   </div>
+  </div>
+ </div>
+</div>
+</body></html>

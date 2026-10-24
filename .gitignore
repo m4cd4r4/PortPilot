@@ -1,5 +1,7 @@
 node_modules/
 dist/
+src/ui-dist/
+docs/redesign/shots/
 test-results/
 .DS_Store
 *.log

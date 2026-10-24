@@ -58,6 +58,12 @@ t('Go to leaves out the view already on screen', () => {
   assert.ok(P.buildCommands({ ...state, view: 'history' }).some((c) => c.id === 'view:apps'));
 });
 
+t('a caller can supply its own Go to targets (the redesign has Home, Localhost, Browsers)', () => {
+  const views = [{ view: 'home', label: 'Go to Home' }, { view: 'localhost', label: 'Go to Localhost' }];
+  const out = P.buildCommands({ ...state, views, view: 'home' }).map((c) => c.id);
+  assert.ok(out.includes('view:localhost') && !out.includes('view:home') && !out.includes('view:apps'));
+});
+
 t('nothing running and nothing else known still gives the global commands', () => {
   const only = P.buildCommands({}).map((c) => c.id);
   assert.deepStrictEqual(only.filter((i) => !i.startsWith('view:')), ['scan', 'add']);

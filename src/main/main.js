@@ -1,5 +1,6 @@
 const { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, nativeTheme, Notification } = require('electron');
 const path = require('path');
+const fs = require('fs');
 const { setupIpcHandlers } = require('./ipcHandlers');
 const { ConfigStore } = require('./configStore');
 
@@ -38,6 +39,19 @@ function installMenuShortcuts(win) {
   });
 }
 
+/**
+ * The redesign bundle (ui/, built to src/ui-dist) loads only when PORTPILOT_NEW_UI=1 and it has
+ * been built; otherwise the v4 renderer stays the default until the Wave 3 cutover.
+ */
+function rendererEntry() {
+  if (process.env.PORTPILOT_NEW_UI === '1') {
+    const built = path.join(__dirname, '../ui-dist/index.html');
+    if (fs.existsSync(built)) return built;
+    console.warn('PORTPILOT_NEW_UI=1 but src/ui-dist is missing; run "npm run build:ui". Loading the v4 UI.');
+  }
+  return path.join(__dirname, '../renderer/index.html');
+}
+
 /** Create the main application window */
 function createWindow(configStore) {
   mainWindow = new BrowserWindow({
@@ -57,7 +71,7 @@ function createWindow(configStore) {
   });
 
   if (OVERLAY_TITLE_BAR) installMenuShortcuts(mainWindow);
-  mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
+  mainWindow.loadFile(rendererEntry());
 
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();

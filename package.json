@@ -30,7 +30,17 @@
     "build:portable": "electron-builder --win portable",
     "build:all": "electron-builder --win nsis portable",
     "build:all-platforms": "electron-builder --win --linux",
-    "dist": "electron-builder --win --publish never"
+    "dist": "electron-builder --win --publish never",
+    "build:ui": "vite build --config ui/vite.config.ts",
+    "dev:ui": "vite --config ui/vite.config.ts",
+    "typecheck:ui": "tsc -p ui/tsconfig.json",
+    "prebuild": "npm run build:ui",
+    "prebuild:portable": "npm run build:ui",
+    "prebuild:all": "npm run build:ui",
+    "prebuild:all-platforms": "npm run build:ui",
+    "predist": "npm run build:ui",
+    "prebuild:linux": "npm run build:ui",
+    "test:e2e:ui": "npm run build:ui && node tests/redesign-shell.e2e.js"
   },
   "keywords": [
     "ports",
@@ -40,11 +50,18 @@
   ],
   "license": "MIT",
   "devDependencies": {
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^5.2.0",
     "electron": "^44.5.1",
     "electron-builder": "^26.0.12",
     "esbuild": "^0.28.2",
     "playwright": "^1.57.0",
-    "png-to-ico": "^3.0.1"
+    "png-to-ico": "^3.0.1",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.7"
   },
   "build": {
     "appId": "com.macdara.portpilot",
