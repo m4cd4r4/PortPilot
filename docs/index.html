@@ -33,7 +33,7 @@
   <!-- CSP for static GitHub Pages site -->
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' https://m4cd4r4.github.io; connect-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none';">
 
-  <link rel="preload" href="screenshots/hero-app.png" as="image">
+  <link rel="preload" href="screenshots/ui/home.png" as="image">
   <link rel="stylesheet" href="style.css">
 
   <!-- JSON-LD Structured Data -->
@@ -50,7 +50,7 @@
       "price": "0",
       "priceCurrency": "USD"
     },
-    "softwareVersion": "4.0.4",
+    "softwareVersion": "5.0.0",
     "author": {
       "@type": "Person",
       "name": "Macdara",
@@ -58,7 +58,7 @@
     },
     "url": "https://m4cd4r4.github.io/PortPilot/",
     "downloadUrl": "https://github.com/m4cd4r4/PortPilot/releases/latest",
-    "screenshot": "https://m4cd4r4.github.io/PortPilot/screenshots/hero-app.png",
+    "screenshot": "https://m4cd4r4.github.io/PortPilot/screenshots/ui/home.png",
     "license": "https://opensource.org/licenses/MIT",
     "isAccessibleForFree": true,
     "featureList": [
@@ -106,18 +106,18 @@
     <header class="hero">
       <div class="container hero-grid">
         <div class="hero-text">
-          <p class="eyebrow"><img src="logo-128.png" alt="" width="20" height="20"> PortPilot 4 &middot; free &middot; MIT</p>
+          <p class="eyebrow"><img src="logo-128.png" alt="" width="20" height="20"> PortPilot 5 &middot; free &middot; MIT</p>
           <h1>See every dev server, and who started it</h1>
           <p class="lede">PortPilot runs your dev servers and shows every port and crash. Connect Claude Code, Cursor or any MCP assistant to share that view and stop duplicate servers.</p>
           <div class="cta-row">
-            <a href="#download" class="btn btn-primary">Download v4.0.4</a>
+            <a href="#download" class="btn btn-primary">Download v5.0.0</a>
             <a href="#mcp" class="btn btn-secondary">Connect an AI assistant</a>
           </div>
           <p class="note">Windows 10/11 and Linux. Works on its own; the AI assistant link is optional.</p>
         </div>
 
         <figure class="hero-visual">
-          <img src="screenshots/hero-app.png" class="hero-shot zoomable" tabindex="0" width="1280" height="820" alt="PortPilot desktop app: a Now running strip of six page previews (examworthy-web on two branches, azureprep, statewise, solaisoft and portpilot), a port conflict strip on alight, and a crash toast for 550-au with an Ask Claude button">
+          <img src="screenshots/ui/home.png" class="hero-shot zoomable" tabindex="0" width="1440" height="760" alt="PortPilot Home: the app you used last with Open, Stop and Details, your browser profiles with page pictures, a scene picker and recently used apps, under an amber line about a blocked port">
           <div class="term" role="img" aria-label="Claude Code with the PortPilot plugin: the guard turns away a second copy of examworthy-web, a crash band offers Fix it for 550-au, and the status line shows 1 crashed and 7 up">
             <div class="term-bar"><span></span><span></span><span></span><b>claude &middot; examworthy-web</b></div>
             <div class="term-body">
@@ -200,7 +200,7 @@
             <h3>Run history</h3>
             <p>Every start, stop and crash is recorded locally, with the branch, commit and any uncommitted files. Search by app, branch or file, then re-run an old version in a sibling worktree. Claude can look a run up too, with the <code>find_run</code> tool.</p>
           </div>
-          <img src="screenshots/crop-history.png" class="crop zoomable" tabindex="0" width="1220" height="452" loading="lazy" alt="The History view: runs of examworthy-web, azureprep, statewise and examworthy-web again, each with a page thumbnail, a Running state word, the branch and commit, and buttons Open URL, Re-run this version, Copy SHA and Pin">
+          <img src="screenshots/ui/history.png" class="crop zoomable" tabindex="0" width="1440" height="900" loading="lazy" alt="The History view: a crashed run with its exit code, stopped runs and running ones with Open, each with a page thumbnail">
         </div>
         <div class="feature-row reveal">
           <div class="feature-copy">
@@ -248,7 +248,7 @@
             <h3>One profile, one port, its own sign-ins</h3>
             <p>A browser opens with <code>--remote-debugging-port=&lt;n&gt;</code>, and anything that can reach <code>127.0.0.1:&lt;n&gt;</code> can read its tabs and click in them. A PortPilot profile is a named browser with its own sign-ins and its own port, so <code>google</code> stays signed in to Search Console while <code>github</code> stays signed in to GitHub. Nothing picks a port by chance. If another program holds a profile's port, the row says which one.</p>
           </div>
-          <img src="demo/screenshots/browsers-1440.png" class="crop zoomable" tabindex="0" width="1440" height="838" loading="lazy" alt="The Browsers tab: google and github running with their open tabs, reddit and facebook stopped, and stripe flagged because another program holds its port">
+          <img src="screenshots/ui/browsers.png" class="crop zoomable" tabindex="0" width="1440" height="520" loading="lazy" alt="The Browsers screen: four named profiles with a picture of their site, a debug port and a purpose each">
         </div>
         <div class="feature-row reveal">
           <div class="feature-copy">
@@ -340,20 +340,20 @@
     <section class="section section-alt" id="download" aria-labelledby="download-heading">
       <div class="container">
         <div class="section-head">
-          <h2 id="download-heading">Download PortPilot 4.0.4</h2>
+          <h2 id="download-heading">Download PortPilot 5.0.0</h2>
           <p>Free and open source. No account and no admin rights. Install it, click Scan, then add your projects.</p>
         </div>
         <div class="downloads">
-          <a href="https://github.com/m4cd4r4/PortPilot/releases/download/v4.0.4/PortPilot-4.0.4-x64.exe" class="dl" rel="noopener">
+          <a href="https://github.com/m4cd4r4/PortPilot/releases/download/v5.0.0/PortPilot-5.0.0-x64.exe" class="dl" rel="noopener">
             <span class="dl-os">Windows</span><b>Installer</b><span class="dl-size">.exe &middot; 113 MB</span>
           </a>
-          <a href="https://github.com/m4cd4r4/PortPilot/releases/download/v4.0.4/PortPilot-4.0.4-portable.exe" class="dl" rel="noopener">
+          <a href="https://github.com/m4cd4r4/PortPilot/releases/download/v5.0.0/PortPilot-5.0.0-portable.exe" class="dl" rel="noopener">
             <span class="dl-os">Windows</span><b>Portable</b><span class="dl-size">.exe &middot; 113 MB</span>
           </a>
-          <a href="https://github.com/m4cd4r4/PortPilot/releases/download/v4.0.4/PortPilot-4.0.4-x86_64.AppImage" class="dl" rel="noopener">
+          <a href="https://github.com/m4cd4r4/PortPilot/releases/download/v5.0.0/PortPilot-5.0.0-x86_64.AppImage" class="dl" rel="noopener">
             <span class="dl-os">Linux</span><b>AppImage</b><span class="dl-size">123 MB</span>
           </a>
-          <a href="https://github.com/m4cd4r4/PortPilot/releases/download/v4.0.4/PortPilot-4.0.4-amd64.deb" class="dl" rel="noopener">
+          <a href="https://github.com/m4cd4r4/PortPilot/releases/download/v5.0.0/PortPilot-5.0.0-amd64.deb" class="dl" rel="noopener">
             <span class="dl-os">Debian / Ubuntu</span><b>.deb</b><span class="dl-size">86 MB</span>
           </a>
         </div>

@@ -8,7 +8,7 @@
 
 PortPilot runs your local dev servers and shows every port, every crash and who started each one. Connect an AI assistant (Claude Code, Cursor, Windsurf, Cline or any MCP client) and it sees the same apps you do, and reuses a running server instead of starting a second copy. It works on its own; the assistant link is optional.
 
-[![Version](https://img.shields.io/badge/version-4.0.4-blue.svg)](https://github.com/m4cd4r4/PortPilot/releases/tag/v4.0.4)
+[![Version](https://img.shields.io/badge/version-5.0.0-blue.svg)](https://github.com/m4cd4r4/PortPilot/releases/tag/v5.0.0)
 [![Tests](https://img.shields.io/badge/tests-Playwright%20E2E-blue.svg)](tests/)
 [![Licence](https://img.shields.io/badge/licence-MIT-green.svg)](LICENSE)
 [![MCP](https://img.shields.io/badge/MCP-26%20tools-purple.svg)](mcp-server/README.md)
@@ -241,10 +241,10 @@ claude mcp list   # portpilot: ... - ✓ Connected
 
 | Platform | Download |
 |----------|----------|
-| Windows installer | [PortPilot-4.0.4-x64.exe](https://github.com/m4cd4r4/PortPilot/releases/download/v4.0.4/PortPilot-4.0.4-x64.exe) (113 MB) |
-| Windows portable | [PortPilot-4.0.4-portable.exe](https://github.com/m4cd4r4/PortPilot/releases/download/v4.0.4/PortPilot-4.0.4-portable.exe) (113 MB) |
-| Linux AppImage | [PortPilot-4.0.4-x86_64.AppImage](https://github.com/m4cd4r4/PortPilot/releases/download/v4.0.4/PortPilot-4.0.4-x86_64.AppImage) (123 MB) |
-| Debian / Ubuntu | [PortPilot-4.0.4-amd64.deb](https://github.com/m4cd4r4/PortPilot/releases/download/v4.0.4/PortPilot-4.0.4-amd64.deb) (86 MB) |
+| Windows installer | [PortPilot-5.0.0-x64.exe](https://github.com/m4cd4r4/PortPilot/releases/download/v5.0.0/PortPilot-5.0.0-x64.exe) (113 MB) |
+| Windows portable | [PortPilot-5.0.0-portable.exe](https://github.com/m4cd4r4/PortPilot/releases/download/v5.0.0/PortPilot-5.0.0-portable.exe) (113 MB) |
+| Linux AppImage | [PortPilot-5.0.0-x86_64.AppImage](https://github.com/m4cd4r4/PortPilot/releases/download/v5.0.0/PortPilot-5.0.0-x86_64.AppImage) (123 MB) |
+| Debian / Ubuntu | [PortPilot-5.0.0-amd64.deb](https://github.com/m4cd4r4/PortPilot/releases/download/v5.0.0/PortPilot-5.0.0-amd64.deb) (86 MB) |
 
 macOS: build from source; it is supported but not officially tested. Install it, click Scan, then add your projects. Older builds are on [Releases](https://github.com/m4cd4r4/PortPilot/releases).
 

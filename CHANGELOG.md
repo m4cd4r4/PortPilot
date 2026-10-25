@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.0.0] - 2026-10-25
+
+### Added
+- **A new default interface.** PortPilot opens on a redesigned view built with React: a top bar with Home, Localhost, Browsers, Library, Ports and Scenes, History and Settings beside it. The classic view is one click away under Settings > Switch to classic view, and the web portal still shows it.
+- **Home.** The app you used last with Open, Stop and Details, your browser profiles as pictures, a scene to start, what's new, and Recently used with a Start button on anything stopped or crashed. Running apps that have no picture get one captured from their page.
+- **Localhost.** Every app as a card with a live preview of its page, in Gallery, Compact, List or Grouped layout. An app whose port another program holds is marked Port held.
+- **Browsers screen.** Named browser profiles as cards with the site's own picture, port, mode and purpose; Start, Stop, Edit and history from one place.
+- **Scenes.** Save a set of apps and browser profiles and start them together. Stop only stops what the scene started. Save what is running turns the current state into a scene.
+- **Command palette.** `Ctrl+K` from anywhere: start, stop or open an app, free a port, or jump to an app's history.
+- **Library, Ports and Settings.** The app table with groups, an app drawer with auto-detect, an inspector with Diagnose for crashed apps and a QR code for the LAN URL, a ports table with Kill, Open and Find a free port, and the settings in one place with a Dark, Light or System theme.
+- **Blocked ports on every screen.** One amber line names the app and what holds its port; Fix opens Ports.
+- **Browser profiles remember when they were last used,** and Home orders them by it.
+
+### Changed
+- README and website lead with the new interface, with new screenshots.
+- Plugin and MCP server versions move to 5.0.0 with the app. The 26 MCP tools are unchanged.
+
 ## [4.0.4] - 2026-10-18
 
 ### Added
