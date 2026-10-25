@@ -73,9 +73,10 @@ async function main() {
     await until(async () => (await running()).includes('app_c'), 20000, 'gamma started by the click');
     await until(() => app.evaluate(() => global.__opened.length > 0), 20000, 'a page was opened');
     check('clicking a stopped app starts it and opens its page', (await app.evaluate(() => global.__opened[0])) === `http://localhost:${pc}`);
-    await win.click('.h-recent .th-card:has-text("gamma") .th-wrap');
+    // beta has been up since the Start step and stays on the strip (gamma, just started, is now the hero).
+    await win.click('.h-recent .th-card:has-text("beta") .th-wrap');
     await until(() => app.evaluate(() => global.__opened.length > 1), 20000, 'second open');
-    check('clicking a running app just opens its page', (await app.evaluate(() => global.__opened[1])) === `http://localhost:${pc}`);
+    check('clicking a running app just opens its page', (await app.evaluate(() => global.__opened[1])) === `http://localhost:${pb}`);
 
     check('no console errors', errors.length === 0, errors.join(' | '));
   } finally {
