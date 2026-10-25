@@ -106,6 +106,10 @@ button.tile:hover { border-color: var(--acc); }
 .th { display: block; flex: 1; min-height: 0; border-radius: 8px; border: 1px solid var(--bd); background-size: cover; background-position: top; }
 .th.sel { outline: 2px solid var(--acc); outline-offset: 2px; }
 .th-wrap:hover .th { border-color: var(--acc); }
+.th-card { position: relative; display: flex; min-width: 0; min-height: 0; } .th-card .th-wrap { flex: 1; }
+.th-start { position: absolute; right: 6px; top: 6px; opacity: 0; background: var(--acc); color: var(--onacc); border: 0; border-radius: 6px; padding: 2px 9px; font-size: 12px; font-weight: 600; }
+.th-card:hover .th-start, .th-start:focus-visible { opacity: 1; }
+.scene-pick { background: var(--bg); color: var(--tx); border: 1px solid var(--bd); border-radius: 7px; padding: 2px 6px; font: inherit; font-weight: 600; max-width: 70%; }
 .cap { font-size: 11.5px; color: var(--tx2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 .h-scene { justify-content: center; } .h-scene b { font-size: 16px; }
@@ -116,7 +120,7 @@ button.tile:hover { border-color: var(--acc); }
 @media (max-width: 899px) {
   .home { grid-template-columns: 1fr; grid-template-rows: none; grid-auto-rows: auto; grid-template-areas: "hero" "browsers" "scene" "local" "news" "recent"; }
   .h-hero { min-height: 320px; } .h-browsers .th, .h-recent .th { aspect-ratio: 16 / 10; flex: none; }
-  .mini.five { grid-template-columns: repeat(3, 1fr); } .h-scene { min-height: 72px; }
+  .mini.five { grid-template-columns: repeat(3, 1fr); } .th-start { opacity: 1; } .h-scene { min-height: 72px; }
 }
 
 /* Palette. */
