@@ -123,6 +123,20 @@ export function Home({ host, t, loaded, onView, snap, thumbs, onDone }: Props) {
     ['Path', hero.app.cwd || ''],
   ] as Array<[string, string]>).filter(([, v]) => v) : [];
   const heroShot = hero ? thumbs.byApp[hero.app.id]?.url : undefined;
+  // Open an app's page; a stopped one is started first and opened as soon as it answers.
+  const openApp = (c: Card) => run(async () => {
+    const url = (port: number) => `http://localhost:${port}`;
+    // Ask the host, not the card: the card can be a poll behind.
+    const now = (await host.snapshot()).running[c.app.id]?.port;
+    if (now) { await host.openUrl(url(now)); return; }
+    await host.startApp(c.app);
+    for (let i = 0; i < 40; i++) {
+      await new Promise((r) => setTimeout(r, 750));
+      const port = (await host.snapshot()).running[c.app.id]?.port;
+      if (port) { await host.openUrl(url(port)); return; }
+    }
+    onView('localhost');
+  });
   const run = (fn: () => Promise<void>) => { fn().catch(() => { /* the card state shows what happened */ }).finally(onDone); };
 
   return (
@@ -210,7 +224,7 @@ export function Home({ host, t, loaded, onView, snap, thumbs, onDone }: Props) {
         <div className="mini five">
           {strip.map((c) => (
             <div key={c.app.id} className="th-card">
-              <button className="th-wrap" onClick={() => onView('localhost')}>
+              <button className="th-wrap" title={`Open ${c.app.name}`} onClick={() => openApp(c)}>
                 <span className="th" style={thumbs.byApp[c.app.id] ? { backgroundImage: `url(${thumbs.byApp[c.app.id].url})` } : { background: gradient(c.app.name) }} />
                 <span className="cap">{c.app.name}</span>
               </button>

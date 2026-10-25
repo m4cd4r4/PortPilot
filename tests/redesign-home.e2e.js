@@ -67,6 +67,16 @@ async function main() {
     check('Stop stops what the scene started', true);
     check('and leaves the rest alone', (await running()).includes('app_a'));
 
+    console.log('step: click a card opens its page');
+    await app.evaluate(({ shell }) => { global.__opened = []; shell.openExternal = async (u) => { global.__opened.push(u); }; });
+    await win.click('.h-recent .th-card:has-text("gamma") .th-wrap');
+    await until(async () => (await running()).includes('app_c'), 20000, 'gamma started by the click');
+    await until(() => app.evaluate(() => global.__opened.length > 0), 20000, 'a page was opened');
+    check('clicking a stopped app starts it and opens its page', (await app.evaluate(() => global.__opened[0])) === `http://localhost:${pc}`);
+    await win.click('.h-recent .th-card:has-text("gamma") .th-wrap');
+    await until(() => app.evaluate(() => global.__opened.length > 1), 20000, 'second open');
+    check('clicking a running app just opens its page', (await app.evaluate(() => global.__opened[1])) === `http://localhost:${pc}`);
+
     check('no console errors', errors.length === 0, errors.join(' | '));
   } finally {
     await h.closeApp(app);
