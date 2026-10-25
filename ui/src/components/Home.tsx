@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Host, Run, Scene, Snapshot } from '../host';
 import { ago, cards, groupOf, hueOf, type Card, type Tally, type View } from '../model';
-import { sceneSummary, startScene } from '../scenes';
+import { sceneRun, sceneSummary, startScene, stopScene } from '../scenes';
 import type { Thumbs } from '../useThumbs';
 import { useBrowserArt } from '../useBrowserMeta';
 
 interface Props { host: Host; t: Tally; loaded: boolean; onView: (v: View) => void; snap: Snapshot; thumbs: Thumbs; onDone: () => void }
 
 const KEY = 'portpilot-home-tally';
+const SCENE_KEY = 'portpilot-home-scene';
 const RELEASES = 'https://github.com/m4cd4r4/PortPilot/releases';
 type Counts = Pick<Tally, 'running' | 'apps' | 'profilesUp' | 'profiles'>;
 
@@ -56,6 +57,7 @@ export function Home({ host, t, loaded, onView, snap, thumbs, onDone }: Props) {
   const [runs, setRuns] = useState<Run[]>([]);
   const [scenes, setScenes] = useState<Scene[]>([]);
   const [sceneNote, setSceneNote] = useState('');
+  const [sceneId, setSceneId] = useState(() => { try { return localStorage.getItem(SCENE_KEY) || ''; } catch { return ''; } });
   useEffect(() => {
     let off = false;
     host.history().then((h) => { if (!off) setRuns(h.runs); }).catch(() => { /* Home still works without a history */ });
@@ -86,7 +88,17 @@ export function Home({ host, t, loaded, onView, snap, thumbs, onDone }: Props) {
     () => [...snap.profiles].sort((a, b) => Number(b.state === 'up') - Number(a.state === 'up') || (Date.parse(b.lastUsed || '') || 0) - (Date.parse(a.lastUsed || '') || 0) || a.name.localeCompare(b.name)).slice(0, 3),
     [snap.profiles],
   );
-  const scene = scenes[0];
+  const scene = scenes.find((x) => x.id === sceneId) ?? scenes[0];
+  const pickScene = (id: string) => {
+    setSceneId(id);
+    setSceneNote('');
+    try { localStorage.setItem(SCENE_KEY, id); } catch { /* storage can be unavailable */ }
+  };
+  // A scene is "on" while anything it started is still up, so the button offers Stop instead of Start.
+  const sceneOn = (() => {
+    const r = scene ? sceneRun(scene.id) : null;
+    return !!r && (r.apps.some((id) => snap.running[id]) || r.browsers.some((n) => snap.profiles.find((p) => p.name === n)?.state === 'up'));
+  })();
 
   // A running app with no picture yet gets one capture, hero first; the host throttles and a failed try is not repeated.
   const tried = useRef(new Set<string>());
@@ -111,6 +123,20 @@ export function Home({ host, t, loaded, onView, snap, thumbs, onDone }: Props) {
     ['Path', hero.app.cwd || ''],
   ] as Array<[string, string]>).filter(([, v]) => v) : [];
   const heroShot = hero ? thumbs.byApp[hero.app.id]?.url : undefined;
+  // Open an app's page; a stopped one is started first and opened as soon as it answers.
+  const openApp = (c: Card) => run(async () => {
+    const url = (port: number) => `http://localhost:${port}`;
+    // Ask the host, not the card: the card can be a poll behind.
+    const now = (await host.snapshot()).running[c.app.id]?.port;
+    if (now) { await host.openUrl(url(now)); return; }
+    await host.startApp(c.app);
+    for (let i = 0; i < 40; i++) {
+      await new Promise((r) => setTimeout(r, 750));
+      const port = (await host.snapshot()).running[c.app.id]?.port;
+      if (port) { await host.openUrl(url(port)); return; }
+    }
+    onView('localhost');
+  });
   const run = (fn: () => Promise<void>) => { fn().catch(() => { /* the card state shows what happened */ }).finally(onDone); };
 
   return (
@@ -166,12 +192,16 @@ export function Home({ host, t, loaded, onView, snap, thumbs, onDone }: Props) {
         <span className="tile-title">Scene</span>
         {scene ? (
           <>
-            <b>{scene.name}</b>
+            {scenes.length > 1
+              ? <select className="scene-pick" aria-label="Scene" value={scene.id} onChange={(e) => pickScene(e.target.value)}>{scenes.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}</select>
+              : <b>{scene.name}</b>}
             <span className="tile-sub">{sceneNote || sceneSummary(scene)}</span>
-            <button className="primary" onClick={() => run(async () => {
-              const r = await startScene(host, scene);
-              setSceneNote(r.failed.length ? `${r.failed.length} could not start` : `Started ${r.started.length}`);
-            })}>Start</button>
+            {sceneOn
+              ? <button className="primary" onClick={() => run(async () => { setSceneNote(`Stopped ${(await stopScene(host, scene)).length}`); })}>Stop</button>
+              : <button className="primary" onClick={() => run(async () => {
+                const r = await startScene(host, scene);
+                setSceneNote(r.failed.length ? `${r.failed.length} could not start` : `Started ${r.started.length}`);
+              })}>Start</button>}
           </>
         ) : (
           <>
@@ -193,10 +223,13 @@ export function Home({ host, t, loaded, onView, snap, thumbs, onDone }: Props) {
         <span className="tile-title">Recently used</span>
         <div className="mini five">
           {strip.map((c) => (
-            <button key={c.app.id} className="th-wrap" onClick={() => onView('localhost')}>
-              <span className="th" style={thumbs.byApp[c.app.id] ? { backgroundImage: `url(${thumbs.byApp[c.app.id].url})` } : { background: gradient(c.app.name) }} />
-              <span className="cap">{c.app.name}</span>
-            </button>
+            <div key={c.app.id} className="th-card">
+              <button className="th-wrap" title={`Open ${c.app.name}`} onClick={() => openApp(c)}>
+                <span className="th" style={thumbs.byApp[c.app.id] ? { backgroundImage: `url(${thumbs.byApp[c.app.id].url})` } : { background: gradient(c.app.name) }} />
+                <span className="cap">{c.app.name}</span>
+              </button>
+              {c.state !== 'running' && <button className="th-start" aria-label={`Start ${c.app.name}`} onClick={() => run(() => host.startApp(c.app))}>Start</button>}
+            </div>
           ))}
           {strip.length === 0 && <span className="tile-sub">Apps you run will show up here</span>}
         </div>

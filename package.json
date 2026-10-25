@@ -40,7 +40,7 @@
     "prebuild:all-platforms": "npm run build:ui",
     "predist": "npm run build:ui",
     "prebuild:linux": "npm run build:ui",
-    "test:e2e:ui": "npm run build:ui && node tests/redesign-shell.e2e.js && node tests/redesign-localhost.e2e.js && node tests/redesign-browsers.e2e.js && node tests/redesign-wave4.e2e.js && node tests/redesign-polish.e2e.js && node tests/redesign-scenes.e2e.js"
+    "test:e2e:ui": "npm run build:ui && node tests/redesign-shell.e2e.js && node tests/redesign-localhost.e2e.js && node tests/redesign-browsers.e2e.js && node tests/redesign-wave4.e2e.js && node tests/redesign-polish.e2e.js && node tests/redesign-scenes.e2e.js && node tests/redesign-home.e2e.js"
   },
   "keywords": [
     "ports",
