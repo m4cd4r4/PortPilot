@@ -40,7 +40,7 @@ The first screen shows what you were just doing: the app you used last with Open
 
 Every app as a card with a live preview of its page, running first and stopped ones below. Switch between Gallery, Compact, List and Grouped. An app another program is holding the port of is marked **Port held**.
 
-![Localhost: running apps with live page previews, one app marked Port held](docs/screenshots/ui/localhost.png)
+![Localhost: running sites with live page previews, one app marked Port held](docs/screenshots/ui/localhost.png)
 
 ### History
 
@@ -52,7 +52,7 @@ Every run is recorded with its state, port, time and the page it served; a crash
 
 `Ctrl+K` from anywhere: type an app, a port or a profile and start it, stop it, open it or jump to its history.
 
-![Command palette filtering to harbor-web with Stop, Open in browser and History actions](docs/screenshots/ui/palette.png)
+![Command palette filtering to examworthy with Stop, Open in browser and History actions](docs/screenshots/ui/palette.png)
 
 ### Scenes
 
