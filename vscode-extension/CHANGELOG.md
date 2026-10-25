@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- Browsers is now the second section of the sidebar, right under Apps, instead of the last. VS Code keeps the order you already have; to apply it, right-click the PortPilot sidebar and choose Reset View Locations.
+
 ## [4.0.6] - 2026-10-17
 
 - Wording is no longer Claude-only: crash toasts and tooltips say an AI assistant started an app, and the description and README lead with the product, not one assistant.

@@ -36,16 +36,16 @@
           "name": "Apps"
         },
         {
+          "id": "portpilot.browsers",
+          "name": "Browsers"
+        },
+        {
           "id": "portpilot.activePorts",
           "name": "Active Ports"
         },
         {
           "id": "portpilot.history",
           "name": "History"
-        },
-        {
-          "id": "portpilot.browsers",
-          "name": "Browsers"
         }
       ]
     },
