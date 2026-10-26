@@ -48,8 +48,10 @@ async function main() {
     await until(() => win.evaluate(() => !!document.querySelector('.topbar')), 20000, 'new top bar');
 
     console.log('step: library lists and adds');
-    await win.click('role=tab[name="Library"]');
-    check('Library tab opens its screen', (await tabOn()) === 'Library');
+    await win.click('role=button[name="More ▾"]');
+    await win.click('role=menuitem[name="Library"]');
+    await win.waitForSelector('table.library');
+    check('Library opens from More', await win.evaluate(() => !!document.querySelector('.more button.on')));
     await until(async () => (await rowNames()).includes('shop'), 10000, 'shop listed');
     await win.click('role=button[name="Add app"]');
     await win.fill('input[placeholder="My app"]', 'second');
@@ -85,14 +87,15 @@ async function main() {
     await shot('library');
 
     console.log('step: grouped Localhost uses the stored group field');
-    await win.click('role=tab[name="Localhost"]');
+    await win.click('role=tab[name="Apps"]');
     await win.click('role=button[name="Grouped"]');
     await until(() => win.evaluate(() => [...document.querySelectorAll('.group-h')].some((e) => e.textContent.startsWith('Work'))), 10000, 'Work heading');
     check('Grouped mode shows the Work group', true);
     await win.click('role=button[name="Gallery"]');
 
     console.log('step: start, details, ports');
-    await win.click('role=tab[name="Library"]');
+    await win.click('role=button[name="More ▾"]');
+    await win.click('role=menuitem[name="Library"]');
     await win.click('tr[data-app="app_shop"] >> role=button[name="Start"]');
     await until(() => win.evaluate(async () => (await window.portpilot.process.list()).apps.some((a) => a.id === 'app_shop' && a.running)), 15000, 'shop running');
     await win.click('tr[data-app="app_shop"] >> role=button[name="Details"]');
@@ -116,7 +119,8 @@ async function main() {
     check('the second click frees the port', true);
 
     console.log('step: delete');
-    await win.click('role=tab[name="Library"]');
+    await win.click('role=button[name="More ▾"]');
+    await win.click('role=menuitem[name="Library"]');
     await win.click('tr[data-app="' + saved.id + '"] >> role=button[name="Edit"]');
     await win.click('role=button[name="Delete app"]');
     await win.click('role=button[name="Yes, delete"]');

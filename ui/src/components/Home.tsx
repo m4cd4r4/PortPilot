@@ -9,15 +9,7 @@ interface Props { host: Host; t: Tally; loaded: boolean; onView: (v: View) => vo
 
 const KEY = 'portpilot-home-tally';
 const SCENE_KEY = 'portpilot-home-scene';
-const RELEASES = 'https://github.com/m4cd4r4/PortPilot/releases';
 type Counts = Pick<Tally, 'running' | 'apps' | 'profilesUp' | 'profiles'>;
-
-/** Short, in-window highlights; the full list is the GitHub releases page. */
-const NEWS: Array<{ tag: 'NEW' | 'FIX'; text: string }> = [
-  { tag: 'NEW', text: 'Scenes: start a set of apps and browsers together' },
-  { tag: 'NEW', text: 'Ctrl+K command palette' },
-  { tag: 'FIX', text: 'The blocked-port banner opens Ports' },
-];
 
 function lastCounts(): Counts | null {
   try {
@@ -140,13 +132,7 @@ export function Home({ host, t, loaded, onView, snap, thumbs, onDone }: Props) {
   const run = (fn: () => Promise<void>) => { fn().catch(() => { /* the card state shows what happened */ }).finally(onDone); };
 
   return (
-    <section className={`home${loaded ? '' : last ? ' stale' : ' loading'}`} aria-label="Home" aria-busy={!loaded}>
-      <button className="tile h-local" onClick={() => onView('localhost')}>
-        <span className="tile-title">Localhost</span>
-        <span className="tile-count">{num(t.running, 'running')}<small> running</small></span>
-        <span className="tile-sub">{num(t.apps, 'apps')} apps registered</span>
-      </button>
-
+    <section className={`home${scene ? ' has-scene' : ''}${loaded ? '' : last ? ' stale' : ' loading'}`} aria-label="Home" aria-busy={!loaded}>
       <div className="tile h-hero" style={{ background: heroShot ? undefined : hero ? gradient(hero.app.name) : undefined }}>
         {heroShot && <img className="hero-shot" src={heroShot} alt="" />}
         {hero ? (
@@ -188,9 +174,9 @@ export function Home({ host, t, loaded, onView, snap, thumbs, onDone }: Props) {
         </div>
       </div>
 
+      {scene && (
       <div className="tile h-scene">
         <span className="tile-title">Scene</span>
-        {scene ? (
           <>
             {scenes.length > 1
               ? <select className="scene-pick" aria-label="Scene" value={scene.id} onChange={(e) => pickScene(e.target.value)}>{scenes.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}</select>
@@ -203,21 +189,8 @@ export function Home({ host, t, loaded, onView, snap, thumbs, onDone }: Props) {
                 setSceneNote(r.failed.length ? `${r.failed.length} could not start` : `Started ${r.started.length}`);
               })}>Start</button>}
           </>
-        ) : (
-          <>
-            <b>No scenes yet</b>
-            <button className="primary" onClick={() => onView('scenes')}>Create</button>
-          </>
-        )}
       </div>
-
-      <div className="tile h-news">
-        <div className="tile-head">
-          <span className="tile-title">What's new</span>
-          <button className="link" onClick={() => run(() => host.openUrl(RELEASES))}>Release notes</button>
-        </div>
-        <ul>{NEWS.map((n) => <li key={n.text}><span className={`tag ${n.tag}`}>{n.tag}</span>{n.text}</li>)}</ul>
-      </div>
+      )}
 
       <div className="tile h-recent">
         <span className="tile-title">Recently used</span>

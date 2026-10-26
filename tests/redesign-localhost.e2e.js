@@ -42,7 +42,7 @@ async function main() {
 
   try {
     await until(() => win.evaluate(() => !!document.querySelector('.topbar')), 20000, 'new top bar');
-    await win.click('role=tab[name="Localhost"]');
+    await win.click('role=tab[name="Apps"]');
     await until(() => win.locator('.card').count().then((n) => n === 3), 15000, 'three cards');
     check('one card per registered app', true);
     check('the gallery is the default mode', (await modeClass()).includes('gallery'));
@@ -91,7 +91,7 @@ async function main() {
     await win.click('role=button[name="List"]');
     await win.reload();
     await until(() => win.locator('.topbar').count().then((n) => n === 1), 20000, 'reloaded');
-    await win.click('role=tab[name="Localhost"]');
+    await win.click('role=tab[name="Apps"]');
     await until(() => win.locator('.card').count().then((n) => n === 3), 15000, 'cards after reload');
     check('the chosen mode survives a reload', (await modeClass()).includes('list'));
     await win.click('role=button[name="Gallery"]');
@@ -110,13 +110,14 @@ async function main() {
     check('a held port badges its card', (await card('app_blocked').locator('.badge').textContent()) === 'Port held');
 
     console.log('step: history');
-    await win.click('role=button[name="History"]');
+    await win.click('role=button[name="More ▾"]');
+    await win.click('role=menuitem[name="History"]');
     await until(() => win.locator('.run').count().then((n) => n >= 1), 30000, 'a run in the timeline');
     check('History lists the shop run', (await win.locator('.run .name').allTextContents()).some((t) => /shop/i.test(t)));
     check('runs sit under a day heading', (await win.locator('.history-view .group-h').count()) >= 1);
     check('the run shows the page title', (await win.locator('.run').first().textContent()).includes('Shop demo'));
-    await win.click('role=button[name="History"]');
-    check('the History button toggles back to Home', await win.evaluate(() => document.querySelector('[role="tab"][aria-selected="true"]')?.textContent === 'Home'));
+    await win.click('role=tab[name="Home"]');
+    check('the Home tab leaves History', await win.evaluate(() => document.querySelector('[role="tab"][aria-selected="true"]')?.textContent === 'Home'));
 
     check('no console errors', errors.length === 0, errors.join(' | '));
   } finally {

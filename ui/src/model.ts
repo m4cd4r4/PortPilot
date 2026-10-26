@@ -1,14 +1,18 @@
 import type { AppRec, Profile, Snapshot } from './host';
 
 export type View = 'home' | 'localhost' | 'browsers' | 'library' | 'ports' | 'scenes' | 'history' | 'settings';
-/** The sections in the segmented control; History and Settings have their own top-bar buttons. */
+/** The sections in the segmented control; the rest are under More, and Settings has its own button. */
 export const VIEWS: Array<{ view: View; label: string }> = [
   { view: 'home', label: 'Home' },
-  { view: 'localhost', label: 'Localhost' },
+  { view: 'localhost', label: 'Apps' },
   { view: 'browsers', label: 'Browsers' },
-  { view: 'library', label: 'Library' },
   { view: 'ports', label: 'Ports' },
+];
+/** Occasional screens: under the More menu in the top bar, and still one Ctrl+K away. */
+export const MORE_VIEWS: Array<{ view: View; label: string }> = [
+  { view: 'library', label: 'Library' },
   { view: 'scenes', label: 'Scenes' },
+  { view: 'history', label: 'History' },
 ];
 
 export interface Tally { running: number; apps: number; profilesUp: number; profiles: number; warnings: string[] }
