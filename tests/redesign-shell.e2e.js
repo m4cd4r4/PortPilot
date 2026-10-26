@@ -84,7 +84,7 @@ async function main() {
     await until(() => running('app_shop'), 15000, 'shop running');
     await until(() => win.evaluate(() => /Stop/.test(document.querySelector('.h-hero')?.textContent || '')), 15000, 'hero offers Stop');
     check('the hero follows the running app and offers Stop', await win.evaluate(() => document.querySelector('.h-hero h2').textContent === 'shop'));
-    await until(() => win.evaluate(() => !!document.querySelector('.h-hero img.hero-shot')), 40000, 'hero picture');
+    await until(() => win.evaluate(() => (document.querySelector('.h-hero .row-th')?.style.backgroundImage || '').includes('url(')), 40000, 'hero picture');
     check('a running app with no picture gets one captured on Home', true);
 
     await openPalette();

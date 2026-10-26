@@ -8,6 +8,7 @@ import { useBrowserArt } from '../useBrowserMeta';
 interface Props { host: Host; t: Tally; loaded: boolean; onView: (v: View) => void; snap: Snapshot; thumbs: Thumbs; onDone: () => void }
 
 const KEY = 'portpilot-home-tally';
+const RUN_ROWS = 5;
 const SCENE_KEY = 'portpilot-home-scene';
 type Counts = Pick<Tally, 'running' | 'apps' | 'profilesUp' | 'profiles'>;
 
@@ -71,6 +72,10 @@ export function Home({ host, t, loaded, onView, snap, thumbs, onDone }: Props) {
     const up = byRecent(top.filter((c) => c.state === 'running'));
     return up[0] ?? byRecent(top.filter((c) => recent.has(c.app.id)))[0] ?? top[0];
   }, [all, recent]);
+  const runningList = useMemo(() => {
+    const up = all.filter((c) => !c.app.parentId && c.state === 'running');
+    return [...up].sort((a, b) => Date.parse(recent.get(b.app.id) || '') - Date.parse(recent.get(a.app.id) || '') || 0);
+  }, [all, recent]);
   const strip = useMemo(() => {
     const byId = new Map(all.map((c) => [c.app.id, c]));
     return [...recent.keys()].map((id) => byId.get(id)).filter((c): c is Card => !!c && !c.app.parentId && c.app.id !== hero?.app.id).slice(0, 5);
@@ -133,27 +138,36 @@ export function Home({ host, t, loaded, onView, snap, thumbs, onDone }: Props) {
 
   return (
     <section className={`home${scene ? ' has-scene' : ''}${loaded ? '' : last ? ' stale' : ' loading'}`} aria-label="Home" aria-busy={!loaded}>
-      <div className="tile h-hero" style={{ background: heroShot ? undefined : hero ? gradient(hero.app.name) : undefined }}>
-        {heroShot && <img className="hero-shot" src={heroShot} alt="" />}
+      <div className="tile h-hero">
         {hero ? (
-          <div className="hero-shade">
-            <span className="hero-live">{hero.state === 'running' ? `${t.running} running, most recent` : 'Last used'}</span>
-            <h2>{hero.app.name}</h2>
-            <dl className="facts">
-              {facts.map(([k, v]) => <div key={k}><dt>{k}</dt><dd title={v}>{v}</dd></div>)}
-            </dl>
-            <div className="hero-actions">
-              {hero.state === 'running' && hero.port
-                ? <button className="primary" onClick={() => run(() => host.openUrl(`http://localhost:${hero.port}`))}>Open</button>
-                : <button className="primary" onClick={() => run(() => host.startApp(hero.app))}>Start</button>}
-              {hero.state === 'running' && <button onClick={() => run(() => host.stopApp(hero.app.id))}>Stop</button>}
-              <button onClick={() => onView('localhost')}>Details</button>
-            </div>
-          </div>
+          <>
+            <span className="tile-title">{runningList.length ? `Running, ${runningList.length} of ${t.apps} apps` : 'Last used'}</span>
+            {(runningList.length ? runningList.slice(0, RUN_ROWS) : [hero]).map((c) => {
+              const shot = thumbs.byApp[c.app.id]?.url;
+              const last = lastRunText(recent.get(c.app.id));
+              return (
+                <div className="run-row" key={c.app.id}>
+                  <span className="th row-th" style={shot ? { backgroundImage: `url(${shot})` } : { background: gradient(c.app.name) }} />
+                  <div className="row-main">
+                    <h2><span className={`dot${c.state === 'running' ? ' on' : ''}`} />{c.app.name}</h2>
+                    <span className="tile-sub">{[c.port ? `:${c.port}` : '', last ? (c.state === 'running' ? `started ${last}` : `last run ${last}`) : ''].filter(Boolean).join(' · ')}</span>
+                  </div>
+                  <div className="row-actions">
+                    {c.state === 'running' && c.port
+                      ? <button className="primary" onClick={() => run(() => host.openUrl(`http://localhost:${c.port}`))}>Open</button>
+                      : <button className="primary" onClick={() => run(() => host.startApp(c.app))}>Start</button>}
+                    {c.state === 'running' && <button onClick={() => run(() => host.stopApp(c.app.id))}>Stop</button>}
+                    <button onClick={() => onView('localhost')}>Details</button>
+                  </div>
+                </div>
+              );
+            })}
+            {runningList.length > RUN_ROWS && <button className="link more-link" onClick={() => onView('localhost')}>+{runningList.length - RUN_ROWS} more running</button>}
+          </>
         ) : (
-          <div className="hero-shade">
-            <h2>No apps yet</h2>
-            <div className="hero-actions"><button className="primary" onClick={() => onView('library')}>Add an app</button></div>
+          <div className="run-row">
+            <div className="row-main"><h2>No apps yet</h2></div>
+            <div className="row-actions"><button className="primary" onClick={() => onView('library')}>Add an app</button></div>
           </div>
         )}
       </div>
