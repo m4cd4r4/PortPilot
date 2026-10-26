@@ -361,6 +361,8 @@ const serve = async (server) => { const port = await listen(server); cleanup.pus
       setStatusBarMessage: (m) => { status.push(m); return { dispose() {} }; },
     },
     commands: { registerCommand: (id, fn) => { registered.set(id, fn); return { dispose() {} }; } },
+    // The profile rows read portpilot.browserPreviews to tag each one for the Show/Hide Preview menu.
+    workspace: { getConfiguration: () => ({ get: () => undefined }) },
     env: { clipboard: { writeText: async (x) => { clip.text = x; } } },
   };
   const origLoad = Module._load;
@@ -407,7 +409,7 @@ const serve = async (server) => { const port = await listen(server); cleanup.pus
     await settle(provider);
     const kids = provider.getChildren();
     assert.deepEqual(kids.map((k) => k.label), ['shop', 'taken', 'idle']);
-    assert.deepEqual(kids.map((k) => k.contextValue), ['bprofile bup', 'bprofile bheld', 'bprofile bdown']);
+    assert.deepEqual(kids.map((k) => k.contextValue), ['bprofile bup bprevoff', 'bprofile bheld bprevoff', 'bprofile bdown bprevoff']);
     assert.equal(kids[0].description, `:${portA} · offscreen · brave`);
     assert.equal(kids[0].collapsibleState, 1); // collapsed, has tabs
     assert.equal(kids[2].collapsibleState, 0);
@@ -443,7 +445,7 @@ const serve = async (server) => { const port = await listen(server); cleanup.pus
     await provider.update();
     await settle(provider);
     assert.ok(provider._onDidChangeTreeData.fired > fired);
-    assert.equal(provider.getChildren().find((k) => k.label === 'shop').contextValue, 'bprofile bdown');
+    assert.equal(provider.getChildren().find((k) => k.label === 'shop').contextValue, 'bprofile bdown bprevoff');
     assert.ok(apiCalls.length > calls);
     // bring it back on the same port for the command tests
     await new Promise((r) => cdpA.server.listen(portA, '127.0.0.1', r));

@@ -40,6 +40,12 @@
           "name": "Browsers"
         },
         {
+          "id": "portpilot.browserPreviews",
+          "name": "Browser Previews",
+          "type": "webview",
+          "when": "portpilot.hasBrowserPreviews"
+        },
+        {
           "id": "portpilot.activePorts",
           "name": "Active Ports"
         },
@@ -243,6 +249,18 @@
         "category": "PortPilot"
       },
       {
+        "command": "portpilot.showBrowserPreview",
+        "title": "Show Preview",
+        "icon": "$(eye)",
+        "category": "PortPilot"
+      },
+      {
+        "command": "portpilot.hideBrowserPreview",
+        "title": "Hide Preview",
+        "icon": "$(eye-closed)",
+        "category": "PortPilot"
+      },
+      {
         "command": "portpilot.focusBrowserTab",
         "title": "Focus Tab",
         "icon": "$(browser)",
@@ -283,6 +301,13 @@
           "type": "boolean",
           "default": true,
           "description": "Sort running and crashed apps first and fold stopped apps into a collapsed \"Stopped (N)\" node at the end of each list."
+        },
+        "portpilot.browserPreviews": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": [],
+          "scope": "machine",
+          "markdownDescription": "Browser profiles that show a live picture of their front page in the **Browser Previews** view. Off for every profile until you choose **Show Preview** on it. A preview reads the page through that profile's debug port, so it shows whatever the page shows, including signed-in pages. Pictures stay in memory and are never saved or sent anywhere."
         },
         "portpilot.rowPreviews": {
           "type": "boolean",
@@ -486,6 +511,16 @@
           "group": "2_open@1"
         },
         {
+          "command": "portpilot.showBrowserPreview",
+          "when": "view == portpilot.browsers && viewItem =~ /bprofile/ && viewItem =~ /bprevoff/",
+          "group": "2_open@2"
+        },
+        {
+          "command": "portpilot.hideBrowserPreview",
+          "when": "view == portpilot.browsers && viewItem =~ /bprofile/ && viewItem =~ /bprevon/",
+          "group": "2_open@2"
+        },
+        {
           "command": "portpilot.copyBrowserCdp",
           "when": "view == portpilot.browsers && viewItem =~ /bprofile/",
           "group": "3_copy@1"
@@ -532,6 +567,14 @@
         },
         {
           "command": "portpilot.openHistoryFolder",
+          "when": "false"
+        },
+        {
+          "command": "portpilot.showBrowserPreview",
+          "when": "false"
+        },
+        {
+          "command": "portpilot.hideBrowserPreview",
           "when": "false"
         },
         {

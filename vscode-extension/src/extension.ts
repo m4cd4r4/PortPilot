@@ -12,7 +12,8 @@ import { killPort } from './portScanner';
 import { appIdByPort, newCrashes, CrashStamp } from './treeModel';
 import { HistoryTreeProvider } from './historyTreeProvider';
 import { registerHistoryCommands } from './historyCommands';
-import { BrowsersTreeProvider } from './browsersTreeProvider';
+import { BrowsersTreeProvider, BrowserProfileItem } from './browsersTreeProvider';
+import { BrowserPreviewView } from './browserPreviewView';
 import { registerBrowserCommands } from './browserCommands';
 import { WebPortal } from './webPortal';
 
@@ -37,6 +38,16 @@ export function activate(context: vscode.ExtensionContext) {
   const browsersView = vscode.window.createTreeView('portpilot.browsers', { treeDataProvider: browsersProvider });
   context.subscriptions.push(browsersView, browsersProvider, browsersView.onDidChangeVisibility(e => browsersProvider.setVisible(e.visible)));
   browsersProvider.setVisible(browsersView.visible);
+
+  // Browser previews: opt-in per profile, so the view and its page reads exist only once one is on.
+  const previewView = new BrowserPreviewView(browsersProvider);
+  context.subscriptions.push(
+    previewView,
+    vscode.window.registerWebviewViewProvider(BrowserPreviewView.viewId, previewView, { webviewOptions: { retainContextWhenHidden: true } }),
+    vscode.workspace.onDidChangeConfiguration(e => { if (e.affectsConfiguration('portpilot.browserPreviews')) browsersProvider.repaint(); }),
+    vscode.commands.registerCommand('portpilot.showBrowserPreview', (item: unknown) => item instanceof BrowserProfileItem ? BrowserPreviewView.setPreview(item.row.name, true) : undefined),
+    vscode.commands.registerCommand('portpilot.hideBrowserPreview', (item: unknown) => item instanceof BrowserProfileItem ? BrowserPreviewView.setPreview(item.row.name, false) : undefined),
+  );
 
   // "Stopped (N)" folding: setting-backed, with a view-title toggle whose icon
   // follows the portpilot.foldStopped context key.
