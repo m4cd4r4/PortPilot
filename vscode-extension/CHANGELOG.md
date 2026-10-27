@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+- New opt-in Browser Previews view: a small picture of each chosen browser profile's front page, taken over the debug port (no desktop app needed). Right-click a profile in Browsers and choose Show Preview. Off by default, because a picture can show a signed-in page; stored in the machine-scoped setting `portpilot.browserPreviews`. Each profile is captured at most every 30 seconds, one at a time.
+
+- Browsers is now the second section of the sidebar, right under Apps, instead of the last. VS Code keeps the order you already have; to apply it, right-click the PortPilot sidebar and choose Reset View Locations.
+
 ## [4.0.6] - 2026-10-17
 
 - Wording is no longer Claude-only: crash toasts and tooltips say an AI assistant started an app, and the description and README lead with the product, not one assistant.

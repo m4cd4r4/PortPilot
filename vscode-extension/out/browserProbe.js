@@ -8,6 +8,7 @@ const browserModel_1 = require("./browserModel");
 // Everything here talks to 127.0.0.1 on a profile's own debug port and nothing else.
 // It reads target titles and URLs from /json; it never opens a tab's websocket, so no
 // page content is read. The only writes are the two explicit commands below.
+// Page content is read in one place only: browserCapture.ts, for profiles with previews switched on.
 const PROBE_MS = 1200;
 const MAX_BODY = 2_000_000;
 const HOST = '127.0.0.1';

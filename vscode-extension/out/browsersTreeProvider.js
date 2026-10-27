@@ -38,6 +38,7 @@ const vscode = __importStar(require("vscode"));
 const config_1 = require("./config");
 const browserModel_1 = require("./browserModel");
 const browserProbe_1 = require("./browserProbe");
+const previewModel_1 = require("./previewModel");
 // Same vocabulary as the Apps rows: running / stopped / port held. Shape carries the
 // meaning, colour reinforces it.
 const STATE_ICONS = {
@@ -60,7 +61,8 @@ class BrowserProfileItem extends vscode.TreeItem {
         this.description = row.description;
         this.tooltip = row.tooltip.join('\n');
         // Tokens, not one word: the menus match each with a regex (package.json "when").
-        this.contextValue = ['bprofile', row.state === 'running' ? 'bup' : row.state === 'held' ? 'bheld' : 'bdown'].join(' ');
+        const previewOn = (0, previewModel_1.hasPreview)((0, previewModel_1.parsePreviewNames)(vscode.workspace.getConfiguration('portpilot').get('browserPreviews')), row.name);
+        this.contextValue = ['bprofile', row.state === 'running' ? 'bup' : row.state === 'held' ? 'bheld' : 'bdown', previewOn ? 'bprevon' : 'bprevoff'].join(' ');
     }
 }
 exports.BrowserProfileItem = BrowserProfileItem;
@@ -93,7 +95,12 @@ class BrowsersTreeProvider {
     call;
     _onDidChangeTreeData = new vscode.EventEmitter();
     onDidChangeTreeData = this._onDidChangeTreeData.event;
+    _onDidChangeRows = new vscode.EventEmitter();
+    /** Fires when the rows move, for the previews view that shares this data. */
+    onDidChangeRows = this._onDidChangeRows.event;
     visible = false;
+    /** The previews view is on screen; it needs fresh rows even while the tree is collapsed. */
+    previewing = false;
     rows = [];
     /** What the tree last drew; a poll repaints only when it moves. */
     drawn = '';
@@ -115,9 +122,21 @@ class BrowsersTreeProvider {
         if (visible)
             void this.poll(true);
     }
-    /** The existing 10 s refresh calls this; it does nothing while the view is hidden. */
+    /** Redraw the rows as they are (the preview setting changed); no new look at the browsers. */
+    repaint() {
+        this._onDidChangeTreeData.fire(undefined);
+    }
+    /** The previews view's visibility; it keeps the rows fresh like the tree does. */
+    setPreviewing(previewing) {
+        if (previewing === this.previewing)
+            return;
+        this.previewing = previewing;
+        if (previewing && !this.visible)
+            void this.poll(true);
+    }
+    /** The existing 10 s refresh calls this; it does nothing while neither view is on screen. */
     async update() {
-        if (this.visible)
+        if (this.visible || this.previewing)
             await this.poll(false);
     }
     /** Title-bar Refresh and after any action: look again and re-read the API. */
@@ -181,6 +200,7 @@ class BrowsersTreeProvider {
                 this.rows = rows;
                 this.drawn = sig;
                 this._onDidChangeTreeData.fire(undefined);
+                this._onDidChangeRows.fire();
             }
         }
         catch {
@@ -215,6 +235,7 @@ class BrowsersTreeProvider {
     }
     dispose() {
         this._onDidChangeTreeData.dispose();
+        this._onDidChangeRows.dispose();
     }
 }
 exports.BrowsersTreeProvider = BrowsersTreeProvider;
