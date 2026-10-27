@@ -46,7 +46,8 @@ async function main() {
     await until(() => win.evaluate(() => !!document.querySelector('.topbar')), 20000, 'new top bar');
 
     console.log('step: empty state');
-    await win.click('role=tab[name="Scenes"]');
+    await win.click('role=button[name="More ▾"]');
+    await win.click('role=menuitem[name="Scenes"]');
     await until(() => win.evaluate(() => !!document.querySelector('.scenes-view')), 10000, 'scenes screen');
     check('Save what is running is disabled with nothing up', await win.locator('role=button[name="Save what is running"]').isDisabled());
     await until(async () => (await win.locator('.empty-note').count()) === 1, 10000, 'empty note');
@@ -64,12 +65,14 @@ async function main() {
     await until(() => win.evaluate(() => !!document.querySelector('article.scene')), 10000, 'scene card');
 
     console.log('step: start with a blocked port');
-    await win.click('role=tab[name="Library"]');
+    await win.click('role=button[name="More ▾"]');
+    await win.click('role=menuitem[name="Library"]');
     await win.click('tr[data-app="app_c"] >> role=button[name="Start"]');
     await until(async () => (await running()).includes('app_c'), 15000, 'gamma started by hand');
     held = h.holdPort(pb);
     await until(async () => fetch(`http://127.0.0.1:${pb}`).then((r) => r.ok, () => false), 10000, 'port held');
-    await win.click('role=tab[name="Scenes"]');
+    await win.click('role=button[name="More ▾"]');
+    await win.click('role=menuitem[name="Scenes"]');
     await until(() => win.locator('role=button[name="Save what is running"]').isEnabled(), 15000, 'capture enabled');
     check('Save what is running is enabled once something is up', true);
     await win.click(`article[data-scene="${sc.id}"] >> role=button[name="Start"]`);
@@ -82,7 +85,8 @@ async function main() {
     await win.click('.banner >> role=button[name="Fix"]');
     await until(() => win.evaluate(() => document.querySelector('[role="tab"][aria-selected="true"]')?.textContent === 'Ports'), 10000, 'Ports tab');
     check('Fix on the blocked banner opens Ports, not the palette', true);
-    await win.click('role=tab[name="Scenes"]');
+    await win.click('role=button[name="More ▾"]');
+    await win.click('role=menuitem[name="Scenes"]');
 
     console.log('step: stop only what the scene started');
     await win.click(`article[data-scene="${sc.id}"] >> role=button[name="Stop"]`);

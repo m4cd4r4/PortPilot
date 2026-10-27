@@ -52,11 +52,11 @@ async function main() {
     await until(() => win.evaluate(() => !!document.querySelector('.topbar')), 20000, 'new top bar');
     check('the new UI is on screen, not the v4 sidebar', await win.evaluate(() => !document.getElementById('v4-sidebar')));
     check('Home is the first screen', (await tabOn()) === 'Home');
-    await until(() => win.evaluate(() => document.querySelector('.home .tile-sub')?.textContent.startsWith('3')), 15000, 'tile counts load');
-    check('Localhost tile counts 0 running of 3 apps', await win.evaluate(() => document.querySelector('.home .tile .tile-count').textContent.startsWith('0')));
+    await until(() => win.evaluate(() => /Start/.test(document.querySelector('.h-hero')?.textContent || '')), 15000, 'home loads');
+    check('Home has no Localhost or news tile', await win.evaluate(() => !document.querySelector('.h-local') && !document.querySelector('.h-news')));
     check('the hero names an app and offers Start', await win.evaluate(() => { const h = document.querySelector('.h-hero'); return !!h?.querySelector('h2')?.textContent && /Start/.test(h.textContent); }));
     check('Home fits the window without scrolling', await win.evaluate(() => { const m = document.querySelector('.main'); return m.scrollHeight <= m.clientHeight + 1; }));
-    check('the Scene and Recently used cards are there', await win.evaluate(() => !!document.querySelector('.h-scene') && !!document.querySelector('.h-recent')));
+    check('Recently used is there and the Scene card waits for a scene', await win.evaluate(() => !!document.querySelector('.h-recent') && !document.querySelector('.h-scene')));
 
     console.log('step: segmented control');
     await win.click('role=tab[name="Browsers"]');
@@ -82,11 +82,9 @@ async function main() {
     await until(async () => !(await paletteOpen()), 15000, 'palette closes after Enter');
     check('Enter runs it and closes the palette', true);
     await until(() => running('app_shop'), 15000, 'shop running');
-    await until(() => win.evaluate(() => document.querySelector('.home .tile .tile-count').textContent.startsWith('1')), 15000, 'tile shows 1 running');
-    check('the Localhost tile now counts 1 running', true);
     await until(() => win.evaluate(() => /Stop/.test(document.querySelector('.h-hero')?.textContent || '')), 15000, 'hero offers Stop');
     check('the hero follows the running app and offers Stop', await win.evaluate(() => document.querySelector('.h-hero h2').textContent === 'shop'));
-    await until(() => win.evaluate(() => !!document.querySelector('.h-hero img.hero-shot')), 40000, 'hero picture');
+    await until(() => win.evaluate(() => (document.querySelector('.h-hero .row-th')?.style.backgroundImage || '').includes('url(')), 40000, 'hero picture');
     check('a running app with no picture gets one captured on Home', true);
 
     await openPalette();
@@ -98,9 +96,9 @@ async function main() {
 
     await openPalette();
     await win.keyboard.type('go to local');
-    await until(async () => (await rows())[0]?.includes('Go to Localhost'), 5000, 'Go to Localhost ranks first');
+    await until(async () => (await rows())[0]?.includes('Go to Apps'), 5000, 'Go to Apps ranks first');
     await win.keyboard.press('Enter');
-    check('Go to Localhost switches screen', (await tabOn()) === 'Localhost');
+    check('Go to Apps switches screen', (await tabOn()) === 'Apps');
     await win.click('role=tab[name="Home"]');
 
     console.log('step: banner');
