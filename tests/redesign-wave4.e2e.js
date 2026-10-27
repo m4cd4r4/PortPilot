@@ -48,10 +48,10 @@ async function main() {
     await until(() => win.evaluate(() => !!document.querySelector('.topbar')), 20000, 'new top bar');
 
     console.log('step: library lists and adds');
-    await win.click('role=button[name="More ▾"]');
-    await win.click('role=menuitem[name="Library"]');
+    await win.click('role=tab[name="Apps"]');
+    await win.click('role=button[name="Manage"]');
     await win.waitForSelector('table.library');
-    check('Library opens from More', await win.evaluate(() => !!document.querySelector('.more button.on')));
+    check('Manage opens from Apps', await win.evaluate(() => !!document.querySelector('[aria-label="Manage apps"]')));
     await until(async () => (await rowNames()).includes('shop'), 10000, 'shop listed');
     await win.click('role=button[name="Add app"]');
     await win.fill('input[placeholder="My app"]', 'second');
@@ -94,8 +94,8 @@ async function main() {
     await win.click('role=button[name="Gallery"]');
 
     console.log('step: start, details, ports');
-    await win.click('role=button[name="More ▾"]');
-    await win.click('role=menuitem[name="Library"]');
+    await win.click('role=tab[name="Apps"]');
+    await win.click('role=button[name="Manage"]');
     await win.click('tr[data-app="app_shop"] >> role=button[name="Start"]');
     await until(() => win.evaluate(async () => (await window.portpilot.process.list()).apps.some((a) => a.id === 'app_shop' && a.running)), 15000, 'shop running');
     await win.click('tr[data-app="app_shop"] >> role=button[name="Details"]');
@@ -119,8 +119,8 @@ async function main() {
     check('the second click frees the port', true);
 
     console.log('step: delete');
-    await win.click('role=button[name="More ▾"]');
-    await win.click('role=menuitem[name="Library"]');
+    await win.click('role=tab[name="Apps"]');
+    await win.click('role=button[name="Manage"]');
     await win.click('tr[data-app="' + saved.id + '"] >> role=button[name="Edit"]');
     await win.click('role=button[name="Delete app"]');
     await win.click('role=button[name="Yes, delete"]');

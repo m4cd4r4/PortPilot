@@ -43,6 +43,7 @@ export function Browsers({ host, snap, onDone }: Props) {
     stop: (p) => act(p.name, () => host.stopBrowser(p.name)),
     release: (p) => act(p.name, () => host.releaseBrowser(p.name)),
     edit: (p) => setDrawer({ name: p.name }),
+    setup: (p, which) => act(p.name, () => host.openSignInSetup(p.name, which)),
   };
 
   const card = (c: BrowserCard) => (
@@ -97,7 +98,10 @@ export function Browsers({ host, snap, onDone }: Props) {
   );
 }
 
-interface Actions { start(p: Profile): void; stop(p: Profile): void; release(p: Profile): void; edit(p: Profile): void }
+interface Actions {
+  start(p: Profile): void; stop(p: Profile): void; release(p: Profile): void; edit(p: Profile): void;
+  setup(p: Profile, which: 'sync' | 'passwords'): void;
+}
 
 const SIGN_LABEL: Record<SignIn, string> = { in: 'Signed in', out: 'Signed out', unknown: '' };
 
@@ -139,6 +143,13 @@ function ProfileCard({ c, mode, art, signIn, busy, actions }: { c: BrowserCard; 
               <span key={i} className="chip" title={a.note || undefined}>{[a.platform, a.username].filter(Boolean).join(' · ')}</span>
             ))}
             {accounts.length > MAX_CHIPS && <span className="chip more">+{accounts.length - MAX_CHIPS}</span>}
+          </div>
+        )}
+        {up && signIn === 'out' && (!p.browser || p.browser === 'brave') && mode !== 'compact' && (
+          <div className="signin-setup" data-signin-setup role="group" aria-label="Set up sign-ins">
+            <span>Sign-ins:</span>
+            <button onClick={() => actions.setup(p, 'sync')} disabled={busy}>Brave Sync</button>
+            <button onClick={() => actions.setup(p, 'passwords')} disabled={busy}>Import passwords</button>
           </div>
         )}
         {lease && (

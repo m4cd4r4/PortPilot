@@ -885,6 +885,21 @@ var require_browserCdp = __commonJS({
         return false;
       }
     }
+    var SETUP_PAGES = { sync: "brave://settings/braveSync", passwords: "brave://settings/importData" };
+    async function openSetupPage(port, which) {
+      const url = Object.prototype.hasOwnProperty.call(SETUP_PAGES, which) ? SETUP_PAGES[which] : null;
+      if (!url) return false;
+      try {
+        const r = await withBrowserSession(port, async (send) => {
+          const t = await send("Target.createTarget", { url });
+          if (t && t.targetId) await send("Target.activateTarget", { targetId: t.targetId });
+          return t;
+        });
+        return !!(r && r.targetId);
+      } catch {
+        return false;
+      }
+    }
     async function withBrowserSession(port, fn) {
       const v = await version(port);
       if (!v || !v.webSocketDebuggerUrl) return null;
@@ -1009,7 +1024,7 @@ var require_browserCdp = __commonJS({
         return false;
       }
     }
-    module2.exports = { version, pageTabs, openTab, withBrowserSession, withSocket, closeBrowser, parkOffscreen, getWindowBounds, setWindowBounds, bringToFront };
+    module2.exports = { version, pageTabs, openTab, SETUP_PAGES, openSetupPage, withBrowserSession, withSocket, closeBrowser, parkOffscreen, getWindowBounds, setWindowBounds, bringToFront };
   }
 });
 

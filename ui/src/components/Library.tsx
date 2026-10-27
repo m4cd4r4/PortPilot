@@ -4,9 +4,10 @@ import { groupOf } from '../model';
 import { AppDrawer } from './AppDrawer';
 import { AppInspector } from './AppInspector';
 
-interface Props { host: Host; snap: Snapshot; onDone: () => void }
+interface Props { host: Host; snap: Snapshot; onDone: () => void; onExit: () => void }
 
-export function Library({ host, snap, onDone }: Props) {
+/** The Manage mode of the Apps screen: add, edit, star and group apps. */
+export function Library({ host, snap, onDone, onExit }: Props) {
   const [query, setQuery] = useState('');
   const [editing, setEditing] = useState<AppRec | 'new' | null>(null);
   const [inspect, setInspect] = useState<AppRec | null>(null);
@@ -33,10 +34,11 @@ export function Library({ host, snap, onDone }: Props) {
   const finish = () => { setEditing(null); onDone(); };
 
   return (
-    <section className="library-view" aria-label="Library">
+    <section className="library-view" aria-label="Manage apps">
       <div className="toolbar">
         <input className="filter" type="search" placeholder="Filter apps" aria-label="Filter apps" value={query} onChange={(e) => setQuery(e.target.value)} />
         <div className="toolbar-end">
+          <button onClick={onExit}>Done</button>
           <button onClick={() => setShowGroups((s) => !s)} aria-expanded={showGroups}>Groups</button>
           <button className="primary" onClick={() => setEditing('new')}>Add app</button>
         </div>

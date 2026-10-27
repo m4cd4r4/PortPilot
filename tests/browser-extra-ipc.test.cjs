@@ -54,10 +54,10 @@ async function setup(opts = {}) {
 (async () => {
   console.log('\n=== browser extra ipc ===\n');
 
-  await t('registers exactly the seven channels', async () => {
+  await t('registers exactly the eight channels', async () => {
     const { handlers } = await setup();
     assert.deepStrictEqual([...handlers.keys()].sort(), [
-      'browser:art:choose', 'browser:art:clear', 'browser:art:get', 'browser:art:index', 'browser:art:refresh', 'browser:health', 'browser:release',
+      'browser:art:choose', 'browser:art:clear', 'browser:art:get', 'browser:art:index', 'browser:art:refresh', 'browser:health', 'browser:release', 'browser:signInSetup',
     ]);
   });
 

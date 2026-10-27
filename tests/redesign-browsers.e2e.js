@@ -95,6 +95,19 @@ async function main() {
     check('a running profile with no login cookie reads Signed out', (await card('blog').locator('.pill').textContent()) === 'Signed out');
     check('a stopped profile shows no sign-in pill', (await card('shop').locator('.pill').count()) === 0);
 
+    console.log('step: set up sign-ins');
+    const tabUrls = async (port) => (await (await fetch(`http://127.0.0.1:${port}/json`)).json()).map((t) => t.url);
+    check('a signed-out running profile offers sign-in setup', (await card('blog').locator('[data-signin-setup] button').count()) === 2);
+    check('a stopped profile does not', (await card('shop').locator('[data-signin-setup]').count()) === 0);
+    await card('blog').getByRole('button', { name: 'Brave Sync' }).click();
+    // Brave reports its own pages on the chrome:// scheme.
+    const isPage = (u, page) => u.startsWith(`brave://settings/${page}`) || u.startsWith(`chrome://settings/${page}`);
+    await until(async () => (await tabUrls(pBlog)).some((u) => isPage(u, 'braveSync')), 15000, 'Sync page open in the profile');
+    check('Brave Sync opens in that profile (read back from its own debug port)', true);
+    await card('blog').getByRole('button', { name: 'Import passwords' }).click();
+    await until(async () => (await tabUrls(pBlog)).some((u) => isPage(u, 'importData')), 15000, 'import page open in the profile');
+    check('Import passwords opens Brave\'s own import page', true);
+
     console.log('step: lease and Release');
     const sid = 'abcd-1234-e2e';
     configFile.updateJson(claimsPathFor(world.configPath), (file) => {

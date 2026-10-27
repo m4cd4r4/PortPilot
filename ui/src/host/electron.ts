@@ -61,6 +61,7 @@ export function createElectronHost(): Host {
     async chooseBrowserArt(name) { return !(await ok(api().browsers.artChoose(name))).cancelled; },
     async clearBrowserArt(name) { await ok(api().browsers.artClear(name)); },
     async browserSignIns(names) { return (await ok(api().browsers.signIns(names))).health || {}; },
+    async openSignInSetup(name, which) { await ok(api().browsers.signInSetup(name, which)); },
     async thumbIndex() { return (await ok(api().thumbs.index())).byApp || {}; },
     async thumbs(keys) { return (await ok(api().thumbs.get(keys))).thumbs || {}; },
     async captureThumb(appId, port) {

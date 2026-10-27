@@ -8,6 +8,7 @@
  *   browser:art:choose   the user picks an image file; it is copied into the config folder
  *   browser:art:clear    forget the picture
  *   browser:health       names -> 'in' | 'out' | 'unknown' from the running browser's cookies
+ *   browser:signInSetup  name, 'sync' | 'passwords' -> open Brave's own Sync / import page in that profile
  *   browser:release      end the lease on a profile; the browser keeps running
  *
  * The renderer sends a profile NAME only, never a path or URL: every file lives at
@@ -77,6 +78,7 @@ function setupBrowserExtraIpc(ipcMain, configStore, injected = {}) {
   const fetchImpl = injected.fetch || fetch;
   const runDeps = () => injected.runDeps || run.defaultDeps();
   const cookiesOf = injected.cookies || ((port) => cdp.withBrowserSession(port, (send) => send('Storage.getCookies')).then((r) => (r && r.cookies) || null));
+  const openSetup = injected.openSetup || cdp.openSetupPage;
   const pickFile = injected.pickFile || (async () => {
     const { dialog, BrowserWindow } = require('electron');
     const r = await dialog.showOpenDialog(BrowserWindow.getFocusedWindow(), {
@@ -213,6 +215,20 @@ function setupBrowserExtraIpc(ipcMain, configStore, injected = {}) {
       out[p.name] = state;
     }
     return { success: true, health: out };
+  }));
+
+  /**
+   * Open Brave's Sync or password-import page inside a running profile, so the person can sign in
+   * there themselves. Never reads another browser's saved logins.
+   */
+  ipcMain.handle('browser:signInSetup', guarded(async (name, which) => {
+    if (!isPlainName(name) || !Object.prototype.hasOwnProperty.call(cdp.SETUP_PAGES, which)) return fail('BAD_ARGS', 'name and a known page are required.');
+    const p = stored(name);
+    if (p.browser && p.browser !== 'brave') return fail('UNSUPPORTED', 'Sign-in setup works for Brave profiles only.');
+    const st = await run.profileStatus(configPath(), p, runDeps());
+    if (st.state !== 'up') return fail('NOT_RUNNING', 'Start the profile first.');
+    const opened = await openSetup(p.port, which);
+    return opened ? { success: true } : fail('OPEN_FAILED', 'The browser did not open the page.');
   }));
 
   /** Ends the lease only: the claim stays as a record of who started the browser, minus its session. */
