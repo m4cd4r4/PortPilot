@@ -141,7 +141,7 @@ export class BrowserPreviewView implements vscode.WebviewViewProvider, vscode.Di
         title: shot?.title || '',
         age: shot ? ageLabel(shot.at, now) : '',
         note: !running ? (r.state === 'held' ? 'Port held by another program' : 'Stopped')
-          : err && !shot ? err
+          : err ? err
             : this.pending.has(r.name) && !shot ? 'Taking a picture (up to 10 s if the window is covered)' : '',
         canOpen: running && !!pickPreviewTab(r.tabs),
       };

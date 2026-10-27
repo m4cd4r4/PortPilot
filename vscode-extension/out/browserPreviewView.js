@@ -164,7 +164,7 @@ class BrowserPreviewView {
                 title: shot?.title || '',
                 age: shot ? (0, previewModel_1.ageLabel)(shot.at, now) : '',
                 note: !running ? (r.state === 'held' ? 'Port held by another program' : 'Stopped')
-                    : err && !shot ? err
+                    : err ? err
                         : this.pending.has(r.name) && !shot ? 'Taking a picture (up to 10 s if the window is covered)' : '',
                 canOpen: running && !!(0, browserCapture_1.pickPreviewTab)(r.tabs),
             };
