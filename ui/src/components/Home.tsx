@@ -183,7 +183,8 @@ export function Home({ host, t, loaded, onView, snap, thumbs, onDone }: Props) {
         <div className="mini">
           {profiles.map((p) => (
             <button key={p.name} className="th-wrap" onClick={() => onView('browsers')}>
-              <span className={`th${p.state === 'up' ? ' sel' : ''}`} style={art.byName[p.name] ? { backgroundImage: `url(${art.byName[p.name]})` } : { background: gradient(p.name) }} />
+              <span className={`th${art.byName[p.name] ? ' art' : ''}${p.state === 'up' ? ' sel' : ''}`}
+                style={art.byName[p.name] ? { backgroundImage: `url(${art.byName[p.name]}), ${gradient(p.name)}` } : { background: gradient(p.name) }} />
               <span className="cap">{p.name}</span>
             </button>
           ))}

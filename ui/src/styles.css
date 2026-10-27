@@ -116,6 +116,9 @@ button.tile:hover { border-color: var(--acc); }
 /* Thumbnails keep one shape and scale with the window, so a shot is never cut off by a fixed row height. */
 .h-browsers .th, .h-recent .th { aspect-ratio: 16 / 10; flex: none; }
 .th { display: block; flex: 1; min-height: 0; border-radius: 8px; border: 1px solid var(--bd); background-size: cover; background-position: top; }
+/* A profile's picture is shown whole on its gradient, never cropped or blown up to fill the tile. */
+.h-browsers .th { max-height: 170px; }
+.th.art { padding: 10px; background-size: contain, cover; background-repeat: no-repeat; background-position: center; background-origin: content-box, border-box; }
 .th.sel { outline: 2px solid var(--acc); outline-offset: 2px; }
 .th-wrap:hover .th { border-color: var(--acc); }
 .th-card { position: relative; display: flex; min-width: 0; min-height: 0; } .th-card .th-wrap { flex: 1; }
@@ -167,7 +170,8 @@ button.tile:hover { border-color: var(--acc); }
 .cards.gallery { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .cards.compact { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; }
 .cards.list { grid-template-columns: minmax(0, 1fr); gap: 8px; }
-@container (max-width: 1100px) { .cards.gallery { grid-template-columns: repeat(3, minmax(0, 1fr)); } .cards.compact { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
+/* Four across only on a wide window: at laptop width three bigger cards read better than four small ones. */
+@container (max-width: 1500px) { .cards.gallery { grid-template-columns: repeat(3, minmax(0, 1fr)); } .cards.compact { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
 @container (max-width: 800px) { .cards.gallery { grid-template-columns: repeat(2, minmax(0, 1fr)); } .cards.compact { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 @container (max-width: 560px) { .cards.gallery { grid-template-columns: minmax(0, 1fr); } .cards.compact { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
