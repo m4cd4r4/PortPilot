@@ -18,7 +18,7 @@ PortPilot runs your local dev servers and shows every port, every crash and who 
 
 </div>
 
-![PortPilot Home: the app you used last with Open, Stop and Details, your browser profiles, a scene picker and recently used apps](docs/screenshots/ui/home.png)
+![PortPilot Home: the running apps with Open, Stop and Details, your browser profiles and recently used apps](docs/screenshots/ui/home.png)
 
 Local-first: no account, no telemetry, no cloud. Windows 10/11 and Linux.
 
@@ -34,13 +34,17 @@ Local-first: no account, no telemetry, no cloud. Windows 10/11 and Linux.
 
 ### Home
 
-The first screen shows what you were just doing: the app you used last with Open, Stop and Details, your browser profiles, a scene to start, and the apps you ran recently, each with a thumbnail of the page it served. A crashed app in Recently used has a Start button. A blocked port shows as one amber line at the top with a Fix button.
+The first screen shows what you were just doing: one row per running app with Open, Stop and Details, your browser profiles as pictures, and the apps you ran recently, each with a thumbnail of the page it served. With nothing running it offers the app you used last with Start. A crashed app in Recently used has a Start button. A blocked port shows as one amber line at the top with a Fix button. On a first run it says what to do instead of showing empty cards.
 
-### Localhost
+### Apps
 
 Every app as a card with a live preview of its page, running first and stopped ones below. Switch between Gallery, Compact, List and Grouped. An app another program is holding the port of is marked **Port held**.
 
-![Localhost: running sites with live page previews, one app marked Port held](docs/screenshots/ui/localhost.png)
+![Apps: running sites with live page previews](docs/screenshots/ui/apps.png)
+
+**Manage** turns the same screen into the editing table: Star, Start or Stop, Details and Edit per app, plus Groups, Add app and an auto-detect that finds Node.js, Python, Go, .NET, Rust, Ruby and Docker projects ([how detection works](docs/AUTO-DETECTION.md)).
+
+![Manage: every app with its port, group and command](docs/screenshots/ui/manage.png)
 
 ### History
 
@@ -54,21 +58,15 @@ Every run is recorded with its state, port, time and the page it served; a crash
 
 ![Command palette filtering to examworthy with Stop, Open in browser and History actions](docs/screenshots/ui/palette.png)
 
-### Scenes
-
-A scene is a set of apps and browser profiles you start together ("Morning work": three apps and the Google profile). Stop only stops what the scene started. **Save what is running** turns the current state into a scene.
-
-![Scenes: Morning work and Client demo, each with its apps and browser profiles](docs/screenshots/ui/scenes.png)
-
 ### Browsers
 
-Named browser profiles with a purpose, the sites each is signed in to and its own debug port. See [Browsers and debug ports](#browsers-and-debug-ports).
+Named browser profiles with a purpose, the sites each is signed in to and its own debug port. **Set up sign-ins** opens Brave's own Sync or Import passwords page in the profile, so you sign in once and PortPilot never reads a saved password. See [Browsers and debug ports](#browsers-and-debug-ports).
 
-![Browsers: four profiles with their ports and purposes](docs/screenshots/ui/browsers.png)
+![Browsers: three profiles with their ports and purposes](docs/screenshots/ui/browsers.png)
 
-### Library, Ports and Settings
+### Ports, Scenes and Settings
 
-**Library** is the table of every registered app with Start, Stop, Details and Edit, plus groups and an auto-detect that finds Node.js, Python, Go, .NET, Rust, Ruby and Docker projects ([how detection works](docs/AUTO-DETECTION.md)). **Ports** lists every TCP port with its process and PID and offers Kill, Open and Find a free port. **Settings** has the theme (Dark, Light or System), close-to-tray, crash notifications and the run-history options. The old interface is one click away under Settings > Switch to classic view.
+**Ports** lists every TCP port with its process and PID and offers Kill, Open and Find a free port. **Scenes** (under More) are sets of apps and browser profiles you start together ("Morning work": three apps and the Google profile); Stop only stops what the scene started, and **Save what is running** turns the current state into a scene. **Settings** has the theme (Dark, Light or System), close-to-tray, crash notifications and the run-history options. The old interface is one click away under Settings > Switch to classic view.
 
 ## Use it with Claude Code
 

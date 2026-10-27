@@ -29,9 +29,8 @@ async function main() {
   if (!fs.existsSync(path.join(root, 'src', 'ui-dist', 'index.html'))) throw new Error('src/ui-dist is missing; run "npm run build:ui" first');
   process.env.PORTPILOT_NEW_UI = '1';
   const ports = await h.freePorts(SITES.length + PROFILES.length);
-  const serve = path.join(__dirname, 'serve.js');
   const apps = SITES.map((s, i) => ({
-    id: `app_${s.site}`, name: s.name, group: s.group, command: `node "${serve}" --site ${s.site} --port ${ports[i]}`,
+    id: `app_${s.site}`, name: s.name, group: s.group, command: `node ../../serve.js --site ${s.site} --port ${ports[i]}`,
     // Own folder per app: PortPilot attributes a listener to an app by its folder, so a shared one mixes them up.
     cwd: path.join(__dirname, 'sites', s.site), preferredPort: ports[i],
   }));
