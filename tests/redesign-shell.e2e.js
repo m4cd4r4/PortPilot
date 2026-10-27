@@ -52,7 +52,7 @@ async function main() {
     await until(() => win.evaluate(() => !!document.querySelector('.topbar')), 20000, 'new top bar');
     check('the new UI is on screen, not the v4 sidebar', await win.evaluate(() => !document.getElementById('v4-sidebar')));
     check('Home is the first screen', (await tabOn()) === 'Home');
-    await until(() => win.evaluate(() => /Start/.test(document.querySelector('.h-hero')?.textContent || '')), 15000, 'home loads');
+    await until(() => win.evaluate(() => !!document.querySelector('.h-hero .run-row h2') && !/Welcome/.test(document.querySelector('.h-hero')?.textContent || '')), 15000, 'home loads');
     check('Home has no Localhost or news tile', await win.evaluate(() => !document.querySelector('.h-local') && !document.querySelector('.h-news')));
     check('the hero names an app and offers Start', await win.evaluate(() => { const h = document.querySelector('.h-hero'); return !!h?.querySelector('h2')?.textContent && /Start/.test(h.textContent); }));
     check('Home fits the window without scrolling', await win.evaluate(() => { const m = document.querySelector('.main'); return m.scrollHeight <= m.clientHeight + 1; }));

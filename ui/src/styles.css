@@ -373,3 +373,4 @@ pre.log.err { border-color: color-mix(in srgb, var(--warn) 45%, var(--bd)); }
 .scene-report li.bad { color: var(--warn); }
 .drawer fieldset.members { max-height: 240px; overflow-y: auto; align-content: start; }
 .drawer fieldset.members label.check { font-size: 13px; }
+.row-main.wrap .tile-sub { white-space: normal !important; }
