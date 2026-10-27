@@ -47,6 +47,28 @@ async function openTab(port, url) {
 }
 
 /**
+ * Browser pages that move sign-ins into a profile. A fixed allowlist: callers pass a key, never a URL,
+ * and nothing is read from the page. Brave only (Sync and Brave's own password import).
+ */
+const SETUP_PAGES = { sync: 'brave://settings/braveSync', passwords: 'brave://settings/importData' };
+
+/** Open one SETUP_PAGES entry in a new foreground tab of the browser on `port`. True when it opened. */
+async function openSetupPage(port, which) {
+  const url = Object.prototype.hasOwnProperty.call(SETUP_PAGES, which) ? SETUP_PAGES[which] : null;
+  if (!url) return false;
+  try {
+    const r = await withBrowserSession(port, async (send) => {
+      const t = await send('Target.createTarget', { url });
+      if (t && t.targetId) await send('Target.activateTarget', { targetId: t.targetId });
+      return t;
+    });
+    return !!(r && r.targetId);
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Run fn(send) against the browser-level CDP endpoint; null when unavailable.
  * `send(method, params)` resolves with the CDP result or rejects with its error.
  */
@@ -189,4 +211,4 @@ async function bringToFront(port) {
   }
 }
 
-module.exports = { version, pageTabs, openTab, withBrowserSession, withSocket, closeBrowser, parkOffscreen, getWindowBounds, setWindowBounds, bringToFront };
+module.exports = { version, pageTabs, openTab, SETUP_PAGES, openSetupPage, withBrowserSession, withSocket, closeBrowser, parkOffscreen, getWindowBounds, setWindowBounds, bringToFront };

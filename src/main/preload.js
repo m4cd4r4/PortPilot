@@ -97,6 +97,7 @@ contextBridge.exposeInMainWorld('portpilot', {
     artChoose: (name) => ipcRenderer.invoke('browser:art:choose', name),
     artClear: (name) => ipcRenderer.invoke('browser:art:clear', name),
     signIns: (names) => ipcRenderer.invoke('browser:health', names),
+    signInSetup: (name, which) => ipcRenderer.invoke('browser:signInSetup', name, which),
     release: (name) => ipcRenderer.invoke('browser:release', name)
   },
 

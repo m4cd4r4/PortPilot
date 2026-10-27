@@ -92,6 +92,8 @@ export interface Host {
   clearBrowserArt(name: string): Promise<void>;
   /** Sign-in state of running profiles; stopped ones are 'unknown'. */
   browserSignIns(names: string[]): Promise<Record<string, SignIn>>;
+  /** Open Brave's Sync or password-import page in a running profile; the person signs in there. */
+  openSignInSetup(name: string, which: 'sync' | 'passwords'): Promise<void>;
   killPort(port: number): Promise<void>;
   /** Reload the window as the classic v4 UI; it comes back on the next launch too. */
   switchToClassic(): Promise<void>;
