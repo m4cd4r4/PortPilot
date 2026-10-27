@@ -1,6 +1,7 @@
 import type { AppRec, Profile, Snapshot } from './host';
 
 export type View = 'home' | 'localhost' | 'browsers' | 'library' | 'ports' | 'scenes' | 'history' | 'settings';
+/** 'library' is only a navigation alias: Apps in Manage mode (see App.tsx). */
 /** The sections in the segmented control; the rest are under More, and Settings has its own button. */
 export const VIEWS: Array<{ view: View; label: string }> = [
   { view: 'home', label: 'Home' },
@@ -10,7 +11,6 @@ export const VIEWS: Array<{ view: View; label: string }> = [
 ];
 /** Occasional screens: under the More menu in the top bar, and still one Ctrl+K away. */
 export const MORE_VIEWS: Array<{ view: View; label: string }> = [
-  { view: 'library', label: 'Library' },
   { view: 'scenes', label: 'Scenes' },
   { view: 'history', label: 'History' },
 ];

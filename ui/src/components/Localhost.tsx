@@ -2,8 +2,9 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Host, Snapshot } from '../host';
 import { MODES, STALE_MS, cards, grouped, type Card, type Mode } from '../model';
 import type { Thumbs } from '../useThumbs';
+import { Library } from './Library';
 
-interface Props { host: Host; snap: Snapshot; thumbs: Thumbs; onDone: () => void }
+interface Props { host: Host; snap: Snapshot; thumbs: Thumbs; onDone: () => void; manage: boolean; onManage: (on: boolean) => void }
 
 const MODE_KEY = 'portpilot-localhost-mode';
 const HOVER_MS = 500;
@@ -19,7 +20,7 @@ function loadMode(): Mode {
   return 'gallery';
 }
 
-export function Localhost({ host, snap, thumbs, onDone }: Props) {
+export function Localhost({ host, snap, thumbs, onDone, manage, onManage }: Props) {
   const [mode, setMode] = useState<Mode>(loadMode);
   const [query, setQuery] = useState('');
   const [error, setError] = useState('');
@@ -65,7 +66,7 @@ export function Localhost({ host, snap, thumbs, onDone }: Props) {
   );
 
   const body = () => {
-    if (!snap.apps.length) return <p className="empty-note">No apps yet. Add one from the Library, or start a dev server and PortPilot will notice it.</p>;
+    if (!snap.apps.length) return <p className="empty-note">No apps yet. Add one with Manage, or start a dev server and PortPilot will notice it.</p>;
     if (!list.length) return <p className="empty-note">No app matches that filter.</p>;
     if (mode === 'grouped') {
       return grouped(snap, list).map((g) => (
@@ -91,14 +92,19 @@ export function Localhost({ host, snap, thumbs, onDone }: Props) {
     );
   };
 
+  if (manage) return <Library host={host} snap={snap} onDone={onDone} onExit={() => onManage(false)} />;
+
   return (
     <section className="gallery-view" aria-label="Localhost">
       <div className="toolbar">
         <input className="filter" type="search" placeholder="Filter apps" aria-label="Filter apps" value={query} onChange={(e) => setQuery(e.target.value)} />
-        <div className="seg small" role="group" aria-label="View mode">
-          {MODES.map((m) => (
-            <button key={m.mode} aria-pressed={mode === m.mode} className={mode === m.mode ? 'on' : ''} onClick={() => pick(m.mode)}>{m.label}</button>
-          ))}
+        <div className="toolbar-end">
+          <div className="seg small" role="group" aria-label="View mode">
+            {MODES.map((m) => (
+              <button key={m.mode} aria-pressed={mode === m.mode} className={mode === m.mode ? 'on' : ''} onClick={() => pick(m.mode)}>{m.label}</button>
+            ))}
+          </div>
+          <button onClick={() => onManage(true)}>Manage</button>
         </div>
       </div>
       {error && <p className="notice" role="alert">{error}</p>}

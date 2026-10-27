@@ -8,7 +8,6 @@ import { Palette } from './components/Palette';
 import { Localhost } from './components/Localhost';
 import { History } from './components/History';
 import { Browsers } from './components/Browsers';
-import { Library } from './components/Library';
 import { Ports } from './components/Ports';
 import { Scenes } from './components/Scenes';
 import { Settings } from './components/Settings';
@@ -17,7 +16,13 @@ import { useThumbs } from './useThumbs';
 const EMPTY: Snapshot = { apps: [], groups: [], running: {}, crashed: {}, conflicts: [], profiles: [], ports: [] };
 
 export function App({ host }: { host: Host }) {
-  const [view, setView] = useState<View>('home');
+  const [view, setViewRaw] = useState<View>('home');
+  const [manage, setManage] = useState(false);
+  /** 'library' is an alias for Apps in Manage mode; any other jump leaves Manage. */
+  const setView = useCallback((v: View) => {
+    setManage(v === 'library');
+    setViewRaw(v === 'library' ? 'localhost' : v);
+  }, []);
   const [snap, setSnap] = useState<Snapshot>(EMPTY);
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState('');
@@ -62,9 +67,8 @@ export function App({ host }: { host: Host }) {
       <main className="main" id="main">
         {error && <p className="notice" role="alert">Could not read PortPilot state: {error}</p>}
         {view === 'home' && <Home host={host} onDone={refresh} t={t} loaded={loaded} onView={setView} snap={snap} thumbs={thumbs} />}
-        {view === 'localhost' && <Localhost host={host} snap={snap} thumbs={thumbs} onDone={refresh} />}
+        {view === 'localhost' && <Localhost host={host} snap={snap} thumbs={thumbs} onDone={refresh} manage={manage} onManage={setManage} />}
         {view === 'history' && <History host={host} />}
-        {view === 'library' && <Library host={host} snap={snap} onDone={refresh} />}
         {view === 'scenes' && <Scenes host={host} snap={snap} onDone={refresh} />}
         {view === 'ports' && <Ports host={host} snap={snap} onDone={refresh} />}
         {view === 'settings' && <Settings host={host} onClassic={() => host.switchToClassic()} />}

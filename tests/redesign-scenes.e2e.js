@@ -65,8 +65,8 @@ async function main() {
     await until(() => win.evaluate(() => !!document.querySelector('article.scene')), 10000, 'scene card');
 
     console.log('step: start with a blocked port');
-    await win.click('role=button[name="More ▾"]');
-    await win.click('role=menuitem[name="Library"]');
+    await win.click('role=tab[name="Apps"]');
+    await win.click('role=button[name="Manage"]');
     await win.click('tr[data-app="app_c"] >> role=button[name="Start"]');
     await until(async () => (await running()).includes('app_c'), 15000, 'gamma started by hand');
     held = h.holdPort(pb);
