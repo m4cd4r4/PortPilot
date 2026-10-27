@@ -166,7 +166,10 @@ export function Home({ host, t, loaded, onView, snap, thumbs, onDone }: Props) {
           </>
         ) : (
           <div className="run-row">
-            <div className="row-main"><h2>No apps yet</h2></div>
+            <div className="row-main wrap">
+              <h2>Welcome to PortPilot</h2>
+              <span className="tile-sub">Add a project folder. PortPilot finds the start command and a free port, and you press Start.</span>
+            </div>
             <div className="row-actions"><button className="primary" onClick={() => onView('library')}>Add an app</button></div>
           </div>
         )}
@@ -206,6 +209,7 @@ export function Home({ host, t, loaded, onView, snap, thumbs, onDone }: Props) {
       </div>
       )}
 
+      {all.length > 0 && (
       <div className="tile h-recent">
         <span className="tile-title">Recently used</span>
         <div className="mini five">
@@ -221,6 +225,7 @@ export function Home({ host, t, loaded, onView, snap, thumbs, onDone }: Props) {
           {strip.length === 0 && <span className="tile-sub">Apps you run will show up here</span>}
         </div>
       </div>
+      )}
     </section>
   );
 }
