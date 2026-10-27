@@ -58,12 +58,14 @@
     "esbuild": "^0.28.2",
     "playwright": "^1.57.0",
     "png-to-ico": "^3.0.1",
+    "rcedit": "^5.0.2",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "typescript": "^5.9.3",
     "vite": "^7.3.7"
   },
   "build": {
+    "afterPack": "scripts/afterPack.cjs",
     "appId": "com.macdara.portpilot",
     "productName": "PortPilot",
     "copyright": "Copyright © 2026 Macdara",
@@ -121,7 +123,7 @@
           ]
         }
       ],
-      "icon": "public/icon.png",
+      "icon": "public/icon.ico",
       "artifactName": "${productName}-${version}-${arch}.${ext}"
     },
     "nsis": {
