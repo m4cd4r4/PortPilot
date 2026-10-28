@@ -56,7 +56,7 @@ Every run is recorded with its state, port, time and the page it served; a crash
 
 `Ctrl+K` from anywhere: type an app, a port or a profile and start it, stop it, open it or jump to its history.
 
-![Command palette filtering to examworthy with Stop, Open in browser and History actions](docs/screenshots/ui/palette.png)
+![Command palette filtering to Fernlane Goods with Stop, Open in browser and History actions](docs/screenshots/ui/palette.png)
 
 ### Browsers
 

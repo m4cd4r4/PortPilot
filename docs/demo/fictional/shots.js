@@ -101,6 +101,12 @@ async function main() {
     await win.click('role=menuitem[name="History"]');
     await h.sleep(1500);
     await shot('history');
+    await win.keyboard.press('Escape');
+    await win.click('role=tab[name="Apps"]');
+    await win.keyboard.press('Control+K');
+    await win.fill('role=combobox', 'fernlane');
+    await h.sleep(600);
+    await shot('palette');
     // No Ports shot: that screen lists every listener on the machine running this script (process names, PIDs).
   } finally {
     await h.closeApp(app);
