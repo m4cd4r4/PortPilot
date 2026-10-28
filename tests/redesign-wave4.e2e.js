@@ -88,9 +88,8 @@ async function main() {
 
     console.log('step: grouped Localhost uses the stored group field');
     await win.click('role=tab[name="Apps"]');
-    await win.click('role=button[name="Grouped"]');
     await until(() => win.evaluate(() => [...document.querySelectorAll('.group-h')].some((e) => e.textContent.startsWith('Work'))), 10000, 'Work heading');
-    check('Grouped mode shows the Work group', true);
+    check('Grouping (on by default) shows the Work group', true);
     await win.click('role=button[name="Gallery"]');
 
     console.log('step: start, details, ports');

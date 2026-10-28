@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { Host, Settings as S } from '../host';
-import { ACCENTS, setPrefs, usePrefs, type Nav } from '../prefs';
+import { ACCENTS, VIEWS, setPrefs, usePrefs, type Nav, type Prefs } from '../prefs';
 
 interface Props { host: Host; onClassic: () => Promise<void> }
 
@@ -46,6 +46,14 @@ export function loadTheme(): string {
   try { const v = localStorage.getItem(THEME_KEY); if (v === 'dark' || v === 'light') return v; } catch { /* storage can be unavailable */ }
   return 'system';
 }
+
+const DISPLAY: Array<{ key: keyof Prefs; label: string; opts: Array<[string, string]> }> = [
+  { key: 'view', label: 'Apps view', opts: VIEWS.map((v) => [v.v, v.l] as [string, string]) },
+  { key: 'density', label: 'Density', opts: [['cozy', 'Cozy'], ['tight', 'Tight']] },
+  { key: 'thumbs', label: 'Thumbnails', opts: [['off', 'Off'], ['peek', 'Hover peek'], ['inline', 'Inline']] },
+  { key: 'status', label: 'Status style', opts: [['dot', 'Dot'], ['glyph', 'Glyph + word']] },
+  { key: 'grouping', label: 'Grouping', opts: [['true', 'Grouped'], ['false', 'Flat']] },
+];
 
 export function Settings({ host, onClassic }: Props) {
   const [s, setS] = useState<S | null>(null);
@@ -103,6 +111,16 @@ export function Settings({ host, onClassic }: Props) {
             ))}
           </div>
         </div>
+        {DISPLAY.map((d) => (
+          <div className="set-line" key={d.key}><span>{d.label}</span>
+            <div className="seg small" role="group" aria-label={d.label}>
+              {d.opts.map(([v, l]) => (
+                <button key={v} aria-pressed={String(prefs[d.key]) === v} className={String(prefs[d.key]) === v ? 'on' : ''}
+                  onClick={() => { setPrefs({ [d.key]: d.key === 'grouping' ? v === 'true' : v } as Partial<Prefs>); setSaved(`${d.label} saved`); }}>{l}</button>
+              ))}
+            </div>
+          </div>
+        ))}
         <div className="set-line"><span>Accent</span>
           <div className="sw" role="group" aria-label="Accent colour">
             {ACCENTS.map((a) => (

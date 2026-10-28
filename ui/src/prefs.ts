@@ -12,10 +12,17 @@ export const ACCENTS = [
 ] as const;
 export type AccentId = (typeof ACCENTS)[number]['id'];
 
-export interface Prefs { nav: Nav; accent: AccentId }
+/** How the Apps list is drawn. */
+export const VIEWS = [{ v: 'rows', l: 'Rows' }, { v: 'compact', l: 'Compact' }, { v: 'cards', l: 'Cards' }, { v: 'gallery', l: 'Gallery' }] as const;
+export type AppView = (typeof VIEWS)[number]['v'];
+export type Density = 'cozy' | 'tight';
+export type Thumbs = 'off' | 'peek' | 'inline';
+export type StatusStyle = 'dot' | 'glyph';
+
+export interface Prefs { nav: Nav; accent: AccentId; view: AppView; density: Density; thumbs: Thumbs; status: StatusStyle; grouping: boolean }
 
 const KEY = 'portpilot-ui-prefs';
-const DEFAULTS: Prefs = { nav: 'side', accent: 'blue' };
+const DEFAULTS: Prefs = { nav: 'side', accent: 'blue', view: 'rows', density: 'tight', thumbs: 'peek', status: 'glyph', grouping: true };
 
 /** Reads the saved choices, dropping any value that is not one of the known options. */
 export function parsePrefs(raw: string | null): Prefs {
@@ -24,6 +31,11 @@ export function parsePrefs(raw: string | null): Prefs {
     const j = JSON.parse(raw || '{}') as Partial<Prefs>;
     if (j.nav === 'side' || j.nav === 'top') out.nav = j.nav;
     if (ACCENTS.some((a) => a.id === j.accent)) out.accent = j.accent as AccentId;
+    if (VIEWS.some((x) => x.v === j.view)) out.view = j.view as AppView;
+    if (j.density === 'cozy' || j.density === 'tight') out.density = j.density;
+    if (j.thumbs === 'off' || j.thumbs === 'peek' || j.thumbs === 'inline') out.thumbs = j.thumbs;
+    if (j.status === 'dot' || j.status === 'glyph') out.status = j.status;
+    if (typeof j.grouping === 'boolean') out.grouping = j.grouping;
   } catch { /* unreadable: use the defaults */ }
   return out;
 }

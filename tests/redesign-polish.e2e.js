@@ -34,6 +34,8 @@ async function main() {
 
     await win.click('role=tab[name="Apps"]');
     await until(async () => (await cards()) > 0, 10000, 'cards');
+    await win.click('role=button[name="Grouped"]');
+    await until(async () => (await win.locator('.group-h').count()) <= 1, 5000, 'flat');
     check('only 12 of 15 stopped apps show at first', (await cards()) === 12, String(await cards()));
     check('a Show all button names the total', (await win.locator('role=button[name="Show all 15 stopped apps"]').count()) === 1);
     await win.click('role=button[name="Show all 15 stopped apps"]');
