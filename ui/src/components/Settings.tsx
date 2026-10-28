@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { Host, Settings as S } from '../host';
+import { ACCENTS, setPrefs, usePrefs, type Nav } from '../prefs';
 
 interface Props { host: Host; onClassic: () => Promise<void> }
 
@@ -28,6 +29,8 @@ const TOGGLES: Array<{ title: string; rows: Array<{ key: BoolKey; label: string;
   ] },
 ];
 
+const NAVS: Array<{ v: Nav; l: string }> = [{ v: 'side', l: 'Sidebar' }, { v: 'top', l: 'Top bar' }];
+
 const THEMES = [{ v: 'dark', l: 'Dark' }, { v: 'light', l: 'Light' }, { v: 'system', l: 'System' }];
 
 const THEME_KEY = 'portpilot-ui-theme';
@@ -49,6 +52,7 @@ export function Settings({ host, onClassic }: Props) {
   const [error, setError] = useState('');
   const [saved, setSaved] = useState('');
   const [theme, setTheme] = useState(loadTheme);
+  const prefs = usePrefs();
 
   useEffect(() => {
     host.getSettings().then(setS).catch((e) => setError((e as Error).message));
@@ -83,11 +87,29 @@ export function Settings({ host, onClassic }: Props) {
 
       <fieldset className="set-group">
         <legend>Appearance</legend>
-        <div className="seg small" role="group" aria-label="Theme">
-          {THEMES.map((t) => (
-            <button key={t.v} aria-pressed={theme === t.v} className={theme === t.v ? 'on' : ''}
-              onClick={() => pickTheme(t.v)}>{t.l}</button>
-          ))}
+        <div className="set-line"><span>Theme</span>
+          <div className="seg small" role="group" aria-label="Theme">
+            {THEMES.map((t) => (
+              <button key={t.v} aria-pressed={theme === t.v} className={theme === t.v ? 'on' : ''}
+                onClick={() => pickTheme(t.v)}>{t.l}</button>
+            ))}
+          </div>
+        </div>
+        <div className="set-line"><span>Navigation</span>
+          <div className="seg small" role="group" aria-label="Navigation">
+            {NAVS.map((n) => (
+              <button key={n.v} aria-pressed={prefs.nav === n.v} className={prefs.nav === n.v ? 'on' : ''}
+                onClick={() => { setPrefs({ nav: n.v }); setSaved('Navigation saved'); }}>{n.l}</button>
+            ))}
+          </div>
+        </div>
+        <div className="set-line"><span>Accent</span>
+          <div className="sw" role="group" aria-label="Accent colour">
+            {ACCENTS.map((a) => (
+              <button key={a.id} style={{ ['--h' as string]: a.hue }} aria-label={a.label} title={a.label}
+                aria-pressed={prefs.accent === a.id} onClick={() => { setPrefs({ accent: a.id }); setSaved('Accent saved'); }} />
+            ))}
+          </div>
         </div>
       </fieldset>
 

@@ -212,8 +212,7 @@ async function main() {
     check('the card falls back to its letter tile', (await card('shop').locator('.letter').textContent()) === 'S');
 
     console.log('step: classic and new');
-    await win.click('role=button[name="Settings"]');
-    await win.click('role=menuitem[name="Switch to classic view"]');
+    await win.click('role=button[name="Switch to classic view"]');
     await until(() => win.evaluate(() => !!document.getElementById('btn-new-ui')), 20000, 'classic UI loads');
     check('Switch to classic view loads the v4 window', await win.evaluate(() => !document.querySelector('.topbar')));
     check('the choice is stored in settings', JSON.parse(fs.readFileSync(world.configPath, 'utf8')).settings.ui === 'classic');

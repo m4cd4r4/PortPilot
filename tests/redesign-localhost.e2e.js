@@ -110,8 +110,7 @@ async function main() {
     check('a held port badges its card', (await card('app_blocked').locator('.badge').textContent()) === 'Port held');
 
     console.log('step: history');
-    await win.click('role=button[name="More ▾"]');
-    await win.click('role=menuitem[name="History"]');
+    await win.click('role=tab[name="History"]');
     await until(() => win.locator('.run').count().then((n) => n >= 1), 30000, 'a run in the timeline');
     check('History lists the shop run', (await win.locator('.run .name').allTextContents()).some((t) => /shop/i.test(t)));
     check('runs sit under a day heading', (await win.locator('.history-view .group-h').count()) >= 1);

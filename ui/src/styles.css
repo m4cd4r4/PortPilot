@@ -1,23 +1,25 @@
+/* Ledger. --ah is the accent hue (prefs.ts sets it); every accent colour is built from it. */
 :root {
   color-scheme: dark;
-  --bg: #0a0b0f; --pn: #12141a; --pn2: #191c24; --bd: #262a34;
-  --tx: #e8eaf0; --tx2: #9aa1ae; --mut: #626a78;
-  --acc: #6ef2a4; --onacc: #04210f; --warn: #f4c15d; --warn-bg: rgba(244, 193, 93, 0.12);
-  --r: 10px;
+  --ah: 235;
+  --bg: #101214; --side: #0b0d0f; --pn: #15181b; --pn2: #1d2125; --bd: #262b30;
+  --tx: #e8eaec; --tx2: #98a0a8; --mut: #7b848d;
+  --acc: hsl(var(--ah) 85% 64%); --onacc: #0b0c10; --warn: #f4c15d; --warn-bg: rgba(244, 193, 93, 0.12);
+  --r: 8px;
   --font: 'Segoe UI Variable', 'Segoe UI', system-ui, sans-serif;
 }
 :root[data-theme='light'] {
   color-scheme: light;
-  --bg: #f3f4f6; --pn: #ffffff; --pn2: #eaecf0; --bd: #dcdfe5;
-  --tx: #15171c; --tx2: #566072; --mut: #8a91a0;
-  --acc: #0d9467; --onacc: #ffffff; --warn: #8a5a05; --warn-bg: rgba(169, 106, 10, 0.12);
+  --bg: #fbfbfa; --side: #f3f4f4; --pn: #ffffff; --pn2: #eef0f0; --bd: #e0e3e4;
+  --tx: #15181b; --tx2: #586068; --mut: #6d757c;
+  --acc: hsl(var(--ah) 75% 36%); --onacc: #ffffff; --warn: #8a5a05; --warn-bg: rgba(169, 106, 10, 0.12);
 }
 @media (prefers-color-scheme: light) {
   :root:not([data-theme='dark']):not([data-theme='light']) {
     color-scheme: light;
-    --bg: #f3f4f6; --pn: #ffffff; --pn2: #eaecf0; --bd: #dcdfe5;
-    --tx: #15171c; --tx2: #566072; --mut: #8a91a0;
-    --acc: #0d9467; --onacc: #ffffff; --warn: #8a5a05; --warn-bg: rgba(169, 106, 10, 0.12);
+    --bg: #fbfbfa; --side: #f3f4f4; --pn: #ffffff; --pn2: #eef0f0; --bd: #e0e3e4;
+    --tx: #15181b; --tx2: #586068; --mut: #6d757c;
+    --acc: hsl(var(--ah) 75% 36%); --onacc: #ffffff; --warn: #8a5a05; --warn-bg: rgba(169, 106, 10, 0.12);
   }
 }
 
@@ -28,7 +30,39 @@ button { font: inherit; color: inherit; cursor: pointer; }
 button:disabled { cursor: default; opacity: 0.45; }
 :focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; }
 
-.shell { display: flex; flex-direction: column; height: 100%; }
+.shell { display: flex; height: 100%; }
+.col { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+/* Sidebar mode: a slim strip keeps the native window controls clear of the page. */
+.dragbar { flex: none; height: 32px; -webkit-app-region: drag; }
+.sidebar {
+  flex: none; width: 216px; display: flex; flex-direction: column; gap: 14px; padding: 12px 10px;
+  background: var(--side); border-right: 1px solid var(--bd); overflow: auto;
+}
+.sidebar .brand { display: flex; align-items: center; gap: 9px; padding: 2px 8px; font-size: 15px; -webkit-app-region: drag; }
+.sidebar .brand .mark { color: var(--acc); display: flex; }
+.sidebar .search { flex: none; max-width: none; width: 100%; }
+.snav { display: flex; flex-direction: column; gap: 2px; }
+.snav button {
+  display: flex; align-items: center; gap: 10px; width: 100%; background: none; border: 0; border-radius: var(--r);
+  padding: 7px 9px; color: var(--tx2); text-align: left;
+}
+.snav button:hover { background: var(--pn2); color: var(--tx); }
+.snav button.on { background: var(--pn2); color: var(--tx); box-shadow: inset 2px 0 0 var(--acc); }
+.sfoot { margin-top: auto; display: flex; flex-direction: column; gap: 6px; }
+.link-btn { background: none; border: 0; padding: 4px 9px; color: var(--mut); font-size: 12.5px; text-align: left; }
+.link-btn:hover { color: var(--tx); }
+.shell[data-nav='side'] .topbar { display: none; }
+.shell[data-nav='top'] .sidebar, .shell[data-nav='top'] .dragbar { display: none; }
+@media (max-width: 720px) {
+  .shell[data-nav] .sidebar, .shell[data-nav] .dragbar { display: none; }
+  .shell[data-nav] .topbar { display: flex; }
+}
+
+/* Settings: display choices. */
+.set-line { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.sw { display: flex; gap: 8px; }
+.sw button { width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--pn); background: hsl(var(--h) 80% 55%); box-shadow: 0 0 0 1px var(--bd); padding: 0; }
+.sw button[aria-pressed='true'] { box-shadow: 0 0 0 2px var(--tx); }
 
 /* Top bar. The right padding clears the native window-controls overlay on Windows. */
 .topbar {
