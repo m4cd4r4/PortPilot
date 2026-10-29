@@ -145,9 +145,13 @@ export function Home({ host, t, loaded, onView, snap, thumbs, onDone }: Props) {
             {(runningList.length ? runningList.slice(0, RUN_ROWS) : [hero]).map((c) => {
               const shot = thumbs.byApp[c.app.id]?.url;
               const last = lastRunText(recent.get(c.app.id));
+              const isOpen = c.state === 'running' && !!c.port;
+              const primary = () => run(() => (isOpen ? host.openUrl(`http://localhost:${c.port}`) : host.startApp(c.app)));
               return (
                 <div className="run-row" key={c.app.id}>
-                  <span className="th row-th" style={shot ? { backgroundImage: `url(${shot})` } : { background: gradient(c.app.name) }} />
+                  <button className="th-wrap row-wrap" title={`${isOpen ? 'Open' : 'Start'} ${c.app.name}`} aria-label={`${isOpen ? 'Open' : 'Start'} ${c.app.name}`} onClick={primary}>
+                    <span className="th row-th" style={shot ? { backgroundImage: `url(${shot})` } : { background: gradient(c.app.name) }} />
+                  </button>
                   <div className="row-main">
                     <h2><span className={`dot${c.state === 'running' ? ' on' : ''}`} />{c.app.name}</h2>
                     <span className="tile-sub">{[c.port ? `:${c.port}` : '', last ? (c.state === 'running' ? `started ${last}` : `last run ${last}`) : ''].filter(Boolean).join(' · ')}</span>
