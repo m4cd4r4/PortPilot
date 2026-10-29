@@ -152,7 +152,8 @@ button.tile:hover { border-color: var(--acc); }
 .h-browsers .th, .h-recent .th { aspect-ratio: 16 / 10; flex: none; }
 .th { display: block; flex: 1; min-height: 0; border-radius: 6px; border: 1px solid var(--bd); background-size: cover; background-position: top; }
 /* A profile's picture is shown whole on its gradient, never cropped or blown up to fill the tile. */
-.h-browsers .th { max-height: 170px; }
+.h-browsers .th { max-height: 96px; }
+.h-recent .th { max-height: 112px; }
 .th.art { padding: 10px; background-size: contain, cover; background-repeat: no-repeat; background-position: center; background-origin: content-box, border-box; }
 .th.sel { outline: 2px solid var(--acc); outline-offset: 2px; }
 .th-wrap:hover .th { border-color: var(--acc); }
@@ -277,6 +278,7 @@ button.tile:hover { border-color: var(--acc); }
   .cards.rows .title { flex: none; max-width: 100%; }
   .cards.compact:not(.gallery) { grid-template-columns: minmax(0, 1fr); }
   .cards .peek { display: none !important; }
+  .cards.rows .run .title { flex: none; }
 }
 
 /* History timeline: the Ledger row, grouped by day. */
@@ -284,7 +286,9 @@ button.tile:hover { border-color: var(--acc); }
 .run { min-height: 40px; }
 .run .shot.small { width: 56px; aspect-ratio: 16 / 10; flex: none; margin: 3px 0; border: 1px solid var(--bd); border-radius: 6px; }
 .run .meta { flex: 1; }
-.run .title { flex: 0 1 300px; }
+.cards.rows .run .title { flex: 0 0 380px; }
+.run .branch { flex: none; white-space: nowrap; }
+.scene-list:empty { display: none; }
 .run .sub .note { color: var(--tx2); }
 
 /* Browsers screen. */
@@ -361,6 +365,11 @@ button.primary:disabled { opacity: 0.6; }
 .cards.rows .bcard .shot, .cards.compact:not(.gallery) .bcard .shot { width: 56px; }
 .cards.rows .bcard .letter { font-size: 20px; }
 .cards.rows .bcard .note-warn { margin: 0; }
+@media (max-width: 720px) {
+  .cards.rows .bcard .meta { flex-wrap: nowrap; }
+  .cards.rows .bcard .title { flex: none; }
+  .cards.rows .bcard .purpose { flex: none; min-width: 0; max-width: 100%; }
+}
 .toolbar, .toolbar-end { flex-wrap: wrap; }
 @media (max-width: 1180px) {
   .topbar { flex-wrap: wrap; }
@@ -442,6 +451,12 @@ pre.log.err { border-color: color-mix(in srgb, var(--warn) 45%, var(--bd)); }
   table.ports .name { white-space: normal; overflow-wrap: anywhere; }
   table.ports .row-acts { min-width: 0; }
   table.ports .row-acts button { padding: 4px 8px; }
+}
+
+/* A flex cell drops out of the table, so its row lines stopped short; keep the actions a real cell on wide windows. */
+@media (min-width: 641px) {
+  table.ports td.row-acts { display: table-cell; text-align: right; white-space: nowrap; }
+  table.ports td.row-acts button + button { margin-left: 6px; }
 }
 
 /* Home first read, Localhost stopped cap. */

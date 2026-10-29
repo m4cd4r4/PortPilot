@@ -103,7 +103,7 @@ export function History({ host }: Props) {
                   <div className="meta">
                     <div className="title"><span className={`stat ${st}`}><span aria-hidden="true">{GLYPH[st]}</span> {WORD[st]}</span><span className="name">{rv.labelOf(r)}</span>
                       {r.git?.branch && <span className="branch">{r.git.branch}</span>}</div>
-                    <div className="sub"><span>{state.text}</span>{r.port && <span>:{r.port}</span>}<span>{rv.formatWhen(r)}</span></div>
+                    <div className="sub">{!live && <span>{state.text}</span>}{r.port && <span>:{r.port}</span>}<span>{rv.formatWhen(r)}</span></div>
                     {r.page?.title && <div className="sub"><span className="note">{r.page.title}</span></div>}
                   </div>
                   <div className="acts shown">
