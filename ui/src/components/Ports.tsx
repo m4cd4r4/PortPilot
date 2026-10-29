@@ -81,7 +81,7 @@ export function Ports({ host, snap, onDone }: Props) {
                     <td className="mono">:{p.port}</td>
                     <td>{(p.processName || 'unknown').replace(/\.exe$/i, '')}</td>
                     <td className="mono">{p.pid ?? ''}</td>
-                    <td>{owner.get(p.port) || <span className="muted">none</span>}</td>
+                    <td>{owner.get(p.port) ? <span className="stat running"><span aria-hidden="true">●</span> {owner.get(p.port)}</span> : <span className="muted">none</span>}</td>
                     <td className="row-acts">
                       <button onClick={() => host.openUrl(`http://localhost:${p.port}`)}>Open</button>
                       {armed === p.port

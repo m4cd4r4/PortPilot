@@ -75,7 +75,8 @@ async function main() {
     await win.click('role=tab[name="Browsers"]');
     await until(() => win.locator('.bcard').count().then((n) => n === 3), 15000, 'three cards');
     check('one card per profile', true);
-    check('the gallery is the default mode', (await modeClass()).includes('gallery'));
+    check('rows are the default view', (await modeClass()).includes('rows'));
+    await win.click('role=button[name="Cards"]');
     await until(() => card('shop').locator('.shot img').count().then((n) => n === 1), 15000, 'seeded picture on the shop card');
     const src = await card('shop').locator('.shot img').getAttribute('src');
     check('the seeded picture shows as a PNG data URL', /^data:image\/png;base64,/.test(src));
@@ -132,14 +133,10 @@ async function main() {
       && await card('held').getByRole('button', { name: 'Start' }).isDisabled());
 
     console.log('step: view modes and filter');
-    for (const mode of ['compact', 'list', 'grouped', 'gallery']) {
+    for (const mode of ['compact', 'cards', 'gallery', 'rows']) {
       await win.click(`role=button[name="${mode[0].toUpperCase() + mode.slice(1)}"]`);
-      await until(async () => (await modeClass()).includes(mode === 'grouped' ? 'gallery' : mode), 5000, `${mode} class`);
+      await until(async () => (await modeClass()).includes(mode === 'cards' ? 'tiles' : mode), 5000, `${mode} class`);
       check(`${mode} mode renders its cards`, (await win.locator('.bcard').count()) === 3);
-      if (mode === 'grouped') {
-        const heads = await win.locator('.group-h').allTextContents();
-        check('grouped mode heads each state', heads.length === 3 && heads[0].startsWith('Open') && heads[1].startsWith('Port blocked') && heads[2].startsWith('Stopped'), heads.join(' | '));
-      }
       if (SHOTS) {
         fs.mkdirSync(SHOTS, { recursive: true });
         for (const scheme of ['dark', 'light']) {
@@ -153,6 +150,9 @@ async function main() {
         await win.setViewportSize({ width: 1440, height: 900 });
       }
     }
+    const heads = await win.locator('.group-h').allTextContents();
+    check('grouped mode heads each state', heads.length === 3 && heads[0].startsWith('Open') && heads[1].startsWith('Port blocked') && heads[2].startsWith('Stopped'), heads.join(' | '));
+    check('and every profile is still listed', (await win.locator('.bcard').count()) === 3);
     await win.fill('input[aria-label="Filter profiles"]', 'owner@shop');
     await until(() => win.locator('.bcard').count().then((n) => n === 1), 5000, 'filtered by account');
     check('the filter reads account usernames', (await card('shop').count()) === 1);
@@ -202,6 +202,7 @@ async function main() {
     check('Remove takes the card away', (await win.locator('.bcard').count()) === 3);
 
     console.log('step: picture controls');
+    await win.click('role=button[name="Cards"]');
     await card('shop').getByRole('button', { name: 'Edit', exact: true }).click();
     await win.waitForSelector('.drawer');
     check('the drawer previews the current picture', (await win.locator('.art-prev img').count()) === 1);
@@ -212,8 +213,7 @@ async function main() {
     check('the card falls back to its letter tile', (await card('shop').locator('.letter').textContent()) === 'S');
 
     console.log('step: classic and new');
-    await win.click('role=button[name="Settings"]');
-    await win.click('role=menuitem[name="Switch to classic view"]');
+    await win.click('role=button[name="Switch to classic view"]');
     await until(() => win.evaluate(() => !!document.getElementById('btn-new-ui')), 20000, 'classic UI loads');
     check('Switch to classic view loads the v4 window', await win.evaluate(() => !document.querySelector('.topbar')));
     check('the choice is stored in settings', JSON.parse(fs.readFileSync(world.configPath, 'utf8')).settings.ui === 'classic');

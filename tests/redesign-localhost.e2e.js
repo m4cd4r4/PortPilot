@@ -45,7 +45,9 @@ async function main() {
     await win.click('role=tab[name="Apps"]');
     await until(() => win.locator('.card').count().then((n) => n === 3), 15000, 'three cards');
     check('one card per registered app', true);
-    check('the gallery is the default mode', (await modeClass()).includes('gallery'));
+    check('rows is the default view, with no inline screenshot', (await modeClass()).includes('rows') && (await win.locator('.shot').count()) === 0);
+    await win.click('role=button[name="Gallery"]');
+    await until(async () => (await modeClass()).includes('gallery'), 5000, 'gallery view');
     check('a stopped app with no history shows a letter tile', (await card('app_idle').locator('.letter').count()) === 1);
 
     console.log('step: start from the card and capture on hover');
@@ -70,13 +72,16 @@ async function main() {
     check('and it is dimmed', Number(opacity) < 1, `opacity ${opacity}`);
 
     console.log('step: view modes');
-    for (const mode of ['compact', 'list', 'grouped', 'gallery']) {
+    for (const mode of ['compact', 'cards', 'gallery', 'rows']) {
       await win.click(`role=button[name="${mode[0].toUpperCase() + mode.slice(1)}"]`);
-      await until(async () => (await modeClass()).includes(mode === 'grouped' ? 'gallery' : mode), 5000, `${mode} class`);
+      await until(async () => (await modeClass()).includes(mode), 5000, `${mode} class`);
       check(`${mode} mode renders its cards`, (await win.locator('.card').count()) === 3);
-      if (mode === 'grouped') {
+      if (mode === 'rows') {
         const heads = await win.locator('.group-h').allTextContents();
-        check('grouped mode has a heading per group', heads.length === 2 && heads[0].startsWith('Web') && heads[1].startsWith('Other'), heads.join(' | '));
+        check('grouped is on by default: a heading per group', heads.length === 2 && heads[0].startsWith('Web') && heads[1].startsWith('Other'), heads.join(' | '));
+        await win.click('role=button[name="Grouped"]');
+        await until(() => win.locator('.group-h').count().then((n) => n === 0 || n === 1), 5000, 'flat');
+        await win.click('role=button[name="Grouped"]');
       }
       if (SHOTS) {
         fs.mkdirSync(SHOTS, { recursive: true });
@@ -88,12 +93,12 @@ async function main() {
         await win.setViewportSize({ width: 1440, height: 900 });
       }
     }
-    await win.click('role=button[name="List"]');
+    await win.click('role=button[name="Cards"]');
     await win.reload();
     await until(() => win.locator('.topbar').count().then((n) => n === 1), 20000, 'reloaded');
     await win.click('role=tab[name="Apps"]');
     await until(() => win.locator('.card').count().then((n) => n === 3), 15000, 'cards after reload');
-    check('the chosen mode survives a reload', (await modeClass()).includes('list'));
+    check('the chosen mode survives a reload', (await modeClass()).includes('cards'));
     await win.click('role=button[name="Gallery"]');
 
     console.log('step: filter');
@@ -110,8 +115,7 @@ async function main() {
     check('a held port badges its card', (await card('app_blocked').locator('.badge').textContent()) === 'Port held');
 
     console.log('step: history');
-    await win.click('role=button[name="More ▾"]');
-    await win.click('role=menuitem[name="History"]');
+    await win.click('role=tab[name="History"]');
     await until(() => win.locator('.run').count().then((n) => n >= 1), 30000, 'a run in the timeline');
     check('History lists the shop run', (await win.locator('.run .name').allTextContents()).some((t) => /shop/i.test(t)));
     check('runs sit under a day heading', (await win.locator('.history-view .group-h').count()) >= 1);

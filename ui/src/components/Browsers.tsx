@@ -1,24 +1,16 @@
 import { useMemo, useState, type SyntheticEvent } from 'react';
 import type { Host, Profile, SignIn, Snapshot } from '../host';
-import { BROWSER_GROUPS, MODES, ago, browserCards, hueOf, type BrowserCard, type Mode } from '../model';
+import { BROWSER_GROUPS, ago, browserCards, hueOf, type BrowserCard } from '../model';
+import { VIEWS, setPrefs, usePrefs, type Prefs } from '../prefs';
 import { useBrowserArt, useSignIns, type BrowserArt } from '../useBrowserMeta';
 import { BrowserDrawer } from './BrowserDrawer';
 
 interface Props { host: Host; snap: Snapshot; onDone: () => void }
 
-const MODE_KEY = 'portpilot-browsers-mode';
 const MAX_CHIPS = 3;
 
-function loadMode(): Mode {
-  try {
-    const v = localStorage.getItem(MODE_KEY);
-    if (MODES.some((m) => m.mode === v)) return v as Mode;
-  } catch { /* storage can be unavailable */ }
-  return 'gallery';
-}
-
 export function Browsers({ host, snap, onDone }: Props) {
-  const [mode, setMode] = useState<Mode>(loadMode);
+  const prefs = usePrefs();
   const [query, setQuery] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState<string>('');
@@ -27,11 +19,6 @@ export function Browsers({ host, snap, onDone }: Props) {
   const list = useMemo(() => browserCards(snap, query), [snap, query]);
   const art = useBrowserArt(host, snap.profiles);
   const signIns = useSignIns(host, snap.profiles);
-
-  const pick = (m: Mode) => {
-    setMode(m);
-    try { localStorage.setItem(MODE_KEY, m); } catch { /* ignore */ }
-  };
 
   const act = async (name: string, fn: () => Promise<void>) => {
     if (busy) return;
@@ -46,8 +33,10 @@ export function Browsers({ host, snap, onDone }: Props) {
     setup: (p, which) => act(p.name, () => host.openSignInSetup(p.name, which)),
   };
 
-  const card = (c: BrowserCard) => (
-    <ProfileCard key={c.profile.name} c={c} mode={mode} art={art} signIn={signIns[c.profile.name]} busy={busy === c.profile.name} actions={actions} />
+  const grid = (rows: BrowserCard[]) => (
+    <div className={`cards ${prefs.view === 'cards' ? 'tiles' : prefs.view}`} data-density={prefs.density} data-status={prefs.status} data-thumbs={prefs.thumbs}>
+      {rows.map((c) => <ProfileCard key={c.profile.name} c={c} prefs={prefs} art={art} signIn={signIns[c.profile.name]} busy={busy === c.profile.name} actions={actions} />)}
+    </div>
   );
 
   const body = () => {
@@ -60,19 +49,19 @@ export function Browsers({ host, snap, onDone }: Props) {
       );
     }
     if (!list.length) return <p className="empty-note">No profile matches that filter.</p>;
-    if (mode === 'grouped') {
+    if (prefs.grouping) {
       return BROWSER_GROUPS.map((g) => {
         const rows = list.filter((c) => c.group === g.id);
         if (!rows.length) return null;
         return (
           <section key={g.id} aria-label={g.label}>
             <h3 className="group-h">{g.label}<small>{rows.length}</small></h3>
-            <div className="cards gallery">{rows.map((c) => <ProfileCard key={c.profile.name} c={c} mode="gallery" art={art} signIn={signIns[c.profile.name]} busy={busy === c.profile.name} actions={actions} />)}</div>
+            {grid(rows)}
           </section>
         );
       });
     }
-    return <div className={`cards ${mode}`}>{list.map(card)}</div>;
+    return grid(list);
   };
 
   return (
@@ -81,10 +70,11 @@ export function Browsers({ host, snap, onDone }: Props) {
         <input className="filter" type="search" placeholder="Filter profiles" aria-label="Filter profiles" value={query} onChange={(e) => setQuery(e.target.value)} />
         <div className="toolbar-end">
           <div className="seg small" role="group" aria-label="View mode">
-            {MODES.map((m) => (
-              <button key={m.mode} aria-pressed={mode === m.mode} className={mode === m.mode ? 'on' : ''} onClick={() => pick(m.mode)}>{m.label}</button>
+            {VIEWS.map((m) => (
+              <button key={m.v} aria-pressed={prefs.view === m.v} className={prefs.view === m.v ? 'on' : ''} onClick={() => setPrefs({ view: m.v })}>{m.l}</button>
             ))}
           </div>
+          <button aria-pressed={prefs.grouping} className={prefs.grouping ? 'tog on' : 'tog'} onClick={() => setPrefs({ grouping: !prefs.grouping })}>Grouped</button>
           <button className="primary" onClick={() => setDrawer({ name: null })}>Add profile</button>
         </div>
       </div>
@@ -103,30 +93,38 @@ interface Actions {
   setup(p: Profile, which: 'sync' | 'passwords'): void;
 }
 
+const GLYPH = { running: '●', conflict: '▲', stopped: '○' } as const;
+const WORD: Record<BrowserCard['group'], string> = { inuse: 'in use', open: 'open', blocked: 'blocked', stopped: 'stopped' };
 const SIGN_LABEL: Record<SignIn, string> = { in: 'Signed in', out: 'Signed out', unknown: '' };
 
-function ProfileCard({ c, mode, art, signIn, busy, actions }: { c: BrowserCard; mode: Mode; art: BrowserArt; signIn?: SignIn; busy: boolean; actions: Actions }) {
+function ProfileCard({ c, prefs, art, signIn, busy, actions }: { c: BrowserCard; prefs: Prefs; art: BrowserArt; signIn?: SignIn; busy: boolean; actions: Actions }) {
   const p = c.profile;
   const picture = art.byName[p.name];
   const up = p.state === 'up';
   const accounts = p.accounts || [];
   const hue = hueOf(p.name);
   const lease = p.leasedTo;
+  const tiles = prefs.view === 'cards' || prefs.view === 'gallery';
+  const showShot = tiles || prefs.thumbs === 'inline';
+  const compact = prefs.view === 'compact';
+  const state = up ? 'running' : c.group === 'blocked' ? 'conflict' : 'stopped';
   const [small, setSmall] = useState(false);
   // A favicon or touch icon is a small square: show it whole on the gradient, not stretched to fill the hero.
   const sized = (e: SyntheticEvent<HTMLImageElement>) => setSmall(e.currentTarget.naturalWidth < 320);
   return (
     <article className={`card bcard ${c.group}`} data-profile={p.name} data-group={c.group}>
-      <button className={`shot bshot${picture && small ? ' small-art' : ''}`} onClick={() => actions.edit(p)} aria-label={`Edit ${p.name}`}
+      {showShot && <button className={`shot bshot${picture && small ? ' small-art' : ''}`} onClick={() => actions.edit(p)} aria-label={`Edit ${p.name}`}
         style={{ background: `linear-gradient(135deg, hsl(${hue} 55% 30%), hsl(${(hue + 40) % 360} 55% 18%))` }}>
         {picture
           ? <img src={picture} alt="" loading="lazy" onLoad={sized} />
           : <span className="letter" aria-hidden="true" style={{ color: `hsl(${hue} 70% 82%)` }}>{p.name.slice(0, 1).toUpperCase()}</span>}
         {c.group === 'blocked' && <span className="badge warn">Port held</span>}
-      </button>
+      </button>}
       <div className="meta">
         <div className="title">
-          <span className={`dot ${up ? 'running' : c.group === 'blocked' ? 'conflict' : 'stopped'}`} aria-hidden="true" />
+          {prefs.status === 'dot'
+            ? <span className={`dot ${state}`} aria-hidden="true" />
+            : <span className={`stat ${state}`}><span aria-hidden="true">{GLYPH[state]}</span> {WORD[c.group]}</span>}
           <span className="name">{p.name}</span>
           {up && signIn && signIn !== 'unknown' && <span className={`pill ${signIn}`} data-signin={signIn}>{SIGN_LABEL[signIn]}</span>}
         </div>
@@ -136,8 +134,8 @@ function ProfileCard({ c, mode, art, signIn, busy, actions }: { c: BrowserCard; 
           {p.mode && p.mode !== 'headed' && <span>{p.mode}</span>}
           {up && p.tabs && <span>{p.tabs.length} tab{p.tabs.length === 1 ? '' : 's'}</span>}
         </div>
-        {mode !== 'compact' && p.purpose && <p className="purpose">{p.purpose}</p>}
-        {mode !== 'compact' && accounts.length > 0 && (
+        {!compact && p.purpose && <p className="purpose">{p.purpose}</p>}
+        {!compact && accounts.length > 0 && (
           <div className="chips" aria-label="Accounts">
             {accounts.slice(0, MAX_CHIPS).map((a, i) => (
               <span key={i} className="chip" title={a.note || undefined}>{[a.platform, a.username].filter(Boolean).join(' · ')}</span>
@@ -145,7 +143,7 @@ function ProfileCard({ c, mode, art, signIn, busy, actions }: { c: BrowserCard; 
             {accounts.length > MAX_CHIPS && <span className="chip more">+{accounts.length - MAX_CHIPS}</span>}
           </div>
         )}
-        {up && signIn === 'out' && (!p.browser || p.browser === 'brave') && mode !== 'compact' && (
+        {up && signIn === 'out' && (!p.browser || p.browser === 'brave') && !compact && (
           <div className="signin-setup" data-signin-setup role="group" aria-label="Set up sign-ins">
             <span>Sign-ins:</span>
             <button onClick={() => actions.setup(p, 'sync')} disabled={busy}>Brave Sync</button>
@@ -158,7 +156,7 @@ function ProfileCard({ c, mode, art, signIn, busy, actions }: { c: BrowserCard; 
             {!lease.starting && <button onClick={() => actions.release(p)} disabled={busy}>Release</button>}
           </div>
         )}
-        {c.group === 'blocked' && p.warning && mode !== 'compact' && <p className="note-warn">{p.warning}</p>}
+        {c.group === 'blocked' && p.warning && !compact && <p className="note-warn">{p.warning}</p>}
       </div>
       <div className="acts">
         {up

@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Host, Snapshot } from './host';
 import { tally, type View } from './model';
 import { TopBar } from './components/TopBar';
+import { Sidebar } from './components/Sidebar';
+import { usePrefs } from './prefs';
 import { Home } from './components/Home';
 import { Banner } from './components/Banner';
 import { Palette } from './components/Palette';
@@ -57,23 +59,28 @@ export function App({ host }: { host: Host }) {
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
+  const prefs = usePrefs();
   const t = useMemo(() => tally(snap), [snap]);
   const thumbs = useThumbs(host);
 
   return (
-    <div className="shell">
-      <TopBar view={view} onView={setView} onSearch={() => setPaletteOpen(true)} onClassic={() => host.switchToClassic()} />
-      <Banner warnings={t.warnings} onFix={() => setView('ports')} />
-      <main className="main" id="main">
-        {error && <p className="notice" role="alert">Could not read PortPilot state: {error}</p>}
-        {view === 'home' && <Home host={host} onDone={refresh} t={t} loaded={loaded} onView={setView} snap={snap} thumbs={thumbs} />}
-        {view === 'localhost' && <Localhost host={host} snap={snap} thumbs={thumbs} onDone={refresh} manage={manage} onManage={setManage} />}
-        {view === 'history' && <History host={host} />}
-        {view === 'scenes' && <Scenes host={host} snap={snap} onDone={refresh} />}
-        {view === 'ports' && <Ports host={host} snap={snap} onDone={refresh} />}
-        {view === 'settings' && <Settings host={host} onClassic={() => host.switchToClassic()} />}
-        {view === 'browsers' && <Browsers host={host} snap={snap} onDone={refresh} />}
-      </main>
+    <div className="shell" data-nav={prefs.nav}>
+      <Sidebar view={view} onView={setView} onSearch={() => setPaletteOpen(true)} onClassic={() => host.switchToClassic()} />
+      <div className="col">
+        <TopBar view={view} onView={setView} onSearch={() => setPaletteOpen(true)} onClassic={() => host.switchToClassic()} />
+        <div className="dragbar" aria-hidden="true" />
+        <Banner warnings={t.warnings} onFix={() => setView('ports')} />
+        <main className="main" id="main">
+          {error && <p className="notice" role="alert">Could not read PortPilot state: {error}</p>}
+          {view === 'home' && <Home host={host} onDone={refresh} t={t} loaded={loaded} onView={setView} snap={snap} thumbs={thumbs} />}
+          {view === 'localhost' && <Localhost host={host} snap={snap} thumbs={thumbs} onDone={refresh} manage={manage} onManage={setManage} />}
+          {view === 'history' && <History host={host} />}
+          {view === 'scenes' && <Scenes host={host} snap={snap} onDone={refresh} />}
+          {view === 'ports' && <Ports host={host} snap={snap} onDone={refresh} />}
+          {view === 'settings' && <Settings host={host} onClassic={() => host.switchToClassic()} />}
+          {view === 'browsers' && <Browsers host={host} snap={snap} onDone={refresh} />}
+        </main>
+      </div>
       <Palette open={paletteOpen} onClose={() => setPaletteOpen(false)} host={host} snap={snap}
         view={view} onView={setView} onDone={refresh} />
     </div>

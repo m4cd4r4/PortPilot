@@ -88,9 +88,8 @@ async function main() {
 
     console.log('step: grouped Localhost uses the stored group field');
     await win.click('role=tab[name="Apps"]');
-    await win.click('role=button[name="Grouped"]');
     await until(() => win.evaluate(() => [...document.querySelectorAll('.group-h')].some((e) => e.textContent.startsWith('Work'))), 10000, 'Work heading');
-    check('Grouped mode shows the Work group', true);
+    check('Grouping (on by default) shows the Work group', true);
     await win.click('role=button[name="Gallery"]');
 
     console.log('step: start, details, ports');
@@ -128,8 +127,7 @@ async function main() {
     check('Delete removes the app after a confirm', true);
 
     console.log('step: settings');
-    await win.click('role=button[name="Settings"]');
-    await win.click('role=menuitem[name="Settings"]');
+    await win.click('role=tab[name="Settings"]');
     await until(() => win.evaluate(() => !!document.querySelector('.settings-view .set-group')), 10000, 'settings screen');
     check('the Settings menu opens the Settings screen', true);
     await win.uncheck('label:has-text("Tell me when an app exits") input');
@@ -146,7 +144,13 @@ async function main() {
     await win.click('role=button[name="Light"]');
     check('the theme applies at once', (await win.evaluate(() => document.documentElement.dataset.theme)) === 'light');
     check('and is remembered', (await win.evaluate(() => localStorage.getItem('portpilot-ui-theme'))) === 'light');
-    check('the classic switch is still on this screen', (await win.locator('role=button[name="Switch to classic view"]').count()) === 1);
+    await win.click('role=button[name="Top bar"]');
+    check('Top bar moves the tabs to the top', (await win.evaluate(() => document.querySelector('.shell').dataset.nav)) === 'top');
+    await win.click('role=button[name="Coral"]');
+    check('an accent sets the hue and is remembered', (await win.evaluate(() => document.documentElement.style.getPropertyValue('--ah'))) === '18'
+      && (await win.evaluate(() => JSON.parse(localStorage.getItem('portpilot-ui-prefs')).accent)) === 'coral');
+    await win.click('role=button[name="Sidebar"]');
+    check('the classic switch is still on this screen', (await win.locator('#main >> role=button[name="Switch to classic view"]').count()) === 1);
     await shot('settings');
 
     check('no console errors', errors.length === 0, errors.join(' | '));

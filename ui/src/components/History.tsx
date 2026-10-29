@@ -4,6 +4,8 @@ import { runView } from '../legacy';
 
 interface Props { host: Host }
 
+const GLYPH = { running: '●', crashed: '✕', stopped: '○' } as const;
+const WORD = { running: 'running', crashed: 'crashed', stopped: 'ended' } as const;
 const DAY = new Intl.DateTimeFormat('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
 const dayOf = (iso: string) => {
   const d = new Date(iso);
@@ -88,19 +90,20 @@ export function History({ host }: Props) {
       {days.map((d) => (
         <section key={d.day} aria-label={d.day}>
           <h3 className="group-h">{d.day}<small>{d.runs.length}</small></h3>
-          <ul className="timeline">
+          <ul className="timeline cards rows">
             {d.runs.map((r) => {
               const live = data.live.includes(r.id);
               const state = rv.runStateOf(r, live);
               const canRestart = !live && data.startable.includes(r.id);
               const url = shots[r.id];
+              const st = live ? 'running' : state.state === 'crashed' ? 'crashed' : 'stopped';
               return (
-                <li key={r.id} className="run" data-run={r.id}>
+                <li key={r.id} className="run card" data-run={r.id}>
                   <div className="shot small">{url ? <img src={url} alt="" loading="lazy" /> : <span className="letter" aria-hidden="true">{rv.labelOf(r).slice(0, 1).toUpperCase()}</span>}</div>
                   <div className="meta">
-                    <div className="title"><span className={`dot ${live ? 'running' : state.state === 'crashed' ? 'crashed' : 'stopped'}`} aria-hidden="true" /><span className="name">{rv.labelOf(r)}</span>
+                    <div className="title"><span className={`stat ${st}`}><span aria-hidden="true">{GLYPH[st]}</span> {WORD[st]}</span><span className="name">{rv.labelOf(r)}</span>
                       {r.git?.branch && <span className="branch">{r.git.branch}</span>}</div>
-                    <div className="sub"><span>{state.text}</span>{r.port && <span>:{r.port}</span>}<span>{rv.formatWhen(r)}</span></div>
+                    <div className="sub">{!live && <span>{state.text}</span>}{r.port && <span>:{r.port}</span>}<span>{rv.formatWhen(r)}</span></div>
                     {r.page?.title && <div className="sub"><span className="note">{r.page.title}</span></div>}
                   </div>
                   <div className="acts shown">
