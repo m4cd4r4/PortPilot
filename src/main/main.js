@@ -221,6 +221,11 @@ if (!gotTheLock) {
     createTray();
     setupIpcHandlers(ipcMain, configStore);
 
+    // Heartbeat and inbox files of ended Claude sessions pile up; sweep them now and hourly.
+    const sweepSessions = () => { try { require('../core/configFile').pruneSessions(configStore.configPath); } catch { /* best effort */ } };
+    sweepSessions();
+    setInterval(sweepSessions, 3600 * 1000).unref();
+
     // Switch between the new and the classic window; both load the same preload and IPC.
     ipcMain.handle('ui:switch', async (_, to) => {
       if (to !== 'new' && to !== 'classic') return { success: false, error: 'Choose new or classic.' };
