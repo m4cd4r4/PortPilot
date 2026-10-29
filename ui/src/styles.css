@@ -122,16 +122,18 @@ button.tile:hover { border-color: var(--acc); }
 .link:hover { color: var(--tx); }
 
 .h-hero { gap: 6px; }
-.run-row { display: flex; align-items: center; gap: 14px; padding: 7px 0; }
+.run-row { display: flex; align-items: center; gap: 12px; padding: 5px 0; }
 .run-row + .run-row { border-top: 1px solid var(--bd); }
 .more-link { align-self: flex-start; text-transform: none; letter-spacing: 0; font-size: 12.5px; color: var(--acc); }
-.h-hero .row-th { flex: none; width: 112px; height: 62px; background-size: cover; background-position: top; }
+.h-hero .row-th { flex: none; width: 56px; height: 32px; background-size: cover; background-position: top; }
 .row-wrap { flex: none; cursor: pointer; }
-.row-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.row-main h2 { margin: 0; font-size: 17px; display: flex; align-items: center; gap: 8px; }
+.row-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0; }
+.row-main h2 { margin: 0; font-size: 14px; display: flex; align-items: center; gap: 8px; }
 .row-main .dot.on { background: var(--acc); }
-.row-actions { display: flex; gap: 8px; }
-.row-actions button { background: none; border: 1px solid var(--bd); border-radius: 7px; color: var(--tx); padding: 4px 12px; }
+.row-actions { display: flex; gap: 4px; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.row-actions button { background: none; border: 1px solid var(--bd); border-radius: 7px; color: var(--tx); padding: 0; width: 28px; height: 28px; display: grid; place-items: center; }
+.row-actions svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 .row-actions button:hover { border-color: var(--acc); }
 .row-actions button.primary { background: var(--acc); border-color: var(--acc); color: var(--onacc); font-weight: 600; }
 .hero-shot { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: top; }
@@ -169,7 +171,7 @@ button.tile:hover { border-color: var(--acc); }
 
 @media (max-width: 899px) {
   .home { grid-template-columns: 1fr; grid-template-rows: none; grid-auto-rows: auto; grid-template-areas: "hero" "browsers" "recent"; }
-  .run-row { gap: 10px; } .h-hero .row-th { width: 64px; height: 36px; } .row-main { overflow: hidden; } .row-main h2 { font-size: 16px; } .row-main h2, .row-main .tile-sub { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .row-actions button { padding: 6px 12px; } .row-actions button:last-child:not(.primary) { display: none; }
+  .run-row { gap: 10px; } .h-hero .row-th { width: 64px; height: 36px; } .row-main { overflow: hidden; } .row-main h2 { font-size: 16px; } .row-main h2, .row-main .tile-sub { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }  .row-actions button:last-child:not(.primary) { display: none; }
   .home.has-scene { grid-template-areas: "hero" "browsers" "scene" "recent"; }
   .h-browsers .th, .h-recent .th { aspect-ratio: 16 / 10; flex: none; }
   .mini.five { grid-template-columns: repeat(3, 1fr); } .th-start { opacity: 1; } .h-scene { min-height: 72px; }

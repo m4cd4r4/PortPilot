@@ -157,11 +157,18 @@ export function Home({ host, t, loaded, onView, snap, thumbs, onDone }: Props) {
                     <span className="tile-sub">{[c.port ? `:${c.port}` : '', last ? (c.state === 'running' ? `started ${last}` : `last run ${last}`) : ''].filter(Boolean).join(' · ')}</span>
                   </div>
                   <div className="row-actions">
-                    {c.state === 'running' && c.port
-                      ? <button className="primary" onClick={() => run(() => host.openUrl(`http://localhost:${c.port}`))}>Open</button>
-                      : <button className="primary" onClick={() => run(() => host.startApp(c.app))}>Start</button>}
-                    {c.state === 'running' && <button onClick={() => run(() => host.stopApp(c.app.id))}>Stop</button>}
-                    <button onClick={() => onView('localhost')}>Details</button>
+                    <button className="primary" title={isOpen ? 'Open' : 'Start'} onClick={primary}>
+                      <svg viewBox="0 0 16 16" aria-hidden="true">{isOpen ? <path d="M6 3h7v7M13 3 5 11" /> : <path d="M5 3.5v9l7-4.5z" fill="currentColor" stroke="none" />}</svg>
+                      <span className="sr">{isOpen ? 'Open' : 'Start'}</span>
+                    </button>
+                    {c.state === 'running' && <button title="Stop" onClick={() => run(() => host.stopApp(c.app.id))}>
+                      <svg viewBox="0 0 16 16" aria-hidden="true"><rect x="4" y="4" width="8" height="8" rx="1" fill="currentColor" stroke="none" /></svg>
+                      <span className="sr">Stop</span>
+                    </button>}
+                    <button title="Details" onClick={() => onView('localhost')}>
+                      <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="3.5" cy="8" r="1.2" fill="currentColor" stroke="none" /><circle cx="8" cy="8" r="1.2" fill="currentColor" stroke="none" /><circle cx="12.5" cy="8" r="1.2" fill="currentColor" stroke="none" /></svg>
+                      <span className="sr">Details</span>
+                    </button>
                   </div>
                 </div>
               );
