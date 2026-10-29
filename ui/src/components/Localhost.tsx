@@ -113,7 +113,7 @@ const WORD: Record<Card['state'], string> = { running: 'running', conflict: 'blo
 
 function AppCard({ c, prefs, thumbs, actions }: { c: Card; prefs: Prefs; thumbs: Thumbs; actions: Actions }) {
   const thumb = thumbs.byApp[c.app.id];
-  const showShot = prefs.view === 'cards' || prefs.view === 'gallery' || prefs.thumbs === 'inline';
+  const showShot = prefs.view === 'cards' || prefs.thumbs === 'inline';
   const peek = !showShot && prefs.thumbs === 'peek' && thumb;
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const hover = () => {
@@ -138,7 +138,7 @@ function AppCard({ c, prefs, thumbs, actions }: { c: Card; prefs: Prefs; thumbs:
         <div className="sub">
           {c.port ? <span>:{c.port}</span> : <span>no port</span>}
           {c.app.branch && <span className="branch">{c.app.branch}</span>}
-          {prefs.view !== 'compact' && c.note && <span className="note">{c.note}</span>}
+          {c.note && <span className="note">{c.note}</span>}
         </div>
       </div>
       {peek && <img className="peek" src={thumb.url} alt="" loading="lazy" />}

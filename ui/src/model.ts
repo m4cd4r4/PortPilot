@@ -37,14 +37,6 @@ export function tally(s: Snapshot): Tally {
 
 export type CardState = 'running' | 'conflict' | 'crashed' | 'stopped';
 export interface Card { app: AppRec; state: CardState; port?: number; note: string }
-export type Mode = 'gallery' | 'compact' | 'list' | 'grouped';
-export const MODES: Array<{ mode: Mode; label: string }> = [
-  { mode: 'gallery', label: 'Gallery' },
-  { mode: 'compact', label: 'Compact' },
-  { mode: 'list', label: 'List' },
-  { mode: 'grouped', label: 'Grouped' },
-];
-
 const RANK: Record<CardState, number> = { conflict: 0, crashed: 1, running: 2, stopped: 3 };
 
 /** One card per registered app: its state, the port to show and a short reason. Running first, then by name. */

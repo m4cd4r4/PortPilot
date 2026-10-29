@@ -13,7 +13,7 @@ export const ACCENTS = [
 export type AccentId = (typeof ACCENTS)[number]['id'];
 
 /** How the Apps list is drawn. */
-export const VIEWS = [{ v: 'rows', l: 'Rows' }, { v: 'compact', l: 'Compact' }, { v: 'cards', l: 'Cards' }, { v: 'gallery', l: 'Gallery' }] as const;
+export const VIEWS = [{ v: 'rows', l: 'Rows' }, { v: 'cards', l: 'Cards' }] as const;
 export type AppView = (typeof VIEWS)[number]['v'];
 export type Density = 'cozy' | 'tight';
 export type Thumbs = 'off' | 'peek' | 'inline';
@@ -31,7 +31,9 @@ export function parsePrefs(raw: string | null): Prefs {
     const j = JSON.parse(raw || '{}') as Partial<Prefs>;
     if (j.nav === 'side' || j.nav === 'top') out.nav = j.nav;
     if (ACCENTS.some((a) => a.id === j.accent)) out.accent = j.accent as AccentId;
-    if (VIEWS.some((x) => x.v === j.view)) out.view = j.view as AppView;
+    // Compact and Gallery were retired: they fold into the two views that remain.
+    const view = (j.view as string) === 'compact' ? 'rows' : (j.view as string) === 'gallery' ? 'cards' : j.view;
+    if (VIEWS.some((x) => x.v === view)) out.view = view as AppView;
     if (j.density === 'cozy' || j.density === 'tight') out.density = j.density;
     if (j.thumbs === 'off' || j.thumbs === 'peek' || j.thumbs === 'inline') out.thumbs = j.thumbs;
     if (j.status === 'dot' || j.status === 'glyph') out.status = j.status;
