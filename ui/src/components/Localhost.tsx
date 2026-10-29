@@ -3,6 +3,7 @@ import type { Host, Snapshot } from '../host';
 import { STALE_MS, cards, grouped, type Card } from '../model';
 import { VIEWS, setPrefs, usePrefs, type Prefs } from '../prefs';
 import type { Thumbs } from '../useThumbs';
+import { AppInspector } from './AppInspector';
 import { Library } from './Library';
 
 interface Props { host: Host; snap: Snapshot; thumbs: Thumbs; onDone: () => void; manage: boolean; onManage: (on: boolean) => void; inspectId?: string }
@@ -17,6 +18,8 @@ export function Localhost({ host, snap, thumbs, onDone, manage, onManage, inspec
   const [query, setQuery] = useState('');
   const [error, setError] = useState('');
   const [allStopped, setAllStopped] = useState(false);
+  // Details opened from Home land on the normal Apps view with the panel up.
+  const [inspectApp, setInspectApp] = useState<string | undefined>(inspectId);
   const list = useMemo(() => cards(snap, query), [snap, query]);
 
   // Keep running apps' screenshots fresh: one stale app per sweep, so captures never pile up.
@@ -84,7 +87,7 @@ export function Localhost({ host, snap, thumbs, onDone, manage, onManage, inspec
     );
   };
 
-  if (manage) return <Library host={host} snap={snap} inspectId={inspectId} onDone={onDone} onExit={() => onManage(false)} />;
+  if (manage) return <Library host={host} snap={snap} onDone={onDone} onExit={() => onManage(false)} />;
 
   return (
     <section className="gallery-view" aria-label="Localhost">
@@ -102,6 +105,11 @@ export function Localhost({ host, snap, thumbs, onDone, manage, onManage, inspec
       </div>
       {error && <p className="notice" role="alert">{error}</p>}
       {body()}
+      {(() => {
+        const a = snap.apps.find((x) => x.id === inspectApp);
+        return a && <AppInspector host={host} app={a} port={snap.running[a.id]?.port} running={!!snap.running[a.id]}
+          crashed={!!snap.crashed[a.id]} onClose={() => setInspectApp(undefined)} />;
+      })()}
     </section>
   );
 }

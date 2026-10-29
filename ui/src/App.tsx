@@ -30,7 +30,7 @@ export function App({ host }: { host: Host }) {
     setViewRaw(v === 'library' ? 'localhost' : v);
   }, []);
   const openItem = useCallback((kind: 'app' | 'browser', id: string) => {
-    setManage(kind === 'app');
+    setManage(false);
     setFocus({ kind, id });
     setViewRaw(kind === 'app' ? 'localhost' : 'browsers');
   }, []);

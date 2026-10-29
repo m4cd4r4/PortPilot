@@ -4,13 +4,13 @@ import { groupOf } from '../model';
 import { AppDrawer } from './AppDrawer';
 import { AppInspector } from './AppInspector';
 
-interface Props { host: Host; snap: Snapshot; onDone: () => void; onExit: () => void; inspectId?: string }
+interface Props { host: Host; snap: Snapshot; onDone: () => void; onExit: () => void }
 
 /** The Manage mode of the Apps screen: add, edit, star and group apps. */
-export function Library({ host, snap, onDone, onExit, inspectId }: Props) {
+export function Library({ host, snap, onDone, onExit }: Props) {
   const [query, setQuery] = useState('');
   const [editing, setEditing] = useState<AppRec | 'new' | null>(null);
-  const [inspect, setInspect] = useState<AppRec | null>(() => snap.apps.find((a) => a.id === inspectId) || null);
+  const [inspect, setInspect] = useState<AppRec | null>(null);
   const [error, setError] = useState('');
   const [groupName, setGroupName] = useState('');
   const [showGroups, setShowGroups] = useState(false);

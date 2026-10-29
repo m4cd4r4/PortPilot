@@ -83,6 +83,7 @@ async function main() {
     await win.locator('.run-row', { hasText: 'beta' }).locator('.chip-tr').click();
     await win.waitForSelector('[role=dialog][aria-label="beta details"]', { timeout: 5000 });
     check('Details on a Home tile opens that app\'s details', true);
+    check('Details keeps the normal Apps view with its view switch', (await win.locator('[aria-label="View mode"]').count()) === 1);
     await win.click('[role=dialog] >> role=button[name="Close"]');
     // A browser card on Home opens that profile.
     await win.click('role=tab[name="Home"]');
