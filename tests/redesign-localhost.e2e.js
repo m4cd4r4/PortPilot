@@ -18,7 +18,6 @@ const SHOTS = process.env.PORTPILOT_SHOTS_DIR || '';
 async function main() {
   if (!fs.existsSync(path.join(h.root, 'src', 'ui-dist', 'index.html'))) throw new Error('src/ui-dist is missing; run "npm run build:ui" first');
   const [shopPort, idlePort, heldPort] = await h.freePorts(3);
-  process.env.PORTPILOT_NEW_UI = '1';
   process.env.PORTPILOT_DETECT_ONLY_PORTS = [shopPort, idlePort, heldPort].join(',');
   const shop = world.mkdir('shop');
   fs.writeFileSync(path.join(shop, 'server.js'), h.SERVER);
@@ -46,8 +45,8 @@ async function main() {
     await until(() => win.locator('.card').count().then((n) => n === 3), 15000, 'three cards');
     check('one card per registered app', true);
     check('rows is the default view, with no inline screenshot', (await modeClass()).includes('rows') && (await win.locator('.shot').count()) === 0);
-    await win.click('role=button[name="Gallery"]');
-    await until(async () => (await modeClass()).includes('gallery'), 5000, 'gallery view');
+    await win.click('role=button[name="Cards"]');
+    await until(async () => (await modeClass()).includes('tiles'), 5000, 'cards view');
     check('a stopped app with no history shows a letter tile', (await card('app_idle').locator('.letter').count()) === 1);
 
     console.log('step: start from the card and capture on hover');
@@ -72,9 +71,9 @@ async function main() {
     check('and it is dimmed', Number(opacity) < 1, `opacity ${opacity}`);
 
     console.log('step: view modes');
-    for (const mode of ['compact', 'cards', 'gallery', 'rows']) {
+    for (const mode of ['cards', 'rows']) {
       await win.click(`role=button[name="${mode[0].toUpperCase() + mode.slice(1)}"]`);
-      await until(async () => (await modeClass()).includes(mode), 5000, `${mode} class`);
+      await until(async () => (await modeClass()).includes(mode === 'cards' ? 'tiles' : mode), 5000, `${mode} class`);
       check(`${mode} mode renders its cards`, (await win.locator('.card').count()) === 3);
       if (mode === 'rows') {
         const heads = await win.locator('.group-h').allTextContents();
@@ -99,7 +98,7 @@ async function main() {
     await win.click('role=tab[name="Apps"]');
     await until(() => win.locator('.card').count().then((n) => n === 3), 15000, 'cards after reload');
     check('the chosen mode survives a reload', (await modeClass()).includes('cards'));
-    await win.click('role=button[name="Gallery"]');
+    await win.click('role=button[name="Cards"]');
 
     console.log('step: filter');
     await win.fill('input[aria-label="Filter apps"]', 'idl');

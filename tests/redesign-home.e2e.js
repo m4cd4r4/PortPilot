@@ -14,7 +14,6 @@ const world = h.makeWorld('pp-home-');
 
 async function main() {
   if (!fs.existsSync(path.join(h.root, 'src', 'ui-dist', 'index.html'))) throw new Error('src/ui-dist is missing; run "npm run build:ui" first');
-  process.env.PORTPILOT_NEW_UI = '1';
   const [pa, pb, pc] = await h.freePorts(3);
   const dir = world.mkdir('srv');
   fs.writeFileSync(path.join(dir, 'server.js'), h.SERVER);

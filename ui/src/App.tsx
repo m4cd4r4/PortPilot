@@ -75,9 +75,9 @@ export function App({ host }: { host: Host }) {
 
   return (
     <div className="shell" data-nav={prefs.nav}>
-      <Sidebar view={view} onView={setView} onSearch={() => setPaletteOpen(true)} onClassic={() => host.switchToClassic()} />
+      <Sidebar view={view} onView={setView} onSearch={() => setPaletteOpen(true)} />
       <div className="col">
-        <TopBar view={view} onView={setView} onSearch={() => setPaletteOpen(true)} onClassic={() => host.switchToClassic()} />
+        <TopBar view={view} onView={setView} onSearch={() => setPaletteOpen(true)} />
         <div className="dragbar" aria-hidden="true" />
         <Banner warnings={t.warnings} onFix={() => setView('ports')} />
         <main className="main" id="main">
@@ -87,7 +87,7 @@ export function App({ host }: { host: Host }) {
           {view === 'history' && <History host={host} />}
           {view === 'scenes' && <Scenes host={host} snap={snap} onDone={refresh} />}
           {view === 'ports' && <Ports host={host} snap={snap} onDone={refresh} />}
-          {view === 'settings' && <Settings host={host} onClassic={() => host.switchToClassic()} />}
+          {view === 'settings' && <Settings host={host} />}
           {view === 'browsers' && <Browsers host={host} snap={snap} onDone={refresh} />}
         </main>
       </div>

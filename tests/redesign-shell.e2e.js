@@ -3,7 +3,7 @@
  * Run: npm run build:ui && node tests/redesign-shell.e2e.js   (needs Electron + playwright)
  * Set PORTPILOT_SHOTS_DIR to save screenshots at 1440 and 1120 wide.
  *
- * Covers: PORTPILOT_NEW_UI=1 loads the new bundle; Home tiles show real counts; the segmented
+ * Covers: the app loads the new bundle; Home tiles show real counts; the segmented
  * control switches screens; Ctrl+K opens the shared palette (also from a text field), ranks,
  * Enter starts and stops an app and switches screen; a held port raises one slim banner;
  * no console errors.
@@ -17,7 +17,6 @@ const SHOTS = process.env.PORTPILOT_SHOTS_DIR || '';
 
 async function main() {
   if (!fs.existsSync(path.join(h.root, 'src', 'ui-dist', 'index.html'))) throw new Error('src/ui-dist is missing; run "npm run build:ui" first');
-  process.env.PORTPILOT_NEW_UI = '1';
   const [shopPort, idlePort, heldPort] = await h.freePorts(3);
   const shop = world.mkdir('shop');
   fs.writeFileSync(path.join(shop, 'server.js'), h.SERVER);

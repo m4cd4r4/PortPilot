@@ -51,7 +51,6 @@ export function createElectronHost(): Host {
     async startBrowser(name) { await ok(api().browsers.start(name)); },
     async stopBrowser(name) { await ok(api().browsers.stop(name)); },
     async killPort(port) { await ok(api().ports.kill(port)); },
-    async switchToClassic() { await ok(api().ui.switch('classic')); },
     async releaseBrowser(name) { await ok(api().browsers.release(name)); },
     async saveBrowser(original, fields) { await ok(api().browsers.save(original, fields)); },
     async removeBrowser(name) { await ok(api().browsers.remove(name)); },
