@@ -14,6 +14,7 @@ import { Ports } from './components/Ports';
 import { Scenes } from './components/Scenes';
 import { Settings } from './components/Settings';
 import { useThumbs } from './useThumbs';
+import { syncTitleBar } from './titleBar';
 
 const EMPTY: Snapshot = { apps: [], groups: [], running: {}, crashed: {}, conflicts: [], profiles: [], ports: [] };
 
@@ -60,6 +61,15 @@ export function App({ host }: { host: Host }) {
   }, []);
 
   const prefs = usePrefs();
+  useEffect(() => {
+    syncTitleBar();
+    const mo = new MutationObserver(syncTitleBar);
+    mo.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    window.addEventListener('resize', syncTitleBar);
+    mq.addEventListener('change', syncTitleBar);
+    return () => { mo.disconnect(); window.removeEventListener('resize', syncTitleBar); mq.removeEventListener('change', syncTitleBar); };
+  }, [prefs.nav]);
   const t = useMemo(() => tally(snap), [snap]);
   const thumbs = useThumbs(host);
 
