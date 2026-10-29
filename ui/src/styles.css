@@ -499,3 +499,5 @@ pre.log.err { border-color: color-mix(in srgb, var(--warn) 45%, var(--bd)); }
 .row-main.wrap .tile-sub { white-space: normal !important; }
 .h-hero .run-grid .row-main .dot.on { background: #8affb0; }
 .h-hero .run-grid .row-main .stat-word { font-size: 11px; font-weight: 500; color: #8affb0; margin-right: 6px; opacity: .9; }
+.h-hero .run-grid .row-main .stat-word { white-space: nowrap; flex: none; }
+.h-hero .run-grid .row-main .nm { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
