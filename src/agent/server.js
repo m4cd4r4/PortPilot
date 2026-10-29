@@ -77,7 +77,7 @@ function createAgent({ configStore, port = DEFAULT_PORT, token = crypto.randomBy
     let html = fs.readFileSync(path.join(RENDERER_DIR, 'index.html'), 'utf8');
     // The portal serves only the Apps view for now: drop the tabs it cannot back.
     html = html.replace(/[ \t]*<button[^>]*data-view="(?:history|browsers)"[^>]*>[^<]*<\/button>\r?\n/g, '');
-    html = html.replace(/[ \t]*<script src="(?:\.\.\/core\/runView|\.\.\/core\/browserView|\.\.\/core\/titleBar|\.\.\/core\/palette|\.\.\/core\/sidebarModel|\.\.\/core\/homeModel|palette|sidebar|home|inspector|history|browsers|rowThumbs|nowStrip)\.js"><\/script>\r?\n/g, '');
+    html = html.replace(/[ \t]*<script src="(?:\.\.\/core\/answerBlocks|\.\.\/core\/runView|\.\.\/core\/browserView|\.\.\/core\/titleBar|\.\.\/core\/palette|\.\.\/core\/sidebarModel|\.\.\/core\/homeModel|palette|sidebar|home|inspector|history|browsers|rowThumbs|nowStrip|diagnose)\.js"><\/script>\r?\n/g, '');
     html = html.replace('</head>', `  <meta name="pp-token" content="${token}">\n</head>`);
     html = html.replace('<script src="renderer.js"></script>',
       '<script src="portpilot-web.js"></script>\n  <script src="renderer.js"></script>');
