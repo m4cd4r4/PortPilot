@@ -60,6 +60,9 @@ const status = loadCore('status');
 const runHistory = loadCore('runHistory');
 const browserApi = loadCore('browserApi');
 const emptyConfig = () => ({ apps: [], settings: {}, groups: [] });
+// Every Claude session starts this server, and the mod that writes the session heartbeat cannot
+// delete files, so each start clears the files of sessions that ended (the desktop app is mostly closed).
+try { configFile.pruneSessions(getConfigPath()); } catch { /* best effort */ }
 
 function readConfig() {
   return configFile.readJson(getConfigPath(), emptyConfig);

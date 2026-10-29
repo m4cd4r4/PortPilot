@@ -244,6 +244,7 @@ var require_configFile = __commonJS({
     }
     var SESSION_LIVE_MS = 45e3;
     var INBOX_KEEP = 20;
+    var SESSION_KEEP_MS = 24 * 3600 * 1e3;
     var safeName = (id) => String(id).replace(/[^A-Za-z0-9_-]/g, "_").slice(0, 120);
     function sessionsDirFor(configPath) {
       return path2.join(path2.dirname(configPath), "sessions");
@@ -273,6 +274,30 @@ var require_configFile = __commonJS({
         out.push({ sessionId: beat.sessionId, cwd: typeof beat.cwd === "string" ? beat.cwd : null, at: beat.at });
       }
       return out.sort((a, b) => b.at - a.at);
+    }
+    function pruneSessions(configPath, now = Date.now(), keepMs = SESSION_KEEP_MS) {
+      const base = path2.dirname(configPath);
+      let removed = 0;
+      for (const sub of ["sessions", "inbox"]) {
+        const dir = path2.join(base, sub);
+        let names;
+        try {
+          names = fs.readdirSync(dir);
+        } catch {
+          continue;
+        }
+        for (const name of names) {
+          if (!name.endsWith(".json")) continue;
+          const file = path2.join(dir, name);
+          try {
+            if (now - fs.statSync(file).mtimeMs < keepMs) continue;
+            fs.unlinkSync(file);
+            removed += 1;
+          } catch {
+          }
+        }
+      }
+      return removed;
     }
     function sendToSession(configPath, sessionId, appId, now = Date.now()) {
       if (!sessionId || !appId) return null;
@@ -307,7 +332,9 @@ var require_configFile = __commonJS({
       inboxPathFor,
       liveSessions,
       sendToSession,
-      SESSION_LIVE_MS
+      pruneSessions,
+      SESSION_LIVE_MS,
+      SESSION_KEEP_MS
     };
   }
 });

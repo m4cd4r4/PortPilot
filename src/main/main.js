@@ -210,6 +210,11 @@ if (!gotTheLock) {
     createTray();
     setupIpcHandlers(ipcMain, configStore);
 
+    // Heartbeat and inbox files of ended Claude sessions pile up; sweep them now and hourly.
+    const sweepSessions = () => { try { require('../core/configFile').pruneSessions(configStore.configPath); } catch { /* best effort */ } };
+    sweepSessions();
+    setInterval(sweepSessions, 3600 * 1000).unref();
+
     // Notify (OS notification + in-app toast) when a running app crashes.
     const { onAppCrash, getRunningApps } = require('./processManager');
     const reserver = require('./portReserver');

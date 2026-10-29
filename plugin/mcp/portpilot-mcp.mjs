@@ -23762,6 +23762,10 @@ var status = loadCore("status");
 var runHistory = loadCore("runHistory");
 var browserApi = loadCore("browserApi");
 var emptyConfig = () => ({ apps: [], settings: {}, groups: [] });
+try {
+  configFile.pruneSessions(getConfigPath());
+} catch {
+}
 function readConfig() {
   return configFile.readJson(getConfigPath(), emptyConfig);
 }
