@@ -152,25 +152,20 @@ export function Home({ host, t, loaded, onView, snap, thumbs, onDone }: Props) {
                 <div className="run-row" key={c.app.id}>
                   <button className="th-wrap row-wrap" title={`${isOpen ? 'Open' : 'Start'} ${c.app.name}`} aria-label={`${isOpen ? 'Open' : 'Start'} ${c.app.name}`} onClick={primary}>
                     <span className="th row-th" style={shot ? { backgroundImage: `url(${shot})` } : { background: gradient(c.app.name) }} />
+                    <span className="sr">{isOpen ? 'Open' : 'Start'}</span>
                   </button>
                   <div className="row-main">
                     <h2><span className={`dot${c.state === 'running' ? ' on' : ''}`} />{c.app.name}</h2>
                     <span className="tile-sub">{[c.port ? `:${c.port}` : '', last ? (c.state === 'running' ? `started ${last}` : `last run ${last}`) : ''].filter(Boolean).join(' · ')}</span>
                   </div>
-                  <div className="row-actions">
-                    <button className="primary" title={isOpen ? 'Open' : 'Start'} onClick={primary}>
-                      <svg viewBox="0 0 16 16" aria-hidden="true">{isOpen ? <path d="M6 3h7v7M13 3 5 11" /> : <path d="M5 3.5v9l7-4.5z" fill="currentColor" stroke="none" />}</svg>
-                      <span className="sr">{isOpen ? 'Open' : 'Start'}</span>
-                    </button>
-                    {c.state === 'running' && <button title="Stop" onClick={() => run(() => host.stopApp(c.app.id))}>
-                      <svg viewBox="0 0 16 16" aria-hidden="true"><rect x="4" y="4" width="8" height="8" rx="1" fill="currentColor" stroke="none" /></svg>
-                      <span className="sr">Stop</span>
-                    </button>}
-                    <button title="Details" onClick={() => onView('localhost')}>
-                      <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="3.5" cy="8" r="1.2" fill="currentColor" stroke="none" /><circle cx="8" cy="8" r="1.2" fill="currentColor" stroke="none" /><circle cx="12.5" cy="8" r="1.2" fill="currentColor" stroke="none" /></svg>
-                      <span className="sr">Details</span>
-                    </button>
-                  </div>
+                  <button className="chip chip-tr" title="Details" onClick={() => onView('localhost')}>
+                    <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="3.5" cy="8" r="1.2" fill="currentColor" stroke="none" /><circle cx="8" cy="8" r="1.2" fill="currentColor" stroke="none" /><circle cx="12.5" cy="8" r="1.2" fill="currentColor" stroke="none" /></svg>
+                    <span className="sr">Details</span>
+                  </button>
+                  {c.state === 'running' && <button className="chip chip-br" title="Stop" onClick={() => run(() => host.stopApp(c.app.id))}>
+                    <svg viewBox="0 0 16 16" aria-hidden="true"><rect x="4" y="4" width="8" height="8" rx="1" fill="currentColor" stroke="none" /></svg>
+                    <span className="sr">Stop</span>
+                  </button>}
                 </div>
               );
             })}
