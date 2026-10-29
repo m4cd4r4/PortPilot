@@ -18,7 +18,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 
 const require = createRequire(import.meta.url);
-const { logPathFor, inboxPathFor, sessionsDirFor, liveSessions, sendToSession, SESSION_LIVE_MS } = require('../src/core/configFile.js');
+const { logPathFor, inboxPathFor, sessionsDirFor, liveSessions, sendToSession, pruneSessions, SESSION_LIVE_MS, SESSION_KEEP_MS } = require('../src/core/configFile.js');
 
 let passed = 0;
 let failed = 0;
@@ -180,6 +180,29 @@ t('a heartbeat the mod writes is a live session to the app; a stale or torn one 
     fs.writeFileSync(path.join(dir, 'torn.json'), '{"sessionId":"to');
     assert.deepStrictEqual(liveSessions(cfg, NOW), [{ sessionId: 'live-1', cwd: 'C:/work', at: NOW - 1000 }]);
     assert.deepStrictEqual(fs.readdirSync(dir).filter((n) => n.includes('corrupt')), []);
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+t('pruneSessions removes only files untouched for a day, in sessions and inbox', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pp-prune-'));
+  try {
+    const cfg = path.join(root, 'portpilot-config.json');
+    const sdir = sessionsDirFor(cfg);
+    const idir = path.dirname(inboxPathFor(cfg, 'x'));
+    fs.mkdirSync(sdir, { recursive: true });
+    fs.mkdirSync(idir, { recursive: true });
+    const age = (file, ms) => { const at = new Date(NOW - ms); fs.utimesSync(file, at, at); };
+    const put = (dir, name, ms) => { const f = path.join(dir, name); fs.writeFileSync(f, '{}'); age(f, ms); };
+    put(sdir, 'live.json', 1000);
+    put(sdir, 'edge.json', SESSION_KEEP_MS - 60000);
+    put(sdir, 'old.json', SESSION_KEEP_MS + 60000);
+    put(sdir, 'note.txt', SESSION_KEEP_MS * 3);
+    put(idir, 'old.json', SESSION_KEEP_MS * 2);
+    put(idir, 'new.json', 5000);
+    assert.equal(pruneSessions(cfg, NOW), 2);
+    assert.deepStrictEqual(fs.readdirSync(sdir).sort(), ['edge.json', 'live.json', 'note.txt']);
+    assert.deepStrictEqual(fs.readdirSync(idir), ['new.json']);
+    assert.equal(pruneSessions(path.join(root, 'none', 'c.json'), NOW), 0);
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
 

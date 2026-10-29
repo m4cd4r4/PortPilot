@@ -42,6 +42,9 @@ type World = {
   inbox?: object
   writes?: { path: string, text: string }[]
   netstat?: () => string
+  /** Files other sessions or earlier writes left beside the config, by path. */
+  files?: Record<string, string>
+  netstatRuns?: number[]
 }
 
 /** Fakes the world beneath the plugin. */
@@ -53,11 +56,13 @@ function world(on: On, w: World = {}) {
     if (path === `${DIR}/portpilot-config.json` && config) return { value: JSON.stringify(config) }
     if (path === `${DIR}/portpilot-runtime.json`) return { value: JSON.stringify(w.runtime ?? RUNTIME) }
     if (path === `${DIR}/logs/api.log` && w.log != null) return { value: w.log }
+    if (w.files && path in w.files) return { value: w.files[path] }
     if (path === `${DIR}/inbox/sess-1.json` && w.inbox) return { value: JSON.stringify(w.inbox) }
     return { deny: `ENOENT ${e.path}` }
   })
   on('process.run', async (_$, e) => {
     const [cmd] = e.argv
+    if (cmd === 'netstat') w.netstatRuns?.push(1)
     const stdout = cmd === 'netstat' ? (w.netstat ? w.netstat() : NETSTAT)
       : cmd === 'tasklist' ? '"node.exe","4812","Console","1","52,000 K"'
       : ''
@@ -74,7 +79,12 @@ function world(on: On, w: World = {}) {
   on('ui.status', async (_$, e) => { w.statuses?.push(e.text); return { value: undefined } })
   on('ui.toast', async (_$, e) => { w.toasts?.push(e.text); return { value: undefined } })
   on('prompt.submit', async (_$, e) => { w.prompts?.push(e.text); return { text: e.text } })
-  on('fs.write', async (_$, e) => { w.writes?.push({ path: e.path.split(String.fromCharCode(92)).join('/'), text: e.text }); return { value: undefined } })
+  on('fs.write', async (_$, e) => {
+    const path = e.path.split(String.fromCharCode(92)).join('/')
+    w.writes?.push({ path, text: e.text })
+    if (w.files) w.files[path] = e.text
+    return { value: undefined }
+  })
   // The engine's own drawing, for when the band has nothing to show.
   on('ui.render', async () => ({ type: 'Box' }))
   on('tool.call', async (_$, e) => {
@@ -209,6 +219,31 @@ test('session start sets the status line and refreshes it on the timer', async (
   expect(statuses).toEqual(['⚓ 1 up · :3000 web✦'])
   await clock.advance(15_000)
   expect(statuses.length).toBe(2)
+})
+
+test('a scan another session wrote seconds ago is reused; an old one is redone and shared', async ($, on) => {
+  const statuses: (string | undefined)[] = []
+  const netstatRuns: number[] = []
+  const NOW_MS = Date.parse('2026-10-08T03:00:00Z')
+  const entry = (port: number) => [port, { port, pid: 1, processName: 'node.exe' }]
+  const cache = (age: number) => JSON.stringify({ at: NOW_MS - age, ports: [entry(3000), entry(4000)] })
+  const files: Record<string, string> = { [`${DIR}/scan-cache.json`]: cache(3_000) }
+  const clock = mock.clock(on, { now: NOW_MS })
+  world(on, { statuses, netstatRuns, files })
+  on('session.start', async (_$, e) => ({ cwd: e.cwd }))
+  await $.session.start({ cwd: 'C:/work', surface: 'terminal', isInteractive: true })
+  await clock.settle()
+  expect(netstatRuns).toEqual([])
+  expect(statuses[0]).toContain('2 up')
+  files[`${DIR}/scan-cache.json`] = cache(11_000)
+  await $.session.start({ cwd: 'C:/work', surface: 'terminal', isInteractive: true })
+  await clock.settle()
+  expect(netstatRuns).toEqual([1])
+  expect(JSON.parse(files[`${DIR}/scan-cache.json`]).at).toBe(NOW_MS)
+  files[`${DIR}/scan-cache.json`] = '{"at":'
+  await $.session.start({ cwd: 'C:/work', surface: 'terminal', isInteractive: true })
+  await clock.settle()
+  expect(netstatRuns).toEqual([1, 1])
 })
 
 test('status_line off: no status line, at start or on the timer', { options: { status_line: false } }, async ($, on) => {

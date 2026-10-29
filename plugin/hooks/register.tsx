@@ -58,6 +58,7 @@ import {
   statusLine,
   targetPort,
   type Config,
+  type Listener,
   type Listeners,
   type Platform,
   type Runtime,
@@ -66,6 +67,9 @@ import { browserContextBlock } from './browser-context.mjs'
 import { checkNotices, EMPTY, freshPorts, noteStart, observable, takeQueued } from './observe.mjs'
 
 const REFRESH_MS = 15_000
+// The periodic refresh reuses a scan another session wrote this recently (scan-cache.json beside the
+// config), so N open sessions cost about 4 machine-wide scans a minute instead of 4 each.
+const SHARED_SCAN_MS = 10_000
 const MAX_BANDS = 2
 
 const crashes = atom({ plugin: 'portpilot', key: 'crashes' } as const, [])
@@ -109,8 +113,17 @@ async function readJson<T>($: EngineInterface, file: string): Promise<T | null> 
   }
 }
 
-/** Listening ports, or null when the scan could not run. */
-async function scanPorts($: EngineInterface, platform: Platform): Promise<Listeners | null> {
+type ScanCache = { at: number; ports: Array<[number, Listener]> }
+
+/** Listening ports, or null when the scan could not run. `maxAgeMs` > 0 accepts another session's scan that young. */
+async function scanPorts($: EngineInterface, platform: Platform, maxAgeMs = 0): Promise<Listeners | null> {
+  const cacheFile = dir ? `${dir}/scan-cache.json` : null
+  if (cacheFile && maxAgeMs > 0) {
+    const hit = await readJson<ScanCache>($, cacheFile)
+    const age = hit && Number.isFinite(hit.at) ? (await $.clock.now()) - hit.at : -1
+    // A torn write (the mod's writes are not atomic) fails to parse and falls through to a fresh scan.
+    if (hit && Array.isArray(hit.ports) && age >= 0 && age < maxAgeMs) return new Map(hit.ports)
+  }
   const tries: string[][] =
     platform === 'win32' ? [['netstat', '-ano']]
     : platform === 'darwin' ? [['lsof', '-iTCP', '-sTCP:LISTEN', '-n', '-P']]
@@ -118,7 +131,16 @@ async function scanPorts($: EngineInterface, platform: Platform): Promise<Listen
   for (const argv of tries) {
     try {
       const { exitCode, stdout } = await $.process.run(argv, { timeoutMs: 15_000 })
-      if (exitCode === 0) return parseListeners(platform, stdout)
+      if (exitCode === 0) {
+        const listeners = parseListeners(platform, stdout)
+        if (cacheFile) {
+          try {
+            const cache: ScanCache = { at: await $.clock.now(), ports: [...listeners] }
+            await $.fs.write(cacheFile, JSON.stringify(cache))
+          } catch { /* the next session scans for itself */ }
+        }
+        return listeners
+      }
     } catch { /* try the next */ }
   }
   return null
@@ -144,7 +166,7 @@ async function holderName($: EngineInterface, platform: Platform, listeners: Lis
 let platform: Platform | null = null
 let dir: string | null = null
 
-async function snapshot($: EngineInterface): Promise<Snapshot> {
+async function snapshot($: EngineInterface, maxScanAgeMs = 0): Promise<Snapshot> {
   platform ??= await detectPlatform($)
   dir ??= await configDir($, platform)
   if (!dir) return { config: null, runtime: null, listeners: null }
@@ -153,7 +175,7 @@ async function snapshot($: EngineInterface): Promise<Snapshot> {
     readJson<Runtime>($, `${dir}/portpilot-runtime.json`),
   ])
   // No config means PortPilot is not set up here: skip the scan.
-  const listeners = config ? await scanPorts($, platform) : null
+  const listeners = config ? await scanPorts($, platform, maxScanAgeMs) : null
   return { config, runtime, listeners }
 }
 
@@ -162,7 +184,7 @@ let showStatus = true
 
 async function refresh($: EngineInterface) {
   try {
-    const { config, runtime, listeners } = await snapshot($)
+    const { config, runtime, listeners } = await snapshot($, SHARED_SCAN_MS)
     // A failed scan keeps the last line rather than claiming "0 up".
     if (config && !listeners) return
     if (showStatus) $.ui.status(listeners ? statusLine(config, runtime, listeners) : undefined)

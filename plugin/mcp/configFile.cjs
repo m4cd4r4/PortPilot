@@ -295,6 +295,8 @@ function readLogTail(configPath, appId, chars = CRASH_TAIL_CHARS) {
 
 const SESSION_LIVE_MS = 45000;
 const INBOX_KEEP = 20;
+/** A heartbeat or inbox file untouched this long belongs to a session that ended. */
+const SESSION_KEEP_MS = 24 * 3600 * 1000;
 
 const safeName = (id) => String(id).replace(/[^A-Za-z0-9_-]/g, '_').slice(0, 120);
 
@@ -325,6 +327,31 @@ function liveSessions(configPath, now = Date.now()) {
   return out.sort((a, b) => b.at - a.at);
 }
 
+/**
+ * Deletes the heartbeat and inbox files of sessions that ended: nothing else removes them (the
+ * mod cannot delete), and a Claude session never reuses an id. Judged by file mtime, so a live
+ * session (rewritten every 15 s) is never touched. Returns how many files went.
+ */
+function pruneSessions(configPath, now = Date.now(), keepMs = SESSION_KEEP_MS) {
+  const base = path.dirname(configPath);
+  let removed = 0;
+  for (const sub of ['sessions', 'inbox']) {
+    const dir = path.join(base, sub);
+    let names;
+    try { names = fs.readdirSync(dir); } catch { continue; }
+    for (const name of names) {
+      if (!name.endsWith('.json')) continue;
+      const file = path.join(dir, name);
+      try {
+        if (now - fs.statSync(file).mtimeMs < keepMs) continue;
+        fs.unlinkSync(file);
+        removed += 1;
+      } catch { /* gone already, or busy: the next pass gets it */ }
+    }
+  }
+  return removed;
+}
+
 /** Asks a live session to look at an app's crash. Returns the request, or null. */
 function sendToSession(configPath, sessionId, appId, now = Date.now()) {
   if (!sessionId || !appId) return null;
@@ -348,5 +375,5 @@ module.exports = {
   readJson, writeJsonAtomic, withLock, updateJson,
   runtimePathFor, readRuntime, recordStart, recordStop, recordCrash,
   logPathFor, readLogTail, CRASH_TAIL_CHARS,
-  sessionsDirFor, inboxPathFor, liveSessions, sendToSession, SESSION_LIVE_MS,
+  sessionsDirFor, inboxPathFor, liveSessions, sendToSession, pruneSessions, SESSION_LIVE_MS, SESSION_KEEP_MS,
 };
