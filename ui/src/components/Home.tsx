@@ -8,7 +8,7 @@ import { useBrowserArt } from '../useBrowserMeta';
 interface Props { host: Host; t: Tally; loaded: boolean; onView: (v: View) => void; snap: Snapshot; thumbs: Thumbs; onDone: () => void }
 
 const KEY = 'portpilot-home-tally';
-const RUN_ROWS = 5;
+const RUN_ROWS = 6;
 const SCENE_KEY = 'portpilot-home-scene';
 type Counts = Pick<Tally, 'running' | 'apps' | 'profilesUp' | 'profiles'>;
 
@@ -142,6 +142,7 @@ export function Home({ host, t, loaded, onView, snap, thumbs, onDone }: Props) {
         {hero ? (
           <>
             <span className="tile-title">{runningList.length ? `Running, ${runningList.length} of ${t.apps} apps` : 'Last used'}</span>
+<div className="run-grid">
             {(runningList.length ? runningList.slice(0, RUN_ROWS) : [hero]).map((c) => {
               const shot = thumbs.byApp[c.app.id]?.url;
               const last = lastRunText(recent.get(c.app.id));
@@ -173,6 +174,7 @@ export function Home({ host, t, loaded, onView, snap, thumbs, onDone }: Props) {
                 </div>
               );
             })}
+</div>
             {runningList.length > RUN_ROWS && <button className="link more-link" onClick={() => onView('localhost')}>+{runningList.length - RUN_ROWS} more running</button>}
           </>
         ) : (
