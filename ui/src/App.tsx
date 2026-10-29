@@ -21,10 +21,18 @@ const EMPTY: Snapshot = { apps: [], groups: [], running: {}, crashed: {}, confli
 export function App({ host }: { host: Host }) {
   const [view, setViewRaw] = useState<View>('home');
   const [manage, setManage] = useState(false);
+  /** A card clicked on Home: the Apps or Browsers screen opens straight onto that item. */
+  const [focus, setFocus] = useState<{ kind: 'app' | 'browser'; id: string } | null>(null);
   /** 'library' is an alias for Apps in Manage mode; any other jump leaves Manage. */
   const setView = useCallback((v: View) => {
     setManage(v === 'library');
+    setFocus(null);
     setViewRaw(v === 'library' ? 'localhost' : v);
+  }, []);
+  const openItem = useCallback((kind: 'app' | 'browser', id: string) => {
+    setManage(kind === 'app');
+    setFocus({ kind, id });
+    setViewRaw(kind === 'app' ? 'localhost' : 'browsers');
   }, []);
   const [snap, setSnap] = useState<Snapshot>(EMPTY);
   const [loaded, setLoaded] = useState(false);
@@ -82,13 +90,13 @@ export function App({ host }: { host: Host }) {
         <Banner warnings={t.warnings} onFix={() => setView('ports')} />
         <main className="main" id="main">
           {error && <p className="notice" role="alert">Could not read PortPilot state: {error}</p>}
-          {view === 'home' && <Home host={host} onDone={refresh} t={t} loaded={loaded} onView={setView} snap={snap} thumbs={thumbs} />}
-          {view === 'localhost' && <Localhost host={host} snap={snap} thumbs={thumbs} onDone={refresh} manage={manage} onManage={setManage} />}
+          {view === 'home' && <Home host={host} onDone={refresh} t={t} loaded={loaded} onView={setView} onOpenItem={openItem} snap={snap} thumbs={thumbs} />}
+          {view === 'localhost' && <Localhost host={host} snap={snap} thumbs={thumbs} onDone={refresh} manage={manage} onManage={setManage} inspectId={focus?.kind === 'app' ? focus.id : undefined} />}
           {view === 'history' && <History host={host} />}
           {view === 'scenes' && <Scenes host={host} snap={snap} onDone={refresh} />}
           {view === 'ports' && <Ports host={host} snap={snap} onDone={refresh} />}
           {view === 'settings' && <Settings host={host} />}
-          {view === 'browsers' && <Browsers host={host} snap={snap} onDone={refresh} />}
+          {view === 'browsers' && <Browsers host={host} snap={snap} onDone={refresh} editName={focus?.kind === 'browser' ? focus.id : undefined} />}
         </main>
       </div>
       <Palette open={paletteOpen} onClose={() => setPaletteOpen(false)} host={host} snap={snap}

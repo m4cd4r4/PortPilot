@@ -21,6 +21,7 @@ async function main() {
   const apps = [mk('app_a', 'alpha', pa), mk('app_b', 'beta', pb), mk('app_c', 'gamma', pc)];
   world.writeConfig({
     apps,
+    browserProfiles: [{ name: 'Work', port: pa + 1000 > 65000 ? 9400 : pa + 1000, browser: 'brave', mode: 'headless', url: 'about:blank' }],
     scenes: [{ id: 'sc_one', name: 'First', apps: ['app_a'], browsers: [] }, { id: 'sc_two', name: 'Second', apps: ['app_c'], browsers: [] }],
   });
 
@@ -41,7 +42,7 @@ async function main() {
     console.log('step: Start again');
     await startStop(apps[1], 1500); // beta ran once and is now stopped, so it lands in history
     await win.evaluate((x) => window.portpilot.process.start(x), apps[0]); // alpha is running and takes the hero
-    await until(() => win.evaluate(() => document.querySelector('.h-hero h2')?.textContent === 'alpha'), 20000, 'hero is alpha');
+    await until(() => win.evaluate(() => document.querySelector('.h-hero h2 .nm')?.textContent === 'alpha'), 20000, 'hero is alpha');
     await until(() => win.evaluate(() => !!document.querySelector('.h-recent .th-start')), 20000, 'a Start button on a stopped card');
     check('the stopped app on Recently used offers Start', await win.evaluate(() => document.querySelector('.h-recent .th-start').getAttribute('aria-label') === 'Start beta'));
     await win.locator('.h-recent .th-card:has-text("beta")').hover();
@@ -76,6 +77,28 @@ async function main() {
     await win.click('.h-recent .th-card:has-text("beta") .th-wrap');
     await until(() => app.evaluate(() => global.__opened.length > 1), 20000, 'second open');
     check('clicking a running app just opens its page', (await app.evaluate(() => global.__opened[1])) === `http://localhost:${pb}`);
+
+    // Details on a Home tile opens that app's details, not just the Apps tab.
+    await win.click('role=tab[name="Home"]');
+    await win.locator('.run-row', { hasText: 'beta' }).locator('.chip-tr').click();
+    await win.waitForSelector('[role=dialog][aria-label="beta details"]', { timeout: 5000 });
+    check('Details on a Home tile opens that app\'s details', true);
+    await win.click('[role=dialog] >> role=button[name="Close"]');
+    // A browser card on Home opens that profile.
+    await win.click('role=tab[name="Home"]');
+    await win.locator('.h-browsers .th-wrap', { hasText: 'Work' }).click();
+    await win.waitForSelector('[role=dialog][aria-label="Edit Work"]', { timeout: 5000 });
+    check('a Home browser card opens that profile', true);
+    await win.click('[role=dialog] >> role=button[name="Close"]');
+    // Status style reaches the Home tiles.
+    await win.click('role=tab[name="Home"]');
+    const word = () => win.locator('.run-row .stat-word').count();
+    await win.evaluate(() => localStorage.setItem('portpilot-ui-prefs', JSON.stringify({ status: 'dot' })));
+    await win.reload(); await win.waitForSelector('.run-row .row-th'); await win.waitForTimeout(300);
+    check('Dot status shows no status word', (await word()) === 0);
+    await win.evaluate(() => localStorage.setItem('portpilot-ui-prefs', JSON.stringify({ status: 'glyph' })));
+    await win.reload(); await win.waitForSelector('.run-row .row-th'); await win.waitForTimeout(300);
+    check('Glyph status shows the status word', (await word()) > 0);
 
     check('no console errors', errors.length === 0, errors.join(' | '));
   } finally {

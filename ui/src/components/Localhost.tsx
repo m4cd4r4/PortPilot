@@ -5,14 +5,14 @@ import { VIEWS, setPrefs, usePrefs, type Prefs } from '../prefs';
 import type { Thumbs } from '../useThumbs';
 import { Library } from './Library';
 
-interface Props { host: Host; snap: Snapshot; thumbs: Thumbs; onDone: () => void; manage: boolean; onManage: (on: boolean) => void }
+interface Props { host: Host; snap: Snapshot; thumbs: Thumbs; onDone: () => void; manage: boolean; onManage: (on: boolean) => void; inspectId?: string }
 
 const HOVER_MS = 500;
 const SWEEP_MS = 30000;
 /** Stopped apps shown before "Show all"; running and blocked ones always show. */
 const STOPPED_SHOWN = 12;
 
-export function Localhost({ host, snap, thumbs, onDone, manage, onManage }: Props) {
+export function Localhost({ host, snap, thumbs, onDone, manage, onManage, inspectId }: Props) {
   const prefs = usePrefs();
   const [query, setQuery] = useState('');
   const [error, setError] = useState('');
@@ -84,7 +84,7 @@ export function Localhost({ host, snap, thumbs, onDone, manage, onManage }: Prop
     );
   };
 
-  if (manage) return <Library host={host} snap={snap} onDone={onDone} onExit={() => onManage(false)} />;
+  if (manage) return <Library host={host} snap={snap} inspectId={inspectId} onDone={onDone} onExit={() => onManage(false)} />;
 
   return (
     <section className="gallery-view" aria-label="Localhost">

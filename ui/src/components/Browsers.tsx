@@ -5,17 +5,17 @@ import { VIEWS, setPrefs, usePrefs, type Prefs } from '../prefs';
 import { useBrowserArt, useSignIns, type BrowserArt } from '../useBrowserMeta';
 import { BrowserDrawer } from './BrowserDrawer';
 
-interface Props { host: Host; snap: Snapshot; onDone: () => void }
+interface Props { host: Host; snap: Snapshot; onDone: () => void; editName?: string }
 
 const MAX_CHIPS = 3;
 
-export function Browsers({ host, snap, onDone }: Props) {
+export function Browsers({ host, snap, onDone, editName }: Props) {
   const prefs = usePrefs();
   const [query, setQuery] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState<string>('');
   // null = closed; { name: null } = adding; { name } = editing that profile
-  const [drawer, setDrawer] = useState<{ name: string | null } | null>(null);
+  const [drawer, setDrawer] = useState<{ name: string | null } | null>(editName ? { name: editName } : null);
   const list = useMemo(() => browserCards(snap, query), [snap, query]);
   const art = useBrowserArt(host, snap.profiles);
   const signIns = useSignIns(host, snap.profiles);
