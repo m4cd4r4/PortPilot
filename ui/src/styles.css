@@ -278,7 +278,6 @@ button.tile:hover { border-color: var(--acc); }
   .cards.rows .title { flex: none; max-width: 100%; }
   .cards.compact:not(.gallery) { grid-template-columns: minmax(0, 1fr); }
   .cards .peek { display: none !important; }
-  .cards.rows .run .title { flex: none; }
 }
 
 /* History timeline: the Ledger row, grouped by day. */
@@ -370,6 +369,7 @@ button.primary:disabled { opacity: 0.6; }
   .cards.rows .bcard .title { flex: none; }
   .cards.rows .bcard .purpose { flex: none; min-width: 0; max-width: 100%; }
 }
+@media (max-width: 720px) { .cards.rows .run .title { flex: none; flex-wrap: wrap; } .run .name { flex: none; max-width: 100%; } }
 .toolbar, .toolbar-end { flex-wrap: wrap; }
 @media (max-width: 1180px) {
   .topbar { flex-wrap: wrap; }
