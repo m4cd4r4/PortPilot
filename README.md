@@ -34,7 +34,7 @@ Local-first: no account, no telemetry, no cloud. Windows 10/11 and Linux.
 
 ### Home
 
-The first screen shows what you were just doing: one row per running app with Open, Stop and Details, your browser profiles as pictures, and the apps you ran recently, each with a thumbnail of the page it served. With nothing running it offers the app you used last with Start. A crashed app in Recently used has a Start button. A blocked port shows as one amber line at the top with a Fix button. On a first run it says what to do instead of showing empty cards.
+The first screen shows what you were just doing: one row per running app with Open, Stop and Details, your browser profiles as pictures, and the apps you ran recently, each with a thumbnail of the page it served. With nothing running it offers the app you used last with Start. A crashed app in Recently used has a Start button. A blocked port counts on the Alerts bell, whose list has a Fix button for each. On a first run it says what to do instead of showing empty cards.
 
 ### Apps
 
@@ -249,7 +249,7 @@ npm start
 
 **Manual entry.** Click Add app and fill in Name, Command (for example `npm run dev`), Working Directory, Preferred Port, and an optional Fallback Range (for example `3001-3010`).
 
-**Port conflicts.** When another process holds an app's port, a banner flags it and its Fix button opens Ports, where **Free :port** stops the holder.
+**Port conflicts.** When another process holds an app's port, the Alerts bell counts it, and its Fix button opens Ports, where **Free :port** stops the holder.
 
 </details>
 

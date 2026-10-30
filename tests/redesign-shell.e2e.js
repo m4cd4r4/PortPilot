@@ -5,7 +5,7 @@
  *
  * Covers: the app loads the new bundle; Home tiles show real counts; the segmented
  * control switches screens; Ctrl+K opens the shared palette (also from a text field), ranks,
- * Enter starts and stops an app and switches screen; a held port raises one slim banner;
+ * Enter starts and stops an app and switches screen; a held port counts on the alerts bell;
  * no console errors.
  */
 const h = require('./e2e-harness');
@@ -100,16 +100,22 @@ async function main() {
     check('Go to Apps switches screen', (await tabOn()) === 'Apps');
     await win.click('role=tab[name="Home"]');
 
-    console.log('step: banner');
+    console.log('step: alerts bell');
     // A just-stopped app's port can linger for a few seconds and read as a conflict; wait for it to clear.
-    await until(async () => (await win.locator('.banner').count()) === 0, 30000, 'banner clears');
-    check('no banner while nothing is blocked', true);
+    const count = () => win.evaluate(() => Number(document.querySelector('.bell-count')?.textContent || 0));
+    await until(async () => (await count()) === 0, 30000, 'bell clears');
+    check('no count on the bell while nothing is blocked', true);
+    check('there is no banner on any screen', (await win.locator('.banner').count()) === 0);
     foreign = h.holdPort(heldPort);
-    // The banner shows the first warning; a stray lingering port from the stopped shop may sit ahead of ours for a poll or two.
-    await until(async () => (await win.locator('.banner .msg').allTextContents()).join('').includes(String(heldPort)), 30000, 'banner names the blocked port');
-    check('exactly one banner, not one block per warning', (await win.locator('.banner').count()) === 1);
-    const msg = await win.locator('.banner .msg').textContent();
-    check('one slim banner names the app and the port', msg.startsWith('blocked') && msg.includes(String(heldPort)), msg);
+    await until(async () => (await count()) >= 1, 30000, 'bell counts the blocked port');
+    check('the bell shows a count', true);
+    check('a blocked port does not push a banner over Home', (await win.locator('.banner').count()) === 0);
+    await win.click('.bell');
+    await until(() => win.evaluate((p) => (document.querySelector('.alerts-pop')?.textContent || '').includes(String(p)), heldPort), 10000, 'popover names the port');
+    const msg = await win.locator('.alerts-pop li .msg').first().textContent();
+    check('the popover names the app and the port', msg.includes('blocked') && msg.includes(String(heldPort)) || (await win.locator('.alerts-pop').textContent()).includes(String(heldPort)), msg);
+    await win.keyboard.press('Escape');
+    check('Esc closes the popover', (await win.locator('.alerts-pop').count()) === 0);
 
     if (SHOTS) {
       fs.mkdirSync(SHOTS, { recursive: true });
