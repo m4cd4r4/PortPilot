@@ -38,7 +38,7 @@ The first screen shows what you were just doing: one row per running app with Op
 
 ### Apps
 
-Every app as a card with a live preview of its page, running first and stopped ones below. Switch between Gallery, Compact, List and Grouped. An app another program is holding the port of is marked **Port held**.
+Every app as a card with a live preview of its page, running first and stopped ones below. Switch between Rows and Cards, and between Grouped and Flat. An app another program is holding the port of is marked **Port held**.
 
 ![Apps: running sites with live page previews](docs/screenshots/ui/apps.png)
 
@@ -170,19 +170,6 @@ One config file and one run record sit behind every surface, so an app you add i
 - Share an app's LAN URL to your phone by QR code
 - Crash toast with an **Ask Claude** button when the session that started the app is still open
 
-<details>
-<summary><b>The classic view</b></summary>
-
-The previous interface is still in the app (Settings > Switch to classic view) and is what the web portal shows. It adds row state and who started each app, a conflict strip with Use free port and Kill & start, worktrees nested under their project (add a repo's worktrees in one go, stale ones flagged), Docker status badges, health checks, Start all / Stop all per group, and six themes (Light, TokyoNight, Nord, Dracula, Glass).
-
-![Classic desktop view: two port conflicts and a crashed app on top, live apps with page previews below](docs/demo/screenshots/desktop-apps-1440.png)
-
-![Row state cell showing running branches and who started them](docs/screenshots/crop-row-state.png)
-
-![Conflict strip on a blocked app row](docs/screenshots/crop-conflict.png)
-
-</details>
-
 ## MCP tools
 
 <details id="mcp-tools">
@@ -262,7 +249,7 @@ npm start
 
 **Manual entry.** Click Add app and fill in Name, Command (for example `npm run dev`), Working Directory, Preferred Port, and an optional Fallback Range (for example `3001-3010`).
 
-**Port conflicts.** When another process holds an app's port, the new view flags it in a banner whose Fix button opens Ports, where **Free :port** stops the holder. The classic view shows a conflict strip on the row with Use free port, Kill & start and Show process.
+**Port conflicts.** When another process holds an app's port, a banner flags it and its Fix button opens Ports, where **Free :port** stops the holder.
 
 </details>
 
@@ -290,7 +277,6 @@ A pulsing yellow 🐳 means Docker Desktop is not running (click to start it); g
 | `Ctrl+K` | Command palette (search apps, ports and profiles, then run an action) |
 | `Escape` | Close the palette, a drawer or a menu |
 
-The classic view adds `Ctrl+R` (scan), `Ctrl+N` (new app), `Ctrl+F` (search) and `Ctrl+G` (new group).
 
 </details>
 
@@ -367,7 +353,7 @@ The smoke suite covers window launch, port scanning, test-server detection, port
 
 Launching from VS Code or Claude Code: `launch.js` clears `ELECTRON_RUN_AS_NODE` for you.
 
-**Stack:** Electron, Node.js, a React and Vite interface (`ui/`) beside the vanilla JS classic view, CSS variables for themes, Playwright for tests, `netstat` (Windows) / `lsof` (macOS, Linux) for port scanning.
+**Stack:** Electron, Node.js, a React and Vite interface (`ui/`), CSS variables for themes, Playwright for tests, `netstat` (Windows) / `lsof` (macOS, Linux) for port scanning.
 
 </details>
 
