@@ -27,11 +27,9 @@ const world = h.makeWorld('pp-fiction-');
 
 async function main() {
   if (!fs.existsSync(path.join(root, 'src', 'ui-dist', 'index.html'))) throw new Error('src/ui-dist is missing; run "npm run build:ui" first');
-  process.env.PORTPILOT_NEW_UI = '1';
   const ports = await h.freePorts(SITES.length + PROFILES.length);
-  const serve = path.join(__dirname, 'serve.js');
   const apps = SITES.map((s, i) => ({
-    id: `app_${s.site}`, name: s.name, group: s.group, command: `node "${serve}" --site ${s.site} --port ${ports[i]}`,
+    id: `app_${s.site}`, name: s.name, group: s.group, command: `node ../../serve.js --site ${s.site} --port ${ports[i]}`,
     // Own folder per app: PortPilot attributes a listener to an app by its folder, so a shared one mixes them up.
     cwd: path.join(__dirname, 'sites', s.site), preferredPort: ports[i],
   }));
@@ -76,6 +74,7 @@ async function main() {
     const runningIds = () => win.evaluate(async () => (await window.portpilot.process.list()).apps.filter((a) => a.running).map((a) => a.id));
     check('the finished run stays stopped', !(await runningIds()).includes('app_portfolio'), (await runningIds()).join(','));
     await win.click('role=tab[name="Apps"]');
+    await win.click('role=button[name="Cards"]');
     await until(() => win.evaluate((n) => document.querySelectorAll('.card.running .shot img').length >= n, SITES.length - 1), 120000, 'live thumbnails');
     check('every running app shows a real capture', true);
     await h.sleep(1500);
@@ -83,7 +82,7 @@ async function main() {
     await shot('apps', 'light');
 
     await win.click('role=tab[name="Home"]');
-    await until(() => win.evaluate(() => document.querySelectorAll('.h-recent .th').length >= 3), 30000, 'home thumbnails');
+    await until(() => win.evaluate(() => document.querySelectorAll('.run-row .row-th').length >= 5), 30000, 'home thumbnails');
     await h.sleep(1000);
     await shot('home');
     await shot('home', 'light');
@@ -98,10 +97,15 @@ async function main() {
     check('each profile card shows its picture', true);
     await shot('browsers');
 
-    await win.click('role=button[name="More ▾"]');
-    await win.click('role=menuitem[name="History"]');
+    await win.click('role=tab[name="History"]');
     await h.sleep(1500);
     await shot('history');
+    await win.keyboard.press('Escape');
+    await win.click('role=tab[name="Apps"]');
+    await win.keyboard.press('Control+K');
+    await win.fill('role=combobox', 'fernlane');
+    await h.sleep(600);
+    await shot('palette');
     // No Ports shot: that screen lists every listener on the machine running this script (process names, PIDs).
   } finally {
     await h.closeApp(app);
