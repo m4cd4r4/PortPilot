@@ -18,7 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Scenes.** Save a set of apps and browser profiles and start them together. Stop only stops what the scene started. Save what is running turns the current state into a scene.
 - **Command palette.** `Ctrl+K` from anywhere: start, stop or open an app, free a port, or jump to an app's history.
 - **Ports and Settings.** An app drawer with auto-detect, an inspector with Diagnose for crashed apps and a QR code for the LAN URL, a ports table with Kill, Open and Find a free port, and the settings in one place with a Dark, Light or System theme.
-- **Blocked ports on every screen.** One amber line names the app and what holds its port; Fix opens Ports.
+- **Blocked ports on the Alerts bell.** A count on the bell (sidebar and top bar) opens a list naming each app and what holds its port; Fix opens Ports. No banner over any screen.
 - **Browser profiles remember when they were last used,** and Home orders them by it.
 
 ### Changed

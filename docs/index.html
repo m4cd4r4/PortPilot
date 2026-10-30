@@ -63,9 +63,8 @@
     "isAccessibleForFree": true,
     "featureList": [
       "Claude Code plugin with a status line, a dev-server guard and crash alerts",
-      "Row state on every app: what state, why, for how long and who started it",
-      "Port conflict strip with Use free port, Kill & start and Show process",
-      "Crash toasts with Restart, Logs and Ask Claude",
+      "Row state on every app: running, stopped or blocked, with what holds a blocked port",
+      "Alerts bell with a count for blocked ports, and Free to stop the holder",
       "MCP server with 26 tools for any MCP assistant",
       "Branch and worktree awareness with nested, colour-coded rows",
       "Port scanning with process details and one-click kill",
@@ -117,7 +116,7 @@
         </div>
 
         <figure class="hero-visual">
-          <img src="screenshots/ui/home.png" class="hero-shot zoomable" tabindex="0" width="2480" height="1352" alt="PortPilot Home: the app you used last with Open, Stop and Details, your browser profiles with page pictures, a scene picker and recently used apps, under an amber line about a blocked port">
+          <img src="screenshots/ui/home.png" class="hero-shot zoomable" tabindex="0" width="2480" height="1352" alt="PortPilot Home: the app you used last with Open, Stop and Details, your browser profiles with page pictures, a scene picker and recently used apps, ">
           <div class="term" role="img" aria-label="Claude Code with the PortPilot plugin: the guard turns away a second copy of examworthy-web, a crash band offers Fix it for 550-au, and the status line shows 1 crashed and 7 up">
             <div class="term-bar"><span></span><span></span><span></span><b>claude &middot; examworthy-web</b></div>
             <div class="term-body">
@@ -204,34 +203,17 @@
         </div>
         <div class="feature-row reveal">
           <div class="feature-copy">
-            <h3>Row state, page preview, and who started it</h3>
-            <p>Every app shows its state, how long it has been in it and who started it: you, or a Claude Code session. A running app also shows a small preview of its page, so the right server is easy to spot. A crashed app reads <code>&#10005; Crashed &middot; exit 1</code>. The VS Code tree uses the same states.</p>
+            <h3>Row state</h3>
+            <p>Every app shows its state and port. A blocked app says what holds the port, so the right server is easy to spot. The Cards view adds a small preview of each running page.</p>
           </div>
-          <div class="crop-scroll" tabindex="-1"><img src="screenshots/crop-row-state.png" class="crop zoomable" tabindex="0" width="688" height="294" loading="lazy" alt="App rows: examworthy-web running 2h with a small page preview, an examworthy-web branch stopped, then alight and cosmos-collective each marked Port blocked with the process that holds the port"></div>
+          <img src="screenshots/ui/rows.png" class="crop zoomable" tabindex="0" width="1224" height="288" loading="lazy" alt="The Rows view: three running apps with Open and Stop, one app marked blocked because its port is held by node, and one stopped app">
         </div>
         <div class="feature-row reveal">
           <div class="feature-copy">
-            <h3>Conflict strip</h3>
-            <p>When something else holds an app's port, the row says what holds it and offers Use free port, Kill &amp; start or Show process. Kill asks for a second click.</p>
+            <h3>Alerts, out of the way</h3>
+            <p>A blocked port adds to the count on the Alerts bell instead of covering the screen. Click it to see each one, and Fix opens Ports, where Free stops whatever holds the port.</p>
           </div>
-          <div class="crop-scroll" tabindex="-1"><img src="screenshots/crop-conflict.png" class="crop zoomable" tabindex="0" width="1022" height="80" loading="lazy" alt="alight in the needs-you strip: port 3007 is held by solaisoft, with buttons Use 3008 instead, Stop solaisoft and start, and Show process"></div>
-        </div>
-        <div class="feature-row reveal">
-          <div class="feature-copy">
-            <h3>Crash toast with Ask Claude</h3>
-            <p>A crash raises a sticky toast with the stderr tail. Ask Claude appears when the session that started the app is still open, and sends it the crash. Repeat crashes group into one toast.</p>
-          </div>
-          <img src="screenshots/crop-crash-toast.png" class="crop crop-narrow zoomable" tabindex="0" width="360" height="121" loading="lazy" alt="Toast: 550-au crashed 2 times in 5 minutes, exit 1, with the Vite error that port 3210 is already in use and buttons Restart, Logs, Ask Claude and Dismiss">
-        </div>
-        <div class="feature-row reveal">
-          <div class="feature-copy">
-            <h3>Both, as they happen</h3>
-            <p>A blocked port resolved in two clicks: the first arms the button, the second stops the holder and starts your app. Then a crash, its toast, and Ask Claude sending the stderr to the session that started the app.</p>
-          </div>
-          <div>
-            <img src="media/conflict-resolve.webp" class="crop zoomable" tabindex="0" width="900" height="558" loading="lazy" alt="Animation: alight is blocked by solaisoft on port 3007, the first click arms the button, the second stops solaisoft and starts alight">
-            <img src="media/crash-ask-claude.webp" class="crop crop-stack zoomable" tabindex="0" width="900" height="558" loading="lazy" alt="Animation: 550-au crashes, a toast shows the stderr tail, and Ask Claude sends the crash to the session that started it">
-          </div>
+          <img src="screenshots/ui/alerts.png" class="crop zoomable" tabindex="0" width="600" height="200" loading="lazy" alt="The Alerts bell with a count of 1, open on a note that Quill and Ink is blocked because its port is held by node, with a Fix button">
         </div>
       </div>
     </section>

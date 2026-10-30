@@ -5,7 +5,6 @@ import { TopBar } from './components/TopBar';
 import { Sidebar } from './components/Sidebar';
 import { usePrefs } from './prefs';
 import { Home } from './components/Home';
-import { Banner } from './components/Banner';
 import { Palette } from './components/Palette';
 import { Localhost } from './components/Localhost';
 import { History } from './components/History';
@@ -83,11 +82,10 @@ export function App({ host }: { host: Host }) {
 
   return (
     <div className="shell" data-nav={prefs.nav}>
-      <Sidebar view={view} onView={setView} onSearch={() => setPaletteOpen(true)} />
+      <Sidebar view={view} onView={setView} onSearch={() => setPaletteOpen(true)} warnings={t.warnings} />
       <div className="col">
-        <TopBar view={view} onView={setView} onSearch={() => setPaletteOpen(true)} />
+        <TopBar view={view} onView={setView} onSearch={() => setPaletteOpen(true)} warnings={t.warnings} />
         <div className="dragbar" aria-hidden="true" />
-        <Banner warnings={t.warnings} onFix={() => setView('ports')} />
         <main className="main" id="main">
           {error && <p className="notice" role="alert">Could not read PortPilot state: {error}</p>}
           {view === 'home' && <Home host={host} onDone={refresh} t={t} loaded={loaded} onView={setView} onOpenItem={openItem} snap={snap} thumbs={thumbs} />}

@@ -1,6 +1,8 @@
 import { MORE_VIEWS, VIEWS, type View } from '../model';
 
-interface Props { view: View; onView: (v: View) => void; onSearch: () => void }
+import { AlertsBell } from './AlertsBell';
+
+interface Props { view: View; onView: (v: View) => void; onSearch: () => void; warnings: string[] }
 
 const PATHS: Record<string, string> = {
   home: 'M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z',
@@ -28,7 +30,7 @@ const MARK = (
 );
 
 /** The Ledger navigation: every section in one column. Tab buttons carry only their label as text. */
-export function Sidebar({ view, onView, onSearch }: Props) {
+export function Sidebar({ view, onView, onSearch, warnings }: Props) {
   const item = (v: { view: View; label: string }) => (
     <button key={v.view} role="tab" aria-selected={view === v.view} className={view === v.view ? 'on' : ''}
       onClick={() => onView(v.view)}><Icon name={v.view} />{v.label}</button>
@@ -43,6 +45,7 @@ export function Sidebar({ view, onView, onSearch }: Props) {
         {[...VIEWS, ...MORE_VIEWS].map(item)}
       </nav>
       <div className="sfoot">
+        <AlertsBell warnings={warnings} where="side" onFix={() => onView('ports')} />
         <nav className="snav" role="tablist" aria-label="Settings">{item({ view: 'settings', label: 'Settings' })}</nav>
       </div>
     </aside>
