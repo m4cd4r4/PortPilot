@@ -95,8 +95,6 @@ export interface Host {
   /** Open Brave's Sync or password-import page in a running profile; the person signs in there. */
   openSignInSetup(name: string, which: 'sync' | 'passwords'): Promise<void>;
   killPort(port: number): Promise<void>;
-  /** Reload the window as the classic v4 UI; it comes back on the next launch too. */
-  switchToClassic(): Promise<void>;
   thumbIndex(): Promise<Record<string, ThumbRef>>;
   thumbs(keys: string[]): Promise<Record<string, string>>;
   /** Ask for a fresh screenshot; the host throttles (one per app per 10 s, one in flight). */

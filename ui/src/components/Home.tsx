@@ -2,13 +2,14 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Host, Run, Scene, Snapshot } from '../host';
 import { ago, cards, groupOf, hueOf, type Card, type Tally, type View } from '../model';
 import { sceneRun, sceneSummary, startScene, stopScene } from '../scenes';
+import { usePrefs } from '../prefs';
 import type { Thumbs } from '../useThumbs';
 import { useBrowserArt } from '../useBrowserMeta';
 
-interface Props { host: Host; t: Tally; loaded: boolean; onView: (v: View) => void; snap: Snapshot; thumbs: Thumbs; onDone: () => void }
+interface Props { host: Host; t: Tally; loaded: boolean; onView: (v: View) => void; onOpenItem: (kind: 'app' | 'browser', id: string) => void; snap: Snapshot; thumbs: Thumbs; onDone: () => void }
 
 const KEY = 'portpilot-home-tally';
-const RUN_ROWS = 5;
+const RUN_ROWS = 6;
 const SCENE_KEY = 'portpilot-home-scene';
 type Counts = Pick<Tally, 'running' | 'apps' | 'profilesUp' | 'profiles'>;
 
@@ -38,7 +39,8 @@ const lastRunText = (iso: string | undefined) => {
   return !a ? '' : a === 'just now' ? a : `${a} ago`;
 };
 
-export function Home({ host, t, loaded, onView, snap, thumbs, onDone }: Props) {
+export function Home({ host, t, loaded, onView, onOpenItem, snap, thumbs, onDone }: Props) {
+  const prefs = usePrefs();
   // The first read takes a couple of seconds on a big library: show the last known counts, dimmed, instead of dashes.
   const last = loaded ? null : lastCounts();
   useEffect(() => {
@@ -142,26 +144,36 @@ export function Home({ host, t, loaded, onView, snap, thumbs, onDone }: Props) {
         {hero ? (
           <>
             <span className="tile-title">{runningList.length ? `Running, ${runningList.length} of ${t.apps} apps` : 'Last used'}</span>
+<div className="run-grid">
             {(runningList.length ? runningList.slice(0, RUN_ROWS) : [hero]).map((c) => {
               const shot = thumbs.byApp[c.app.id]?.url;
               const last = lastRunText(recent.get(c.app.id));
+              const isOpen = c.state === 'running' && !!c.port;
+              const primary = () => run(() => (isOpen ? host.openUrl(`http://localhost:${c.port}`) : host.startApp(c.app)));
               return (
                 <div className="run-row" key={c.app.id}>
-                  <span className="th row-th" style={shot ? { backgroundImage: `url(${shot})` } : { background: gradient(c.app.name) }} />
+                  <button className="th-wrap row-wrap" title={`${isOpen ? 'Open' : 'Start'} ${c.app.name}`} aria-label={`${isOpen ? 'Open' : 'Start'} ${c.app.name}`} onClick={primary}>
+                    <span className="th row-th" style={shot ? { backgroundImage: `url(${shot})` } : { background: gradient(c.app.name) }} />
+                    <span className="sr">{isOpen ? 'Open' : 'Start'}</span>
+                  </button>
                   <div className="row-main">
-                    <h2><span className={`dot${c.state === 'running' ? ' on' : ''}`} />{c.app.name}</h2>
+                    <h2>{prefs.status === 'dot'
+                      ? <span className={`dot${c.state === 'running' ? ' on' : ''}`} />
+                      : <span className="stat-word"><span aria-hidden="true">{c.state === 'running' ? '●' : '○'}</span> {c.state === 'running' ? 'running' : 'stopped'}</span>}<span className="nm">{c.app.name}</span></h2>
                     <span className="tile-sub">{[c.port ? `:${c.port}` : '', last ? (c.state === 'running' ? `started ${last}` : `last run ${last}`) : ''].filter(Boolean).join(' · ')}</span>
                   </div>
-                  <div className="row-actions">
-                    {c.state === 'running' && c.port
-                      ? <button className="primary" onClick={() => run(() => host.openUrl(`http://localhost:${c.port}`))}>Open</button>
-                      : <button className="primary" onClick={() => run(() => host.startApp(c.app))}>Start</button>}
-                    {c.state === 'running' && <button onClick={() => run(() => host.stopApp(c.app.id))}>Stop</button>}
-                    <button onClick={() => onView('localhost')}>Details</button>
-                  </div>
+                  <button className="chip chip-tr" title="Details" onClick={() => onOpenItem('app', c.app.id)}>
+                    <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="3.5" cy="8" r="1.2" fill="currentColor" stroke="none" /><circle cx="8" cy="8" r="1.2" fill="currentColor" stroke="none" /><circle cx="12.5" cy="8" r="1.2" fill="currentColor" stroke="none" /></svg>
+                    <span className="sr">Details</span>
+                  </button>
+                  {c.state === 'running' && <button className="chip chip-br" title="Stop" onClick={() => run(() => host.stopApp(c.app.id))}>
+                    <svg viewBox="0 0 16 16" aria-hidden="true"><rect x="4" y="4" width="8" height="8" rx="1" fill="currentColor" stroke="none" /></svg>
+                    <span className="sr">Stop</span>
+                  </button>}
                 </div>
               );
             })}
+</div>
             {runningList.length > RUN_ROWS && <button className="link more-link" onClick={() => onView('localhost')}>+{runningList.length - RUN_ROWS} more running</button>}
           </>
         ) : (
@@ -182,7 +194,7 @@ export function Home({ host, t, loaded, onView, snap, thumbs, onDone }: Props) {
         </div>
         <div className="mini">
           {profiles.map((p) => (
-            <button key={p.name} className="th-wrap" onClick={() => onView('browsers')}>
+            <button key={p.name} className="th-wrap" onClick={() => onOpenItem('browser', p.name)}>
               <span className={`th${art.byName[p.name] ? ' art' : ''}${p.state === 'up' ? ' sel' : ''}`}
                 style={art.byName[p.name] ? { backgroundImage: `url(${art.byName[p.name]}), ${gradient(p.name)}` } : { background: gradient(p.name) }} />
               <span className="cap">{p.name}</span>

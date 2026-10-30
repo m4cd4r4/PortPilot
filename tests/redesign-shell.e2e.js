@@ -3,7 +3,7 @@
  * Run: npm run build:ui && node tests/redesign-shell.e2e.js   (needs Electron + playwright)
  * Set PORTPILOT_SHOTS_DIR to save screenshots at 1440 and 1120 wide.
  *
- * Covers: PORTPILOT_NEW_UI=1 loads the new bundle; Home tiles show real counts; the segmented
+ * Covers: the app loads the new bundle; Home tiles show real counts; the segmented
  * control switches screens; Ctrl+K opens the shared palette (also from a text field), ranks,
  * Enter starts and stops an app and switches screen; a held port raises one slim banner;
  * no console errors.
@@ -17,7 +17,6 @@ const SHOTS = process.env.PORTPILOT_SHOTS_DIR || '';
 
 async function main() {
   if (!fs.existsSync(path.join(h.root, 'src', 'ui-dist', 'index.html'))) throw new Error('src/ui-dist is missing; run "npm run build:ui" first');
-  process.env.PORTPILOT_NEW_UI = '1';
   const [shopPort, idlePort, heldPort] = await h.freePorts(3);
   const shop = world.mkdir('shop');
   fs.writeFileSync(path.join(shop, 'server.js'), h.SERVER);
@@ -83,7 +82,7 @@ async function main() {
     check('Enter runs it and closes the palette', true);
     await until(() => running('app_shop'), 15000, 'shop running');
     await until(() => win.evaluate(() => /Stop/.test(document.querySelector('.h-hero')?.textContent || '')), 15000, 'hero offers Stop');
-    check('the hero follows the running app and offers Stop', await win.evaluate(() => document.querySelector('.h-hero h2').textContent === 'shop'));
+    check('the hero follows the running app and offers Stop', await win.evaluate(() => document.querySelector('.h-hero h2 .nm').textContent === 'shop'));
     await until(() => win.evaluate(() => (document.querySelector('.h-hero .row-th')?.style.backgroundImage || '').includes('url(')), 40000, 'hero picture');
     check('a running app with no picture gets one captured on Home', true);
 

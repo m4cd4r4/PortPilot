@@ -3,20 +3,23 @@ import type { Host, Snapshot } from '../host';
 import { STALE_MS, cards, grouped, type Card } from '../model';
 import { VIEWS, setPrefs, usePrefs, type Prefs } from '../prefs';
 import type { Thumbs } from '../useThumbs';
+import { AppInspector } from './AppInspector';
 import { Library } from './Library';
 
-interface Props { host: Host; snap: Snapshot; thumbs: Thumbs; onDone: () => void; manage: boolean; onManage: (on: boolean) => void }
+interface Props { host: Host; snap: Snapshot; thumbs: Thumbs; onDone: () => void; manage: boolean; onManage: (on: boolean) => void; inspectId?: string }
 
 const HOVER_MS = 500;
 const SWEEP_MS = 30000;
 /** Stopped apps shown before "Show all"; running and blocked ones always show. */
 const STOPPED_SHOWN = 12;
 
-export function Localhost({ host, snap, thumbs, onDone, manage, onManage }: Props) {
+export function Localhost({ host, snap, thumbs, onDone, manage, onManage, inspectId }: Props) {
   const prefs = usePrefs();
   const [query, setQuery] = useState('');
   const [error, setError] = useState('');
   const [allStopped, setAllStopped] = useState(false);
+  // Details opened from Home land on the normal Apps view with the panel up.
+  const [inspectApp, setInspectApp] = useState<string | undefined>(inspectId);
   const list = useMemo(() => cards(snap, query), [snap, query]);
 
   // Keep running apps' screenshots fresh: one stale app per sweep, so captures never pile up.
@@ -102,6 +105,11 @@ export function Localhost({ host, snap, thumbs, onDone, manage, onManage }: Prop
       </div>
       {error && <p className="notice" role="alert">{error}</p>}
       {body()}
+      {(() => {
+        const a = snap.apps.find((x) => x.id === inspectApp);
+        return a && <AppInspector host={host} app={a} port={snap.running[a.id]?.port} running={!!snap.running[a.id]}
+          crashed={!!snap.crashed[a.id]} onClose={() => setInspectApp(undefined)} />;
+      })()}
     </section>
   );
 }
@@ -113,7 +121,7 @@ const WORD: Record<Card['state'], string> = { running: 'running', conflict: 'blo
 
 function AppCard({ c, prefs, thumbs, actions }: { c: Card; prefs: Prefs; thumbs: Thumbs; actions: Actions }) {
   const thumb = thumbs.byApp[c.app.id];
-  const showShot = prefs.view === 'cards' || prefs.view === 'gallery' || prefs.thumbs === 'inline';
+  const showShot = prefs.view === 'cards' || prefs.thumbs === 'inline';
   const peek = !showShot && prefs.thumbs === 'peek' && thumb;
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const hover = () => {
@@ -138,7 +146,7 @@ function AppCard({ c, prefs, thumbs, actions }: { c: Card; prefs: Prefs; thumbs:
         <div className="sub">
           {c.port ? <span>:{c.port}</span> : <span>no port</span>}
           {c.app.branch && <span className="branch">{c.app.branch}</span>}
-          {prefs.view !== 'compact' && c.note && <span className="note">{c.note}</span>}
+          {c.note && <span className="note">{c.note}</span>}
         </div>
       </div>
       {peek && <img className="peek" src={thumb.url} alt="" loading="lazy" />}

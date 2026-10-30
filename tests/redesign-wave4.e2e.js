@@ -6,7 +6,7 @@
  * Covers: Add app form saves cwd/command/port; edit renames; star; groups CRUD and Grouped mode;
  * Start/Stop from the Library; Details shows the app's output and a share URL; Ports lists a live
  * listener and Kill needs a second click; Settings writes the config, the theme persists, and the
- * classic switch is still there; no console errors.
+ * no classic switch; no console errors.
  */
 const h = require('./e2e-harness');
 const { fs, path, until } = h;
@@ -19,7 +19,6 @@ const LOUD = h.SERVER + "console.log('hello-from-shop');\n";
 
 async function main() {
   if (!fs.existsSync(path.join(h.root, 'src', 'ui-dist', 'index.html'))) throw new Error('src/ui-dist is missing; run "npm run build:ui" first');
-  process.env.PORTPILOT_NEW_UI = '1';
   const [shopPort, newPort] = await h.freePorts(2);
   const shop = world.mkdir('shop');
   fs.writeFileSync(path.join(shop, 'server.js'), LOUD);
@@ -90,7 +89,7 @@ async function main() {
     await win.click('role=tab[name="Apps"]');
     await until(() => win.evaluate(() => [...document.querySelectorAll('.group-h')].some((e) => e.textContent.startsWith('Work'))), 10000, 'Work heading');
     check('Grouping (on by default) shows the Work group', true);
-    await win.click('role=button[name="Gallery"]');
+    await win.click('role=button[name="Cards"]');
 
     console.log('step: start, details, ports');
     await win.click('role=tab[name="Apps"]');
@@ -150,7 +149,7 @@ async function main() {
     check('an accent sets the hue and is remembered', (await win.evaluate(() => document.documentElement.style.getPropertyValue('--ah'))) === '18'
       && (await win.evaluate(() => JSON.parse(localStorage.getItem('portpilot-ui-prefs')).accent)) === 'coral');
     await win.click('role=button[name="Sidebar"]');
-    check('the classic switch is still on this screen', (await win.locator('#main >> role=button[name="Switch to classic view"]').count()) === 1);
+    check('Settings has no classic switch', (await win.locator('#main >> role=button[name="Switch to classic view"]').count()) === 0);
     await shot('settings');
 
     check('no console errors', errors.length === 0, errors.join(' | '));

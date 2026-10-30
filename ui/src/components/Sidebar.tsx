@@ -1,7 +1,6 @@
-import { useState } from 'react';
 import { MORE_VIEWS, VIEWS, type View } from '../model';
 
-interface Props { view: View; onView: (v: View) => void; onSearch: () => void; onClassic: () => Promise<void> }
+interface Props { view: View; onView: (v: View) => void; onSearch: () => void }
 
 const PATHS: Record<string, string> = {
   home: 'M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z',
@@ -29,15 +28,11 @@ const MARK = (
 );
 
 /** The Ledger navigation: every section in one column. Tab buttons carry only their label as text. */
-export function Sidebar({ view, onView, onSearch, onClassic }: Props) {
-  const [error, setError] = useState('');
+export function Sidebar({ view, onView, onSearch }: Props) {
   const item = (v: { view: View; label: string }) => (
     <button key={v.view} role="tab" aria-selected={view === v.view} className={view === v.view ? 'on' : ''}
       onClick={() => onView(v.view)}><Icon name={v.view} />{v.label}</button>
   );
-  const classic = async () => {
-    try { setError(''); await onClassic(); } catch (e) { setError((e as Error).message); }
-  };
   return (
     <aside className="sidebar" aria-label="Sidebar">
       <div className="brand"><span className="mark">{MARK}</span>PortPilot</div>
@@ -49,8 +44,6 @@ export function Sidebar({ view, onView, onSearch, onClassic }: Props) {
       </nav>
       <div className="sfoot">
         <nav className="snav" role="tablist" aria-label="Settings">{item({ view: 'settings', label: 'Settings' })}</nav>
-        <button className="link-btn" onClick={classic}>Switch to classic view</button>
-        {error && <p className="notice" role="alert">{error}</p>}
       </div>
     </aside>
   );

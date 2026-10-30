@@ -2,10 +2,10 @@ import { useEffect, useState } from 'react';
 import type { Host, Settings as S } from '../host';
 import { ACCENTS, VIEWS, setPrefs, usePrefs, type Nav, type Prefs } from '../prefs';
 
-interface Props { host: Host; onClassic: () => Promise<void> }
+interface Props { host: Host }
 
 type BoolKey = 'autoScan' | 'closeToTray' | 'stopAppsOnQuit' | 'openAtLogin' | 'autoResizeWindow' | 'notifyOnCrash'
-  | 'autoTrackLocalhost' | 'autoRegister' | 'openDevTools' | 'historySnapshots' | 'rowPreviews';
+  | 'autoTrackLocalhost' | 'autoRegister' | 'openDevTools' | 'historySnapshots';
 
 const TOGGLES: Array<{ title: string; rows: Array<{ key: BoolKey; label: string; hint: string; fallback: boolean }> }> = [
   { title: 'Window', rows: [
@@ -22,7 +22,6 @@ const TOGGLES: Array<{ title: string; rows: Array<{ key: BoolKey; label: string;
     { key: 'autoScan', label: 'Scan ports in the background', hint: 'Off: only the Rescan button reads the machine.', fallback: true },
     { key: 'autoTrackLocalhost', label: 'Record every localhost server in History', hint: 'Whoever started it.', fallback: true },
     { key: 'historySnapshots', label: 'Keep a page screenshot with each run', hint: 'Stored on this machine only.', fallback: true },
-    { key: 'rowPreviews', label: 'Show live previews on rows', hint: 'Classic view only; the new view always shows thumbnails.', fallback: true },
   ] },
   { title: 'Developer', rows: [
     { key: 'openDevTools', label: 'Open DevTools with the window', hint: 'For debugging PortPilot itself.', fallback: false },
@@ -35,7 +34,7 @@ const THEMES = [{ v: 'dark', l: 'Dark' }, { v: 'light', l: 'Light' }, { v: 'syst
 
 const THEME_KEY = 'portpilot-ui-theme';
 
-/** The new view keeps its own theme choice (the classic view stores its palette names elsewhere). */
+/** The view keeps its own theme choice. */
 export function applyTheme(theme: string | null) {
   const root = document.documentElement;
   if (theme === 'dark' || theme === 'light') root.dataset.theme = theme;
@@ -55,7 +54,7 @@ const DISPLAY: Array<{ key: keyof Prefs; label: string; opts: Array<[string, str
   { key: 'grouping', label: 'Grouping', opts: [['true', 'Grouped'], ['false', 'Flat']] },
 ];
 
-export function Settings({ host, onClassic }: Props) {
+export function Settings({ host }: Props) {
   const [s, setS] = useState<S | null>(null);
   const [error, setError] = useState('');
   const [saved, setSaved] = useState('');
@@ -156,11 +155,6 @@ export function Settings({ host, onClassic }: Props) {
           onSave={(n) => save({ historyMaxMB: n }, 'Screenshot budget')} />
       </fieldset>
 
-      <fieldset className="set-group">
-        <legend>Views</legend>
-        <p className="set-note">You are in the new view. The classic view stays available until the web portal moves over.</p>
-        <button onClick={() => onClassic().catch((e) => setError((e as Error).message))}>Switch to classic view</button>
-      </fieldset>
     </section>
   );
 }

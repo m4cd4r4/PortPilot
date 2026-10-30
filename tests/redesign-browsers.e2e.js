@@ -1,14 +1,13 @@
 /**
- * Real-Electron check of the redesign's Browsers screen and the classic/new switch (ui/, src/ui-dist),
+ * Real-Electron check of the redesign's Browsers screen (ui/, src/ui-dist),
  * with REAL headless Brave, against a THROWAWAY config.
  * Run: npm run build:ui && node tests/redesign-browsers.e2e.js   (skips without Brave)
  * Set PORTPILOT_SHOTS_DIR to save screenshots (each view mode at 1440 and 390 wide, dark and light).
  *
  * Covers: one card per profile with account chips, purpose and brand art (a seeded picture) or a
  * gradient and letter; Start from the card (real Brave) and its Signed out pill from real cookies;
- * a lease line with Release that keeps the browser running; a held port badges its card; the four
- * view modes and the filter; add, edit and remove through the drawer, accounts included; the
- * Settings menu switches to the classic UI and the classic header switches back.
+ * a lease line with Release that keeps the browser running; a held port badges its card; the two
+ * view modes and the filter; add, edit and remove through the drawer, accounts included; no classic switch.
  */
 const h = require('./e2e-harness');
 const configFile = require('../src/core/configFile');
@@ -45,7 +44,6 @@ const isUp = (port) => fetch(`http://127.0.0.1:${port}/json/version`).then(() =>
 async function main() {
   if (!fs.existsSync(path.join(h.root, 'src', 'ui-dist', 'index.html'))) throw new Error('src/ui-dist is missing; run "npm run build:ui" first');
   const [pShop, pBlog, pHeld, pNew] = await h.freePorts(4);
-  process.env.PORTPILOT_NEW_UI = 'auto'; // neither 0 nor 1: the app picks, so this also proves new is the default
   world.writeConfig({
     browserProfiles: [
       { name: 'shop', port: pShop, browser: 'brave', mode: 'headless', url: 'about:blank', purpose: 'Shop admin', sites: ['shop.example.com'],
@@ -133,7 +131,7 @@ async function main() {
       && await card('held').getByRole('button', { name: 'Start' }).isDisabled());
 
     console.log('step: view modes and filter');
-    for (const mode of ['compact', 'cards', 'gallery', 'rows']) {
+    for (const mode of ['cards', 'rows']) {
       await win.click(`role=button[name="${mode[0].toUpperCase() + mode.slice(1)}"]`);
       await until(async () => (await modeClass()).includes(mode === 'cards' ? 'tiles' : mode), 5000, `${mode} class`);
       check(`${mode} mode renders its cards`, (await win.locator('.bcard').count()) === 3);
@@ -212,14 +210,9 @@ async function main() {
     await win.keyboard.press('Escape');
     check('the card falls back to its letter tile', (await card('shop').locator('.letter').textContent()) === 'S');
 
-    console.log('step: classic and new');
-    await win.click('role=button[name="Switch to classic view"]');
-    await until(() => win.evaluate(() => !!document.getElementById('btn-new-ui')), 20000, 'classic UI loads');
-    check('Switch to classic view loads the v4 window', await win.evaluate(() => !document.querySelector('.topbar')));
-    check('the choice is stored in settings', JSON.parse(fs.readFileSync(world.configPath, 'utf8')).settings.ui === 'classic');
-    await win.click('#btn-new-ui');
-    await until(() => win.evaluate(() => !!document.querySelector('.topbar')), 20000, 'new UI loads again');
-    check('Try new view in the classic header comes back to the new window', JSON.parse(fs.readFileSync(world.configPath, 'utf8')).settings.ui === 'new');
+    console.log('step: no classic view');
+    check('the old Compact and Gallery views are gone', (await win.getByRole('button', { name: 'Compact' }).count()) === 0 && (await win.getByRole('button', { name: 'Gallery' }).count()) === 0);
+    check('there is no switch to a classic view', (await win.getByText('Switch to classic view').count()) === 0);
 
     check('no console errors', errors.length === 0, errors.join(' | '));
   } finally {

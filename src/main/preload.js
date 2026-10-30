@@ -72,11 +72,6 @@ contextBridge.exposeInMainWorld('portpilot', {
     capture: (appId, port) => ipcRenderer.invoke('thumbs:capture', appId, port)
   },
 
-  // Which window loads: the redesign or the classic v4 renderer
-  ui: {
-    switch: (to) => ipcRenderer.invoke('ui:switch', to)
-  },
-
   // Browser profiles (Browsers tab)
   browsers: {
     list: () => ipcRenderer.invoke('browser:list'),

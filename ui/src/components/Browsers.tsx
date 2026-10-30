@@ -5,17 +5,17 @@ import { VIEWS, setPrefs, usePrefs, type Prefs } from '../prefs';
 import { useBrowserArt, useSignIns, type BrowserArt } from '../useBrowserMeta';
 import { BrowserDrawer } from './BrowserDrawer';
 
-interface Props { host: Host; snap: Snapshot; onDone: () => void }
+interface Props { host: Host; snap: Snapshot; onDone: () => void; editName?: string }
 
 const MAX_CHIPS = 3;
 
-export function Browsers({ host, snap, onDone }: Props) {
+export function Browsers({ host, snap, onDone, editName }: Props) {
   const prefs = usePrefs();
   const [query, setQuery] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState<string>('');
   // null = closed; { name: null } = adding; { name } = editing that profile
-  const [drawer, setDrawer] = useState<{ name: string | null } | null>(null);
+  const [drawer, setDrawer] = useState<{ name: string | null } | null>(editName ? { name: editName } : null);
   const list = useMemo(() => browserCards(snap, query), [snap, query]);
   const art = useBrowserArt(host, snap.profiles);
   const signIns = useSignIns(host, snap.profiles);
@@ -104,9 +104,8 @@ function ProfileCard({ c, prefs, art, signIn, busy, actions }: { c: BrowserCard;
   const accounts = p.accounts || [];
   const hue = hueOf(p.name);
   const lease = p.leasedTo;
-  const tiles = prefs.view === 'cards' || prefs.view === 'gallery';
+  const tiles = prefs.view === 'cards';
   const showShot = tiles || prefs.thumbs === 'inline';
-  const compact = prefs.view === 'compact';
   const state = up ? 'running' : c.group === 'blocked' ? 'conflict' : 'stopped';
   const [small, setSmall] = useState(false);
   // A favicon or touch icon is a small square: show it whole on the gradient, not stretched to fill the hero.
@@ -134,8 +133,8 @@ function ProfileCard({ c, prefs, art, signIn, busy, actions }: { c: BrowserCard;
           {p.mode && p.mode !== 'headed' && <span>{p.mode}</span>}
           {up && p.tabs && <span>{p.tabs.length} tab{p.tabs.length === 1 ? '' : 's'}</span>}
         </div>
-        {!compact && p.purpose && <p className="purpose">{p.purpose}</p>}
-        {!compact && accounts.length > 0 && (
+        {p.purpose && <p className="purpose">{p.purpose}</p>}
+        {accounts.length > 0 && (
           <div className="chips" aria-label="Accounts">
             {accounts.slice(0, MAX_CHIPS).map((a, i) => (
               <span key={i} className="chip" title={a.note || undefined}>{[a.platform, a.username].filter(Boolean).join(' · ')}</span>
@@ -143,7 +142,7 @@ function ProfileCard({ c, prefs, art, signIn, busy, actions }: { c: BrowserCard;
             {accounts.length > MAX_CHIPS && <span className="chip more">+{accounts.length - MAX_CHIPS}</span>}
           </div>
         )}
-        {up && signIn === 'out' && (!p.browser || p.browser === 'brave') && !compact && (
+        {up && signIn === 'out' && (!p.browser || p.browser === 'brave') && (
           <div className="signin-setup" data-signin-setup role="group" aria-label="Set up sign-ins">
             <span>Sign-ins:</span>
             <button onClick={() => actions.setup(p, 'sync')} disabled={busy}>Brave Sync</button>
@@ -156,7 +155,7 @@ function ProfileCard({ c, prefs, art, signIn, busy, actions }: { c: BrowserCard;
             {!lease.starting && <button onClick={() => actions.release(p)} disabled={busy}>Release</button>}
           </div>
         )}
-        {c.group === 'blocked' && p.warning && !compact && <p className="note-warn">{p.warning}</p>}
+        {c.group === 'blocked' && p.warning && <p className="note-warn">{p.warning}</p>}
       </div>
       <div className="acts">
         {up
