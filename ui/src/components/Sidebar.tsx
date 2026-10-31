@@ -22,10 +22,11 @@ function Icon({ name }: { name: string }) {
 }
 
 const MARK = (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-    <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2" />
-    <path d="M12 5.5l3.2 8.3L12 12.3 8.8 13.8z" fill="currentColor" />
-    <circle cx="12" cy="17.2" r="1.3" fill="currentColor" />
+  <svg width="22" height="22" viewBox="0 0 64 64" aria-hidden="true">
+    <rect x="2" y="2" width="60" height="60" rx="15" fill="#24283b" />
+    <rect x="16" y="13" width="9" height="39" rx="4.5" fill="#c0caf5" />
+    <circle cx="33.5" cy="27.5" r="11" fill="none" stroke="#c0caf5" strokeWidth="9" />
+    <circle cx="33.5" cy="27.5" r="4.5" fill="#9ece6a" />
   </svg>
 );
 
