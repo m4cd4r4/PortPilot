@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [4.1.0] - 2026-10-31
 
 - New opt-in Browser Previews view: a small picture of each chosen browser profile's front page, taken over the debug port (no desktop app needed). Right-click a profile in Browsers and choose Show Preview. Off by default, because a picture can show a signed-in page; stored in the machine-scoped setting `portpilot.browserPreviews`. Each profile is captured at most every 30 seconds, one at a time.
 
