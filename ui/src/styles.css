@@ -465,21 +465,15 @@ pre.log.err { border-color: color-mix(in srgb, var(--warn) 45%, var(--bd)); }
 }
 .groups-panel small { color: var(--tx2); white-space: nowrap; }
 @media (max-width: 640px) {
-  table.ports .row-acts { display: grid; grid-template-columns: 1fr 1fr; min-width: 150px; }
-}
-@media (max-width: 640px) {
   table.ports th, table.ports td { padding: 8px 8px; }
   table.ports .title { flex-wrap: wrap; }
   table.ports .name { white-space: normal; overflow-wrap: anywhere; }
-  table.ports .row-acts { min-width: 0; }
   table.ports .row-acts button { padding: 4px 8px; }
 }
 
-/* A flex cell drops out of the table, so its row lines stopped short; keep the actions a real cell on wide windows. */
-@media (min-width: 641px) {
-  table.ports td.row-acts { display: table-cell; text-align: right; white-space: nowrap; }
-  table.ports td.row-acts button + button { margin-left: 6px; }
-}
+/* A flex or grid cell drops out of the table, so its row lines stop short and the buttons sit above the text; keep the actions a real, middle-aligned cell at every width. */
+table.ports td.row-acts { display: table-cell; text-align: right; white-space: nowrap; vertical-align: middle; }
+table.ports td.row-acts button + button { margin-left: 6px; }
 
 /* Home first read, Localhost stopped cap. */
 .home.stale .tile-count, .home.stale .tile-sub { opacity: 0.5; }
