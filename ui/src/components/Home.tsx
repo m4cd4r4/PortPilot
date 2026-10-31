@@ -21,7 +21,8 @@ function lastCounts(): Counts | null {
   return null;
 }
 
-const gradient = (name: string) => `linear-gradient(135deg, hsl(${hueOf(name)} 55% 32%), hsl(${(hueOf(name) + 40) % 360} 50% 16%))`;
+/** One flat, muted tint per name: a placeholder behind a picture that has not loaded. */
+const gradient = (name: string) => `hsl(${hueOf(name)} 26% 22%)`;
 
 /** Latest start per app, newest first, from run history. */
 function lastRuns(runs: Run[]): Map<string, string> {
@@ -196,7 +197,7 @@ export function Home({ host, t, loaded, onView, onOpenItem, snap, thumbs, onDone
           {profiles.map((p) => (
             <button key={p.name} className="th-wrap" onClick={() => onOpenItem('browser', p.name)}>
               <span className={`th${art.byName[p.name] ? ' art' : ''}${p.state === 'up' ? ' sel' : ''}`}
-                style={art.byName[p.name] ? { backgroundImage: `url(${art.byName[p.name]}), ${gradient(p.name)}` } : { background: gradient(p.name) }} />
+                style={art.byName[p.name] ? { backgroundImage: `url(${art.byName[p.name]})`, backgroundColor: gradient(p.name) } : { background: gradient(p.name) }} />
               <span className="cap">{p.name}</span>
             </button>
           ))}
