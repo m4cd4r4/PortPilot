@@ -56,7 +56,7 @@ export function Scenes({ host, snap, onDone }: Props) {
       </div>
       {error && <p className="notice" role="alert">{error}</p>}
 
-      {scenes && !scenes.length && <p className="empty-note">No scenes yet. Start the apps and browsers you work with, then press Save what is running.</p>}
+      {scenes && !scenes.length && <p className="empty-note">No scenes yet. Start the apps and browsers you work with, then press "Save what is running".</p>}
       <div className="scene-list">
         {(scenes || []).map((s) => {
           const run = sceneRun(s.id);

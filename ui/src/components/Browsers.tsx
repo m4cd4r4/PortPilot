@@ -113,7 +113,7 @@ function ProfileCard({ c, prefs, art, signIn, busy, actions }: { c: BrowserCard;
   return (
     <article className={`card bcard ${c.group}`} data-profile={p.name} data-group={c.group}>
       {showShot && <button className={`shot bshot${picture && small ? ' small-art' : ''}`} onClick={() => actions.edit(p)} aria-label={`Edit ${p.name}`}
-        style={{ background: `linear-gradient(135deg, hsl(${hue} 55% 30%), hsl(${(hue + 40) % 360} 55% 18%))` }}>
+        style={{ background: `hsl(${hue} 26% 22%)` }}>
         {picture
           ? <img src={picture} alt="" loading="lazy" onLoad={sized} />
           : <span className="letter" aria-hidden="true" style={{ color: `hsl(${hue} 70% 82%)` }}>{p.name.slice(0, 1).toUpperCase()}</span>}
