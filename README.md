@@ -20,6 +20,10 @@ PortPilot shows the sites you are running locally, each with its port, a live pr
 
 ![PortPilot Home: the running apps with Open, Stop and Details, your browser profiles and recently used apps](docs/screenshots/ui/home.png)
 
+[![A cat at a desk watches Claude Code ask PortPilot for the youtube profile; the Browsers row switches to in use and the newest video opens](docs/media/browsers-film-poster.jpg)](docs/media/browsers-film.mp4)
+
+*One sentence, and the browser is already signed in: Claude asks for the `youtube` profile, PortPilot opens it on :9241 with the account signed in, and the assistant reads the newest video on the subscriptions feed. 18 seconds, silent; the demo uses a throwaway channel. [Play the film](docs/media/browsers-film.mp4).*
+
 Local-first: no account, no telemetry, no cloud. Windows 10/11 and Linux.
 
 ## What you get
@@ -138,10 +142,6 @@ Then label each browser profile (what it is for, which sites it logs into), beca
 ## Browsers and debug ports
 
 A **debug port** is how a program drives a Chromium browser. The browser opens with `--remote-debugging-port=<n>`, and anything that can reach `127.0.0.1:<n>` can then read its tabs and click in them. A **browser profile** in PortPilot is a named browser with its own sign-ins and its own debug port, so a `google` profile stays signed in to Search Console while a `github` profile stays signed in to GitHub. Nothing picks a port by chance: you give each profile one, and PortPilot hands that port to Claude.
-
-[![A cat at a desk watches Claude Code ask PortPilot for the youtube profile; the Browsers row switches to in use and the newest video opens](docs/media/browsers-film-poster.jpg)](docs/media/browsers-film.mp4)
-
-*One sentence, and the browser is already signed in: Claude asks for the `youtube` profile, PortPilot opens it on :9241 with the account signed in, and the assistant reads the newest video on the subscriptions feed. 18 seconds, silent; the demo uses a throwaway channel. [Play the film](docs/media/browsers-film.mp4).*
 
 - **Start and Stop.** In the Browsers screen, or in the VS Code Browsers view, Start opens the profile's own Brave or Chrome on its port and Stop closes it and frees the port.
 
