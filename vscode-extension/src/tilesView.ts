@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import * as crypto from 'crypto';
-import { readConfig, readRuntimeApps, readRowThumbs, thumbDataUri, browserArtStamp, browserArtDataUri } from './config';
+import { readConfig, readRuntimeApps, readRowThumbs, readLastAppThumbs, thumbDataUri, browserArtStamp, browserArtDataUri } from './config';
 import { AppsTreeProvider, AppTreeItem, appRowState } from './appsTreeProvider';
 import { BrowsersTreeProvider, BrowserProfileItem, BrowserTabItem } from './browsersTreeProvider';
 import { pickPreviewTab } from './browserCapture';
@@ -63,6 +63,7 @@ export class TilesView implements vscode.WebviewViewProvider, vscode.Disposable 
     const running = this.apps.getRunningByAppId();
     const pictures = this.apps.rowPreviews;
     const thumbs = pictures ? readRowThumbs() : {};
+    const lastThumbs = pictures ? readLastAppThumbs() : {};
     const inputs: AppInput[] = config.apps.map(a => {
       const active = running.get(a.id);
       const row = appRowState(active, runtime[a.id]);
@@ -74,7 +75,8 @@ export class TilesView implements vscode.WebviewViewProvider, vscode.Disposable 
         word: row.word,
         favorite: !!a.isFavorite,
         branch: a.branch || null,
-        thumb: active ? thumbOf(thumbs, a.id, !!runtime[a.id], active.port) : null,
+        // A running app with no capture of its own yet shows its last known screenshot.
+        thumb: active ? thumbOf(thumbs, a.id, !!runtime[a.id], active.port) ?? lastThumbs[a.id]?.thumb ?? null : null,
       };
     });
     const { live, stopped } = buildAppTiles(inputs, pictures);

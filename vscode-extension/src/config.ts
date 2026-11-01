@@ -128,6 +128,7 @@ interface RunHistoryApi {
 }
 interface RunViewApi {
   rowThumbs(runs: unknown[]): Record<string, RowThumbRef>;
+  appThumbs(runs: unknown[]): Record<string, { thumb: string }>;
 }
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const runHistory: RunHistoryApi = require(path.join(__dirname, '..', 'runtime', 'core', 'runHistory.js'));
@@ -248,6 +249,17 @@ export function readRowThumbs(): Record<string, RowThumbRef> {
     const { key, runs } = readRunsCached();
     if (thumbCache?.key !== key) thumbCache = { key, thumbs: runView.rowThumbs(runs) };
     return thumbCache.thumbs;
+  } catch { return {}; }
+}
+
+let lastThumbCache: { key: string; thumbs: Record<string, { thumb: string }> } | null = null;
+
+/** Each app's newest page thumbnail, open run or closed. Empty on any read failure. */
+export function readLastAppThumbs(): Record<string, { thumb: string }> {
+  try {
+    const { key, runs } = readRunsCached();
+    if (lastThumbCache?.key !== key) lastThumbCache = { key, thumbs: runView.appThumbs(runs) };
+    return lastThumbCache.thumbs;
   } catch { return {}; }
 }
 

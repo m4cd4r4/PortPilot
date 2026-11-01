@@ -40,11 +40,13 @@
         },
         {
           "id": "portpilot.apps",
-          "name": "Apps"
+          "name": "Apps",
+          "visibility": "collapsed"
         },
         {
           "id": "portpilot.browsers",
-          "name": "Browsers"
+          "name": "Browsers",
+          "visibility": "collapsed"
         },
         {
           "id": "portpilot.browserPreviews",
