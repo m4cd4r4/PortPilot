@@ -22,7 +22,7 @@ It works on its own; the assistant link is optional.
 [![MCP](https://img.shields.io/badge/MCP-26%20tools-purple.svg)](docs/REFERENCE.md#mcp-tools-26)
 [![VS Code Marketplace](https://vsmarketplacebadges.dev/version-short/macdara.portpilot.svg)](https://marketplace.visualstudio.com/items?itemName=macdara.portpilot)
 
-**[Download](#install)** &nbsp;&middot;&nbsp; **[Connect an AI assistant](#use-it-with-claude-code)** &nbsp;&middot;&nbsp; **[Website](https://m4cd4r4.github.io/PortPilot/)**
+**[Download](#install)** &nbsp;&middot;&nbsp; **[Connect an AI assistant](#use-it-with-claude-code)** &nbsp;&middot;&nbsp; **[Dedicated browsers](#dedicated-browsers)** &nbsp;&middot;&nbsp; **[A tour of the app](#a-tour-of-the-app)** &nbsp;&middot;&nbsp; **[Website](https://m4cd4r4.github.io/PortPilot/)**
 
 </div>
 
