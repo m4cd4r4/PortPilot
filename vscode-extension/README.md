@@ -10,7 +10,7 @@ PortPilot lists your registered apps and every listening port in the VS Code sid
 
 **Tiles, at the top.** The `Tiles` view shows your apps and dedicated browsers as small picture tiles. Running apps and ones that need attention come first, each with the page picture the desktop app took (the last known one while a fresh run has none, and a letter tile when an app has never had one); idle apps fold into a compact `Show N stopped` list. Below that, one tile per browser profile with the site's icon the desktop app saved for it. Click a running app's tile to open it, click a running browser's tile to bring its page to the front, and hover a tile for Start or Stop. The pictures are read from PortPilot's local files and never leave your machine.
 
-<img src="https://raw.githubusercontent.com/m4cd4r4/PortPilot/master/docs/screenshots/vscode-v4-tiles.png" alt="The Tiles view: six running apps with page pictures and status lamps, a Show 4 stopped link and browser profiles below, with the Apps, Browsers, Active Ports and History lists collapsed underneath" width="300">
+<img src="https://raw.githubusercontent.com/m4cd4r4/PortPilot/master/docs/screenshots/vscode-v4-tiles.png" alt="The Tiles view: five running apps with page pictures and status lamps, a Show 1 stopped link and browser profiles below, with the Apps, Browsers, Active Ports and History lists collapsed underneath" width="300">
 
 The demo has no saved site icons, so its browser tiles show letters. Turn the view off with `portpilot.tilesView`; the Apps and Browsers lists below it start collapsed on a new install and stay for the keyboard and the right-click menus.
 
