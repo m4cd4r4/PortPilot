@@ -4,9 +4,9 @@
 
 # PortPilot
 
-**See every dev server on your machine, and who started it.**
+**Every localhost app and dedicated browser on your machine, and who started it.**
 
-PortPilot runs your local dev servers and shows every port, every crash and who started each one. Connect an AI assistant (Claude Code, Cursor, Windsurf, Cline or any MCP client) and it sees the same apps you do, and reuses a running server instead of starting a second copy. It works on its own; the assistant link is optional.
+PortPilot shows the sites you are running locally, each with its port, a live preview of the page and any crash, and gives every job its own signed-in browser on a debug port. Connect an AI assistant (Claude Code, Cursor, Windsurf, Cline or any MCP client) and it sees the same apps and browsers you do, reuses a running server instead of starting a second copy, and takes the browser that matches the site it needs. It works on its own; the assistant link is optional.
 
 [![Version](https://img.shields.io/badge/version-5.0.0-blue.svg)](https://github.com/m4cd4r4/PortPilot/releases/tag/v5.0.0)
 [![Tests](https://img.shields.io/badge/tests-Playwright%20E2E-blue.svg)](tests/)
@@ -25,10 +25,10 @@ Local-first: no account, no telemetry, no cloud. Windows 10/11 and Linux.
 ## What you get
 
 - **One place for every local server.** Apps you registered, servers you started in a terminal and servers Claude started all show up, with the port, the state and a live preview of the page.
+- **Named browsers with their own debug ports.** One profile per purpose (Search Console, GitHub, a staging admin), each signed in once, handed to an assistant by task and shown as a tile next to your apps. See [Browsers and debug ports](#browsers-and-debug-ports).
 - **Port trouble fixed in a click.** A blocked port is flagged on every screen; one button frees it. A crashed app keeps its exit code and last stderr line in History.
 - **A run record.** Every run is kept with the git state it came from, so you can come back to it later.
 - **Assistants that cooperate.** Claude Code and other MCP clients start, stop and find servers through PortPilot, and are turned away from a second copy of a server that is already up.
-- **Named browsers with their own debug ports.** One profile per purpose (Search Console, GitHub, a staging admin), each signed in once, handed to an assistant by task.
 
 ## A tour of the app
 
@@ -164,7 +164,7 @@ One config file and one run record sit behind every surface, so an app you add i
 
   ![PortPilot sidebar in VS Code with running apps first, two crashed apps and a crash toast](docs/screenshots/vscode-overview.png)
 
-  ![The Tiles view in VS Code: six running apps with page pictures, then browser profiles, with the tree lists collapsed underneath](docs/screenshots/vscode-v4-tiles.png)
+  ![The Tiles view in VS Code: five running apps with page pictures, then browser profiles, with the tree lists collapsed underneath](docs/screenshots/vscode-v4-tiles.png)
 
 - **Web portal.** The classic Apps view in your browser, from `npm run agent` or from VS Code. It binds `127.0.0.1` only and needs a per-session token. Use it on a machine where you cannot install the desktop app. The new screens, row previews and crash toasts are not in the portal yet.
 - **Tray.** A tray menu with a Stop per running app keeps your servers alive after you close the window.
