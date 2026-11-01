@@ -4,9 +4,17 @@
 
 # PortPilot
 
-**Every localhost app and dedicated browser on your machine, and who started it.**
+### Every localhost app and dedicated browser on your machine, and who started it.
 
-PortPilot shows the sites you are running locally, each with its port, a live preview of the page and any crash, and gives every job its own signed-in browser on a debug port. Connect an AI assistant (Claude Code, Cursor, Windsurf, Cline or any MCP client) and it sees the same apps and browsers you do, reuses a running server instead of starting a second copy, and takes the browser that matches the site it needs. It works on its own; the assistant link is optional.
+PortPilot shows the sites you are running locally, each with its port, a live preview of the page and any crash.
+
+It gives every job its own signed-in browser on a debug port.
+
+Connect an AI assistant (Claude Code, Cursor, Windsurf, Cline or any MCP client) and it sees the same apps and browsers you do.
+
+The assistant reuses a running server instead of starting a second copy, and takes the browser that matches the site it needs.
+
+It works on its own; the assistant link is optional.
 
 [![Version](https://img.shields.io/badge/version-5.0.0-blue.svg)](https://github.com/m4cd4r4/PortPilot/releases/tag/v5.0.0)
 [![Tests](https://img.shields.io/badge/tests-Playwright%20E2E-blue.svg)](tests/)
