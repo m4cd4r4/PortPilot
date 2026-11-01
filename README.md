@@ -30,25 +30,39 @@ It works on its own; the assistant link is optional.
 
 [![A cat at a desk watches Claude Code ask PortPilot for the youtube profile; the Browsers row switches to in use and the newest video opens](docs/media/browsers-film-poster.jpg)](docs/media/browsers-film.mp4)
 
-*One sentence, and the browser is already signed in: Claude asks for the `youtube` profile, PortPilot opens it on :9241 with the account signed in, and the assistant reads the newest video on the subscriptions feed. 18 seconds, silent; the demo uses a throwaway channel. [Play the film](docs/media/browsers-film.mp4).*
+*One sentence, and the browser is already signed in.*
 
-Local-first: no account, no telemetry, no cloud. Windows 10/11 and Linux.
+*Claude asks for the `youtube` profile, PortPilot opens it on :9241 with the account signed in, and the assistant reads the newest video on the subscriptions feed.*
+
+*18 seconds, silent; the demo uses a throwaway channel. [Play the film](docs/media/browsers-film.mp4).*
+
+Local-first: no account, no telemetry, no cloud.
+
+Windows 10/11 and Linux.
 
 ## What you get
 
-- **One place for every local server.** Apps you registered, servers you started in a terminal and servers Claude started all show up, with the port, the state and a live preview of the page.
-- **Named browsers with their own debug ports.** One profile per purpose (Search Console, GitHub, a staging admin), each signed in once, handed to an assistant by task and shown as a tile next to your apps. More in [Browsers and debug ports](#browsers-and-debug-ports).
-- **Port trouble fixed in a click.** A blocked port is flagged on every screen; one button frees it. A crashed app keeps its exit code and last stderr line in History.
-- **A run record.** Every run is kept with the git state it came from, so you can come back to it later.
-- **Assistants that cooperate.** Claude Code and other MCP clients start, stop and find servers through PortPilot, and are turned away from a second copy of a server that is already up.
+**One place for every local server**
+- Apps you registered, servers you started in a terminal and servers Claude started all show up.
+- Each has its port, its state and a live preview of the page.
+
+**Named browsers with their own debug ports**
+- One profile per purpose (Search Console, GitHub, a staging admin), each signed in once.
+- A profile is handed to an assistant by task and shown as a tile next to your apps.
+- More in [Browsers and debug ports](#browsers-and-debug-ports).
+
+**Port trouble fixed in a click**
+- A blocked port is flagged on every screen, and one button frees it.
+- A crashed app keeps its exit code and last stderr line in History.
+
+**A run record**
+- Every run is kept with the git state it came from, so you can come back to it later.
+
+**Assistants that cooperate**
+- Claude Code and other MCP clients start, stop and find servers through PortPilot.
+- They are turned away from a second copy of a server that is already up.
 
 ## The app
-
-**Apps** shows every app as a card with a live preview of its page, running first and stopped ones below. An app another program is holding the port of is marked **Port held**. **Manage** turns the same screen into the editing table, plus Groups, Add app and an auto-detect that finds Node.js, Python, Go, .NET, Rust, Ruby and Docker projects ([how detection works](docs/AUTO-DETECTION.md)).
-
-**History** records every run with its state, port, time and the page it served; a crash reads `Crashed · exit 1`. Filter by app, branch, page or commit, open a run that is still up, or start a past one again.
-
-**Ports** lists every TCP port with its process and PID and offers Kill, Open and Find a free port. **Scenes** are sets of apps and browser profiles you start together. **Settings** has the theme, close-to-tray, crash notifications and the run-history options. **`Ctrl+K`** from anywhere: type an app, a port or a profile and start it, stop it, open it or jump to its history.
 
 <table>
   <tr>
@@ -63,6 +77,33 @@ Local-first: no account, no telemetry, no cloud. Windows 10/11 and Linux.
   </tr>
 </table>
 
+**Apps**
+- Every app is a card with a live preview of its page, running first and stopped ones below.
+- An app another program is holding the port of is marked **Port held**.
+
+**Manage**
+- Turns the Apps screen into the editing table, plus Groups and Add app.
+- Auto-detect finds Node.js, Python, Go, .NET, Rust, Ruby and Docker projects ([how detection works](docs/AUTO-DETECTION.md)).
+
+**History**
+- Records every run with its state, port, time and the page it served. A crash reads `Crashed · exit 1`.
+- Filter by app, branch, page or commit.
+- Open a run that is still up, or start a past one again.
+
+**Ports**
+- Lists every TCP port with its process and PID.
+- Offers Kill, Open and Find a free port.
+
+**Scenes**
+- Sets of apps and browser profiles you start together.
+
+**Settings**
+- The theme, close-to-tray, crash notifications and the run-history options.
+
+**`Ctrl+K`**
+- From anywhere, type an app, a port or a profile.
+- Start it, stop it, open it or jump to its history.
+
 ## Use it with Claude Code
 
 ```text
@@ -70,26 +111,41 @@ Local-first: no account, no telemetry, no cloud. Windows 10/11 and Linux.
 /plugin install portpilot@portpilot
 ```
 
-The MCP server is bundled, so there is no `npm install`. One install gives Claude:
+The MCP server is bundled, so there is no `npm install`.
+
+One install gives Claude:
 
 - **Status line.** Every session shows what is up, worst state first. A ✦ marks apps Claude started.
   ```text
   ⚓ 1 crashed · 7 up · :3000 examworthy-web
   ```
-- **Dev-server guard.** A start on a busy port is turned away with the URL to reuse. A clean start goes through PortPilot. If the guard can't tell what a command does, it lets it run.
-- **Crash band with Fix it.** When an app Claude started crashes, the session gets a band with Restart, Logs and Fix it. Fix it hands Claude the crash and the stderr tail.
+- **Dev-server guard.**
+  - A start on a busy port is turned away with the URL to reuse.
+  - A clean start goes through PortPilot.
+  - If the guard can't tell what a command does, it lets it run.
+- **Crash band with Fix it.**
+  - When an app Claude started crashes, the session gets a band with Restart, Logs and Fix it.
+  - Fix it hands Claude the crash and the stderr tail.
 - **The PortPilot tools**: list, start, stop, scan, kill and group, as the 26 [MCP tools](#mcp-tools).
 
 ![Animation: Claude Code is turned away from a second pnpm dev because examworthy-web is already up on :3000, and reuses that server](docs/media/claude-guard.webp)
 
 The animation is a terminal frame rendered around the plugin's real output, not a capture of the Claude Code app.
 
-The MCP server also works with Claude Desktop, Cursor, Windsurf, Cline and any other MCP client. Setup outside the plugin: [mcp-server/README.md](mcp-server/README.md).
+The MCP server also works with Claude Desktop, Cursor, Windsurf, Cline and any other MCP client.
+
+Setup outside the plugin: [mcp-server/README.md](mcp-server/README.md).
 
 <details>
 <summary><b>Make Claude use PortPilot by default</b></summary>
 
-The plugin does most of this on its own: the dev-server guard routes starts through PortPilot, a skill tells Claude never to start a server with bare Bash, and the start of every conversation lists your browser profiles. The skill is the part Claude decides to load, so for a firm default add this to `~/.claude/CLAUDE.md` (all projects) or a project's `CLAUDE.md`:
+The plugin does most of this on its own:
+
+- The dev-server guard routes starts through PortPilot.
+- A skill tells Claude never to start a server with bare Bash.
+- The start of every conversation lists your browser profiles.
+
+The skill is the part Claude decides to load. For a firm default, add this to `~/.claude/CLAUDE.md` (all projects) or a project's `CLAUDE.md`:
 
 ```text
 ## Local servers and browsers: use PortPilot
@@ -99,33 +155,74 @@ The plugin does most of this on its own: the dev-server guard routes starts thro
 - Never kill a port or delete an app unless I ask.
 ```
 
-Then label each browser profile (what it is for, which sites it logs into), because Claude can only match what you wrote. Other MCP assistants have no plugin, so put the same text in their instructions file.
+Then label each browser profile (what it is for, which sites it logs into), because Claude can only match what you wrote.
+
+Other MCP assistants have no plugin, so put the same text in their instructions file.
 
 </details>
 
 ## Browsers and debug ports
 
-A **debug port** is how a program drives a Chromium browser. The browser opens with `--remote-debugging-port=<n>`, and anything that can reach `127.0.0.1:<n>` can then read its tabs and click in them. A **browser profile** in PortPilot is a named browser with its own sign-ins and its own debug port, so a `google` profile stays signed in to Search Console while a `github` profile stays signed in to GitHub. Nothing picks a port by chance: you give each profile one, and PortPilot hands that port to Claude.
+A **debug port** is how a program drives a Chromium browser.
 
-- **Start and Stop.** In the Browsers screen, or in the VS Code Browsers view, Start opens the profile's own Brave or Chrome on its port and Stop closes it and frees the port.
-- **Set up sign-ins** opens Brave's own Sync or Import passwords page in the profile, so you sign in once and PortPilot never reads a saved password.
-- **Claude asks by purpose.** Label each profile with what it is for and the sites it logs into. Claude calls `start_browser` with `for` set to the site and gets the matching profile and its `cdpUrl`. It refuses to guess when two profiles fit, and says so when none does.
-- **Browsers that do not collide.** A profile one session started is leased to it while that session is alive: a second session is told `IN_USE` and is steered to a free profile, unless it passes `takeover:true` after telling you.
-- **A blocked port is reported, not worked around.** If another program holds a profile's port, the row says which one.
-- **Browser history.** Each profile's past sessions: who started and stopped each, when, and the pages that were open, with secrets in addresses hidden. **Open again** starts the profile and opens those pages (http and https only, at most 20).
+The browser opens with `--remote-debugging-port=<n>`, and anything that can reach `127.0.0.1:<n>` can then read its tabs and click in them.
+
+A **browser profile** in PortPilot is a named browser with its own sign-ins and its own debug port.
+
+A `google` profile stays signed in to Search Console while a `github` profile stays signed in to GitHub.
+
+Nothing picks a port by chance: you give each profile one, and PortPilot hands that port to Claude.
+
+**Start and Stop**
+- Use the Browsers screen or the VS Code Browsers view.
+- Start opens the profile's own Brave or Chrome on its port.
+- Stop closes it and frees the port.
+
+**Set up sign-ins**
+- Opens Brave's own Sync or Import passwords page in the profile.
+- You sign in once, and PortPilot never reads a saved password.
+
+**Claude asks by purpose**
+- Label each profile with what it is for and the sites it logs into.
+- Claude calls `start_browser` with `for` set to the site and gets the matching profile and its `cdpUrl`.
+- It refuses to guess when two profiles fit, and says so when none does.
+
+**Browsers that do not collide**
+- A profile one session started is leased to it while that session is alive.
+- A second session is told `IN_USE` and is steered to a free profile, unless it passes `takeover:true` after telling you.
+
+**A blocked port is reported, not worked around**
+- If another program holds a profile's port, the row says which one.
+
+**Browser history**
+- Each profile's past sessions: who started and stopped each, when, and the pages that were open.
+- Secrets in addresses are hidden.
+- **Open again** starts the profile and opens those pages (http and https only, at most 20).
 
 ## Other ways in
 
 One config file and one run record sit behind every surface, so an app you add in one shows up in the others.
 
-- **VS Code extension.** Picture tiles for your apps and browser profiles at the top of the sidebar, then the tree, a status bar item and a crash toast, without leaving the editor. Running apps come first, stopped ones fold away, and a ✦ marks anything Claude started. [Marketplace](https://marketplace.visualstudio.com/items?itemName=macdara.portpilot).
+**VS Code extension** ([Marketplace](https://marketplace.visualstudio.com/items?itemName=macdara.portpilot))
+- Picture tiles for your apps and browser profiles at the top of the sidebar.
+- Then the tree, a status bar item and a crash toast, without leaving the editor.
+- Running apps come first, stopped ones fold away, and a ✦ marks anything Claude started.
 
-  <img src="docs/screenshots/vscode-v4-tiles.png" alt="The Tiles view in VS Code: five running apps with page pictures, then browser profiles, with the tree lists collapsed underneath" width="300">
+<img src="docs/screenshots/vscode-v4-tiles.png" alt="The Tiles view in VS Code: five running apps with page pictures, then browser profiles, with the tree lists collapsed underneath" width="300">
 
-- **Web portal.** The classic Apps view in your browser, from `npm run agent` or from VS Code. It binds `127.0.0.1` only and needs a per-session token. Use it on a machine where you cannot install the desktop app. The new screens, row previews and crash toasts are not in the portal yet.
-- **Tray.** A tray menu with a Stop per running app keeps your servers alive after you close the window.
+**Web portal**
+- The classic Apps view in your browser, from `npm run agent` or from VS Code.
+- It binds `127.0.0.1` only and needs a per-session token.
+- Use it on a machine where you cannot install the desktop app.
+- The new screens, row previews and crash toasts are not in the portal yet.
 
-Also: keep an app's port reserved while it is stopped, share an app's LAN URL to your phone by QR code, and a crash toast with an **Ask Claude** button when the session that started the app is still open.
+**Tray**
+- A tray menu with a Stop per running app keeps your servers alive after you close the window.
+
+**Also**
+- Keep an app's port reserved while it is stopped.
+- Share an app's LAN URL to your phone by QR code.
+- A crash toast with an **Ask Claude** button when the session that started the app is still open.
 
 ## MCP tools
 
@@ -161,13 +258,43 @@ Also: keep an app's port reserved while it is stopped, share an app's LAN URL to
 | `set_browser_mode` | Set a profile's mode for its next start: headed, offscreen or headless |
 | `browser_history` | Past browser sessions, newest first: who started and ended each, when, and the pages (URL and title) that were open. Filters `profile`, `since`, `limit` (default 10, at most 50) |
 
-**Browser tools without MCP.** The web agent (`npm run agent`) serves the same six tools as `POST /api/browser/<tool>` with the arguments as a JSON body and the `X-PortPilot-Token` header (the token is in `agent.json` beside the config). The answer is the same JSON the MCP tool returns: `{ success: true, name, port, cdpUrl, state, ... }`, or `{ success: false, code, error, action }`. Who started a profile is shown as a `claim`. A caller that names its session (`sessionId`) is held to the lease described below; a caller with no `sessionId` is never refused.
+**Browser tools without MCP**
 
-**Purpose, sites and routing.** A profile may carry `purpose` (a short phrase, at most 200 characters) and `sites` (hostnames such as `search.google.com`, at most 20, lowercase, no scheme or path). `for` is scored against them: a site match (the host, or a subdomain of a listed site) is the strongest signal, then the words of the purpose, the profile name, the note and the start URL's host. Only the profile's own words count: PortPilot knows nothing about any site, so write `gsc` into the purpose if you want to say "gsc". If the best two scores are within 25% of each other the answer is `AMBIGUOUS` with both names. At the start of every Claude Code conversation the plugin adds a short note listing the profiles (name, port, mode, purpose, sites; at most 25 profiles and 2 KB, never a folder path, a URL query or a long note), so Claude already knows to call `start_browser` with `for`. Nothing is added when you have no profiles.
+- The web agent (`npm run agent`) serves the same six tools as `POST /api/browser/<tool>`.
+- Send the arguments as a JSON body with the `X-PortPilot-Token` header. The token is in `agent.json` beside the config.
+- The answer is the same JSON the MCP tool returns: `{ success: true, name, port, cdpUrl, state, ... }`, or `{ success: false, code, error, action }`.
+- Who started a profile is shown as a `claim`.
+- A caller that names its session (`sessionId`) is held to the lease described below. A caller with no `sessionId` is never refused.
 
-**Window placement and keep in front.** Edit a profile and open **Window**: left, top, width, height and **Keep in front**. **Capture current position** reads the running browser's real window and fills the fields, so you place it by hand once. When a headed profile starts, PortPilot sets those bounds (Chrome DevTools Protocol `Browser.setWindowBounds`), reads them back, and reports `window: { requested, actual, applied }` in the start result. **Keep in front** also raises the page (`Page.bringToFront`) after the start and on every `start_browser` that reuses the running browser (which also puts the window back where it was saved), and, on Windows only and as best effort, makes the window always-on-top (`SetWindowPos` with `HWND_TOPMOST`; a failure is logged and reported as `topmost: false`, never an error). Other systems get the position, size and bring-to-front only. Offscreen and headless profiles ignore the window. Duplicate does not copy purpose, sites or window, so two profiles never both claim one site.
+**Purpose, sites and routing**
 
-**Browser sessions and leases.** A profile started by Claude session A is leased to A while A's heartbeat (`sessions/<id>.json`, written every 15 s by the plugin) is under 45 s old. Session B then gets `{ success: false, code: "IN_USE", error, action }` naming the owner (short id) and when it started; `list_browser_profiles` shows `leasedTo` and `free` on every row, and `start_browser` with `name: "any"` (or no name and `free: true`) starts a free profile, or returns the one the session already holds. `takeover:true` overrides, for `start_browser` and `stop_browser`, and should follow telling the user. A lease whose owner has gone quiet is free again. Every start and stop is also kept in `history/browser-runs.json` (500 entries by default) with the tabs that were open, sampled about every 30 s and again at stop. Addresses are stored with secrets hidden: userinfo is dropped and the value of any query or fragment parameter that looks like a secret (token, key, code, auth, session, password) becomes `***`.
+- A profile may carry `purpose` (a short phrase, at most 200 characters) and `sites` (hostnames such as `search.google.com`, at most 20, lowercase, no scheme or path).
+- `for` is scored against them. A site match (the host, or a subdomain of a listed site) is the strongest signal, then the words of the purpose, the profile name, the note and the start URL's host.
+- Only the profile's own words count. PortPilot knows nothing about any site, so write `gsc` into the purpose if you want to say "gsc".
+- If the best two scores are within 25% of each other, the answer is `AMBIGUOUS` with both names.
+- At the start of every Claude Code conversation the plugin adds a short note listing the profiles (name, port, mode, purpose, sites), so Claude already knows to call `start_browser` with `for`.
+- That note holds at most 25 profiles and 2 KB, and never a folder path, a URL query or a long note. Nothing is added when you have no profiles.
+
+**Window placement and keep in front**
+
+- Edit a profile and open **Window**: left, top, width, height and **Keep in front**.
+- **Capture current position** reads the running browser's real window and fills the fields, so you place it by hand once.
+- When a headed profile starts, PortPilot sets those bounds (Chrome DevTools Protocol `Browser.setWindowBounds`), reads them back, and reports `window: { requested, actual, applied }` in the start result.
+- **Keep in front** also raises the page (`Page.bringToFront`) after the start and on every `start_browser` that reuses the running browser, which also puts the window back where it was saved.
+- On Windows only and as best effort, **Keep in front** makes the window always-on-top (`SetWindowPos` with `HWND_TOPMOST`). A failure is logged and reported as `topmost: false`, never an error.
+- Other systems get the position, size and bring-to-front only. Offscreen and headless profiles ignore the window.
+- Duplicate does not copy purpose, sites or window, so two profiles never both claim one site.
+
+**Browser sessions and leases**
+
+- A profile started by Claude session A is leased to A while A's heartbeat (`sessions/<id>.json`, written every 15 s by the plugin) is under 45 s old.
+- Session B then gets `{ success: false, code: "IN_USE", error, action }` naming the owner (short id) and when it started.
+- `list_browser_profiles` shows `leasedTo` and `free` on every row.
+- `start_browser` with `name: "any"` (or no name and `free: true`) starts a free profile, or returns the one the session already holds.
+- `takeover:true` overrides, for `start_browser` and `stop_browser`, and should follow telling the user.
+- A lease whose owner has gone quiet is free again.
+- Every start and stop is also kept in `history/browser-runs.json` (500 entries by default) with the tabs that were open, sampled about every 30 s and again at stop.
+- Addresses are stored with secrets hidden. Userinfo is dropped, and the value of any query or fragment parameter that looks like a secret (token, key, code, auth, session, password) becomes `***`.
 
 Manual setup for Claude Code without the plugin:
 
@@ -188,7 +315,11 @@ claude mcp list   # portpilot: ... - ✓ Connected
 | Linux AppImage | [PortPilot-5.0.0-x86_64.AppImage](https://github.com/m4cd4r4/PortPilot/releases/download/v5.0.0/PortPilot-5.0.0-x86_64.AppImage) (123 MB) |
 | Debian / Ubuntu | [PortPilot-5.0.0-amd64.deb](https://github.com/m4cd4r4/PortPilot/releases/download/v5.0.0/PortPilot-5.0.0-amd64.deb) (86 MB) |
 
-macOS: build from source; it is supported but not officially tested. Install it, click Scan, then add your projects. Older builds are on [Releases](https://github.com/m4cd4r4/PortPilot/releases).
+Install it, click Scan, then add your projects.
+
+Older builds are on [Releases](https://github.com/m4cd4r4/PortPilot/releases).
+
+macOS: build from source; it is supported but not officially tested.
 
 ```bash
 git clone https://github.com/m4cd4r4/PortPilot.git
@@ -202,11 +333,17 @@ npm start
 <details>
 <summary><b>Adding apps and handling conflicts</b></summary>
 
-**Auto-detect (recommended).** Click Add app, then **Browse**, and pick the project folder. PortPilot fills in the name from `package.json`, the command with the right package manager (`pnpm run dev`, `yarn dev`, `npm run dev`), the working directory and the preferred port from config files. Review, then Save.
+**Auto-detect (recommended)**
+- Click Add app, then **Browse**, and pick the project folder.
+- PortPilot fills in the name from `package.json`, the command with the right package manager (`pnpm run dev`, `yarn dev`, `npm run dev`), the working directory and the preferred port from config files.
+- Review, then Save.
 
-**Manual entry.** Click Add app and fill in Name, Command (for example `npm run dev`), Working Directory, Preferred Port, and an optional Fallback Range (for example `3001-3010`).
+**Manual entry**
+- Click Add app and fill in Name, Command (for example `npm run dev`), Working Directory, Preferred Port, and an optional Fallback Range (for example `3001-3010`).
 
-**Port conflicts.** When another process holds an app's port, the Alerts bell counts it, and its Fix button opens Ports, where **Free :port** stops the holder.
+**Port conflicts**
+- When another process holds an app's port, the Alerts bell counts it.
+- Its Fix button opens Ports, where **Free :port** stops the holder.
 
 </details>
 
@@ -222,7 +359,8 @@ npm start
 | ⚡ | Auto-start | App configured to start on launch |
 | 🌐 | Remote | App runs on a remote server/VPS |
 
-A pulsing yellow 🐳 means Docker Desktop is not running (click to start it); green means it is ready. Running apps show `v4` or `v6` for the IP protocol they are bound to, so the browser button opens the right URL.
+- A pulsing yellow 🐳 means Docker Desktop is not running (click to start it). Green means it is ready.
+- Running apps show `v4` or `v6` for the IP protocol they are bound to, so the browser button opens the right URL.
 
 </details>
 
@@ -286,7 +424,9 @@ Because the backend can start and kill processes, it is locked down:
 - A custom header forces a **CORS preflight**, blocking cross-site requests
 - Strict **CSP**; token file written `chmod 600`
 
-Full threat model: [SECURITY.md](SECURITY.md). Run either the desktop app or the agent, not both at once: they track started processes separately.
+Full threat model: [SECURITY.md](SECURITY.md).
+
+Run either the desktop app or the agent, not both at once: they track started processes separately.
 
 </details>
 
