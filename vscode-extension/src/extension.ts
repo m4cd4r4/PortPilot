@@ -14,6 +14,7 @@ import { HistoryTreeProvider } from './historyTreeProvider';
 import { registerHistoryCommands } from './historyCommands';
 import { BrowsersTreeProvider, BrowserProfileItem } from './browsersTreeProvider';
 import { BrowserPreviewView } from './browserPreviewView';
+import { TilesView } from './tilesView';
 import { registerBrowserCommands } from './browserCommands';
 import { WebPortal } from './webPortal';
 
@@ -38,6 +39,13 @@ export function activate(context: vscode.ExtensionContext) {
   const browsersView = vscode.window.createTreeView('portpilot.browsers', { treeDataProvider: browsersProvider });
   context.subscriptions.push(browsersView, browsersProvider, browsersView.onDidChangeVisibility(e => browsersProvider.setVisible(e.visible)));
   browsersProvider.setVisible(browsersView.visible);
+
+  // Tiles: apps and browser profiles as small picture tiles above the trees (portpilot.tilesView hides it).
+  const tilesView = new TilesView(appsProvider, browsersProvider);
+  context.subscriptions.push(
+    tilesView,
+    vscode.window.registerWebviewViewProvider(TilesView.viewId, tilesView, { webviewOptions: { retainContextWhenHidden: true } }),
+  );
 
   // Browser previews: opt-in per profile, so the view and its page reads exist only once one is on.
   const previewView = new BrowserPreviewView(browsersProvider);

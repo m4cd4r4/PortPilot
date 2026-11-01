@@ -49,6 +49,8 @@ exports.readRowThumbs = readRowThumbs;
 exports.pinHistoryRun = pinHistoryRun;
 exports.appForRun = appForRun;
 exports.thumbDataUri = thumbDataUri;
+exports.browserArtStamp = browserArtStamp;
+exports.browserArtDataUri = browserArtDataUri;
 exports.logPathFor = logPathFor;
 exports.updateConfig = updateConfig;
 exports.generateId = generateId;
@@ -241,6 +243,51 @@ function thumbDataUri(thumb) {
         if (!st.isFile() || st.size > THUMB_MAX_BYTES)
             return null;
         return `data:image/jpeg;base64,${fs.readFileSync(file).toString('base64')}`;
+    }
+    catch {
+        return null;
+    }
+}
+// Brand art the desktop caches per browser profile: <configDir>/browser-art/<lower name>.<ext> with a
+// <lower name>.json beside it ({ ext, at, source }). The desktop writes it; the extension only reads.
+const ART_EXTS = ['png', 'jpg', 'webp', 'gif', 'ico'];
+const ART_MIME = { png: 'image/png', jpg: 'image/jpeg', webp: 'image/webp', gif: 'image/gif', ico: 'image/x-icon' };
+const ART_MAX_BYTES = 2 * 1024 * 1024;
+const ART_NAME_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
+function artFileFor(name) {
+    if (!ART_NAME_RE.test(name))
+        return null; // a profile name is never a path
+    const base = path.join(path.dirname(getConfigPath()), 'browser-art', name.toLowerCase());
+    try {
+        const meta = JSON.parse(fs.readFileSync(`${base}.json`, 'utf-8'));
+        if (typeof meta.ext !== 'string' || !ART_EXTS.includes(meta.ext))
+            return null;
+        return { file: `${base}.${meta.ext}`, ext: meta.ext };
+    }
+    catch {
+        return null;
+    }
+}
+/** The art file's modification time, or null when the profile has no picture. Cheap: no pixels read. */
+function browserArtStamp(name) {
+    try {
+        const have = artFileFor(name);
+        return have ? Math.round(fs.statSync(have.file).mtimeMs) : null;
+    }
+    catch {
+        return null;
+    }
+}
+/** A profile's picture as a data URI (it never leaves this machine), or null. */
+function browserArtDataUri(name) {
+    try {
+        const have = artFileFor(name);
+        if (!have)
+            return null;
+        const st = fs.statSync(have.file);
+        if (!st.isFile() || st.size > ART_MAX_BYTES)
+            return null;
+        return `data:${ART_MIME[have.ext]};base64,${fs.readFileSync(have.file).toString('base64')}`;
     }
     catch {
         return null;

@@ -1,5 +1,9 @@
 # Changelog
 
+## [Unreleased] - 4.2.0
+
+- New Tiles view at the top of the sidebar: your apps and dedicated browsers as small picture tiles. Running apps and ones that need attention come first, each with the page picture the desktop app captured; idle apps sit in a compact `Show N stopped` list. Browser profiles show the site icon the desktop app saved for them. Click an app tile to open it, click a running browser tile to bring its page to the front, hover for Start or Stop. Pictures come from PortPilot's local files only. Hide it with `portpilot.tilesView`; `portpilot.rowPreviews` off also turns the app pictures off.
+
 ## [4.1.0] - 2026-10-31
 
 - New opt-in Browser Previews view: a small picture of each chosen browser profile's front page, taken over the debug port (no desktop app needed). Right-click a profile in Browsers and choose Show Preview. Off by default, because a picture can show a signed-in page; stored in the machine-scoped setting `portpilot.browserPreviews`. Each profile is captured at most every 30 seconds, one at a time.
