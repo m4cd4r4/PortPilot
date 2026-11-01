@@ -139,6 +139,10 @@ Then label each browser profile (what it is for, which sites it logs into), beca
 
 A **debug port** is how a program drives a Chromium browser. The browser opens with `--remote-debugging-port=<n>`, and anything that can reach `127.0.0.1:<n>` can then read its tabs and click in them. A **browser profile** in PortPilot is a named browser with its own sign-ins and its own debug port, so a `google` profile stays signed in to Search Console while a `github` profile stays signed in to GitHub. Nothing picks a port by chance: you give each profile one, and PortPilot hands that port to Claude.
 
+[![A cat at a desk watches Claude Code ask PortPilot for the youtube profile; the Browsers row switches to in use and the newest video opens](docs/media/browsers-film-poster.jpg)](docs/media/browsers-film.mp4)
+
+*One sentence, and the browser is already signed in: Claude asks for the `youtube` profile, PortPilot opens it on :9241 with the account signed in, and the assistant reads the newest video on the subscriptions feed. 18 seconds, silent; the demo uses a throwaway channel. [Play the film](docs/media/browsers-film.mp4).*
+
 - **Start and Stop.** In the Browsers screen, or in the VS Code Browsers view, Start opens the profile's own Brave or Chrome on its port and Stop closes it and frees the port.
 
   ![Animation: starting the google profile on :9232, then stopping it](docs/media/browsers-start-stop.webp)
@@ -156,9 +160,11 @@ The Claude Code clips on this page are terminal frames rendered around the plugi
 
 One config file and one run record sit behind every surface, so an app you add in one shows up in the others.
 
-- **VS Code extension.** The sidebar tree, a status bar item and a crash toast, without leaving the editor. Running apps come first, stopped ones fold away, and a ✦ marks anything Claude started. A Browsers view lists your profiles with Start and Stop. [Marketplace](https://marketplace.visualstudio.com/items?itemName=macdara.portpilot).
+- **VS Code extension.** Picture tiles for your apps and browser profiles at the top of the sidebar, then the tree, a status bar item and a crash toast, without leaving the editor. Running apps come first, stopped ones fold away, and a ✦ marks anything Claude started. A Browsers view lists your profiles with Start and Stop. [Marketplace](https://marketplace.visualstudio.com/items?itemName=macdara.portpilot).
 
   ![PortPilot sidebar in VS Code with running apps first, two crashed apps and a crash toast](docs/screenshots/vscode-overview.png)
+
+  ![The Tiles view in VS Code: six running apps with page pictures, then browser profiles, with the tree lists collapsed underneath](docs/screenshots/vscode-v4-tiles.png)
 
 - **Web portal.** The classic Apps view in your browser, from `npm run agent` or from VS Code. It binds `127.0.0.1` only and needs a per-session token. Use it on a machine where you cannot install the desktop app. The new screens, row previews and crash toasts are not in the portal yet.
 - **Tray.** A tray menu with a Stop per running app keeps your servers alive after you close the window.

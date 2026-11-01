@@ -89,6 +89,7 @@ class TilesView {
         const running = this.apps.getRunningByAppId();
         const pictures = this.apps.rowPreviews;
         const thumbs = pictures ? (0, config_1.readRowThumbs)() : {};
+        const lastThumbs = pictures ? (0, config_1.readLastAppThumbs)() : {};
         const inputs = config.apps.map(a => {
             const active = running.get(a.id);
             const row = (0, appsTreeProvider_1.appRowState)(active, runtime[a.id]);
@@ -100,7 +101,8 @@ class TilesView {
                 word: row.word,
                 favorite: !!a.isFavorite,
                 branch: a.branch || null,
-                thumb: active ? (0, tilesModel_1.thumbOf)(thumbs, a.id, !!runtime[a.id], active.port) : null,
+                // A running app with no capture of its own yet shows its last known screenshot.
+                thumb: active ? (0, tilesModel_1.thumbOf)(thumbs, a.id, !!runtime[a.id], active.port) ?? lastThumbs[a.id]?.thumb ?? null : null,
             };
         });
         const { live, stopped } = (0, tilesModel_1.buildAppTiles)(inputs, pictures);
