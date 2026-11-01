@@ -1,8 +1,10 @@
 # Changelog
 
-## [Unreleased] - 4.2.0
+## [4.2.0] - 2026-11-01
 
-- New Tiles view at the top of the sidebar: your apps and dedicated browsers as small picture tiles. Running apps and ones that need attention come first, each with the page picture the desktop app captured; idle apps sit in a compact `Show N stopped` list. Browser profiles show the site icon the desktop app saved for them. Click an app tile to open it, click a running browser tile to bring its page to the front, hover for Start or Stop. Pictures come from PortPilot's local files only. Hide it with `portpilot.tilesView`; `portpilot.rowPreviews` off also turns the app pictures off.
+- New Tiles view at the top of the sidebar: your apps and dedicated browsers as small picture tiles. Running apps and ones that need attention come first, each with the page picture the desktop app captured; a running app with no picture of its own yet shows its last known one. Idle apps sit in a compact `Show N stopped` list. Browser profiles show the site icon the desktop app saved for them. Click an app tile to open it, click a running browser tile to bring its page to the front, hover for Start or Stop. Pictures come from PortPilot's local files only. Hide it with `portpilot.tilesView`; `portpilot.rowPreviews` off also turns the app pictures off.
+
+- On a new install the sidebar opens with Tiles tall enough for six app tiles and with Apps, Browsers, Active Ports and History collapsed, since Tiles already shows the same information. Click a header to open one. VS Code keeps the layout you already have, so an existing install changes only if you right-click the PortPilot sidebar and choose Reset View Locations.
 
 ## [4.1.0] - 2026-10-31
 

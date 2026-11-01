@@ -8,7 +8,11 @@ PortPilot lists your registered apps and every listening port in the VS Code sid
 
 ## What's in the sidebar
 
-**Tiles, at the top.** The `Tiles` view shows your apps and dedicated browsers as small picture tiles. Running apps and ones that need attention come first, each with the page picture the desktop app took when it started (a letter tile when there is none); idle apps fold into a compact `Show N stopped` list. Below that, one tile per browser profile with the site's icon the desktop app saved for it. Click a running app's tile to open it, click a running browser's tile to bring its page to the front, and hover a tile for Start or Stop. The pictures are read from PortPilot's local files and never leave your machine. Turn the view off with `portpilot.tilesView`; the Apps and Browsers lists below it stay for the keyboard and the right-click menus.
+**Tiles, at the top.** The `Tiles` view shows your apps and dedicated browsers as small picture tiles. Running apps and ones that need attention come first, each with the page picture the desktop app took (the last known one while a fresh run has none, and a letter tile when an app has never had one); idle apps fold into a compact `Show N stopped` list. Below that, one tile per browser profile with the site's icon the desktop app saved for it. Click a running app's tile to open it, click a running browser's tile to bring its page to the front, and hover a tile for Start or Stop. The pictures are read from PortPilot's local files and never leave your machine.
+
+<img src="https://raw.githubusercontent.com/m4cd4r4/PortPilot/master/docs/screenshots/vscode-v4-tiles.png" alt="The Tiles view: six running apps with page pictures and status lamps, a Show 4 stopped link and browser profiles below, with the Apps, Browsers, Active Ports and History lists collapsed underneath" width="300">
+
+The demo has no saved site icons, so its browser tiles show letters. Turn the view off with `portpilot.tilesView`; the Apps and Browsers lists below it start collapsed on a new install and stay for the keyboard and the right-click menus.
 
 **Apps, running first.** Each app shows its port, its state, how long it has been in that state and who started it: you, or a Claude Code session. Stopped apps fold into a collapsed `Stopped (N)` node at the end of each group, so the running ones stay on screen. Worktree branches sit under their app.
 
@@ -41,6 +45,8 @@ The view reads `history/runs.json` beside your PortPilot config and re-reads it 
 - Stop only ends a browser PortPilot started for that profile. If something else holds the port, or the owner cannot be confirmed, PortPilot says so and leaves it running.
 
 The view looks only while it is on screen, once per 10 seconds, and only at the profile's own debug port on `127.0.0.1`: it reads tab titles and URLs, never page content, and navigates only when you use Open URL (http and https only). The profile list is re-read only when the config changes. Where the editor's Node has no built-in WebSocket (older VS Code), Stop cannot ask the browser to quit cleanly and ends it after a short wait instead.
+
+**Browser Previews, off until you ask.** Right-click a profile in Browsers and choose Show Preview, and the `Browser Previews` view shows a small picture of that profile's front page, taken over its debug port with no desktop app needed. It starts off for every profile, because a picture can show a signed-in page. Each chosen profile is captured at most once every 30 seconds, one at a time, and pictures stay in memory and are never saved or sent anywhere.
 
 **Everything else from the tree.** Start and stop apps, kill a port, open in the browser, change a port, toggle favourites, and add, edit or delete apps. Running detection is two-phase: an app on a dynamic or non-preferred port is still found, with its live port shown.
 

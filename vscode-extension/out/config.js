@@ -46,6 +46,7 @@ exports.recordAppStop = recordAppStop;
 exports.readRuntimeApps = readRuntimeApps;
 exports.readRunsCached = readRunsCached;
 exports.readRowThumbs = readRowThumbs;
+exports.readLastAppThumbs = readLastAppThumbs;
 exports.pinHistoryRun = pinHistoryRun;
 exports.appForRun = appForRun;
 exports.thumbDataUri = thumbDataUri;
@@ -197,6 +198,19 @@ function readRowThumbs() {
         if (thumbCache?.key !== key)
             thumbCache = { key, thumbs: runView.rowThumbs(runs) };
         return thumbCache.thumbs;
+    }
+    catch {
+        return {};
+    }
+}
+let lastThumbCache = null;
+/** Each app's newest page thumbnail, open run or closed. Empty on any read failure. */
+function readLastAppThumbs() {
+    try {
+        const { key, runs } = readRunsCached();
+        if (lastThumbCache?.key !== key)
+            lastThumbCache = { key, thumbs: runView.appThumbs(runs) };
+        return lastThumbCache.thumbs;
     }
     catch {
         return {};

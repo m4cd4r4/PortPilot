@@ -227,6 +227,15 @@
         </div>
         <div class="feature-row reveal">
           <div class="feature-copy">
+            <h3>One sentence, and the browser is already signed in</h3>
+            <p>Ask your assistant for the transcript of the newest video on your YouTube subscriptions. It asks PortPilot for the <code>youtube</code> profile, which opens on its own port with the account already signed in, and reads the page. There is no login step and no setup. The demo uses a throwaway channel.</p>
+          </div>
+          <video class="crop" controls muted loop playsinline preload="none" width="1920" height="1080" poster="media/browsers-film-poster.jpg" aria-label="Animation: a cat at a desk watches Claude Code ask PortPilot for the youtube profile, the Browsers row switches to in use on port 9241, and the newest video on the subscriptions feed is opened">
+            <source src="media/browsers-film.mp4" type="video/mp4">
+          </video>
+        </div>
+        <div class="feature-row reveal">
+          <div class="feature-copy">
             <h3>One profile, one port, its own sign-ins</h3>
             <p>A browser opens with <code>--remote-debugging-port=&lt;n&gt;</code>, and anything that can reach <code>127.0.0.1:&lt;n&gt;</code> can read its tabs and click in them. A PortPilot profile is a named browser with its own sign-ins and its own port, so <code>google</code> stays signed in to Search Console while <code>github</code> stays signed in to GitHub. Nothing picks a port by chance. If another program holds a profile's port, the row says which one.</p>
           </div>
@@ -246,7 +255,7 @@
           </div>
           <img src="media/claude-browser.webp" class="crop zoomable" tabindex="0" width="900" height="368" loading="lazy" alt="Animation: Claude asks for Google Search Console, PortPilot starts the google profile and returns its debug port, and a second session is told the profile is in use">
         </div>
-        <p class="install-note">The Claude Code clip is a terminal frame rendered around the plugin's real output, not a capture of the Claude Code app.</p>
+        <p class="install-note">The Claude Code panel in the film and the clip above are frames drawn around the plugin's real output, not captures of the Claude Code app.</p>
       </div>
     </section>
 
@@ -286,7 +295,7 @@
           <article class="card group reveal">
             <h3>Everywhere</h3>
             <ul>
-              <li><a href="https://marketplace.visualstudio.com/items?itemName=macdara.portpilot" rel="noopener">VS Code extension</a>: sidebar tree and status bar</li>
+              <li><a href="https://marketplace.visualstudio.com/items?itemName=macdara.portpilot" rel="noopener">VS Code extension</a>: picture tiles for apps and browsers, sidebar tree and status bar</li>
               <li>Web portal in your browser, loopback-only</li>
               <li>Tray menu with a Stop per running app</li>
               <li>6 themes plus Auto</li>
