@@ -1,5 +1,6 @@
-// Stages a fake PortPilot machine for the VS Code extension, from the same demo seed the
-// desktop screenshots use, so the extension can be photographed without touching real data:
+// Stages a fake PortPilot machine for the VS Code extension, from the fictional demo apps the
+// desktop mockups use (PP_STAGE_SEED=real switches to demo-seed.js), so the extension can be
+// photographed without touching real data:
 //
 //   node vscode-stage.mjs serve  <work>   write config + history, shim netstat/tasklist/powershell,
 //                                         run the fake debug-port servers, stay alive until stopped
@@ -16,7 +17,7 @@ import vm from 'node:vm';
 import http from 'node:http';
 import net from 'node:net';
 import { spawn } from 'node:child_process';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPO = path.resolve(HERE, '..', '..', '..');
@@ -31,7 +32,76 @@ const STRIPE_PORT = 9237; // stands in for the seed's :9231 so a real Brave on h
 const profileDir = (name) => path.join(W, 'profiles', name);
 const write = (file, data) => { fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, data); };
 
+// The six fictional apps the desktop mockups use (docs/demo/fictional/shots.js), with a real
+// 480x270 capture of each demo page as its thumbnail. Marlowe Studio stays stopped.
+const FICTIONAL = [
+  { site: 'shop', name: 'Fernlane Goods', group: 'work', port: 3101, up: 41 * 60 },
+  { site: 'blog', name: 'Quill & Ink', group: 'personal', port: 3102, up: 2 * 3600 + 14 * 60 },
+  { site: 'dashboard', name: 'Tidewatch', group: 'work', port: 3103, up: 18 * 60 },
+  { site: 'docs', name: 'Lumen Docs', group: 'work', port: 3104, up: 52 * 60 },
+  { site: 'chat', name: 'Chatterbox', group: 'personal', port: 3105, up: 5 * 3600 + 22 * 60 },
+  { site: 'portfolio', name: 'Marlowe Studio', group: 'personal', port: 3106, up: 0 },
+];
+
+async function captureThumbs() {
+  const { createRequire } = await import('node:module');
+  let chromium;
+  for (const base of [REPO, 'I:/Scratch/PortPilot-2026']) {
+    try { ({ chromium } = createRequire(path.join(base, 'package.json'))('playwright')); break; } catch { /* try the next checkout */ }
+  }
+  if (!chromium) throw new Error('playwright not found; run npm install in the repo (or the main checkout)');
+  const browser = await chromium.launch({ executablePath: 'C:/Program Files/BraveSoftware/Brave-Browser/Application/brave.exe' });
+  const out = {};
+  try {
+    // 1280x720 at 0.375 scale is the 480x270 the desktop stores.
+    const page = await browser.newPage({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 0.375 });
+    for (const f of FICTIONAL) {
+      await page.goto(pathToFileURL(path.join(HERE, '..', 'fictional', 'sites', f.site, 'index.html')).href);
+      await page.waitForTimeout(400);
+      const buf = await page.screenshot({ type: 'jpeg', quality: 82 });
+      out[f.site] = `data:image/jpeg;base64,${buf.toString('base64')}`;
+    }
+  } finally { await browser.close(); }
+  return out;
+}
+
+async function loadFictionalSeed() {
+  const shots = await captureThumbs();
+  const now = Date.now();
+  const ago = (sec) => new Date(now - sec * 1000).toISOString();
+  const slug = (n) => n.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  const apps = FICTIONAL.map((f) => ({
+    id: `app_${f.site}`, name: f.name, command: `npm run dev -- --port ${f.port}`, cwd: `C:/dev/${slug(f.name)}`, preferredPort: f.port, group: f.group,
+    fallbackRange: null, env: {}, autoStart: false, isFavorite: false, description: null, startupDelay: null, parentId: null, branch: null,
+    worktreePath: null, colorSource: null, color: '#7dcfff', healthPath: null, reservePort: false, createdAt: now, updatedAt: now,
+  }));
+  const groups = [{ id: 'work', name: 'Work', color: '#7aa2f7', expanded: true }, { id: 'personal', name: 'Personal', color: '#9ece6a', expanded: true }];
+  const live = FICTIONAL.filter((f) => f.up);
+  const pidOf = (f) => 4100 + FICTIONAL.indexOf(f) * 37;
+  const runtime = Object.fromEntries(live.map((f) => [`app_${f.site}`, { startedBy: { kind: 'human', surface: 'desktop', at: ago(f.up) }, pid: pidOf(f), port: f.port }]));
+  const ports = live.map((f) => ({ port: f.port, pid: pidOf(f), processName: 'node.exe', commandLine: 'node next dev', address: '127.0.0.1', appId: `app_${f.site}` }));
+  const runs = FICTIONAL.map((f, i) => ({
+    id: `r_fic${i + 1}`, appId: `app_${f.site}`, appName: f.name, cwd: `C:/dev/${slug(f.name)}`, command: `npm run dev -- --port ${f.port}`, port: f.port,
+    repoRoot: `C:/dev/${slug(f.name)}`, relCwd: '', url: `http://localhost:${f.port}/`, startedBy: { kind: 'human', surface: 'desktop', at: ago(f.up || 3 * 3600) },
+    startedAt: ago(f.up || 3 * 3600), stoppedAt: f.up ? null : ago(2 * 3600), endedBy: f.up ? null : 'stop', exitCode: null, pinned: false,
+    git: { branch: 'main', sha: `${(0xa1b2c3 + i * 0x111111).toString(16)}0d4e5f`.slice(0, 12), subject: 'chore: tidy', dirty: false, files: [], snapshot: null, skipped: null },
+    page: { title: f.name, thumb: `thumbs/r_fic${i + 1}.jpg` },
+  }));
+  const thumbs = Object.fromEntries(FICTIONAL.map((f, i) => [`r_fic${i + 1}`, shots[f.site]]));
+  const tab = (title, url) => ({ id: 't0', title, url });
+  const browsers = [
+    { name: 'Work', port: 9232, mode: 'headed', state: 'up', purpose: 'Client dashboards and admin', sites: ['tidewatch.example'], tabs: [tab('Tidewatch', 'https://tidewatch.example/')] },
+    { name: 'Research', port: 9233, mode: 'headed', state: 'up', purpose: 'Docs, papers and reading lists', sites: ['lumen.example'], tabs: [tab('Lumen Docs', 'https://lumen.example/')] },
+    { name: 'Social', port: 9234, mode: 'headed', state: 'down', purpose: 'Community and chat', sites: ['chatterbox.example'], url: 'https://chatterbox.example' },
+  ];
+  return { apps, groups, runtime, runs, thumbs, ports, browsers };
+}
+
 async function loadSeed() {
+  return process.env.PP_STAGE_SEED === 'real' ? loadRealSeed() : loadFictionalSeed();
+}
+
+async function loadRealSeed() {
   const sandbox = { window: {}, setTimeout, Promise, Date, Math, Object, Array, JSON, URLSearchParams, console };
   vm.runInNewContext(fs.readFileSync(path.join(HERE, '..', 'demo-seed.js'), 'utf8'), sandbox);
   const pp = sandbox.window.portpilot;
