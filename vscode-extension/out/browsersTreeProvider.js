@@ -101,6 +101,8 @@ class BrowsersTreeProvider {
     visible = false;
     /** The previews view is on screen; it needs fresh rows even while the tree is collapsed. */
     previewing = false;
+    /** The Tiles view is on screen. */
+    tiling = false;
     rows = [];
     /** What the tree last drew; a poll repaints only when it moves. */
     drawn = '';
@@ -134,9 +136,17 @@ class BrowsersTreeProvider {
         if (previewing && !this.visible)
             void this.poll(true);
     }
-    /** The existing 10 s refresh calls this; it does nothing while neither view is on screen. */
+    /** The Tiles view's visibility; like the previews view it needs fresh rows while the tree is collapsed. */
+    setTiling(tiling) {
+        if (tiling === this.tiling)
+            return;
+        this.tiling = tiling;
+        if (tiling && !this.visible && !this.previewing)
+            void this.poll(true);
+    }
+    /** The existing 10 s refresh calls this; it does nothing while no view that shows browsers is on screen. */
     async update() {
-        if (this.visible || this.previewing)
+        if (this.visible || this.previewing || this.tiling)
             await this.poll(false);
     }
     /** Title-bar Refresh and after any action: look again and re-read the API. */

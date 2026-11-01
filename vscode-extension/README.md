@@ -8,6 +8,8 @@ PortPilot lists your registered apps and every listening port in the VS Code sid
 
 ## What's in the sidebar
 
+**Tiles, at the top.** The `Tiles` view shows your apps and dedicated browsers as small picture tiles. Running apps and ones that need attention come first, each with the page picture the desktop app took when it started (a letter tile when there is none); idle apps fold into a compact `Show N stopped` list. Below that, one tile per browser profile with the site's icon the desktop app saved for it. Click a running app's tile to open it, click a running browser's tile to bring its page to the front, and hover a tile for Start or Stop. The pictures are read from PortPilot's local files and never leave your machine. Turn the view off with `portpilot.tilesView`; the Apps and Browsers lists below it stay for the keyboard and the right-click menus.
+
 **Apps, running first.** Each app shows its port, its state, how long it has been in that state and who started it: you, or a Claude Code session. Stopped apps fold into a collapsed `Stopped (N)` node at the end of each group, so the running ones stay on screen. Worktree branches sit under their app.
 
 <img src="https://raw.githubusercontent.com/m4cd4r4/PortPilot/master/docs/screenshots/vscode-v4-apps.png" alt="Apps view with running apps first, a crashed app and stopped apps folded" width="420">
@@ -62,7 +64,8 @@ The ✦ marks and the "An AI assistant started it" line appear for any app an MC
 | Setting | Default | Description |
 |---------|---------|-------------|
 | `portpilot.foldStoppedApps` | `true` | Sort running and crashed apps first and fold stopped apps into a `Stopped (N)` node. |
-| `portpilot.rowPreviews` | `true` | Show a page preview when you hover a running app. |
+| `portpilot.tilesView` | `true` | Show the Tiles view at the top of the sidebar. |
+| `portpilot.rowPreviews` | `true` | Show a page preview when you hover a running app, and on its tile in the Tiles view. |
 | `portpilot.webPortal.enabled` | `false` | Run the web portal whenever this window is open. |
 | `portpilot.webPortal.stopAppsOnStop` | `false` | Also stop the dev servers the portal started when it stops. |
 

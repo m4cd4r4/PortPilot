@@ -128,6 +128,7 @@ interface RunHistoryApi {
 }
 interface RunViewApi {
   rowThumbs(runs: unknown[]): Record<string, RowThumbRef>;
+  appThumbs(runs: unknown[]): Record<string, { thumb: string }>;
 }
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const runHistory: RunHistoryApi = require(path.join(__dirname, '..', 'runtime', 'core', 'runHistory.js'));
@@ -251,6 +252,17 @@ export function readRowThumbs(): Record<string, RowThumbRef> {
   } catch { return {}; }
 }
 
+let lastThumbCache: { key: string; thumbs: Record<string, { thumb: string }> } | null = null;
+
+/** Each app's newest page thumbnail, open run or closed. Empty on any read failure. */
+export function readLastAppThumbs(): Record<string, { thumb: string }> {
+  try {
+    const { key, runs } = readRunsCached();
+    if (lastThumbCache?.key !== key) lastThumbCache = { key, thumbs: runView.appThumbs(runs) };
+    return lastThumbCache.thumbs;
+  } catch { return {}; }
+}
+
 /** Pin or unpin a run in the shared history (a 51st pin is refused). Never throws. */
 export function pinHistoryRun(runId: string, pinned: boolean): { ok: boolean; reason?: string } {
   try { return runHistory.pinRun(getConfigPath(), runId, pinned); } catch { return { ok: false, reason: 'error' }; }
@@ -287,6 +299,42 @@ export function thumbDataUri(thumb: string): string | null {
     const st = fs.statSync(file);
     if (!st.isFile() || st.size > THUMB_MAX_BYTES) return null;
     return `data:image/jpeg;base64,${fs.readFileSync(file).toString('base64')}`;
+  } catch { return null; }
+}
+
+// Brand art the desktop caches per browser profile: <configDir>/browser-art/<lower name>.<ext> with a
+// <lower name>.json beside it ({ ext, at, source }). The desktop writes it; the extension only reads.
+const ART_EXTS = ['png', 'jpg', 'webp', 'gif', 'ico'];
+const ART_MIME: Record<string, string> = { png: 'image/png', jpg: 'image/jpeg', webp: 'image/webp', gif: 'image/gif', ico: 'image/x-icon' };
+const ART_MAX_BYTES = 2 * 1024 * 1024;
+const ART_NAME_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
+
+function artFileFor(name: string): { file: string; ext: string } | null {
+  if (!ART_NAME_RE.test(name)) return null; // a profile name is never a path
+  const base = path.join(path.dirname(getConfigPath()), 'browser-art', name.toLowerCase());
+  try {
+    const meta = JSON.parse(fs.readFileSync(`${base}.json`, 'utf-8')) as { ext?: unknown };
+    if (typeof meta.ext !== 'string' || !ART_EXTS.includes(meta.ext)) return null;
+    return { file: `${base}.${meta.ext}`, ext: meta.ext };
+  } catch { return null; }
+}
+
+/** The art file's modification time, or null when the profile has no picture. Cheap: no pixels read. */
+export function browserArtStamp(name: string): number | null {
+  try {
+    const have = artFileFor(name);
+    return have ? Math.round(fs.statSync(have.file).mtimeMs) : null;
+  } catch { return null; }
+}
+
+/** A profile's picture as a data URI (it never leaves this machine), or null. */
+export function browserArtDataUri(name: string): string | null {
+  try {
+    const have = artFileFor(name);
+    if (!have) return null;
+    const st = fs.statSync(have.file);
+    if (!st.isFile() || st.size > ART_MAX_BYTES) return null;
+    return `data:${ART_MIME[have.ext]};base64,${fs.readFileSync(have.file).toString('base64')}`;
   } catch { return null; }
 }
 

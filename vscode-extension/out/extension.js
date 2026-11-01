@@ -48,6 +48,7 @@ const historyTreeProvider_1 = require("./historyTreeProvider");
 const historyCommands_1 = require("./historyCommands");
 const browsersTreeProvider_1 = require("./browsersTreeProvider");
 const browserPreviewView_1 = require("./browserPreviewView");
+const tilesView_1 = require("./tilesView");
 const browserCommands_1 = require("./browserCommands");
 const webPortal_1 = require("./webPortal");
 let webPortal;
@@ -69,6 +70,9 @@ function activate(context) {
     const browsersView = vscode.window.createTreeView('portpilot.browsers', { treeDataProvider: browsersProvider });
     context.subscriptions.push(browsersView, browsersProvider, browsersView.onDidChangeVisibility(e => browsersProvider.setVisible(e.visible)));
     browsersProvider.setVisible(browsersView.visible);
+    // Tiles: apps and browser profiles as small picture tiles above the trees (portpilot.tilesView hides it).
+    const tilesView = new tilesView_1.TilesView(appsProvider, browsersProvider);
+    context.subscriptions.push(tilesView, vscode.window.registerWebviewViewProvider(tilesView_1.TilesView.viewId, tilesView, { webviewOptions: { retainContextWhenHidden: true } }));
     // Browser previews: opt-in per profile, so the view and its page reads exist only once one is on.
     const previewView = new browserPreviewView_1.BrowserPreviewView(browsersProvider);
     context.subscriptions.push(previewView, vscode.window.registerWebviewViewProvider(browserPreviewView_1.BrowserPreviewView.viewId, previewView, { webviewOptions: { retainContextWhenHidden: true } }), vscode.workspace.onDidChangeConfiguration(e => { if (e.affectsConfiguration('portpilot.browserPreviews'))

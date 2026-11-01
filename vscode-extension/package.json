@@ -32,12 +32,21 @@
     "views": {
       "portpilot": [
         {
+          "id": "portpilot.tiles",
+          "name": "Tiles",
+          "type": "webview",
+          "initialSize": 300,
+          "when": "config.portpilot.tilesView"
+        },
+        {
           "id": "portpilot.apps",
-          "name": "Apps"
+          "name": "Apps",
+          "visibility": "collapsed"
         },
         {
           "id": "portpilot.browsers",
-          "name": "Browsers"
+          "name": "Browsers",
+          "visibility": "collapsed"
         },
         {
           "id": "portpilot.browserPreviews",
@@ -47,11 +56,13 @@
         },
         {
           "id": "portpilot.activePorts",
-          "name": "Active Ports"
+          "name": "Active Ports",
+          "visibility": "collapsed"
         },
         {
           "id": "portpilot.history",
-          "name": "History"
+          "name": "History",
+          "visibility": "collapsed"
         }
       ]
     },
@@ -308,6 +319,11 @@
           "default": [],
           "scope": "machine",
           "markdownDescription": "Browser profiles that show a live picture of their front page in the **Browser Previews** view. Off for every profile until you choose **Show Preview** on it. A preview reads the page through that profile's debug port, so it shows whatever the page shows, including signed-in pages. Pictures stay in memory and are never saved or sent anywhere."
+        },
+        "portpilot.tilesView": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show the Tiles view at the top of the PortPilot sidebar: small tiles for your apps (with a page picture while they run) and your dedicated browsers (with the site's icon). Pictures are read from PortPilot's local files and never leave this machine. The Apps and Browsers lists stay below it."
         },
         "portpilot.rowPreviews": {
           "type": "boolean",
