@@ -38,13 +38,22 @@ Local-first: no account, no telemetry, no cloud. Windows 10/11 and Linux.
 
 **Apps** shows every app as a card with a live preview of its page, running first and stopped ones below. An app another program is holding the port of is marked **Port held**. **Manage** turns the same screen into the editing table, plus Groups, Add app and an auto-detect that finds Node.js, Python, Go, .NET, Rust, Ruby and Docker projects ([how detection works](docs/AUTO-DETECTION.md)).
 
-![Apps: running sites with live page previews](docs/screenshots/ui/apps.png)
-
 **History** records every run with its state, port, time and the page it served; a crash reads `Crashed · exit 1`. Filter by app, branch, page or commit, open a run that is still up, or start a past one again.
 
-![History: runs with thumbnails, a crashed run, stopped runs and running ones with Open](docs/screenshots/ui/history.png)
-
 **Ports** lists every TCP port with its process and PID and offers Kill, Open and Find a free port. **Scenes** are sets of apps and browser profiles you start together. **Settings** has the theme, close-to-tray, crash notifications and the run-history options. **`Ctrl+K`** from anywhere: type an app, a port or a profile and start it, stop it, open it or jump to its history.
+
+<table>
+  <tr>
+    <th>Apps</th>
+    <th>History</th>
+    <th>Browsers</th>
+  </tr>
+  <tr>
+    <td width="33%"><a href="docs/screenshots/ui/apps.png"><img src="docs/screenshots/ui/apps.png" alt="Apps: running sites with live page previews"></a></td>
+    <td width="33%"><a href="docs/screenshots/ui/history.png"><img src="docs/screenshots/ui/history.png" alt="History: runs with thumbnails, a crashed run, stopped runs and running ones with Open"></a></td>
+    <td width="33%"><a href="docs/screenshots/ui/browsers.png"><img src="docs/screenshots/ui/browsers.png" alt="Browsers: three profiles with their ports and purposes"></a></td>
+  </tr>
+</table>
 
 ## Use it with Claude Code
 
@@ -89,8 +98,6 @@ Then label each browser profile (what it is for, which sites it logs into), beca
 ## Browsers and debug ports
 
 A **debug port** is how a program drives a Chromium browser. The browser opens with `--remote-debugging-port=<n>`, and anything that can reach `127.0.0.1:<n>` can then read its tabs and click in them. A **browser profile** in PortPilot is a named browser with its own sign-ins and its own debug port, so a `google` profile stays signed in to Search Console while a `github` profile stays signed in to GitHub. Nothing picks a port by chance: you give each profile one, and PortPilot hands that port to Claude.
-
-![Browsers: three profiles with their ports and purposes](docs/screenshots/ui/browsers.png)
 
 - **Start and Stop.** In the Browsers screen, or in the VS Code Browsers view, Start opens the profile's own Brave or Chrome on its port and Stop closes it and frees the port.
 - **Set up sign-ins** opens Brave's own Sync or Import passwords page in the profile, so you sign in once and PortPilot never reads a saved password.
