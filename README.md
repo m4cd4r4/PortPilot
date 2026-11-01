@@ -25,7 +25,7 @@ Local-first: no account, no telemetry, no cloud. Windows 10/11 and Linux.
 ## What you get
 
 - **One place for every local server.** Apps you registered, servers you started in a terminal and servers Claude started all show up, with the port, the state and a live preview of the page.
-- **Named browsers with their own debug ports.** One profile per purpose (Search Console, GitHub, a staging admin), each signed in once, handed to an assistant by task and shown as a tile next to your apps. See [Browsers and debug ports](#browsers-and-debug-ports).
+- **Named browsers with their own debug ports.** One profile per purpose (Search Console, GitHub, a staging admin), each signed in once, handed to an assistant by task and shown as a tile next to your apps. [Watch Claude open a signed-in YouTube profile](https://m4cd4r4.github.io/PortPilot/#browsers) or read [Browsers and debug ports](#browsers-and-debug-ports).
 - **Port trouble fixed in a click.** A blocked port is flagged on every screen; one button frees it. A crashed app keeps its exit code and last stderr line in History.
 - **A run record.** Every run is kept with the git state it came from, so you can come back to it later.
 - **Assistants that cooperate.** Claude Code and other MCP clients start, stop and find servers through PortPilot, and are turned away from a second copy of a server that is already up.

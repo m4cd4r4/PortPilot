@@ -90,6 +90,7 @@
         <span class="nav-toggle-bar"></span>
       </button>
       <div class="nav-links" id="nav-menu">
+        <a href="#browsers" class="nav-link">Browsers</a>
         <a href="#mcp" class="nav-link">Assistants</a>
         <a href="#claude" class="nav-link">Claude Code</a>
         <a href="#new" class="nav-link">What's new</a>
@@ -133,6 +134,47 @@
         </figure>
       </div>
     </header>
+
+    <!-- Browsers and debug ports -->
+    <section class="section section-alt" id="browsers" aria-labelledby="browsers-heading">
+      <div class="container">
+        <div class="section-head">
+          <h2 id="browsers-heading">Browsers and debug ports</h2>
+          <p>A debug port is how a program drives a Chromium browser. Give each profile its own, and PortPilot hands the right one to your AI assistant.</p>
+        </div>
+        <div class="feature-row reveal">
+          <div class="feature-copy">
+            <h3>One sentence, and the browser is already signed in</h3>
+            <p>Ask your assistant for the transcript of the newest video on your YouTube subscriptions. It asks PortPilot for the <code>youtube</code> profile, which opens on its own port with the account already signed in, and reads the page. There is no login step and no setup. The demo uses a throwaway channel.</p>
+          </div>
+          <video class="crop" controls muted loop playsinline preload="none" width="1920" height="1080" poster="media/browsers-film-poster.jpg" aria-label="Animation: a cat at a desk watches Claude Code ask PortPilot for the youtube profile, the Browsers row switches to in use on port 9241, and the newest video on the subscriptions feed is opened">
+            <source src="media/browsers-film.mp4" type="video/mp4">
+          </video>
+        </div>
+        <div class="feature-row reveal">
+          <div class="feature-copy">
+            <h3>One profile, one port, its own sign-ins</h3>
+            <p>A browser opens with <code>--remote-debugging-port=&lt;n&gt;</code>, and anything that can reach <code>127.0.0.1:&lt;n&gt;</code> can read its tabs and click in them. A PortPilot profile is a named browser with its own sign-ins and its own port, so <code>google</code> stays signed in to Search Console while <code>github</code> stays signed in to GitHub. Nothing picks a port by chance. If another program holds a profile's port, the row says which one.</p>
+          </div>
+          <img src="screenshots/ui/browsers.png" class="crop zoomable" tabindex="0" width="2480" height="1440" loading="lazy" alt="The Browsers screen: four named profiles with a picture of their site, a debug port and a purpose each">
+        </div>
+        <div class="feature-row reveal">
+          <div class="feature-copy">
+            <h3>Start and Stop</h3>
+            <p>In the Browsers tab, or the VS Code Browsers view, Start opens the profile's own Brave or Chrome on its port. Stop closes it and frees the port.</p>
+          </div>
+          <img src="media/browsers-start-stop.webp" class="crop zoomable" tabindex="0" width="900" height="581" loading="lazy" alt="Animation: the google profile is stopped, Start opens it on port 9232 with its tabs, Stop closes it and frees the port">
+        </div>
+        <div class="feature-row reveal">
+          <div class="feature-copy">
+            <h3>Claude asks by purpose</h3>
+            <p>Label each profile with what it is for and the sites it logs into. Claude calls <code>start_browser</code> with <code>for</code> set to the site and gets the matching profile and its <code>cdpUrl</code>. A session that started a profile holds it until the session ends; other sessions are told it is in use and steered to a free one.</p>
+          </div>
+          <img src="media/claude-browser.webp" class="crop zoomable" tabindex="0" width="900" height="368" loading="lazy" alt="Animation: Claude asks for Google Search Console, PortPilot starts the google profile and returns its debug port, and a second session is told the profile is in use">
+        </div>
+        <p class="install-note">The Claude Code panel in the film and the clip above are frames drawn around the plugin's real output, not captures of the Claude Code app.</p>
+      </div>
+    </section>
 
     <!-- MCP -->
     <section class="section" id="mcp" aria-labelledby="mcp-heading">
@@ -215,47 +257,6 @@
           </div>
           <img src="screenshots/ui/alerts.png" class="crop zoomable" tabindex="0" width="600" height="200" loading="lazy" alt="The Alerts bell with a count of 1, open on a note that Quill and Ink is blocked because its port is held by node, with a Fix button">
         </div>
-      </div>
-    </section>
-
-    <!-- Browsers and debug ports -->
-    <section class="section" id="browsers" aria-labelledby="browsers-heading">
-      <div class="container">
-        <div class="section-head">
-          <h2 id="browsers-heading">Browsers and debug ports</h2>
-          <p>A debug port is how a program drives a Chromium browser. Give each profile its own, and PortPilot hands the right one to your AI assistant.</p>
-        </div>
-        <div class="feature-row reveal">
-          <div class="feature-copy">
-            <h3>One sentence, and the browser is already signed in</h3>
-            <p>Ask your assistant for the transcript of the newest video on your YouTube subscriptions. It asks PortPilot for the <code>youtube</code> profile, which opens on its own port with the account already signed in, and reads the page. There is no login step and no setup. The demo uses a throwaway channel.</p>
-          </div>
-          <video class="crop" controls muted loop playsinline preload="none" width="1920" height="1080" poster="media/browsers-film-poster.jpg" aria-label="Animation: a cat at a desk watches Claude Code ask PortPilot for the youtube profile, the Browsers row switches to in use on port 9241, and the newest video on the subscriptions feed is opened">
-            <source src="media/browsers-film.mp4" type="video/mp4">
-          </video>
-        </div>
-        <div class="feature-row reveal">
-          <div class="feature-copy">
-            <h3>One profile, one port, its own sign-ins</h3>
-            <p>A browser opens with <code>--remote-debugging-port=&lt;n&gt;</code>, and anything that can reach <code>127.0.0.1:&lt;n&gt;</code> can read its tabs and click in them. A PortPilot profile is a named browser with its own sign-ins and its own port, so <code>google</code> stays signed in to Search Console while <code>github</code> stays signed in to GitHub. Nothing picks a port by chance. If another program holds a profile's port, the row says which one.</p>
-          </div>
-          <img src="screenshots/ui/browsers.png" class="crop zoomable" tabindex="0" width="2480" height="1440" loading="lazy" alt="The Browsers screen: four named profiles with a picture of their site, a debug port and a purpose each">
-        </div>
-        <div class="feature-row reveal">
-          <div class="feature-copy">
-            <h3>Start and Stop</h3>
-            <p>In the Browsers tab, or the VS Code Browsers view, Start opens the profile's own Brave or Chrome on its port. Stop closes it and frees the port.</p>
-          </div>
-          <img src="media/browsers-start-stop.webp" class="crop zoomable" tabindex="0" width="900" height="581" loading="lazy" alt="Animation: the google profile is stopped, Start opens it on port 9232 with its tabs, Stop closes it and frees the port">
-        </div>
-        <div class="feature-row reveal">
-          <div class="feature-copy">
-            <h3>Claude asks by purpose</h3>
-            <p>Label each profile with what it is for and the sites it logs into. Claude calls <code>start_browser</code> with <code>for</code> set to the site and gets the matching profile and its <code>cdpUrl</code>. A session that started a profile holds it until the session ends; other sessions are told it is in use and steered to a free one.</p>
-          </div>
-          <img src="media/claude-browser.webp" class="crop zoomable" tabindex="0" width="900" height="368" loading="lazy" alt="Animation: Claude asks for Google Search Console, PortPilot starts the google profile and returns its debug port, and a second session is told the profile is in use">
-        </div>
-        <p class="install-note">The Claude Code panel in the film and the clip above are frames drawn around the plugin's real output, not captures of the Claude Code app.</p>
       </div>
     </section>
 
