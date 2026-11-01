@@ -35,6 +35,7 @@
           "id": "portpilot.tiles",
           "name": "Tiles",
           "type": "webview",
+          "initialSize": 300,
           "when": "config.portpilot.tilesView"
         },
         {
@@ -53,11 +54,13 @@
         },
         {
           "id": "portpilot.activePorts",
-          "name": "Active Ports"
+          "name": "Active Ports",
+          "visibility": "collapsed"
         },
         {
           "id": "portpilot.history",
-          "name": "History"
+          "name": "History",
+          "visibility": "collapsed"
         }
       ]
     },
