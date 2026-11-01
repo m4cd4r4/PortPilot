@@ -53,12 +53,12 @@ async function captureThumbs() {
   const browser = await chromium.launch({ executablePath: 'C:/Program Files/BraveSoftware/Brave-Browser/Application/brave.exe' });
   const out = {};
   try {
-    // 1280x720 at 0.375 scale is the 480x270 the desktop stores.
-    const page = await browser.newPage({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 0.375 });
+    // 1280x720 at 0.75 scale is 960x540, sharper than the 480x270 the desktop stores and still under the thumb cap.
+    const page = await browser.newPage({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 0.75 });
     for (const f of FICTIONAL) {
       await page.goto(pathToFileURL(path.join(HERE, '..', 'fictional', 'sites', f.site, 'index.html')).href);
       await page.waitForTimeout(400);
-      const buf = await page.screenshot({ type: 'jpeg', quality: 82 });
+      const buf = await page.screenshot({ type: 'jpeg', quality: 80 });
       out[f.site] = `data:image/jpeg;base64,${buf.toString('base64')}`;
     }
   } finally { await browser.close(); }
