@@ -1,5 +1,9 @@
 # Changelog
 
+## [4.2.3] - 2026-11-02
+
+- Marketplace page: shorter README (History, Browsers and Commands sections trimmed), status bar example matches the demo, and the extension now ships its MIT LICENSE file. No code changes.
+
 ## [4.2.2] - 2026-11-02
 
 - Marketplace page: every screenshot now shows the fictional demo apps instead of real project names, and the crash toast and image descriptions match. No code changes.
