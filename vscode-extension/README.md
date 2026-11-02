@@ -12,7 +12,7 @@ PortPilot lists your registered apps and every listening port in the VS Code sid
 
 <img src="https://raw.githubusercontent.com/m4cd4r4/PortPilot/master/docs/screenshots/vscode-v4-tiles.png" alt="The PortPilot sidebar: tiles for five running apps with page pictures and status lamps, a Show 1 stopped link and browser profiles, then the Apps list grouped as Work and Personal and the Active Ports list of dev servers" width="420">
 
-The demo has no saved site icons, so its browser tiles show letters. Turn the view off with `portpilot.tilesView`; the Apps and Browsers lists below it start collapsed on a new install and stay for the keyboard and the right-click menus.
+Turn the view off with `portpilot.tilesView`; the Apps and Browsers lists below it start collapsed on a new install.
 
 **Apps, running first.** Each app shows its port, its state, how long it has been in that state and who started it: you, or a Claude Code session. Stopped apps fold into a collapsed `Stopped (N)` node at the end of each group, so the running ones stay on screen. Worktree branches sit under their app.
 
@@ -22,33 +22,23 @@ The demo has no saved site icons, so its browser tiles show letters. Turn the vi
 
 <img src="https://raw.githubusercontent.com/m4cd4r4/PortPilot/master/docs/screenshots/vscode-v4-ports.png" alt="Active Ports listing app names, with a star on the port an AI assistant started" width="420">
 
-**Crash alerts.** When an app crashes, the PortPilot icon gets a count badge and a toast says which app crashed, its exit code and whether an AI assistant started it. Restart brings it back; Logs opens its output with the stderr tail. A crash from before the window opened shows in the badge without a toast. The status bar switches from `PP: 6 running` to `PP: Marlowe Studio crashed`.
+**Crash alerts.** When an app crashes, the PortPilot icon gets a count badge and a toast says which app crashed, its exit code and whether an AI assistant started it. Restart brings it back; Logs opens its output with the stderr tail. A crash from before the window opened shows in the badge without a toast. The status bar switches from `PP: 5 running` to `PP: Marlowe Studio crashed`.
 
 <img src="https://raw.githubusercontent.com/m4cd4r4/PortPilot/master/docs/screenshots/vscode-v4-crash-toast.png" alt="Crash toast: Marlowe Studio crashed (exit 1). An AI assistant started it. With Restart and Logs buttons" width="560">
 
-**History: go back to a page from last week.** The `History` view lists past localhost pages from PortPilot's local run history, newest first: Today, Yesterday, then one group per day for a week, then a collapsed `Earlier`. Each row shows the app, start time and port, with an icon for running, stopped, crashed or ended-unseen. Hover for the page title, URL, git branch and commit, and the page thumbnail. Servers PortPilot found without you registering them carry a `detected` marker once the desktop app records them.
+**History: reopen a page from a past run.** The `History` view lists past localhost pages, newest first, grouped by day. Each row shows the app, start time and port. Hover for the page title, URL, git branch and thumbnail.
 
 <img src="https://raw.githubusercontent.com/m4cd4r4/PortPilot/master/docs/screenshots/vscode-v4-history.png" alt="History view: today's runs, newest first, each with its start time and port, a green tick for running apps and a grey dot for a stopped one" width="420">
 
-- **Click** a running page to open it in your browser. Click a closed one to start it again: it needs a recorded folder and start command, and PortPilot waits for the port to answer before opening the page. Without those it says why.
-- **Row buttons and menu:** open or start again, copy URL, pin or unpin (pinned runs are never pruned), open folder.
-- **Search** (title-bar icon) filters by name, port, page title or branch. The list shows the newest 200 runs.
-
-The view reads `history/runs.json` beside your PortPilot config and re-reads it only when it changes. Thumbnails are read from that folder and never leave your machine.
+Click a running page to open it, or a closed one to start it again (PortPilot waits for the port before opening). Pin keeps a run from being pruned; search filters the newest 200. Everything is read from local files and never leaves your machine.
 
 **Browsers: manage your debug-port browsers without leaving the editor.** The `Browsers` view lists the named browser profiles from the PortPilot app's Browsers tab (or created by Claude with `start_browser`): one row each with `:port · mode · browser`, running first, then port held, then stopped. A running profile expands to its open tabs (title and URL, the first 30). Hover for the note, start URL, profile folder and, when a Claude session has leased the profile, who has it.
 
 <img src="https://raw.githubusercontent.com/m4cd4r4/PortPilot/master/docs/screenshots/vscode-v4-browsers.png" alt="Browsers view: two running profiles expanded to their open tabs and one stopped profile" width="420">
 
-- **Row buttons and menu:** Start, Stop, Set mode (headed, offscreen or headless; it applies the next time the profile starts), Open URL in this profile, Copy CDP URL (`http://127.0.0.1:<port>`), Copy port.
-- **Click a tab** to bring it to the front inside its browser.
-- Stop only ends a browser PortPilot started for that profile. If something else holds the port, or the owner cannot be confirmed, PortPilot says so and leaves it running.
+Row buttons start, stop, set the mode of, and open a URL in a profile, or copy its CDP URL. Click a tab to bring it to the front. Stop only ends a browser PortPilot started. The view reads tab titles and URLs from each profile's own debug port on `127.0.0.1`, every 10 seconds while it is on screen, never page content.
 
-The view looks only while it is on screen, once per 10 seconds, and only at the profile's own debug port on `127.0.0.1`: it reads tab titles and URLs, never page content, and navigates only when you use Open URL (http and https only). The profile list is re-read only when the config changes. Where the editor's Node has no built-in WebSocket (older VS Code), Stop cannot ask the browser to quit cleanly and ends it after a short wait instead.
-
-**Browser Previews, off until you ask.** Right-click a profile in Browsers and choose Show Preview, and the `Browser Previews` view shows a small picture of that profile's front page, taken over its debug port with no desktop app needed. It starts off for every profile, because a picture can show a signed-in page. Each chosen profile is captured at most once every 30 seconds, one at a time, and pictures stay in memory and are never saved or sent anywhere.
-
-**Everything else from the tree.** Start and stop apps, kill a port, open in the browser, change a port, toggle favourites, and add, edit or delete apps. Running detection is two-phase: an app on a dynamic or non-preferred port is still found, with its live port shown.
+**Browser Previews, off until you ask.** Right-click a profile and choose Show Preview for a small picture of its front page. Off by default because a picture can show a signed-in page; pictures stay in memory and are never saved or sent.
 
 ## Web portal, hosted from VS Code
 
@@ -75,9 +65,7 @@ The ✦ marks and the "An AI assistant started it" line appear for any app an MC
 | `portpilot.webPortal.enabled` | `false` | Run the web portal whenever this window is open. |
 | `portpilot.webPortal.stopAppsOnStop` | `false` | Also stop the dev servers the portal started when it stops. |
 
-## Commands
-
-Start, stop and open the web portal; fold or unfold stopped apps; search, refresh and reopen runs in History; start, stop, set the mode of and open pages in browser profiles; add, edit and delete apps; change ports, kill ports and scan ports. All are in the Command Palette under `PortPilot:` and on the sidebar.
+Every action is in the Command Palette under `PortPilot:` and on the sidebar.
 
 ## Links
 
