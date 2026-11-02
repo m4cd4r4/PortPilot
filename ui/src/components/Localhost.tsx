@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import type { Host, Snapshot } from '../host';
+import { clusterCards, type Cluster } from '../clusters';
 import { STALE_MS, cards, grouped, type Card } from '../model';
 import { VIEWS, setPrefs, usePrefs, type Prefs } from '../prefs';
 import type { Thumbs } from '../useThumbs';
@@ -18,6 +19,7 @@ export function Localhost({ host, snap, thumbs, onDone, manage, onManage, inspec
   const [query, setQuery] = useState('');
   const [error, setError] = useState('');
   const [allStopped, setAllStopped] = useState(false);
+  const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set());
   // Details opened from Home land on the normal Apps view with the panel up.
   const [inspectApp, setInspectApp] = useState<string | undefined>(inspectId);
   const list = useMemo(() => cards(snap, query), [snap, query]);
@@ -51,15 +53,52 @@ export function Localhost({ host, snap, thumbs, onDone, manage, onManage, inspec
     stop: (c: Card) => act(() => host.stopApp(c.app.id)),
   };
 
-  const showAll = () => (
-    <p className="show-all"><button onClick={() => setAllStopped(true)}>Show all {list.filter((c) => c.state === 'stopped').length} stopped apps</button></p>
+  const showAll = (n: number) => (
+    <p className="show-all"><button onClick={() => setAllStopped(true)}>Show all {n} stopped apps</button></p>
   );
 
-  const grid = (rows: Card[]) => (
+  const toggle = (key: string) => setExpandedKeys((o) => { const n = new Set(o); if (n.has(key)) n.delete(key); else n.add(key); return n; });
+
+  const grid = (rows: Cluster[]) => (
     <div className={`cards ${prefs.view === 'cards' ? 'tiles' : prefs.view}`} data-density={prefs.density} data-status={prefs.status} data-thumbs={prefs.thumbs}>
-      {rows.map((c) => <AppCard key={c.app.id} c={c} prefs={prefs} thumbs={thumbs} actions={actions} />)}
+      {rows.map((cl) => {
+        const many = cl.members.length > 1;
+        // A search names a branch more often than a project, so it opens every cluster.
+        const expanded = many && (!!query || expandedKeys.has(cl.key));
+        return (
+          <Fragment key={cl.key}>
+            <AppCard c={cl.head} title={cl.name} prefs={prefs} thumbs={thumbs} actions={actions}
+              more={many ? { count: cl.members.length, open: expanded, toggle: () => toggle(cl.key) } : undefined} />
+            {expanded && (
+              <div className="members" role="group" aria-label={`${cl.name} copies`}>
+                <div className="cards rows" data-density="tight" data-status={prefs.status} data-thumbs="off">
+                  {cl.members.map((m) => <AppCard key={m.app.id} c={m} title={m.app.branch || m.app.name} member prefs={prefs} thumbs={thumbs} actions={actions} />)}
+                </div>
+              </div>
+            )}
+          </Fragment>
+        );
+      })}
     </div>
   );
+
+  /** One run of apps: projects that are up first, then the stopped ones behind a count. */
+  const section = (list: Card[]) => {
+    const clusters = clusterCards(list);
+    const active = clusters.filter((c) => c.state !== 'stopped');
+    const stopped = clusters.filter((c) => c.state === 'stopped');
+    const capped = !allStopped && !query && stopped.length > STOPPED_SHOWN;
+    const shown = capped ? stopped.slice(0, STOPPED_SHOWN) : stopped;
+    if (!active.length || !stopped.length) return <>{grid(shown.length ? shown : active)}{capped && showAll(stopped.reduce((n, c) => n + c.members.length, 0))}</>;
+    return (
+      <>
+        {grid(active)}
+        <h4 className="group-h sub">Stopped<small>{stopped.length}</small></h4>
+        {grid(shown)}
+        {capped && showAll(stopped.reduce((n, c) => n + c.members.length, 0))}
+      </>
+    );
+  };
 
   const body = () => {
     if (!snap.apps.length) return <p className="empty-note">No apps yet. Add one with Manage, or start a dev server and PortPilot will notice it.</p>;
@@ -68,23 +107,11 @@ export function Localhost({ host, snap, thumbs, onDone, manage, onManage, inspec
       return grouped(snap, list).map((g) => (
         <section key={g.id || 'rest'} aria-label={g.name}>
           <h3 className="group-h">{g.name}<small>{g.cards.length}</small></h3>
-          {grid(g.cards)}
+          {section(g.cards)}
         </section>
       ));
     }
-    const active = list.filter((c) => c.state !== 'stopped');
-    const stopped = list.filter((c) => c.state === 'stopped');
-    const capped = !allStopped && !query && stopped.length > STOPPED_SHOWN;
-    const shown = capped ? stopped.slice(0, STOPPED_SHOWN) : stopped;
-    if (!active.length || !stopped.length) return <>{grid(shown.length ? shown : active)}{capped && showAll()}</>;
-    return (
-      <>
-        {grid(active)}
-        <h3 className="group-h">Stopped<small>{stopped.length}</small></h3>
-        {grid(shown)}
-        {capped && showAll()}
-      </>
-    );
+    return section(list);
   };
 
   if (manage) return <Library host={host} snap={snap} onDone={onDone} onExit={() => onManage(false)} />;
@@ -119,9 +146,12 @@ interface Actions { open(c: Card): void; start(c: Card): void; stop(c: Card): vo
 const GLYPH: Record<Card['state'], string> = { running: '●', conflict: '▲', crashed: '✕', stopped: '○' };
 const WORD: Record<Card['state'], string> = { running: 'running', conflict: 'blocked', crashed: 'crashed', stopped: 'stopped' };
 
-function AppCard({ c, prefs, thumbs, actions }: { c: Card; prefs: Prefs; thumbs: Thumbs; actions: Actions }) {
+interface More { count: number; open: boolean; toggle(): void }
+
+function AppCard({ c, title, more, member, prefs, thumbs, actions }: { c: Card; title?: string; more?: More; member?: boolean; prefs: Prefs; thumbs: Thumbs; actions: Actions }) {
   const thumb = thumbs.byApp[c.app.id];
-  const showShot = prefs.view === 'cards' || prefs.thumbs === 'inline';
+  // An app with nothing to show drops the screenshot box: a tile of one grey letter is the clutter, not the app.
+  const showShot = !member && (prefs.view === 'cards' || prefs.thumbs === 'inline') && (!!thumb || c.state !== 'stopped');
   const peek = !showShot && prefs.thumbs === 'peek' && thumb;
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const hover = () => {
@@ -133,7 +163,7 @@ function AppCard({ c, prefs, thumbs, actions }: { c: Card; prefs: Prefs; thumbs:
   useEffect(() => () => clearTimeout(timer.current), []);
 
   return (
-    <article className={`card ${c.state}`} data-app={c.app.id} data-state={c.state} onMouseEnter={hover} onMouseLeave={() => clearTimeout(timer.current)}>
+    <article className={`card ${c.state}${member ? ' member' : ''}`} data-app={c.app.id} data-state={c.state} onMouseEnter={hover} onMouseLeave={() => clearTimeout(timer.current)}>
       {showShot && <button className="shot" onClick={() => actions.open(c)} disabled={c.state !== 'running'} aria-label={`Open ${c.app.name}`}>
         {thumb ? <img src={thumb.url} alt="" loading="lazy" /> : <span className="letter" aria-hidden="true">{c.app.name.slice(0, 1).toUpperCase()}</span>}
         {c.state === 'conflict' && <span className="badge warn">Port held</span>}
@@ -142,10 +172,11 @@ function AppCard({ c, prefs, thumbs, actions }: { c: Card; prefs: Prefs; thumbs:
       <div className="meta">
         <div className="title">{prefs.status === 'dot'
           ? <span className={`dot ${c.state}`} aria-hidden="true" />
-          : <span className={`stat ${c.state}`}><span aria-hidden="true">{GLYPH[c.state]}</span> {WORD[c.state]}</span>}<span className="name">{c.app.name}</span></div>
+          : <span className={`stat ${c.state}`}><span aria-hidden="true">{GLYPH[c.state]}</span> {WORD[c.state]}</span>}<span className="name">{title ?? c.app.name}</span></div>
         <div className="sub">
           {c.port ? <span>:{c.port}</span> : <span>no port</span>}
-          {c.app.branch && <span className="branch">{c.app.branch}</span>}
+          {!member && c.app.branch && <span className="branch">{c.app.branch}</span>}
+          {more && <button className="copies" aria-expanded={more.open} onClick={more.toggle}>{more.open ? '▾' : '▸'} {more.count} copies</button>}
           {c.note && <span className="note">{c.note}</span>}
         </div>
       </div>

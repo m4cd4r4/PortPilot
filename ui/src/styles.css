@@ -228,6 +228,12 @@ button.tile:hover { border-color: var(--acc); }
 .empty-note { color: var(--tx2); max-width: 520px; margin: 40px auto; text-align: center; }
 .group-h { display: flex; align-items: baseline; gap: 8px; margin: 24px 0 10px; font-size: 13px; font-weight: 500; color: var(--tx2); }
 .group-h small { color: var(--mut); font-weight: 400; }
+.group-h.sub { margin: 16px 0 8px; font-size: 12px; color: var(--mut); }
+.card .copies { background: none; border: 0; padding: 0; color: var(--acc); font: inherit; font-size: 12px; cursor: pointer; }
+.card .copies:hover { text-decoration: underline; }
+.members { grid-column: 1 / -1; margin: -4px 0 6px 14px; padding-left: 12px; border-left: 2px solid var(--bd); }
+.members .cards.rows { border-radius: 8px; }
+.card.member .name { font-weight: 400; }
 
 .cards { display: grid; gap: 14px; }
 /* minmax(0, 1fr): a card's content can never widen its column past the window. */

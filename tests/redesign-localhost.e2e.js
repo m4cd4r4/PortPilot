@@ -47,7 +47,7 @@ async function main() {
     check('rows is the default view, with no inline screenshot', (await modeClass()).includes('rows') && (await win.locator('.shot').count()) === 0);
     await win.click('role=button[name="Cards"]');
     await until(async () => (await modeClass()).includes('tiles'), 5000, 'cards view');
-    check('a stopped app with no history shows a letter tile', (await card('app_idle').locator('.letter').count()) === 1);
+    check('a stopped app with no screenshot drops the empty letter tile', (await card('app_idle').locator('.shot').count()) === 0);
 
     console.log('step: start from the card and capture on hover');
     await card('app_shop').hover();
