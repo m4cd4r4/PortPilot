@@ -16,13 +16,15 @@ The assistant reuses a running server instead of starting a second copy, and tak
 
 It works on its own; the assistant link is optional.
 
+Prefer to stay in your editor? The same apps, ports and crash alerts are in the [PortPilot VS Code extension](https://marketplace.visualstudio.com/items?itemName=macdara.portpilot).
+
 [![Version](https://img.shields.io/badge/version-5.0.0-blue.svg)](https://github.com/m4cd4r4/PortPilot/releases/tag/v5.0.0)
 [![Tests](https://img.shields.io/badge/tests-Playwright%20E2E-blue.svg)](tests/)
 [![Licence](https://img.shields.io/badge/licence-MIT-green.svg)](LICENSE)
 [![MCP](https://img.shields.io/badge/MCP-26%20tools-purple.svg)](docs/REFERENCE.md#mcp-tools-26)
 [![VS Code Marketplace](https://vsmarketplacebadges.dev/version-short/macdara.portpilot.svg)](https://marketplace.visualstudio.com/items?itemName=macdara.portpilot)
 
-**[Download](#install)** &nbsp;&middot;&nbsp; **[Connect an AI assistant](#use-it-with-claude-code)** &nbsp;&middot;&nbsp; **[Dedicated browsers](#dedicated-browsers)** &nbsp;&middot;&nbsp; **[A tour of the app](#a-tour-of-the-app)** &nbsp;&middot;&nbsp; **[Website](https://m4cd4r4.github.io/PortPilot/)**
+**[Download](#install)** &nbsp;&middot;&nbsp; **[Connect an AI assistant](#use-it-with-claude-code)** &nbsp;&middot;&nbsp; **[Dedicated browsers](#dedicated-browsers)** &nbsp;&middot;&nbsp; **[VS Code extension](https://marketplace.visualstudio.com/items?itemName=macdara.portpilot)** &nbsp;&middot;&nbsp; **[A tour of the app](#a-tour-of-the-app)** &nbsp;&middot;&nbsp; **[Website](https://m4cd4r4.github.io/PortPilot/)**
 
 </div>
 
