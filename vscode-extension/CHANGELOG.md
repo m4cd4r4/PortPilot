@@ -1,5 +1,9 @@
 # Changelog
 
+## [4.2.4] - 2026-11-02
+
+- Marketplace page: the top image is now a short clip of hovering an app (Stop, Open in Browser, Favourite and a page preview) followed by a crash alert, in place of a still. No code changes.
+
 ## [4.2.3] - 2026-11-02
 
 - Marketplace page: shorter README (History, Browsers and Commands sections trimmed), status bar example matches the demo, and the extension now ships its MIT LICENSE file. No code changes.

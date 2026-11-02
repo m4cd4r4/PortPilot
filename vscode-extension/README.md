@@ -4,7 +4,7 @@
 
 PortPilot lists your registered apps and every listening port in the VS Code sidebar. Running apps come first, crashes get a badge and a toast, and a ✦ marks anything an AI assistant started through PortPilot. It shares one config with the [PortPilot desktop app](https://github.com/m4cd4r4/PortPilot) and its MCP server, so the editor, the desktop app and Claude all see the same state.
 
-![PortPilot sidebar in VS Code: apps grouped as Work and Personal with a crashed app, the badge on the activity bar, a crash toast and a red crash item in the status bar](https://raw.githubusercontent.com/m4cd4r4/PortPilot/master/docs/screenshots/vscode-v4-overview.png)
+![Hovering an app in the PortPilot sidebar shows Stop, Open in Browser and Favourite buttons and a preview of its page; then an app crashes, and the sidebar shows a badge, a toast with Restart and Logs, and a red status bar item](https://raw.githubusercontent.com/m4cd4r4/PortPilot/master/docs/screenshots/vscode-v4-demo.gif)
 
 ## What's in the sidebar
 
