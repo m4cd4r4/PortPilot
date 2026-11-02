@@ -5,7 +5,7 @@
 //   node vscode-stage.mjs serve  <work>   write config + history, shim netstat/tasklist/powershell,
 //                                         run the fake debug-port servers, stay alive until stopped
 //   node vscode-stage.mjs launch <work>   open a throwaway Extension Development Host on it
-//   node vscode-stage.mjs crash  <work>   stamp 550-au as crashed (the extension toasts it)
+//   node vscode-stage.mjs crash  <work>   stamp Marlowe Studio as crashed (the extension toasts it)
 //
 // The extension reads <APPDATA>/portpilot/*, runs `netstat`/`tasklist`/`powershell` through the
 // shell, and probes each browser profile's debug port over HTTP. The host is launched with
@@ -122,6 +122,8 @@ async function stage() {
 
   // No crash yet: the `crash` command adds one after the window is up, so the toast fires.
   const runtime = JSON.parse(JSON.stringify(s.runtime));
+  // Tidewatch was started by an assistant, so its port carries the star and its row says so.
+  if (runtime.app_dashboard) runtime.app_dashboard.startedBy = { kind: 'claude', surface: 'mcp', sessionId: 'a3f81d27-demo', label: 'api', at: runtime.app_dashboard.startedBy.at };
   const browserProfiles = s.browsers.map((p) => ({
     name: p.name, port: p.state === 'blocked' ? STRIPE_PORT : p.port, browser: 'brave', mode: p.mode,
     url: p.url || '', note: '', purpose: p.purpose, sites: p.sites, userDataDir: profileDir(p.name),
@@ -221,17 +223,17 @@ async function fakeBrowser() {
 function crash() {
   const file = path.join(CONFIG_DIR, 'portpilot-runtime.json');
   const j = JSON.parse(fs.readFileSync(file, 'utf8'));
-  j.apps.a_metrics = {
-    startedBy: { kind: 'claude', surface: 'mcp', sessionId: 'b71c9e04-demo', label: 'pearl lighting', at: new Date(Date.now() - 30 * 60000).toISOString() },
-    pid: 4420, port: 3210,
+  j.apps.app_portfolio = {
+    startedBy: { kind: 'claude', surface: 'mcp', sessionId: 'b71c9e04-demo', label: 'landing page', at: new Date(Date.now() - 30 * 60000).toISOString() },
+    pid: 4420, port: 3106,
     crashed: {
-      exitCode: 1, at: Date.now(), port: 3210,
-      startedBy: { kind: 'claude', surface: 'mcp', sessionId: 'b71c9e04-demo', label: 'pearl lighting', at: new Date(Date.now() - 30 * 60000).toISOString() },
-      errorTail: 'error when starting dev server:\nError: Port 3210 is already in use',
+      exitCode: 1, at: Date.now(), port: 3106,
+      startedBy: { kind: 'claude', surface: 'mcp', sessionId: 'b71c9e04-demo', label: 'landing page', at: new Date(Date.now() - 30 * 60000).toISOString() },
+      errorTail: 'error when starting dev server:\nError: Port 3106 is already in use',
     },
   };
   fs.writeFileSync(file, JSON.stringify(j, null, 2));
-  console.log('stamped 550-au as crashed');
+  console.log('stamped Marlowe Studio as crashed');
 }
 
 function launch() {
