@@ -38,7 +38,7 @@ Prefer to stay in your editor? The same apps, ports and crash alerts are in the 
 
 *18 seconds, silent; the demo uses a throwaway channel. [Play the film](docs/media/browsers-film.mp4) or [watch it on the site](https://m4cd4r4.github.io/PortPilot/#browsers).*
 
-![Hovering an app in the PortPilot sidebar in VS Code shows a preview of its page, then its Stop, Open in Browser and Favourite buttons, with the cursor on Open in Browser](docs/screenshots/vscode-v4-demo.gif)
+https://github.com/user-attachments/assets/d7ecd1d4-462c-4108-a00f-8bf896cbe7a9
 
 *The same apps in VS Code: hover one for a page preview and its buttons. [Get the extension](https://marketplace.visualstudio.com/items?itemName=macdara.portpilot).*
 
