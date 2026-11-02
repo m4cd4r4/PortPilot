@@ -2,7 +2,7 @@
 
 ## [4.2.4] - 2026-11-02
 
-- Marketplace page: the top image is now a short clip of hovering an app (Stop, Open in Browser, Favourite and a page preview) followed by a crash alert, in place of a still. No code changes.
+- Marketplace page: the top image is now a short clip of hovering an app (a page preview, then Stop, Open in Browser and Favourite) in place of a still. No code changes.
 
 ## [4.2.3] - 2026-11-02
 
