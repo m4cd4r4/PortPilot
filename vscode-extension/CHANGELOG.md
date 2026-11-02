@@ -1,5 +1,9 @@
 # Changelog
 
+## [4.2.2] - 2026-11-02
+
+- Marketplace page: every screenshot now shows the fictional demo apps instead of real project names, and the crash toast and image descriptions match. No code changes.
+
 ## [4.2.1] - 2026-11-01
 
 - Marketplace page: new Tiles screenshot (wider and sharper, with the Apps and Active Ports lists under the tiles) and corrected image descriptions. No code changes.
