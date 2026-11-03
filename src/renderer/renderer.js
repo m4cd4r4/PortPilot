@@ -810,9 +810,10 @@ function extractExePath(cmdLine) {
 }
 
 async function openInBrowser(appId) {
+  // Only a detected server has a page to open: the preferred port of a stopped app is a dead URL
+  // (and "Opening ..." would toast success on it).
   const detected = state.detectedApps[appId];
-  const app = state.apps.find(a => a.id === appId);
-  const port = detected?.port || app?.preferredPort;
+  const port = detected?.port;
 
   if (port) {
     const address = detected?.address || '';
@@ -826,7 +827,7 @@ async function openInBrowser(appId) {
       showToast(`Failed: ${error.message}`, 'error');
     }
   } else {
-    showToast('No port detected for this app', 'error');
+    showToast('Not running: start the app first', 'error');
   }
 }
 
@@ -1803,7 +1804,7 @@ function openAppDrawer(appId) {
   }
 
   const secondary = [
-    port ? `<button class="btn btn-secondary" data-act="openInBrowser" data-id="${app.id}">${icon('browser', 12)} Open</button>` : '',
+    (isRunning && port) ? `<button class="btn btn-secondary" data-act="openInBrowser" data-id="${app.id}">${icon('browser', 12)} Open</button>` : '',
     (isRunning && port) ? `<button class="btn btn-secondary" data-act="shareApp" data-id="${app.id}" data-port="${port}" title="Open on your phone - needs the same Wi-Fi, and a dev command that listens on all interfaces (e.g. --host)">${icon('qr', 12)} Share</button>` : '',
     managedRunning ? `<button class="btn btn-secondary" data-act="viewLogs" data-id="${app.id}">${icon('logs', 12)} Logs</button>` : '',
     app.cwd ? `<button class="btn btn-secondary" data-act="openAppFolder" data-id="${app.id}">${icon('folder', 12)} Folder</button>` : '',

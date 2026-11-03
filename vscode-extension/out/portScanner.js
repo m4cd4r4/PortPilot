@@ -34,6 +34,7 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.scanPorts = scanPorts;
+exports.pidsOf = pidsOf;
 exports.computeRunning = computeRunning;
 exports.isOwnListener = isOwnListener;
 exports.ownOnPort = ownOnPort;
@@ -79,7 +80,7 @@ async function scanWindows() {
     });
     // Identify listening sockets locale-independently: their foreign address ends
     // in ":0" (no remote peer). Avoids matching localized state strings.
-    const portToPid = new Map();
+    const portToPids = new Map();
     for (const line of stdout.split('\n')) {
         if (!/^\s*TCP\b/i.test(line))
             continue;
@@ -93,14 +94,17 @@ async function scanWindows() {
             continue;
         const port = parseInt(portMatch[1], 10);
         const pid = parseInt(parts[4], 10);
-        if (port >= 1 && port <= 65535 && !portToPid.has(port)) {
-            portToPid.set(port, pid);
-        }
+        if (port < 1 || port > 65535)
+            continue;
+        const pids = portToPids.get(port) || [];
+        if (!pids.includes(pid))
+            pids.push(pid);
+        portToPids.set(port, pids);
     }
-    const names = await getProcessNamesWindows([...new Set(portToPid.values())]);
+    const names = await getProcessNamesWindows([...new Set([...portToPids.values()].flat())]);
     const ports = [];
-    for (const [port, pid] of portToPid) {
-        ports.push({ port, pid, processName: names.get(pid) || 'Unknown' });
+    for (const [port, pids] of portToPids) {
+        ports.push({ port, pid: pids[0], processName: names.get(pids[0]) || 'Unknown', pids });
     }
     return ports.sort((a, b) => a.port - b.port);
 }
@@ -172,8 +176,21 @@ async function scanLinux() {
     }
     return dedupe(ports);
 }
+/** One entry per port (the first seen), carrying every pid bound to it. */
 function dedupe(ports) {
-    return [...new Map(ports.map(p => [p.port, p])).values()].sort((a, b) => a.port - b.port);
+    const byPort = new Map();
+    for (const p of ports) {
+        const seen = byPort.get(p.port);
+        if (!seen)
+            byPort.set(p.port, { ...p, pids: [p.pid] });
+        else if (p.pid && !seen.pids.includes(p.pid))
+            seen.pids.push(p.pid);
+    }
+    return [...byPort.values()].sort((a, b) => a.port - b.port);
+}
+/** Every pid a scan entry holds. */
+function pidsOf(p) {
+    return (p.pids && p.pids.length ? p.pids : [p.pid]).filter(Boolean);
 }
 /** Resolve PID -> command line for a set of PIDs (used for accurate matching). */
 async function getCommandLines(pids) {
@@ -243,8 +260,14 @@ async function ownOnPort(port) {
     const match = (await scanPorts()).find(p => p.port === port);
     if (!match || !match.pid)
         return null;
-    const commandLine = (await getCommandLines([match.pid])).get(match.pid) || '';
-    return isOwnListener({ processName: match.processName, commandLine }) ? (match.processName || `pid ${match.pid}`) : null;
+    const pids = pidsOf(match);
+    const cmds = await getCommandLines(pids);
+    for (const pid of pids) {
+        if (isOwnListener({ processName: match.processName, commandLine: cmds.get(pid) || '' })) {
+            return match.processName || `pid ${pid}`;
+        }
+    }
+    return null;
 }
 function neverSelf(p) {
     return !NOT_A_SERVER.test(p.processName) && !isOwnListener(p);
@@ -329,19 +352,31 @@ async function killPort(port) {
     try {
         if (await ownOnPort(port))
             return false; // never PortPilot itself
+        // Kill every holder: an IPv4 and an IPv6 listener from two processes would otherwise leave
+        // the second one still holding the port after a "successful" kill.
         if (platform === 'win32') {
             const match = (await scanPorts()).find(p => p.port === port);
             if (!match || !match.pid)
                 return false;
-            await execAsync(`taskkill /F /PID ${match.pid}`);
+            for (const pid of pidsOf(match)) {
+                try {
+                    await execAsync(`taskkill /F /PID ${pid}`);
+                }
+                catch { /* already gone */ }
+            }
             return true;
         }
         else {
             const { stdout } = await execAsync(`lsof -ti:${port}`, { encoding: 'utf-8' });
-            const pid = stdout.trim().split('\n')[0];
-            if (!pid)
+            const pids = stdout.trim().split('\n').map(s => s.trim()).filter(Boolean);
+            if (!pids.length)
                 return false;
-            await execAsync(`kill -9 ${pid}`);
+            for (const pid of pids) {
+                try {
+                    await execAsync(`kill -9 ${pid}`);
+                }
+                catch { /* already gone */ }
+            }
             return true;
         }
     }

@@ -16,6 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **PortPilot never kills itself.** Stop, Kill on the Ports table, `Free port` in the palette and the MCP `kill_port` and `stop_app` tools refuse a pid PortPilot runs in (the app, the MCP server, the web agent) instead of taking every managed dev server down with it.
 - **The MCP server comes back.** If the shared MCP server exits, PortPilot restarts it with backoff; after five quick deaths in a row it stops trying and raises a notification naming the port.
 - **Folder buttons open the folder.** The app card, drawer and port row "Folder" buttons opened nothing behind a success toast; they now open the folder in the file manager and report a real failure.
+- **An app's name is matched word by word.** "AzurePrep" now matches a server whose command names `azure`; the keyword split ran after lowercasing, so it never split. A server in a sibling worktree folder (`shop-landing` for `shop`) no longer matches the parent on name alone.
+- **Open on a stopped app no longer opens a dead URL.** The drawer and the palette open an app only when it is running; a stopped app says so instead of toasting success.
+- **VS Code extension: Kill frees the port.** A port held by two processes (an IPv4 and an IPv6 listener) kept the second one after Kill; every holder is now killed.
+- **A stale `agent.json` is dropped.** A force-terminated web agent left its record behind; readers now check the pid is alive and delete the file when it is not. The app also counts a running standalone agent's port as its own, so it is not tracked as someone's dev server.
 
 ## [5.0.0] - 2026-10-31
 

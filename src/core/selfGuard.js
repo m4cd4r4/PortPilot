@@ -87,4 +87,27 @@ function cmdNamesFolder(commandLine, name) {
   return findBounded(cmd, seg, new Set([...BEFORE, ...SEP]));
 }
 
-module.exports = { isOwnServerCommand, isOwnProcessName, isOwnBinding, protectPid, unprotectPid, isOwnPid, cmdNamesPath, cmdNamesFolder };
+/**
+ * Does the command line name a sibling of this directory that merely starts with it, such as a
+ * worktree? "I:/x/shop" against `node I:\x\shop-landing\server.js` is true; against
+ * `node I:\x\shop\server.js` or `node I:\x\shopify\s.js` under a different parent it is false
+ * only when the path really is this one. A sibling's server is never this app's, however well
+ * the app's name keywords fit it.
+ */
+function cmdNamesSibling(commandLine, dir) {
+  const cmd = String(commandLine || '').toLowerCase();
+  const base = String(dir || '').toLowerCase().replace(/[\\/]+$/, '');
+  if (!cmd || !base) return false;
+  for (const needle of new Set([base.replace(/\//g, '\\'), base.replace(/\\/g, '/')])) {
+    let at = cmd.indexOf(needle);
+    while (at !== -1) {
+      const before = at === 0 ? undefined : cmd[at - 1];
+      const after = cmd[at + needle.length];
+      if ((before === undefined || BEFORE.has(before)) && after !== undefined && !AFTER.has(after)) return true;
+      at = cmd.indexOf(needle, at + 1);
+    }
+  }
+  return false;
+}
+
+module.exports = { isOwnServerCommand, isOwnProcessName, isOwnBinding, protectPid, unprotectPid, isOwnPid, cmdNamesPath, cmdNamesFolder, cmdNamesSibling };

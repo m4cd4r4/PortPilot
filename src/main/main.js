@@ -3,6 +3,8 @@ const path = require('path');
 const fs = require('fs');
 const { setupIpcHandlers } = require('./ipcHandlers');
 const { ConfigStore } = require('./configStore');
+const { getConfigDir } = require('../core/configPath');
+const { readLiveAgent } = require('../core/agentFile');
 
 let mainWindow = null;
 let tray = null;
@@ -168,7 +170,13 @@ function startLocalhostTracking() {
   localhostWatcher = require('./localhostWatcher').startLocalhostWatcher(configStore, {
     intervalMs: interval >= 1000 ? interval : undefined,
     onlyPorts: only,
-    ownPorts: () => [mcpPort, webAgent ? webAgent.getInfo().port : null].filter(Boolean),
+    // A standalone `npm run agent` or the VS Code portal agent auto-picks 7318+ and records it in
+    // agent.json; without this it would be tracked as a stranger's dev server.
+    ownPorts: () => [
+      mcpPort,
+      webAgent ? webAgent.getInfo().port : null,
+      readLiveAgent(getConfigDir())?.port || null
+    ].filter(Boolean),
   });
 }
 
