@@ -57,6 +57,8 @@ jobs:
 
       - run: npm ci
       - run: npm ci --prefix mcp-server
+      # The window is the React bundle; a package without it launches to nothing (see release.yml).
+      - run: npm run build:ui
 
       # Unpacked build only: proves electron-builder packages this Electron
       # version on each OS without spending time on installers.
