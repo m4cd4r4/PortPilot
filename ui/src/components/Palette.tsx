@@ -39,8 +39,10 @@ function PaletteBody({ open, onClose, host, snap, view, onView, onDone }: Props)
       else if (a.type === 'startApp') await host.startApp(snap.apps.find((x) => x.id === a.id)!);
       else if (a.type === 'stopApp') await host.stopApp(a.id!);
       else if (a.type === 'openApp') {
-        const port = snap.running[a.id!]?.port ?? snap.apps.find((x) => x.id === a.id)?.preferredPort;
-        if (port) await host.openUrl(`http://localhost:${port}`);
+        // Only a running app has a page; its preferred port alone is a dead URL.
+        const port = snap.running[a.id!]?.port;
+        if (!port) { setStatus('Not running: start it first'); return; }
+        await host.openUrl(`http://localhost:${port}`);
       } else if (a.type === 'startBrowser') await host.startBrowser(a.name!);
       else if (a.type === 'stopBrowser') await host.stopBrowser(a.name!);
       else if (a.type === 'killPort') await host.killPort(a.port!);

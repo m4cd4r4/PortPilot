@@ -11,7 +11,7 @@ const reserver = require('./portReserver');
 const { recordStart, recordStop, readRuntime, liveSessions, sendToSession, readLogTail } = require('../core/configFile');
 const { createRunner, findClaude } = require('./diagnoseRunner');
 const { makeStartedBy, shortSession } = require('../core/status');
-const { isOwnBinding, cmdNamesPath, cmdNamesFolder } = require('../core/selfGuard');
+const { isOwnBinding, cmdNamesPath, cmdNamesFolder, cmdNamesSibling } = require('../core/selfGuard');
 const { folderToOpen } = require('../core/openFolder');
 
 // Read the Peacock window colour from a worktree's .vscode/settings.json so a
@@ -328,9 +328,11 @@ function matchPortsToApps(ports, apps, ownedPids = {}) {
     const appNameLower = app.name.toLowerCase();
 
     // Extract keywords from app name for better matching
-    const appKeywords = app.name.toLowerCase()
-      .replace(/[^a-z0-9]/gi, '')
-      .split(/(?=[A-Z])/) // Split on capital letters (e.g., "AzurePrep" -> ["azure", "prep"])
+    // Split on capital letters and separators before lowercasing ("AzurePrep" -> ["azure", "prep"],
+    // "my-shop api" -> ["shop"]); lowercasing first would leave nothing for the capital split to find.
+    const appKeywords = app.name
+      .split(/(?=[A-Z])|[^a-zA-Z0-9]+/)
+      .map(word => word.toLowerCase())
       .filter(word => word.length > 3); // Only meaningful words
 
     // Check for CWD match (partial - just the folder name)
@@ -342,10 +344,13 @@ function matchPortsToApps(ports, apps, ownedPids = {}) {
                  cmdNamesFolder(binding.commandLine, cwdFolderName);
     }
 
-    // Check for strong app name evidence in command or process
-    const strongAppNameMatch =
+    // Check for strong app name evidence in command or process. A server in a sibling folder that
+    // starts with this app's cwd (a worktree: I:/x/shop-landing for I:/x/shop) shares the name's
+    // keywords by construction, so name evidence counts for nothing there.
+    const sibling = app.cwd ? cmdNamesSibling(binding.commandLine, app.cwd) : false;
+    const strongAppNameMatch = !sibling && (
       cmdLower.includes(appNameLower) ||
-      appKeywords.some(keyword => cmdLower.includes(keyword) || processLower.includes(keyword));
+      appKeywords.some(keyword => cmdLower.includes(keyword) || processLower.includes(keyword)));
 
     // STRICT MATCHING: Require CWD match OR strong app name match
     // Don't match just because it's a Node.js process. A port PortPilot itself holds (the web

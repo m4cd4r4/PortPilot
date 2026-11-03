@@ -24,6 +24,7 @@ const crypto = require('crypto');
 
 const { createDispatcher } = require('../core/dispatch');
 const { getConfigDir } = require('../core/configPath');
+const { writeAgent, removeAgent } = require('../core/agentFile');
 const browserApi = require('../core/browserApi');
 
 const HOST = '127.0.0.1';
@@ -229,14 +230,11 @@ async function main() {
     throw err;
   }
 
-  // Persist {port, token} for tooling, readable only by the user.
+  // Persist {port, token, pid} for tooling, readable only by the user. Readers check the pid
+  // (src/core/agentFile.js): a force-terminated agent leaves the file behind.
   let file = null;
   try {
-    const dir = getConfigDir();
-    fs.mkdirSync(dir, { recursive: true });
-    file = path.join(dir, 'agent.json');
-    fs.writeFileSync(file, JSON.stringify({ ...started, pid: process.pid }, null, 2), { mode: 0o600 });
-    try { fs.chmodSync(file, 0o600); } catch { /* non-POSIX */ }
+    file = writeAgent(getConfigDir(), { ...started, pid: process.pid });
   } catch (e) { console.error('Could not write agent.json:', e.message); }
 
   console.log('\n  PortPilot Web Agent running (loopback only)\n');
@@ -247,10 +245,10 @@ async function main() {
 
   if (!process.env.PORTPILOT_NO_OPEN && !process.argv.includes('--no-open')) openBrowser(started.url);
 
-  const agentJson = path.join(getConfigDir(), 'agent.json');
-  // Sync best-effort removal on any normal process exit. Covers Windows, where a
-  // force-terminate (TerminateProcess) skips the async handlers below.
-  process.on('exit', () => { try { fs.rmSync(agentJson, { force: true }); } catch { /* ignore */ } });
+  const agentDir = getConfigDir();
+  // Sync best-effort removal on any normal process exit. A Windows force-terminate
+  // (TerminateProcess) skips even this, which is why readers verify the pid.
+  process.on('exit', () => { try { removeAgent(agentDir); } catch { /* ignore */ } });
 
   let shuttingDown = false;
   const shutdown = async () => {
@@ -258,7 +256,7 @@ async function main() {
     shuttingDown = true;
     // Hard exit even if cleanup hangs, so a stop never wedges the process.
     setTimeout(() => process.exit(0), 3000).unref();
-    try { fs.rmSync(agentJson, { force: true }); } catch { /* ignore */ }
+    try { removeAgent(agentDir); } catch { /* ignore */ }
     // Opt-in: also stop the dev servers this agent started (mirrors the desktop
     // app's stopAppsOnQuit). Off by default, so dev servers survive a portal stop.
     if (process.env.PORTPILOT_STOP_APPS_ON_EXIT === '1') {

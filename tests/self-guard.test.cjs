@@ -124,6 +124,24 @@ const DEV_MCP = '"I:\\Scratch\\PortPilot-2026\\node_modules\\electron\\dist\\ele
     assert.equal(matches.pp, undefined);
     assert.equal(unknownConflicts.length, 1);
   });
+  await t('cmdNamesSibling: a worktree folder that starts with the cwd is a sibling, the cwd itself is not', () => {
+    assert.ok(guard.cmdNamesSibling('node I:\\Scratch\\shop-landing\\server.js', 'I:/Scratch/shop'));
+    assert.ok(guard.cmdNamesSibling('node I:/Scratch/shop2/server.js', 'I:\\Scratch\\shop\\'));
+    assert.equal(guard.cmdNamesSibling('node I:\\Scratch\\shop\\server.js', 'I:/Scratch/shop'), false);
+    assert.equal(guard.cmdNamesSibling('node server.js', 'I:/Scratch/shop'), false);
+    assert.equal(guard.cmdNamesSibling('node D:\\other\\shop-landing\\s.js', 'I:/Scratch/shop'), false);
+  });
+  await t('a CamelCase app name splits into keywords (AzurePrep -> azure, prep)', () => {
+    const app = { id: 'a', name: 'AzurePrep', preferredPort: 3000 };
+    const api = { port: 3000, pid: 65, processName: 'node.exe', address: '127.0.0.1:3000', commandLine: 'node azure-api.js' };
+    const r = matchPortsToApps([api], [app]);
+    assert.equal(r.matches.a && r.matches.a.confidence, 'low');
+    assert.equal(r.unknownConflicts.length, 0);
+    const other = { ...api, pid: 66, commandLine: 'node server.js' };
+    const r2 = matchPortsToApps([other], [app]);
+    assert.equal(r2.matches.a, undefined);
+    assert.equal(r2.unknownConflicts.length, 1);
+  });
   await t('the parent still matches its own server', () => {
     const parent = { id: 'p', name: 'PortPilot', cwd: 'I:/Scratch/PortPilot-2026', preferredPort: 7317 };
     const srv = { port: 7317, pid: 62, processName: 'node.exe', address: '127.0.0.1:7317', commandLine: 'node I:\\Scratch\\PortPilot-2026\\src\\agent\\server.js' };
