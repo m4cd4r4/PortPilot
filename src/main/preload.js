@@ -150,6 +150,7 @@ contextBridge.exposeInMainWorld('portpilot', {
 
   // Shell operations
   openExternal: (url) => ipcRenderer.invoke('shell:openExternal', url),
+  openPath: (target) => ipcRenderer.invoke('shell:openPath', target),
   browseDirectory: () => ipcRenderer.invoke('shell:browseDirectory'),
 
   // Docker operations

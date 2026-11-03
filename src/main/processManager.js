@@ -2,6 +2,14 @@ const { spawn, exec } = require('child_process');
 const os = require('os');
 const path = require('path');
 const { recordStop } = require('../core/configFile');
+const { isOwnPid } = require('../core/selfGuard');
+
+// A kill aimed at PortPilot itself (Electron main, the MCP child, the in-process web agent):
+// refused before any shell command runs. `taskkill /T` on the main pid would take every managed
+// dev server down with it.
+function refuseOwn(pid) {
+  return { success: false, error: `Process ${pid} is PortPilot itself; it is never killed from here` };
+}
 
 // Track running child processes
 const runningProcesses = new Map();
@@ -176,6 +184,10 @@ function killProcess(pid) {
       resolve({ success: false, error: 'Invalid PID' });
       return;
     }
+    if (isOwnPid(safePid)) {
+      resolve(refuseOwn(safePid));
+      return;
+    }
     const isWindows = os.platform() === 'win32';
     const command = isWindows
       ? `taskkill /F /PID ${safePid} /T`
@@ -226,6 +238,7 @@ async function killByPort(port) {
   if (!portInfo || !portInfo.pid) {
     return { success: false, error: `No process found on port ${port}` };
   }
+  if (isOwnPid(portInfo.pid)) return refuseOwn(portInfo.pid);
 
   // The tracked pid is the shell's, not the server's, so killProcess's pid
   // match misses it. Match the managed app by the port it was started on too.

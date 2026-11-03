@@ -240,9 +240,14 @@ function activate(context) {
         vscode.window.setStatusBarMessage(`PortPilot: Found ${count} active ports`, 3000);
     }), vscode.commands.registerCommand('portpilot.startApp', (item) => {
         startApp(item.app);
-    }), vscode.commands.registerCommand('portpilot.foldStopped', () => setFold(true)), vscode.commands.registerCommand('portpilot.unfoldStopped', () => setFold(false)), vscode.commands.registerCommand('portpilot.stopApp', (item) => {
+    }), vscode.commands.registerCommand('portpilot.foldStopped', () => setFold(true)), vscode.commands.registerCommand('portpilot.unfoldStopped', () => setFold(false)), vscode.commands.registerCommand('portpilot.stopApp', async (item) => {
         if (!item.activePort) {
             vscode.window.showWarningMessage(`${item.app.name} is not running.`);
+            return;
+        }
+        const own = await (0, portScanner_1.ownOnPort)(item.activePort.port);
+        if (own) {
+            vscode.window.showWarningMessage(`Port ${item.activePort.port} is PortPilot's own (${own}); it is never stopped from here.`);
             return;
         }
         const pid = item.activePort.pid;
@@ -264,6 +269,11 @@ function activate(context) {
         vscode.window.showWarningMessage(`Kill process on port ${port} (${item.activePort.processName})?`, 'Kill', 'Cancel').then(async (choice) => {
             if (choice !== 'Kill')
                 return;
+            const own = await (0, portScanner_1.ownOnPort)(port);
+            if (own) {
+                vscode.window.showWarningMessage(`Port ${port} is PortPilot's own (${own}); it is never killed from here.`);
+                return;
+            }
             if (await (0, portScanner_1.killPort)(port)) {
                 vscode.window.showInformationMessage(`Killed process on port ${port}`);
                 setTimeout(() => { void refreshAll(); }, 1000);

@@ -24075,9 +24075,13 @@ function killPort(port) {
     if (platform === "win32") {
       const match = scanPorts().find((p) => p.port === port);
       if (!match || !match.pid) return { success: false, error: "Port not found" };
+      const own = refuseKill(port, match);
+      if (own) return own;
       execSync(`taskkill /F /PID ${match.pid}`);
       return { success: true, pid: match.pid };
     } else {
+      const own = refuseKill(port, scanPorts().find((p) => p.port === port));
+      if (own) return own;
       execSync(`lsof -ti:${port} | xargs kill -9`);
       return { success: true };
     }
@@ -24122,17 +24126,49 @@ function computeRunning(apps, activePorts) {
   return matchRunning(apps, activePorts.map((p) => ({ ...p, commandLine: cmds.get(p.pid) || "" })));
 }
 var NOT_A_SERVER = /^(brave|chrome|chromium|msedge|firefox|opera|vivaldi|code|cursor|windsurf|claude)\b/i;
+var OWN_SERVER_CMD = /[\\/]portpilot[^\\/"'\s]*[\\/](?:resources[\\/])?mcp-server[\\/]index\.js(?=["'\s]|$)/i;
+var OWN_PROCESS_NAME = /^portpilot(\.exe)?$/i;
+function isOwnListener(p) {
+  return !!p && (OWN_PROCESS_NAME.test((p.processName || "").trim()) || OWN_SERVER_CMD.test(p.commandLine || ""));
+}
+function isOwnPid(pid) {
+  return Number(pid) === process.pid || Number(pid) === process.ppid;
+}
+function refuseKill(port, match) {
+  if (!match || !match.pid) return null;
+  if (isOwnPid(match.pid) || isOwnListener({ ...match, commandLine: getCommandLines([match.pid]).get(match.pid) || "" })) {
+    return { success: false, error: `Port ${port} is PortPilot's own (${match.processName || "pid " + match.pid}); it is never killed from here` };
+  }
+  return null;
+}
+function neverSelf(p) {
+  return !NOT_A_SERVER.test(p.processName || "") && !isOwnListener(p);
+}
+var PATH_BEFORE = /* @__PURE__ */ new Set(['"', "'", " ", "	", "=", "(", ","]);
+var PATH_AFTER = /* @__PURE__ */ new Set(['"', "'", " ", "	", "\\", "/", ";", ",", ")", "&", ":", "`"]);
+function cmdNamesPath(commandLine, dir) {
+  const cmd = (commandLine || "").toLowerCase();
+  const base = (dir || "").toLowerCase().replace(/[\\/]+$/, "");
+  if (!cmd || !base) return false;
+  for (const needle of /* @__PURE__ */ new Set([base.replace(/\//g, "\\"), base.replace(/\\/g, "/")])) {
+    let at = cmd.indexOf(needle);
+    while (at !== -1) {
+      const before = at === 0 ? void 0 : cmd[at - 1];
+      const after = cmd[at + needle.length];
+      if ((before === void 0 || PATH_BEFORE.has(before)) && (after === void 0 || PATH_AFTER.has(after))) return true;
+      at = cmd.indexOf(needle, at + 1);
+    }
+  }
+  return false;
+}
 function matchRunning(apps, ports) {
   const matched = /* @__PURE__ */ new Set();
   const result = /* @__PURE__ */ new Map();
   for (const app of apps) {
     if (!app.cwd) continue;
-    const cwd = app.cwd.toLowerCase();
-    const cwdAlt = cwd.replace(/\\/g, "/");
     for (const p of ports) {
-      if (matched.has(p.port) || NOT_A_SERVER.test(p.processName || "")) continue;
-      const cl = p.commandLine.toLowerCase();
-      if (cl && (cl.includes(cwd) || cl.includes(cwdAlt))) {
+      if (matched.has(p.port) || !neverSelf(p)) continue;
+      if (cmdNamesPath(p.commandLine, app.cwd)) {
         result.set(app.id, p);
         matched.add(p.port);
         break;
@@ -24142,7 +24178,7 @@ function matchRunning(apps, ports) {
   for (const app of apps) {
     if (result.has(app.id) || !app.preferredPort) continue;
     const p = ports.find((x) => x.port === app.preferredPort);
-    if (!p || matched.has(p.port)) continue;
+    if (!p || matched.has(p.port) || isOwnListener(p)) continue;
     result.set(app.id, p);
     matched.add(p.port);
   }
@@ -24151,7 +24187,7 @@ function matchRunning(apps, ports) {
     const folder = app.cwd.toLowerCase().split(/[\\/]/).filter(Boolean).pop() || "";
     const keywords = [folder, ...app.name.toLowerCase().split(/[^a-z0-9]+/)].filter((k) => k.length > 3);
     for (const p of ports) {
-      if (matched.has(p.port) || NOT_A_SERVER.test(p.processName || "")) continue;
+      if (matched.has(p.port) || !neverSelf(p)) continue;
       const cl = p.commandLine.toLowerCase();
       if (cl && keywords.some((k) => cl.includes(k))) {
         result.set(app.id, p);
@@ -24262,6 +24298,8 @@ function stopApp(app) {
   const activePorts = scanPorts();
   const portInfo = activePorts.find((p) => p.port === app.preferredPort);
   if (portInfo?.pid) {
+    const own = refuseKill(app.preferredPort, portInfo);
+    if (own) return { success: false, error: `${own.error}; it is not ${app.name}` };
     try {
       if (os.platform() === "win32") {
         execSync(`taskkill /F /PID ${portInfo.pid}`);
@@ -24943,10 +24981,12 @@ if (isMain) main().catch(console.error);
 export {
   alreadyRunning,
   appAtCwd,
+  cmdNamesPath,
   cmdSafe,
   detachedCommand,
   expectedPort,
   findRuns,
+  isOwnListener,
   matchRunning,
   normPath,
   observedDuplicate,

@@ -455,9 +455,13 @@ function killPort(port) {
       // `findstr LISTENING`, which fails on non-English Windows.
       const match = scanPorts().find(p => p.port === port);
       if (!match || !match.pid) return { success: false, error: 'Port not found' };
+      const own = refuseKill(port, match);
+      if (own) return own;
       execSync(`taskkill /F /PID ${match.pid}`);
       return { success: true, pid: match.pid };
     } else {
+      const own = refuseKill(port, scanPorts().find(p => p.port === port));
+      if (own) return own;
       execSync(`lsof -ti:${port} | xargs kill -9`);
       return { success: true };
     }
@@ -522,6 +526,45 @@ function computeRunning(apps, activePorts) {
 // never the app's own server, so command-line evidence from them proves nothing.
 const NOT_A_SERVER = /^(brave|chrome|chromium|msedge|firefox|opera|vivaldi|code|cursor|windsurf|claude)\b/i;
 
+// PortPilot's own servers are never an app's server either: this MCP server (packaged:
+// "PortPilot.exe ...\resources\mcp-server\index.js", dev: "electron.exe ...\PortPilot-2026\mcp-server\index.js")
+// once matched the "PortPilot" app entry by keyword, and stop_app killed it. Mirrors src/core/selfGuard.js.
+const OWN_SERVER_CMD = /[\\/]portpilot[^\\/"'\s]*[\\/](?:resources[\\/])?mcp-server[\\/]index\.js(?=["'\s]|$)/i;
+const OWN_PROCESS_NAME = /^portpilot(\.exe)?$/i;
+function isOwnListener(p) {
+  return !!p && (OWN_PROCESS_NAME.test((p.processName || '').trim()) || OWN_SERVER_CMD.test(p.commandLine || ''));
+}
+// Run as a stdio child of a Claude session, this process is neither the desktop app nor the shared
+// MCP server, so a pid test alone proves nothing: the listener's name and command line decide too.
+function isOwnPid(pid) { return Number(pid) === process.pid || Number(pid) === process.ppid; }
+function refuseKill(port, match) {
+  if (!match || !match.pid) return null;
+  if (isOwnPid(match.pid) || isOwnListener({ ...match, commandLine: getCommandLines([match.pid]).get(match.pid) || '' })) {
+    return { success: false, error: `Port ${port} is PortPilot's own (${match.processName || 'pid ' + match.pid}); it is never killed from here` };
+  }
+  return null;
+}
+function neverSelf(p) { return !NOT_A_SERVER.test(p.processName || '') && !isOwnListener(p); }
+
+const PATH_BEFORE = new Set(['"', "'", ' ', '\t', '=', '(', ',']);
+const PATH_AFTER = new Set(['"', "'", ' ', '\t', '\\', '/', ';', ',', ')', '&', ':', '`']);
+/** The command line names `dir` as a whole path component: I:/x/app is not I:/x/app-worktree. */
+function cmdNamesPath(commandLine, dir) {
+  const cmd = (commandLine || '').toLowerCase();
+  const base = (dir || '').toLowerCase().replace(/[\\/]+$/, '');
+  if (!cmd || !base) return false;
+  for (const needle of new Set([base.replace(/\//g, '\\'), base.replace(/\\/g, '/')])) {
+    let at = cmd.indexOf(needle);
+    while (at !== -1) {
+      const before = at === 0 ? undefined : cmd[at - 1];
+      const after = cmd[at + needle.length];
+      if ((before === undefined || PATH_BEFORE.has(before)) && (after === undefined || PATH_AFTER.has(after))) return true;
+      at = cmd.indexOf(needle, at + 1);
+    }
+  }
+  return false;
+}
+
 /** The pure matcher: `ports` already carry their `commandLine`. */
 function matchRunning(apps, ports) {
   const matched = new Set();
@@ -530,12 +573,9 @@ function matchRunning(apps, ports) {
   // Phase 1: high-confidence CWD match in the command line.
   for (const app of apps) {
     if (!app.cwd) continue;
-    const cwd = app.cwd.toLowerCase();
-    const cwdAlt = cwd.replace(/\\/g, '/');
     for (const p of ports) {
-      if (matched.has(p.port) || NOT_A_SERVER.test(p.processName || '')) continue;
-      const cl = p.commandLine.toLowerCase();
-      if (cl && (cl.includes(cwd) || cl.includes(cwdAlt))) {
+      if (matched.has(p.port) || !neverSelf(p)) continue;
+      if (cmdNamesPath(p.commandLine, app.cwd)) {
         result.set(app.id, p);
         matched.add(p.port);
         break;
@@ -547,7 +587,7 @@ function matchRunning(apps, ports) {
   for (const app of apps) {
     if (result.has(app.id) || !app.preferredPort) continue;
     const p = ports.find(x => x.port === app.preferredPort);
-    if (!p || matched.has(p.port)) continue;
+    if (!p || matched.has(p.port) || isOwnListener(p)) continue;
     result.set(app.id, p);
     matched.add(p.port);
   }
@@ -559,7 +599,7 @@ function matchRunning(apps, ports) {
     const folder = app.cwd.toLowerCase().split(/[\\/]/).filter(Boolean).pop() || '';
     const keywords = [folder, ...app.name.toLowerCase().split(/[^a-z0-9]+/)].filter(k => k.length > 3);
     for (const p of ports) {
-      if (matched.has(p.port) || NOT_A_SERVER.test(p.processName || '')) continue;
+      if (matched.has(p.port) || !neverSelf(p)) continue;
       const cl = p.commandLine.toLowerCase();
       if (cl && keywords.some(k => cl.includes(k))) {
         result.set(app.id, p);
@@ -712,6 +752,8 @@ function stopApp(app) {
   const portInfo = activePorts.find(p => p.port === app.preferredPort);
 
   if (portInfo?.pid) {
+    const own = refuseKill(app.preferredPort, portInfo);
+    if (own) return { success: false, error: `${own.error}; it is not ${app.name}` };
     try {
       if (os.platform() === 'win32') {
         execSync(`taskkill /F /PID ${portInfo.pid}`);
@@ -1507,4 +1549,4 @@ async function main() {
 const isMain = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
 if (isMain) main().catch(console.error);
 
-export { matchRunning, findRuns, rerunSteps, alreadyRunning, expectedPort,normPath, appAtCwd, cmdSafe, startRefusal, observedDuplicate,pickColor, resolveWorktreeGit, registerWorktree, stampStart, detachedCommand, prepareLog };
+export { matchRunning, isOwnListener, cmdNamesPath, findRuns, rerunSteps, alreadyRunning, expectedPort,normPath, appAtCwd, cmdSafe, startRefusal, observedDuplicate,pickColor, resolveWorktreeGit, registerWorktree, stampStart, detachedCommand, prepareLog };
