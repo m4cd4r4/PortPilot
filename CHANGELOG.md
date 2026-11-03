@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [5.0.1] - 2026-11-03
 
+### Fixed
+- **The installer opens a window again.** 5.0.0 shipped without the interface bundle (the release build never ran the UI build), so the app threw at launch and showed nothing. The release and CI builds now build it, and the packaged smoke test fails if it is missing.
+
 ### Added
 - **VS Code extension 4.2.0: a Tiles view.** Your apps and dedicated browsers as picture tiles at the top of the sidebar, with Start and Stop on hover. A running app with no picture of its own yet shows its last known one. Apps, Browsers, Active Ports and History start collapsed on a new install.
 - **Browsers film.** An 18-second film on the website and in the README: one sentence to Claude, and the `youtube` profile opens already signed in.

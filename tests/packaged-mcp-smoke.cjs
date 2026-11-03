@@ -30,6 +30,22 @@ const browserApi = path.join(unpacked, 'resources', 'mcp-server', 'browserApi.cj
 if (!fs.existsSync(browserApi)) fail(`missing ${browserApi} - the build did not ship the browser-profile tools (package.json build.extraResources)`);
 if (!fs.existsSync(sdk)) fail(`missing ${sdk} - the build did not bundle mcp-server/node_modules`);
 
+// The window is src/ui-dist/index.html inside app.asar. v5.0.0 shipped without it (the release
+// workflow never ran `npm run build:ui`) and launched to nothing. The asar header is JSON at the
+// start of the file naming every packed path, so a plain read finds the bundle without unpacking.
+const asar = path.join(unpacked, 'resources', 'app.asar');
+const appDir = path.join(unpacked, 'resources', 'app');
+if (fs.existsSync(asar)) {
+  const fd = fs.openSync(asar, 'r');
+  const head = Buffer.alloc(4 * 1024 * 1024);
+  const n = fs.readSync(fd, head, 0, head.length, 0);
+  fs.closeSync(fd);
+  if (!head.toString('latin1', 0, n).includes('"ui-dist"')) fail(`${asar} has no src/ui-dist - the build did not run "npm run build:ui"`);
+} else if (!fs.existsSync(path.join(appDir, 'src', 'ui-dist', 'index.html'))) {
+  fail(`${appDir} has no src/ui-dist/index.html - the build did not run "npm run build:ui"`);
+}
+console.log('✅ packaged app carries the UI bundle (src/ui-dist)');
+
 const child = spawn(exe, [server], {
   env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' },
   stdio: ['pipe', 'pipe', 'pipe'],

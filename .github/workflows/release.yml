@@ -31,6 +31,12 @@ jobs:
       - name: Install MCP server dependencies
         run: npm ci --prefix mcp-server
 
+      # The window is the React bundle (ui/ -> src/ui-dist, gitignored). Without this
+      # step the packaged app throws "src/ui-dist is missing" at launch and shows no
+      # window: v5.0.0 and the first v5.0.1 draft shipped that way (2026-11-03).
+      - name: Build the UI bundle
+        run: npm run build:ui
+
       - name: Build Windows
         if: matrix.os == 'windows-latest'
         run: npx electron-builder --win nsis portable --publish never
