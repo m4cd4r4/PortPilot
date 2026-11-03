@@ -8,7 +8,7 @@ import {
 } from './config';
 import { AppsTreeProvider, AppTreeItem, GroupTreeItem } from './appsTreeProvider';
 import { PortsTreeProvider, PortTreeItem } from './portsTreeProvider';
-import { killPort } from './portScanner';
+import { killPort, ownOnPort } from './portScanner';
 import { appIdByPort, newCrashes, CrashStamp } from './treeModel';
 import { HistoryTreeProvider } from './historyTreeProvider';
 import { registerHistoryCommands } from './historyCommands';
@@ -247,9 +247,14 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand('portpilot.foldStopped', () => setFold(true)),
     vscode.commands.registerCommand('portpilot.unfoldStopped', () => setFold(false)),
 
-    vscode.commands.registerCommand('portpilot.stopApp', (item: AppTreeItem) => {
+    vscode.commands.registerCommand('portpilot.stopApp', async (item: AppTreeItem) => {
       if (!item.activePort) {
         vscode.window.showWarningMessage(`${item.app.name} is not running.`);
+        return;
+      }
+      const own = await ownOnPort(item.activePort.port);
+      if (own) {
+        vscode.window.showWarningMessage(`Port ${item.activePort.port} is PortPilot's own (${own}); it is never stopped from here.`);
         return;
       }
       const pid = item.activePort.pid;
@@ -275,6 +280,11 @@ export function activate(context: vscode.ExtensionContext) {
         'Kill', 'Cancel'
       ).then(async choice => {
         if (choice !== 'Kill') return;
+        const own = await ownOnPort(port);
+        if (own) {
+          vscode.window.showWarningMessage(`Port ${port} is PortPilot's own (${own}); it is never killed from here.`);
+          return;
+        }
         if (await killPort(port)) {
           vscode.window.showInformationMessage(`Killed process on port ${port}`);
           setTimeout(() => { void refreshAll(); }, 1000);

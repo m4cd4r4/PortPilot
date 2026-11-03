@@ -774,28 +774,28 @@ async function openPortInBrowser(port) {
   }
 }
 
-async function openProcessFolder(exePath) {
-  if (!exePath) return;
+// Folders go through shell:openPath (main resolves the directory); openExternal is http/https only
+// and answers {success:false} without throwing, which once left every "Folder" button a no-op
+// behind a success toast.
+async function openFolder(target) {
+  if (!target) return;
   try {
-    const dir = exePath.substring(0, exePath.lastIndexOf('\\')) || exePath.substring(0, exePath.lastIndexOf('/'));
-    if (dir) {
-      await window.portpilot.openExternal(`file:///${dir.replace(/\\/g, '/')}`);
-      showToast('Opened folder', 'success');
-    }
+    const result = await window.portpilot.openPath(target);
+    if (!result || !result.success) throw new Error((result && result.error) || 'Unknown error');
+    showToast('Opened folder', 'success');
   } catch (err) {
-    showToast('Failed to open folder', 'error');
+    showToast(`Failed to open folder: ${err.message}`, 'error');
   }
+}
+
+async function openProcessFolder(exePath) {
+  return openFolder(exePath);
 }
 
 async function openAppFolder(appId) {
   const app = state.apps.find(a => a.id === appId);
   if (!app || !app.cwd) return;
-  try {
-    await window.portpilot.openExternal(`file:///${app.cwd.replace(/\\/g, '/')}`);
-    showToast('Opened folder', 'success');
-  } catch (err) {
-    showToast('Failed to open folder', 'error');
-  }
+  return openFolder(app.cwd);
 }
 
 function extractExePath(cmdLine) {

@@ -7,7 +7,7 @@ const { ConfigStore } = require('./configStore');
 let mainWindow = null;
 let tray = null;
 let webAgent = null;  // opt-in loopback web agent (Option C), shares this process's configStore
-let mcpServer = null; // shared HTTP MCP server: one process for every Claude session, vs one stdio child per session
+let mcpServer = null; // supervisor of the shared HTTP MCP server: one process for every Claude session, vs one stdio child per session
 let localhostWatcher = null; // records every localhost dev server into the run history (setting autoTrackLocalhost)
 
 // Windows: no OS title bar and no File/Edit/View/Window menu. The PortPilot header is the
@@ -287,21 +287,34 @@ if (!gotTheLock) {
     // http://127.0.0.1:<port>/mcp (default 8788).
     // Forked via ELECTRON_RUN_AS_NODE so Electron's bundled Node runs the ESM
     // server (utilityProcess.fork can't load an ESM entry).
+    // The child is supervised (src/core/mcpSupervisor.js): a death is restarted with backoff,
+    // and its pid is protected so no Stop, port kill or palette command can take it down.
     try {
       const { fork } = require('child_process');
+      const { createSupervisor } = require('../core/mcpSupervisor');
+      const { protectPid, unprotectPid } = require('../core/selfGuard');
       const mcpEntry = app.isPackaged
         ? path.join(process.resourcesPath, 'mcp-server', 'index.js')
         : path.join(__dirname, '..', '..', 'mcp-server', 'index.js');
       const mcpPort = process.env.PORTPILOT_MCP_PORT || '8788';
-      mcpServer = fork(mcpEntry, ['--port', mcpPort], {
-        env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' },
-        stdio: ['ignore', 'ignore', 'inherit', 'ipc'],
+      mcpServer = createSupervisor({
+        spawn: () => fork(mcpEntry, ['--port', mcpPort], {
+          env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' },
+          stdio: ['ignore', 'ignore', 'inherit', 'ipc'],
+        }),
+        onChild: (child) => {
+          protectPid(child.pid);
+          child.on('error', (err) => console.error('MCP server failed to start:', err));
+          child.on('exit', () => unprotectPid(child.pid));
+        },
+        onGiveUp: ({ code }) => {
+          const body = `The MCP server on port ${mcpPort} keeps exiting (code ${code}). Claude sessions have no PortPilot tools until PortPilot is restarted. Is another PortPilot holding that port?`;
+          console.error(body);
+          try { if (Notification.isSupported()) new Notification({ title: 'PortPilot - MCP server stopped', body }).show(); } catch { /* no notification surface */ }
+        },
+        log: (line) => console.error(line),
       });
-      mcpServer.on('error', (err) => console.error('MCP server failed to start:', err));
-      mcpServer.on('exit', (code) => {
-        if (code) console.error(`PortPilot MCP server exited with code ${code}`);
-        mcpServer = null;
-      });
+      mcpServer.start();
       console.log(`PortPilot MCP HTTP server starting on port ${mcpPort}`);
     } catch (err) {
       console.error('Failed to start MCP HTTP server:', err);
@@ -380,6 +393,12 @@ app.on('window-all-closed', () => {
 app.on('before-quit', async (event) => {
   app.isQuitting = true;
 
+  // Stop the shared MCP HTTP server first: once quitting, a death must not be restarted.
+  if (mcpServer) {
+    try { mcpServer.stop(); } catch (err) { console.error('Error stopping MCP server:', err); }
+    mcpServer = null;
+  }
+
   // Drop all port reservations so we don't leave sockets held after exit.
   try { await require('./portReserver').releaseAll(); } catch (err) { console.error('Error releasing reservations:', err); }
 
@@ -389,12 +408,6 @@ app.on('before-quit', async (event) => {
   if (webAgent) {
     try { await webAgent.stop(); } catch (err) { console.error('Error stopping web agent:', err); }
     webAgent = null;
-  }
-
-  // Stop the shared MCP HTTP server
-  if (mcpServer) {
-    try { mcpServer.kill(); } catch (err) { console.error('Error stopping MCP server:', err); }
-    mcpServer = null;
   }
 
   // Clean up child processes if enabled in settings

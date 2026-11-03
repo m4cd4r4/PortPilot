@@ -11,6 +11,8 @@ const reserver = require('./portReserver');
 const { recordStart, recordStop, readRuntime, liveSessions, sendToSession, readLogTail } = require('../core/configFile');
 const { createRunner, findClaude } = require('./diagnoseRunner');
 const { makeStartedBy, shortSession } = require('../core/status');
+const { isOwnBinding, cmdNamesPath, cmdNamesFolder } = require('../core/selfGuard');
+const { folderToOpen } = require('../core/openFolder');
 
 // Read the Peacock window colour from a worktree's .vscode/settings.json so a
 // detected branch can be coloured to match its VS Code window. settings.json is
@@ -273,10 +275,7 @@ function matchPortsToApps(ports, apps, ownedPids = {}) {
     if (!app.cwd) continue;
     if (matches[app.id]) continue; // already matched to a process we started (Phase 0)
 
-    // Normalize paths for comparison
     const normalizedCwd = path.normalize(app.cwd).toLowerCase();
-    const cwdWithForwardSlash = normalizedCwd.replace(/\\/g, '/');
-    const cwdWithBackSlash = normalizedCwd.replace(/\//g, '\\');
 
     for (const portInfo of ports) {
       if (matchedPorts.has(portInfo.port)) continue; // Skip already matched ports
@@ -290,12 +289,10 @@ function matchPortsToApps(ports, apps, ownedPids = {}) {
       }];
 
       for (const binding of allBindings) {
-        const cmdLower = (binding.commandLine || '').toLowerCase();
-        const cwdInCmd = cmdLower.includes(cwdWithForwardSlash) ||
-                         cmdLower.includes(cwdWithBackSlash) ||
-                         cmdLower.includes(normalizedCwd);
-
-        if (cwdInCmd) {
+        // PortPilot's own servers (the MCP child, this process) are never an app's server, and the
+        // cwd must sit at a path boundary: I:/x/app is not I:/x/app-worktree (src/core/selfGuard.js).
+        if (isOwnBinding(binding)) continue;
+        if (cmdNamesPath(binding.commandLine, normalizedCwd)) {
           // High-confidence match found
           matches[app.id] = {
             port: portInfo.port,
@@ -323,7 +320,9 @@ function matchPortsToApps(ports, apps, ownedPids = {}) {
     const portInfo = ports.find(p => p.port === app.preferredPort);
     if (!portInfo || matchedPorts.has(portInfo.port)) continue; // Port not found or already matched
 
-    const binding = portInfo.bindings?.[0] || portInfo;
+    const bindings = portInfo.bindings || [portInfo];
+    const binding = bindings[0];
+    const own = bindings.some(isOwnBinding);
     const cmdLower = (binding.commandLine || '').toLowerCase();
     const processLower = (binding.processName || '').toLowerCase();
     const appNameLower = app.name.toLowerCase();
@@ -339,9 +338,8 @@ function matchPortsToApps(ports, apps, ownedPids = {}) {
     if (app.cwd) {
       const normalizedCwd = path.normalize(app.cwd).toLowerCase();
       const cwdFolderName = path.basename(normalizedCwd);
-      cwdMatch = cmdLower.includes(normalizedCwd) ||
-                 cmdLower.includes(normalizedCwd.replace(/\\/g, '/')) ||
-                 cmdLower.includes(cwdFolderName);
+      cwdMatch = cmdNamesPath(binding.commandLine, normalizedCwd) ||
+                 cmdNamesFolder(binding.commandLine, cwdFolderName);
     }
 
     // Check for strong app name evidence in command or process
@@ -350,8 +348,10 @@ function matchPortsToApps(ports, apps, ownedPids = {}) {
       appKeywords.some(keyword => cmdLower.includes(keyword) || processLower.includes(keyword));
 
     // STRICT MATCHING: Require CWD match OR strong app name match
-    // Don't match just because it's a Node.js process
-    const isConfidentMatch = cwdMatch || strongAppNameMatch;
+    // Don't match just because it's a Node.js process. A port PortPilot itself holds (the web
+    // agent runs inside this process) is a conflict the UI names, never a match: a match would
+    // offer Stop, and Stop would be a self-kill.
+    const isConfidentMatch = !own && (cwdMatch || strongAppNameMatch);
 
     if (isConfidentMatch) {
       matches[app.id] = {
@@ -1020,6 +1020,19 @@ function setupIpcHandlers(ipcMain, configStore) {
       const { shell } = require('electron');
       await shell.openExternal(url);
       return { success: true };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+
+  /** Open a folder in the OS file manager (an app cwd, or the folder of a process exe) */
+  ipcMain.handle('shell:openPath', async (_, target) => {
+    const dir = folderToOpen(target);
+    if (!dir) return { success: false, error: 'Not a folder on this machine' };
+    try {
+      const { shell } = require('electron');
+      const problem = await shell.openPath(dir); // '' on success, else the OS message
+      return problem ? { success: false, error: problem } : { success: true, path: dir };
     } catch (error) {
       return { success: false, error: error.message };
     }

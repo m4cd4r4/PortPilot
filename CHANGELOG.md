@@ -11,6 +11,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **VS Code extension 4.2.0: a Tiles view.** Your apps and dedicated browsers as picture tiles at the top of the sidebar, with Start and Stop on hover. A running app with no picture of its own yet shows its last known one. Apps, Browsers, Active Ports and History start collapsed on a new install.
 - **Browsers film.** An 18-second film on the website and in the README: one sentence to Claude, and the `youtube` profile opens already signed in.
 
+### Fixed
+- **PortPilot no longer mistakes itself for an app.** The "PortPilot" app entry was shown running on 8788 because its own MCP server's command line contains "portpilot": Open opened the MCP endpoint and Stop killed the tools out from under every Claude session. Own servers are skipped by the matcher in the app, the MCP server and the VS Code extension, and an app's folder now matches only at a path boundary, so a parent app no longer claims its worktree's server.
+- **PortPilot never kills itself.** Stop, Kill on the Ports table, `Free port` in the palette and the MCP `kill_port` and `stop_app` tools refuse a pid PortPilot runs in (the app, the MCP server, the web agent) instead of taking every managed dev server down with it.
+- **The MCP server comes back.** If the shared MCP server exits, PortPilot restarts it with backoff; after five quick deaths in a row it stops trying and raises a notification naming the port.
+- **Folder buttons open the folder.** The app card, drawer and port row "Folder" buttons opened nothing behind a success toast; they now open the folder in the file manager and report a real failure.
+
 ## [5.0.0] - 2026-10-31
 
 ### Added

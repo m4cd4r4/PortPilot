@@ -2,12 +2,23 @@
 // the matcher, so every case runs against both. Pure: ports arrive with their command lines.
 import assert from 'node:assert';
 import { createRequire } from 'node:module';
-import { matchRunning as mcpMatch } from '../mcp-server/index.js';
+import { matchRunning as mcpMatch, isOwnListener as mcpOwn, cmdNamesPath as mcpPath } from '../mcp-server/index.js';
 
 const require = createRequire(import.meta.url);
-const { matchRunning: extMatch } = require('../vscode-extension/out/portScanner.js');
+const { matchRunning: extMatch, isOwnListener: extOwn, cmdNamesPath: extPath } = require('../vscode-extension/out/portScanner.js');
 
 const impls = { 'mcp-server': mcpMatch, 'vscode-extension': extMatch };
+const helpers = { 'mcp-server': [mcpOwn, mcpPath], 'vscode-extension': [extOwn, extPath] };
+
+// The kill paths (kill_port, stop_app, the extension's Stop and Kill) refuse PortPilot's own listeners
+// by name or command line, since a stdio MCP child knows no pids of the desktop app.
+for (const [label, [isOwn, namesPath]] of Object.entries(helpers)) {
+  assert.ok(isOwn({ processName: 'PortPilot.exe', commandLine: '' }), `${label}: PortPilot.exe is own`);
+  assert.ok(isOwn({ processName: 'electron.exe', commandLine: 'electron.exe I:\\Scratch\\PortPilot-2026\\mcp-server\\index.js --port 8788' }), `${label}: the dev MCP child is own`);
+  assert.strictEqual(isOwn({ processName: 'node.exe', commandLine: 'node I:\\work\\shop\\mcp-server\\index.js --tag portpilot' }), false, `${label}: a user mcp-server is not`);
+  assert.ok(namesPath('sh -c "cd /x/app;npm run dev"', '/x/app'), `${label}: a path before ; is found`);
+  assert.strictEqual(namesPath('node /x/app-worktree/s.js', '/x/app'), false, `${label}: a longer path is not`);
+}
 
 const solaisoft = { id: 'a', name: 'Solaisoft', cwd: 'I:\\Scratch\\solaisoft', preferredPort: 3002 };
 
@@ -45,6 +56,33 @@ for (const [label, matchRunning] of Object.entries(impls)) {
   const both = matchRunning([roofing, hawk], [hawkServer, roofingServer]);
   assert.strictEqual(both.get('g') && both.get('g').port, 3420, `${label}: glancehawk-web keeps its own port`);
   assert.strictEqual(both.get('r') && both.get('r').port, 4577, `${label}: roofing-clone is not given glancehawk's port`);
+
+  // PortPilot's own MCP server carries "portpilot" on its command line. The "PortPilot" app entry (the web
+  // agent, npm run agent) must not be shown as running on 8788: Open would hit the MCP endpoint and Stop
+  // would kill the tools out from under every Claude session. Packaged and dev command lines.
+  const self = { id: 'pp', name: 'PortPilot', cwd: 'I:/Scratch/PortPilot-2026', preferredPort: 7317 };
+  const packagedMcp = {
+    port: 8788, pid: 7, processName: 'PortPilot.exe',
+    commandLine: '"C:\\Users\\me\\AppData\\Local\\Programs\\PortPilot\\PortPilot.exe" C:\\Users\\me\\AppData\\Local\\Programs\\PortPilot\\resources\\mcp-server\\index.js --port 8788',
+  };
+  const devMcp = {
+    port: 8788, pid: 8, processName: 'electron.exe',
+    commandLine: '"I:\\Scratch\\PortPilot-2026\\node_modules\\electron\\dist\\electron.exe" I:\\Scratch\\PortPilot-2026\\mcp-server\\index.js --port 8788',
+  };
+  assert.strictEqual(matchRunning([self], [packagedMcp]).has('pp'), false, `${label}: the packaged MCP server is not the PortPilot app`);
+  assert.strictEqual(matchRunning([self], [devMcp]).has('pp'), false, `${label}: the dev MCP server is not the PortPilot app`);
+  const selfOn7317 = { ...packagedMcp, port: 7317, pid: 9 };
+  assert.strictEqual(matchRunning([self], [selfOn7317]).has('pp'), false, `${label}: PortPilot.exe on the preferred port is still not the app`);
+  const webAgent = { port: 7317, pid: 10, processName: 'node.exe', commandLine: 'node I:\\Scratch\\PortPilot-2026\\src\\agent\\server.js' };
+  assert.strictEqual(matchRunning([self], [devMcp, webAgent]).get('pp')?.port, 7317, `${label}: the real web agent is still found`);
+
+  // A cwd matches only at a path boundary: the parent's cwd is a prefix of its worktree's.
+  const parent = { id: 'p', name: 'PortPilot', cwd: 'I:/Scratch/PortPilot-2026' };
+  const child = { id: 'c', name: 'landing', cwd: 'I:/Scratch/PortPilot-2026-landing-redesign-340' };
+  const childServer = { port: 7318, pid: 11, processName: 'node.exe', commandLine: 'node I:\\Scratch\\PortPilot-2026-landing-redesign-340\\src\\agent\\server.js' };
+  const wt = matchRunning([parent, child], [childServer]);
+  assert.strictEqual(wt.has('p'), false, `${label}: the parent does not claim its worktree's server`);
+  assert.strictEqual(wt.get('c')?.port, 7318, `${label}: the worktree app gets its own server`);
 }
 
 console.log('running-match: ok');
