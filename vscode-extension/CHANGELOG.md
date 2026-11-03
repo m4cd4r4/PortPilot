@@ -1,5 +1,10 @@
 # Changelog
 
+## [4.2.5] - 2026-11-03
+
+- Kill on a port held by two processes (an IPv4 and an IPv6 listener) now frees it: every holder is killed, where before the second one kept the port.
+- The scanner no longer mistakes PortPilot's own server for an app (shared with desktop 5.0.1).
+
 ## [4.2.4] - 2026-11-02
 
 - Marketplace page: the top image is now a short clip of hovering an app (a page preview, then Stop, Open in Browser and Favourite) in place of a still. No code changes.

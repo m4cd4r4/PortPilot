@@ -18,7 +18,7 @@ It works on its own; the assistant link is optional.
 
 Prefer to stay in your editor? The same apps, ports and crash alerts are in the [PortPilot VS Code extension](https://marketplace.visualstudio.com/items?itemName=macdara.portpilot).
 
-[![Version](https://img.shields.io/badge/version-5.0.0-blue.svg)](https://github.com/m4cd4r4/PortPilot/releases/tag/v5.0.0)
+[![Version](https://img.shields.io/badge/version-5.0.1-blue.svg)](https://github.com/m4cd4r4/PortPilot/releases/tag/v5.0.1)
 [![Tests](https://img.shields.io/badge/tests-Playwright%20E2E-blue.svg)](tests/)
 [![Licence](https://img.shields.io/badge/licence-MIT-green.svg)](LICENSE)
 [![MCP](https://img.shields.io/badge/MCP-26%20tools-purple.svg)](docs/REFERENCE.md#mcp-tools-26)
@@ -50,10 +50,10 @@ Windows 10/11 and Linux.
 
 | Platform | Download |
 |----------|----------|
-| Windows installer | [PortPilot-5.0.0-x64.exe](https://github.com/m4cd4r4/PortPilot/releases/download/v5.0.0/PortPilot-5.0.0-x64.exe) (113 MB) |
-| Windows portable | [PortPilot-5.0.0-portable.exe](https://github.com/m4cd4r4/PortPilot/releases/download/v5.0.0/PortPilot-5.0.0-portable.exe) (113 MB) |
-| Linux AppImage | [PortPilot-5.0.0-x86_64.AppImage](https://github.com/m4cd4r4/PortPilot/releases/download/v5.0.0/PortPilot-5.0.0-x86_64.AppImage) (123 MB) |
-| Debian / Ubuntu | [PortPilot-5.0.0-amd64.deb](https://github.com/m4cd4r4/PortPilot/releases/download/v5.0.0/PortPilot-5.0.0-amd64.deb) (86 MB) |
+| Windows installer | [PortPilot-5.0.1-x64.exe](https://github.com/m4cd4r4/PortPilot/releases/download/v5.0.1/PortPilot-5.0.1-x64.exe) (113 MB) |
+| Windows portable | [PortPilot-5.0.1-portable.exe](https://github.com/m4cd4r4/PortPilot/releases/download/v5.0.1/PortPilot-5.0.1-portable.exe) (113 MB) |
+| Linux AppImage | [PortPilot-5.0.1-x86_64.AppImage](https://github.com/m4cd4r4/PortPilot/releases/download/v5.0.1/PortPilot-5.0.1-x86_64.AppImage) (123 MB) |
+| Debian / Ubuntu | [PortPilot-5.0.1-amd64.deb](https://github.com/m4cd4r4/PortPilot/releases/download/v5.0.1/PortPilot-5.0.1-amd64.deb) (86 MB) |
 
 Install it, click Scan, then add your projects.
 
