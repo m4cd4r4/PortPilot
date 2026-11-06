@@ -124,6 +124,18 @@ function braveOn(dir, { crashpad = false } = {}) {
   } catch { return []; }
 }
 
+/** The developer's real ports: their MCP server and their browser profiles. Never the journey's. */
+const devPort = (p) => !(p > 0) || p === 8788 || (p >= 9222 && p <= 9241);
+
+/** PIDs of Brave main (browser) processes on a profile folder: no --type= helper. */
+function braveMain(dir) {
+  try {
+    const key = dir.toLowerCase().replace(/'/g, "''");
+    const ps = `Get-CimInstance Win32_Process -Filter "Name='brave.exe'" | Where-Object { $_.CommandLine -and $_.CommandLine.ToLower().Contains('${key}') -and -not $_.CommandLine.Contains('--type=') } | ForEach-Object { $_.ProcessId }`;
+    return execFileSync('powershell.exe', ['-NoProfile', '-Command', ps], { encoding: 'utf8', windowsHide: true }).split(/\s+/).filter(Boolean).map(Number);
+  } catch { return []; }
+}
+
 /** "pid name" of every process whose command line names the world folder. */
 function worldProcs(dir) {
   try {
@@ -139,13 +151,18 @@ function worldProcs(dir) {
   // The watcher at its shipped interval (10 s). At the kit's 1 s it confirms the app's port (2 scans)
   // before start_app has stamped it (the MCP server stamps only once the port answers, ~2 s), and
   // records a second, "detected" run: a race the shipped interval cannot reach.
+  // Debug ports and the shop's site come from the OS too, kept off the watcher's list (they are not
+  // dev servers). Drawn and guarded before the world exists; the kit's own ports are guarded once it hands them over.
+  const extra = await h.freePorts(3);
+  if (extra.some(devPort)) throw new Error(`the OS handed out a port the developer uses (${extra.join(', ')}); run again`);
   const j = await journey('claude-sessions', { ports: 1, detectIntervalMs: 10000 });
   const [apiPort] = j.ports;
-  // Debug ports and the shop's site come from the OS too, kept off the watcher's list (they are not dev servers).
-  let extra = [];
-  while (extra.length < 3) extra = (await h.freePorts(4)).filter((p) => !j.ports.includes(p)).slice(0, 3);
+  const all = [...j.ports, ...extra];
+  if (all.some(devPort) || new Set(all).size !== all.length) {
+    try { fs.rmSync(j.tmp, { recursive: true, force: true }); } catch { /* nothing started in it yet */ }
+    throw new Error(`a journey port is the developer's or is repeated (${all.join(', ')}); run again`);
+  }
   const [shopDebug, blogDebug, sitePort] = extra;
-  if ([shopDebug, blogDebug, sitePort].some((p) => (p >= 9222 && p <= 9241) || p === 8788)) throw new Error('the OS handed out a port the developer uses; run again');
 
   // The shop's admin site, so the profile's start page is a real page Brave can name.
   const site = http.createServer((q, r) => { r.setHeader('content-type', 'text/html'); r.end(`<title>Orders</title><h1>Orders ${q.url}</h1>`); });
@@ -194,7 +211,9 @@ function worldProcs(dir) {
       const errLog = path.join(j.out, 'app-stderr.log');
       j.app.process().stderr.on('data', (d) => fs.appendFileSync(errLog, `${new Date().toISOString()} ${d}`));
       mcpPort = Number(await j.app.evaluate(() => process.env.PORTPILOT_MCP_PORT));
-      j.check('the desktop was handed its own MCP port, not the real one', mcpPort > 0 && mcpPort !== 8788, `:${mcpPort}`);
+      // Never talk MCP to the developer's real PortPilot: stop here, before any connection.
+      if (devPort(mcpPort)) throw new Error(`the desktop's MCP port is not the journey's own (:${mcpPort}); refusing to connect`);
+      j.check('the desktop was handed its own MCP port, not the real one', true, `:${mcpPort}`);
       a = await j.waitFor(() => mcpClient(mcpPort), 30000);
       b = a && await mcpClient(mcpPort);
       j.check('something listens on that port', j.listeners(mcpPort).length > 0, `:${mcpPort} pid ${j.listeners(mcpPort).join('/')}`);
@@ -226,7 +245,8 @@ function worldProcs(dir) {
       j.check('the port is held by brave.exe', info && /brave\.exe$/i.test(info.exe), info && info.exe);
       j.check('opened on the profile folder inside the world', info && info.cmd.toLowerCase().includes(shopDir.toLowerCase()) && info.cmd.includes(`--remote-debugging-port=${shopDebug}`), info && info.cmd.slice(0, 300));
       const page = got && await j.waitFor(async () => (await brave(shopDebug)).pages.find((p) => p.url === shopUrl && p.title === 'Orders'), 15000);
-      j.check('Brave has the profile\'s start page open', page, got && JSON.stringify((await brave(shopDebug)).pages.map((p) => p.url)));
+      const now = await brave(shopDebug);
+      j.check('Brave has the profile\'s start page open', page, now ? JSON.stringify(now.pages.map((p) => p.url)) : 'no answer');
       j.check('PortPilot started nothing on the other profile', j.listeners(blogDebug).length === 0);
       const c = claims()['shop-admin'];
       j.check('the claims file names session A as holder of that browser', c && c.sessionId === A && c.pid === pids[0] && !c.starting, JSON.stringify(c));
@@ -234,8 +254,8 @@ function worldProcs(dir) {
       j.check('browser-runs.json opens one session, started by claude A', open.length === 1 && open[0].startedBy?.kind === 'claude' && open[0].startedBy?.sessionId === A, JSON.stringify(open.map((e) => e.startedBy)));
       braveA = { pid: pids[0], ws: got && got.version.webSocketDebuggerUrl };
       const card = j.win.locator('.bcard[data-profile="shop-admin"]');
-      j.check('the Browsers card reads in use', await j.waitFor(async () => (await card.getAttribute('data-group')) === 'inuse', 15000), await card.getAttribute('data-group'));
-      const lease = await card.locator('.lease').textContent().catch(() => '');
+      j.check('the Browsers card reads in use', await j.waitFor(async () => (await card.getAttribute('data-group', { timeout: 500 })) === 'inuse', 15000), await card.getAttribute('data-group', { timeout: 500 }).catch(() => 'no card'));
+      const lease = await card.locator('.lease').textContent({ timeout: 500 }).catch(() => '');
       j.check(`and names who holds it (claude ${short(A)})`, lease.includes(`In use by claude ${short(A)}`), lease);
       await j.shot('02-a-holds-shop-admin');
     }],
@@ -249,7 +269,8 @@ function worldProcs(dir) {
       await h.sleep(1000);
       const still = await brave(shopDebug);
       j.check('the same Brave still answers: not relaunched, not stopped', still && still.version.webSocketDebuggerUrl === braveA.ws && j.listeners(shopDebug).join() === String(braveA.pid), `${j.listeners(shopDebug).join('/')}`);
-      j.check('one Brave process tree on the profile folder', h.alive(braveA.pid) && braveOn(shopDir).includes(braveA.pid));
+      const mains = braveMain(shopDir);
+      j.check('exactly one Brave browser process on the profile folder: the one A started', mains.length === 1 && mains[0] === braveA.pid, mains.join(','));
       j.check('the claim still names A', claims()['shop-admin']?.sessionId === A, JSON.stringify(claims()['shop-admin']));
       j.check('browser-runs.json still holds one session for it', bruns().filter((e) => e.profile === 'shop-admin').length === 1);
       const listed = await b.tool('list_browser_profiles', { sessionId: B });
@@ -275,8 +296,8 @@ function worldProcs(dir) {
       const all = bruns().filter((e) => e.profile === 'shop-admin');
       j.check('browser-runs.json keeps one open session, still started by A', all.length === 1 && !all[0].stoppedAt && all[0].startedBy?.sessionId === A, JSON.stringify(all.map((e) => ({ by: e.startedBy?.sessionId, stoppedAt: e.stoppedAt }))));
       const card = j.win.locator('.bcard[data-profile="shop-admin"]');
-      const lease = await j.waitFor(async () => { const t = await card.locator('.lease').textContent().catch(() => ''); return t.includes(`claude ${short(B)}`) && t; }, 15000);
-      j.check(`the Browsers card now names claude ${short(B)}`, lease, lease || await card.locator('.lease').textContent().catch(() => 'no lease line'));
+      const lease = await j.waitFor(async () => { const t = await card.locator('.lease').textContent({ timeout: 500 }).catch(() => ''); return t.includes(`claude ${short(B)}`) && t; }, 15000);
+      j.check(`the Browsers card now names claude ${short(B)}`, lease, lease || await card.locator('.lease').textContent({ timeout: 500 }).catch(() => 'no lease line'));
       await j.shot('03-b-took-over-after-a-went-quiet');
     }],
 
@@ -330,7 +351,7 @@ function worldProcs(dir) {
       await j.tab('History');
       await j.win.getByRole('button', { name: 'Browsers', exact: true }).click();
       const li = j.win.locator(`li[data-session="${e && e.id}"]`);
-      const sub = await j.waitFor(() => li.locator('.sub').first().textContent(), 15000);
+      const sub = await j.waitFor(() => li.locator('.sub').first().textContent({ timeout: 500 }), 15000);
       j.check(`Browsers history reads "started by claude ${short(A)}"`, (sub || '').includes(`started by claude ${short(A)}`), sub);
       j.check(`and "stopped by claude ${short(B)}"`, (sub || '').includes(`stopped by claude ${short(B)}`), sub);
       const tabs = await li.locator('.tabs-line').textContent().catch(() => '');
@@ -363,6 +384,12 @@ function worldProcs(dir) {
     ['nothing reached the developer\'s real PortPilot', async () => {
       beating.clear();
       clearInterval(ticker);
+      // Positive control: with no real PortPilot folder to read, every "gained nothing" below would pass vacuously.
+      if (!REAL_DIR || !fs.existsSync(REAL_DIR)) {
+        j.note(`SKIP real-data leakage checks: no real PortPilot folder (${REAL_DIR || 'APPDATA unset'}) on this machine`);
+        site.close();
+        return;
+      }
       const realSessions = (() => { try { return fs.readdirSync(path.join(REAL_DIR, 'sessions')); } catch { return []; } })();
       j.check('the real sessions/ has no heartbeat of ours', ![A, B].some((id) => realSessions.includes(`${id}.json`)));
       const realClaims = Object.values(readJson(path.join(REAL_DIR, 'portpilot-browser-claims.json'), {}).profiles || {});
@@ -386,8 +413,8 @@ function worldProcs(dir) {
       const mcpPid = j.listeners(mcpPort)[0];
       const errors = await j.quit();
       j.check('no page errors in the session', errors.length === 0, errors.join(' | '));
-      // Electron's helpers (a renderer) can outlive the main process by a moment; the kit's sweep runs
-      // straight after quit and would kill and flag them. Give them the time a person would.
+      // Electron's helpers (a renderer) can outlive the main process by a moment. Measured here, with the
+      // same 20 s bound the kit's teardown sweep gives world processes before calling them strays.
       const s0 = Date.now();
       const clear = await j.waitFor(() => worldProcs(j.tmp).length === 0, 20000);
       j.note(`world processes gone ${((Date.now() - s0) / 1000).toFixed(1)} s after the main process exited`);

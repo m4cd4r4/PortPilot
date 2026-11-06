@@ -292,11 +292,14 @@ async function journey(name, { ports: nPorts = 4, detectIntervalMs = 1000 } = {}
       if (errors.length) j.check('no page errors in the last session', false, errors.join(' | '));
       for (const c of [...children]) await j.stopChild(c);
       // Stragglers: an Electron a failed launch never handed back, or a server PortPilot started that
-      // outlived a quit. The world folder and the ports belong to this journey alone. Electron's helpers
-      // (a renderer) can outlive the main process by ~10 s on a busy machine: wait that long before calling it a stray.
-      const strayList = () => [...new Set([...worldProcesses(tmp), ...ports.flatMap((p) => listeners(p))])];
-      await j.waitFor(() => strayList().length === 0, 20000);
-      const strays = strayList();
+      // outlived a quit. The world folder and the ports belong to this journey alone. A journey port still
+      // held right after quit is a stray at once. Electron's helpers (a renderer) can outlive the main
+      // process by ~10 s on a busy machine, so world processes get up to 20 s, timed and recorded.
+      const portHolders = ports.flatMap((p) => listeners(p));
+      const w0 = Date.now();
+      const worldClear = await j.waitFor(() => worldProcesses(tmp).length === 0, 20000);
+      j.note(worldClear ? `world clear after ${((Date.now() - w0) / 1000).toFixed(1)} s` : 'world not clear after 20 s');
+      const strays = [...new Set([...portHolders, ...worldProcesses(tmp)])];
       if (strays.length) {
         j.check('nothing outlives the journey', false, `killed ${strays.map((p) => `${p} ${describe(p)}`).join(', ')}`);
         strays.forEach(killTree);
