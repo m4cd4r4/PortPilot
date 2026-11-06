@@ -70,6 +70,29 @@ async function answers(port) {
   } catch { return null; }
 }
 
+function killTree(pid) {
+  try {
+    if (process.platform === 'win32') execFileSync('taskkill', ['/PID', String(pid), '/T', '/F'], { stdio: 'ignore', windowsHide: true });
+    else process.kill(pid, 'SIGKILL');
+  } catch { /* already gone */ }
+}
+
+/** PIDs whose command line names the world folder: an Electron a failed launch never handed back, its helpers. */
+function worldProcesses(dir) {
+  if (process.platform !== 'win32') return [];
+  try {
+    const ps = `Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -and $_.CommandLine.ToLower().Contains('${dir.toLowerCase().replace(/'/g, "''")}') -and $_.ProcessId -ne ${process.pid} -and $_.ProcessId -ne $PID -and -not $_.CommandLine.Contains('Get-CimInstance') } | ForEach-Object { $_.ProcessId }`;
+    return execFileSync('powershell.exe', ['-NoProfile', '-Command', ps], { encoding: 'utf8', windowsHide: true }).split(/\s+/).filter(Boolean).map(Number);
+  } catch { return []; }
+}
+
+/** A comparable folder key: real path, forward slashes, lower case (runs.json stores I:/x, os.tmpdir() may be 8.3 and backslashed). */
+function dirKey(p) {
+  let r = String(p || '');
+  try { r = fs.realpathSync.native(r); } catch { /* gone or not a path */ }
+  return r.replace(/\\/g, '/').replace(/\/+$/, '').toLowerCase();
+}
+
 function gitHead() {
   try { return h.git(h.root, 'rev-parse', '--short', 'HEAD'); } catch { return 'unknown'; }
 }
@@ -86,7 +109,15 @@ async function journey(name, { ports: nPorts = 4, detectIntervalMs = 1000 } = {}
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), `pp-journey-${name}-`));
   const configDir = path.join(tmp, 'portpilot');
   fs.mkdirSync(configDir, { recursive: true });
+  const tmpKey = dirKey(tmp);
   const ports = await h.freePorts(nPorts);
+  // Positive control: "port free" checks mean nothing if listeners() cannot see a port we know is held
+  // (a netstat in another language, a failed spawn).
+  const probe = h.holdPort(ports[0]);
+  const seen = await (async () => { for (let i = 0; i < 40; i++) { if (listeners(ports[0]).includes(probe.pid)) return true; await h.sleep(100); } return false; })();
+  probe.kill();
+  for (let i = 0; i < 40 && listeners(ports[0]).length; i++) await h.sleep(100);
+  if (!seen) throw new Error(`listeners() cannot see a port held by this test (:${ports[0]}); every "port free" check would pass vacuously`);
   // The watcher looks at the journey's ports only (never the developer's servers), and fast.
   process.env.PORTPILOT_DETECT_ONLY_PORTS = ports.join(',');
   process.env.PORTPILOT_DETECT_INTERVAL_MS = String(detectIntervalMs);
@@ -140,10 +171,11 @@ async function journey(name, { ports: nPorts = 4, detectIntervalMs = 1000 } = {}
       if (!current) return [];
       const { app, errors } = current;
       const pid = app.process().pid;
-      if (hard) app.process().kill('SIGKILL');
+      // Hard = the whole process tree dies at once, as in a crash or Task Manager (SIGKILL on Windows ends only the main process).
+      if (hard) killTree(pid);
       else await app.evaluate(({ app: a }) => a.quit()).catch(() => {});
-      const gone = await j.waitFor(() => !h.alive(pid), 15000);
-      if (!gone) await h.closeApp(app);
+      let gone = await j.waitFor(() => !h.alive(pid), 15000);
+      if (!gone) { await h.closeApp(app); killTree(pid); gone = await j.waitFor(() => !h.alive(pid), 5000); }
       log({ kind: 'event', step: stepName, event: hard ? 'kill' : 'quit', pid, exited: !!gone });
       current = null;
       return errors;
@@ -246,11 +278,18 @@ async function journey(name, { ports: nPorts = 4, detectIntervalMs = 1000 } = {}
       const errors = await j.quit().catch(() => []);
       if (errors.length) j.check('no page errors in the last session', false, errors.join(' | '));
       for (const c of [...children]) await j.stopChild(c);
+      // Stragglers: an Electron a failed launch never handed back, or a server PortPilot started that
+      // outlived a quit. The world folder and the ports belong to this journey alone.
+      const strays = [...new Set([...worldProcesses(tmp), ...ports.flatMap((p) => listeners(p))])];
+      if (strays.length) {
+        j.check('nothing outlives the journey', false, `killed ${strays.join(', ')}`);
+        strays.forEach(killTree);
+      }
 
       // Leakage: the developer's real history gains nothing from this journey. Other runs may appear
       // (a real PortPilot keeps recording the developer's own servers); only ours count.
       const since = new Date(t0).toISOString();
-      const ours = realRuns().filter((r) => r && r.startedAt >= since && (ports.includes(Number(r.port)) || String(r.cwd || '').toLowerCase().startsWith(tmp.toLowerCase())));
+      const ours = realRuns().filter((r) => r && r.startedAt >= since && (ports.includes(Number(r.port)) || (r.cwd && `${dirKey(r.cwd)}/`.startsWith(`${tmpKey}/`))));
       j.check('the real PortPilot history gained no runs from this journey', ours.length === 0, `${ours.length} of ours; real total ${leakBefore} -> ${realRuns().length}`);
 
       const failed = results.filter((r) => !r.ok);

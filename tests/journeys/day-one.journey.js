@@ -148,7 +148,8 @@ const h = require('../e2e-harness');
     ['the stranger leaves', async () => {
       await stranger.stop();
       j.check('blog\'s port is free again', await j.portFree(blogPort));
-      j.check('the card leaves the conflict state', await j.waitFor(async () => (await j.stateOf(ids.blog)) !== 'conflict', 30000), await j.stateOf(ids.blog));
+      // A named state, not just "not conflict": a missing card reads as null and must not pass.
+      j.check('the card goes back to crashed (its last real state)', await j.waitFor(async () => (await j.stateOf(ids.blog)) === 'crashed', 30000), await j.stateOf(ids.blog));
       j.check('the bell clears', await j.waitFor(async () => (await j.win.locator('.bell-count').count()) === 0, 15000));
     }],
 
