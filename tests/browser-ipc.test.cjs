@@ -293,6 +293,9 @@ async function setup() {
     assert.deepStrictEqual(r.sessions[0].tabs.map((t) => t.url), ['https://example.test/']);
     assert.strictEqual((await call('browser:history', '')).code, 'BAD_ARGS');
     assert.strictEqual((await call('browser:history', 'other')).sessions.length, 0);
+    const all = await call('browser:history');
+    assert.strictEqual(all.success, true, 'no name lists every profile');
+    assert.deepStrictEqual(all.sessions.map((e) => e.profile), ['shop']);
     await w.cleanup();
   });
 

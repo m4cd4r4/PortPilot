@@ -73,6 +73,8 @@ export function createElectronHost(): Host {
       return { runs: r.runs || [], live: r.live || [], startable: r.startable || [] };
     },
     async startAgain(runId) { return (await ok(api().history.startAgain(runId))).url || null; },
+    async browserHistory() { return (await ok(api().browsers.history())).sessions || []; },
+    async reopenBrowser(id) { return ok(api().browsers.reopen(id)); },
     async getSettings() { return (await ok(api().config.getSettings())).settings || {}; },
     async updateSettings(patch) { return (await ok(api().config.updateSettings(patch))).settings || {}; },
     async saveApp(fields) { return (await ok(api().config.saveApp(fields))).app; },

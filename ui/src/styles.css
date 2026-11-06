@@ -116,6 +116,7 @@ button.ib .ic { display: block; }
 .tile-notice { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; margin: 0 0 8px; }
 .tile-notice span { flex: 0 1 auto; }
 .tile-notice .link { color: var(--acc); font-size: 12.5px; }
+.tile-notice.info { color: var(--tx2); }
 .placeholder { max-width: 640px; margin: 48px auto; color: var(--tx2); }
 
 /* Home: the spotlight grid. The Scene tile only exists once a scene does, and Browsers takes its row. */
@@ -338,6 +339,10 @@ button.tile:hover { border-color: var(--acc); }
   .cards.rows .meta { flex-direction: column; align-items: flex-start; gap: 0; }
   .cards.rows .title, .cards.rows .run .title, .cards.rows .bcard .title { flex: none; max-width: 100%; min-width: 0; }
   .cards.rows .name { white-space: normal; overflow-wrap: anywhere; }
+  /* A history row: facts wrap under the name instead of pushing the page sideways. */
+  .cards.rows .run .meta { min-width: 0; }
+  .cards.rows .run .sub { max-width: 100%; flex-wrap: wrap; white-space: normal; }
+  .cards.rows .run .sub .when { min-width: 0; }
   .cards .peek { display: none !important; }
 }
 
@@ -345,6 +350,7 @@ button.tile:hover { border-color: var(--acc); }
 .timeline { list-style: none; margin: 0; padding: 0; }
 .run { min-height: 40px; }
 .run .shot.small { width: 56px; aspect-ratio: 16 / 10; flex: none; margin: 4px 0; border: 1px solid var(--bd); border-radius: 6px; }
+.run .shot.small .letter { font-size: 18px; }
 .run .meta { flex: 1; }
 .cards.rows .run .title { flex: 0 0 auto; min-width: 380px; }
 /* Mid widths: the name columns step down so the facts (port, time) keep their room. */

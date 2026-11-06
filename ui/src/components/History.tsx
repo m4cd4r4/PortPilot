@@ -1,19 +1,36 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { HistoryData, Host, Run } from '../host';
 import { runView } from '../legacy';
+import { dayOf } from '../model';
 import { IconButton } from './icons';
+import { BrowserHistory } from './BrowserHistory';
 
 interface Props { host: Host }
 
 const GLYPH = { running: '●', crashed: '✕', stopped: '○' } as const;
 const WORD = { running: 'running', crashed: 'crashed', stopped: 'ended' } as const;
-const DAY = new Intl.DateTimeFormat('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
-const dayOf = (iso: string) => {
-  const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? 'Unknown date' : DAY.format(d);
-};
 
+type Kind = 'apps' | 'browsers';
+const KIND_KEY = 'portpilot-history-kind';
+const readKind = (): Kind => { try { return localStorage.getItem(KIND_KEY) === 'browsers' ? 'browsers' : 'apps'; } catch { return 'apps'; } };
+
+/** History: past app runs, or past browser sessions, picked by a switch in the toolbar. */
 export function History({ host }: Props) {
+  const [kind, setKindState] = useState<Kind>(readKind);
+  const setKind = (k: Kind) => { setKindState(k); try { localStorage.setItem(KIND_KEY, k); } catch { /* private mode */ } };
+  const kindSwitch = (
+    <div className="toolbar-end">
+      <div className="seg small" role="group" aria-label="History of">
+        {(['apps', 'browsers'] as const).map((k) => (
+          <button key={k} aria-pressed={kind === k} className={kind === k ? 'on' : ''} onClick={() => setKind(k)}>{k === 'apps' ? 'Apps' : 'Browsers'}</button>
+        ))}
+      </div>
+    </div>
+  );
+  return kind === 'browsers' ? <BrowserHistory host={host} kindSwitch={kindSwitch} /> : <AppHistory host={host} kindSwitch={kindSwitch} />;
+}
+
+function AppHistory({ host, kindSwitch }: Props & { kindSwitch: ReactNode }) {
   const [data, setData] = useState<HistoryData>({ runs: [], live: [], startable: [] });
   const [loaded, setLoaded] = useState(false);
   const [query, setQuery] = useState('');
@@ -85,6 +102,7 @@ export function History({ host }: Props) {
     <section className="history-view" aria-label="History">
       <div className="toolbar">
         <input className="filter" type="search" placeholder="Filter runs by app, branch, page or commit" aria-label="Filter runs" value={query} onChange={(e) => setQuery(e.target.value)} />
+        {kindSwitch}
       </div>
       {error && <p className="notice" role="alert">{error}</p>}
       {loaded && !days.length && <p className="empty-note">{query ? 'No run matches that filter.' : 'No runs yet. Start an app and it shows up here.'}</p>}

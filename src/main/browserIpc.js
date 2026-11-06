@@ -124,8 +124,12 @@ function setupBrowserIpc(ipcMain, configStore, injected = {}) {
   // The desktop is a long-lived process, so it keeps each running browser's tabs fresh for History.
   if (!injected.noSampler) api.startHistorySampler(configPath(), runDeps());
 
-  /** Past sessions of one profile (newest first), with the tabs each had open. */
+  /**
+   * Past sessions (newest first), with the tabs each had open. A name gives that profile's last 10;
+   * no argument gives every profile's last 50, for the History screen. An empty or odd name is refused.
+   */
   ipcMain.handle('browser:history', guarded((name) => {
+    if (name === undefined || name === null) return call('browser_history', { limit: 50 });
     if (!isPlainName(name)) return { success: false, code: 'BAD_ARGS', error: 'name is required.' };
     return call('browser_history', { profile: name, limit: 10 });
   }));

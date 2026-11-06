@@ -68,6 +68,16 @@ export interface Run {
 }
 export interface HistoryData { runs: Run[]; live: string[]; startable: string[] }
 
+/** A browser profile's past session (src/core/browserHistory.js via browser_history). */
+export interface BrowserSession {
+  id: string; profile: string; port?: number; browser?: string; mode?: string; running: boolean;
+  startedBy?: { kind?: string; label?: string; sessionId?: string } | null; startedAt: string; stoppedAt?: string | null;
+  endedBy?: { kind?: string; label?: string; sessionId?: string; reason?: string } | null;
+  tabs: Array<{ title?: string; url?: string }>;
+}
+/** What Open again did: tabs opened, failed, and whether saved addresses had secrets stripped. */
+export interface ReopenResult { name: string; opened: number; failed: number; hidden?: boolean }
+
 /** What the UI needs from whoever hosts it: Electron IPC today, HTTP (web portal) and VS Code postMessage later. */
 export interface Host {
   kind: 'electron' | 'http' | 'vscode';
@@ -104,6 +114,10 @@ export interface Host {
   history(): Promise<HistoryData>;
   /** Restart a closed run; resolves to the URL once it answers (or null). */
   startAgain(runId: string): Promise<string | null>;
+  /** Every browser profile's recent sessions, newest first. */
+  browserHistory(): Promise<BrowserSession[]>;
+  /** Start a past session's profile and open its tabs again. */
+  reopenBrowser(id: string): Promise<ReopenResult>;
   /** Saved settings (partial merge on write). */
   getSettings(): Promise<Settings>;
   updateSettings(patch: Settings): Promise<Settings>;

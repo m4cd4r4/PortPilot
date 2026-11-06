@@ -128,3 +128,10 @@ export function ago(iso: string | undefined, now = Date.now()): string {
   if (m < 1440) return `${Math.floor(m / 60)}h`;
   return `${Math.floor(m / 1440)}d`;
 }
+
+/** The day heading for a history group: "Friday 6 November". */
+const DAY = new Intl.DateTimeFormat('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
+export const dayOf = (iso: string): string => {
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? 'Unknown date' : DAY.format(d);
+};
