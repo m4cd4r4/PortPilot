@@ -102,7 +102,7 @@ async function closeApp(app) {
 
 /** A node process holding a port, started by the test (so killing it is the test's own business). */
 function holdPort(port) {
-  const child = spawn(process.execPath, ['-e', `require('http').createServer((q,r)=>r.end('held')).listen(${port},'127.0.0.1')`], { stdio: 'ignore', windowsHide: true });
+  const child = spawn(process.execPath, ['-e', `require('http').createServer((q,r)=>r.end('held')).listen(${port},'127.0.0.1')`, '--', '--portpilot-test'], { stdio: 'ignore', windowsHide: true }); // the marker keeps an installed PortPilot from recording it
   return child;
 }
 
