@@ -15,23 +15,31 @@ export const MORE_VIEWS: Array<{ view: View; label: string }> = [
   { view: 'history', label: 'History' },
 ];
 
-export interface Tally { running: number; apps: number; profilesUp: number; profiles: number; warnings: string[] }
+/** One line in the alerts bell: a blocked port (Fix opens Ports) or a crashed app (Restart / Dismiss). */
+export interface Alert { kind: 'conflict' | 'crash'; text: string; appId?: string }
+export interface Tally { running: number; apps: number; profilesUp: number; profiles: number; alerts: Alert[] }
 
-/** Counts for the Home tiles and the slim warning banner. Pure. */
+/** Counts for the Home tiles and the alerts bell. Pure. */
 export function tally(s: Snapshot): Tally {
   const top = s.apps.filter((a) => !a.parentId);
-  const warnings = s.conflicts.map((c) => {
+  const alerts: Alert[] = s.conflicts.map((c) => {
     const app = s.apps.find((a) => a.id === c.appId);
     const name = app?.name || c.appName;
     const who = c.occupiedBy?.processName ? c.occupiedBy.processName.replace(/\.exe$/i, '') : 'another process';
-    return `${name || 'An app'} is blocked: :${c.port} is held by ${who}`;
+    return { kind: 'conflict', appId: c.appId, text: `${name || 'An app'} is blocked: :${c.port} is held by ${who}` };
   });
+  // A crash counts while the app is down and its port is not held: a blocked app shows its conflict only.
+  for (const app of s.apps) {
+    const c = s.crashed[app.id];
+    if (!c || s.running[app.id] || s.conflicts.some((x) => x.appId === app.id)) continue;
+    alerts.push({ kind: 'crash', appId: app.id, text: `${app.name} crashed${c.exitCode != null ? `: exit ${c.exitCode}` : ''}` });
+  }
   return {
     running: top.filter((a) => s.running[a.id]).length,
     apps: top.length,
     profilesUp: s.profiles.filter((p) => p.state === 'up').length,
     profiles: s.profiles.length,
-    warnings,
+    alerts,
   };
 }
 

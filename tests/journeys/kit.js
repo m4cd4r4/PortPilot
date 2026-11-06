@@ -222,6 +222,10 @@ async function journey(name, { ports: nPorts = 4, detectIntervalMs = 1000 } = {}
 
     // ---- outside checks ---------------------------------------------------
     config: () => readJson(path.join(configDir, 'portpilot-config.json'), null),
+    /** The runtime sidecar: who started each app, and the crash stamp a dead one leaves. */
+    runtime: () => readJson(path.join(configDir, 'portpilot-runtime.json'), { apps: {} }).apps || {},
+    /** The visible alerts bell's count, '' when it shows none (the sidebar and the narrow top bar each carry one). */
+    bellCount: () => current.win.locator('.bell-count:visible').first().textContent({ timeout: 500 }).catch(() => ''),
     runs: () => { const r = readJson(path.join(configDir, 'history', 'runs.json'), []); return Array.isArray(r) ? r : (r.runs || []); },
     listeners,
     answers,

@@ -36,6 +36,8 @@ export interface ProfileFields {
   sites?: string[]; accounts?: Account[];
 }
 export interface ArtRef { source: string; at: number }
+/** What main sends on `crash-toast` (src/core/crashAlert.js buildCrashAlert). */
+export interface CrashAlert { appId: string; name: string; title: string; meta: string; lines: string[]; count: number; at: number }
 export interface Group { id: string; name: string }
 /** A saved set of apps (ids) and browser profiles (names) started together. */
 export interface Scene { id: string; name: string; apps: string[]; browsers: string[] }
@@ -46,8 +48,8 @@ export interface Snapshot {
   groups: Group[];
   /** appId -> live info, present only while the app is up */
   running: Record<string, { port?: number; pid?: number }>;
-  /** appId -> exit info for an app PortPilot started that has since died */
-  crashed: Record<string, { exitCode?: number }>;
+  /** appId -> exit info for an app PortPilot started that has since died; kept across relaunches until it starts again or is dismissed */
+  crashed: Record<string, { exitCode?: number | null; at?: number; port?: number | null }>;
   conflicts: Conflict[];
   profiles: Profile[];
   /** listeners on the machine, for the palette's "free port" commands */
@@ -84,6 +86,10 @@ export interface Host {
   snapshot(): Promise<Snapshot>;
   startApp(app: AppRec): Promise<void>;
   stopApp(id: string): Promise<void>;
+  /** Forget an app's crash: it reads stopped, also after a relaunch. */
+  dismissCrash(id: string): Promise<void>;
+  /** A running app exited unexpectedly; returns an unsubscribe. */
+  onCrash(cb: (a: CrashAlert) => void): () => void;
   openUrl(url: string): Promise<void>;
   startBrowser(name: string): Promise<void>;
   stopBrowser(name: string): Promise<void>;

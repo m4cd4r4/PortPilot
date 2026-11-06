@@ -29,6 +29,8 @@ Every number published about this work (see [ARTICLE-NOTES.md](ARTICLE-NOTES.md)
 | F13 | 2026-11-06 | Since #207 marked test servers `--portpilot-test`, the app under test ignored them too, so no e2e could check that a terminal-started server is detected. | Planning the day-one journey's detection step | test bug | journey-wave1 PR (marker counts only on ports a test names via `PORTPILOT_DETECT_ONLY_PORTS`; an installed PortPilot never sets it) |
 | F14 | 2026-11-06 | A crash is forgotten after a relaunch: blog crashed (exit 3) in the evening and read `stopped` next morning. History still has the crash. A crash also raises no alert (the bell counts port conflicts only). | day-one journey, `07-next-morning` and `03-crashed` screenshots | real | open (product question, Wave 2 gate) |
 | F15 | 2026-11-06 | At 390 px the History filter placeholder is cut mid-word (`Filter runs by app, branch, p`). | day-one journey, `04-detected-in-history-390` screenshot | real | open (cosmetic) |
+| F16 | 2026-11-06 | Resolution of F14, decided by the developer: the crash toast is back (`<app> crashed`, `:port · exit N`, last output lines, Restart / Logs / Dismiss, no Ask Claude); a crash stays on the card and in the bell across a relaunch until the app starts again or is dismissed from the bell; the bell counts crashes. Before: `07-next-morning` read `stopped`, bell empty after the crash. After: `crashed`, `Exited with code 3`, bell 1; Dismiss in the bell clears the runtime stamp. | day-one journey, same steps before (20:37 run) and after (21:36 run) | real | crash-toast PR |
+| F17 | 2026-11-06 | F8 narrowed: the crash toast scenarios now run in the day-one journey; "Re-run this version" is retired (the v5 UI has no such button), so its SCENARIOS row is removed. The other F8 rows still point at missing specs. | Rewriting the SCENARIOS rows for the crash-toast PR | real | crash-toast PR (part of F8) |
 
 ## Runs
 
@@ -45,6 +47,11 @@ Every number published about this work (see [ARTICLE-NOTES.md](ARTICLE-NOTES.md)
 | 2026-11-06 20:30 | same | day-one journey x2 | 43/43, 43/43 | 59.1 s, 53.0 s | stability |
 | 2026-11-06 20:32 | same | `npm run test:e2e:ui` (9 suites) | 197/197 | 4 min 27 s | after the drawer fix |
 | 2026-11-06 20:37 | same | day-one journey (+ start command check) | 44/44; real `runs.json` +0 of ours | 45.7 s | |
+| 2026-11-06 21:36 | source d1f1854 + crash-toast | day-one journey with the crash toast steps | 62/62; real `runs.json` +0 of ours | 94.3 s | after measurement for F14/F16; screenshots read at 1440 and 390 |
+| 2026-11-06 21:37 | same | `npm run test:e2e:ui` (9 suites) | 197/197 | about 4.5 min | before the review fixes |
+| 2026-11-06 21:48 | same + review fixes (outside stop, restart and dismiss races, restart errors, Logs fallback) | day-one journey | 62/62 | 86.5 s | screenshots read at 1440 and 390 |
+| 2026-11-06 21:50 | same | `npm run test:e2e:ui` | stopped in `redesign-shell` at the alerts popover check (F6 again); the 8 later suites did not run | 36 s | |
+| 2026-11-06 21:52 | same | `redesign-shell` x3, then the other 8 suites one by one | 22/22 x3; 175/175 (197 in all) | 223 s for the 8 | F6 is a flake: same build, three clean reruns |
 
 ## Cleanups done on real data
 

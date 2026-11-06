@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Host, Snapshot } from './host';
-import { tally, type View } from './model';
+import { tally, type Alert, type View } from './model';
 import { TopBar } from './components/TopBar';
 import { Sidebar } from './components/Sidebar';
 import { usePrefs } from './prefs';
@@ -14,6 +14,9 @@ import { Scenes } from './components/Scenes';
 import { Settings } from './components/Settings';
 import { useThumbs } from './useThumbs';
 import { syncTitleBar } from './titleBar';
+import { CrashToasts } from './components/CrashToasts';
+import { AppInspector } from './components/AppInspector';
+import type { AlertAct } from './components/AlertsBell';
 
 const EMPTY: Snapshot = { apps: [], groups: [], running: {}, crashed: {}, conflicts: [], profiles: [], ports: [] };
 
@@ -37,6 +40,10 @@ export function App({ host }: { host: Host }) {
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState('');
   const [paletteOpen, setPaletteOpen] = useState(false);
+  /** Logs opened from a crash toast, over whichever screen is showing. */
+  const [logsFor, setLogsFor] = useState<string | null>(null);
+  /** Why a bell action (Restart, Dismiss) failed; cleared by the next one. */
+  const [notice, setNotice] = useState('');
 
   const refresh = useCallback(async () => {
     try {
@@ -80,14 +87,29 @@ export function App({ host }: { host: Host }) {
   const t = useMemo(() => tally(snap), [snap]);
   const thumbs = useThumbs(host);
 
+  const restart = useCallback(async (appId: string) => {
+    const app = snap.apps.find((a) => a.id === appId);
+    if (!app) throw new Error('That app is no longer in PortPilot');
+    try { await host.startApp(app); } finally { refresh(); }
+  }, [host, snap.apps, refresh]);
+  const onAlert = useCallback((a: Alert, act: AlertAct) => {
+    setNotice('');
+    const fail = (e: unknown) => setNotice((e as Error).message);
+    if (act === 'fix') setView('ports');
+    else if (a.appId && act === 'restart') restart(a.appId).catch(fail);
+    else if (a.appId && act === 'dismiss') host.dismissCrash(a.appId).then(refresh, fail);
+  }, [host, refresh, restart, setView]);
+  const logsApp = logsFor ? snap.apps.find((a) => a.id === logsFor) : undefined;
+
   return (
     <div className="shell" data-nav={prefs.nav}>
-      <Sidebar view={view} onView={setView} onSearch={() => setPaletteOpen(true)} warnings={t.warnings} />
+      <Sidebar view={view} onView={setView} onSearch={() => setPaletteOpen(true)} alerts={t.alerts} onAlert={onAlert} />
       <div className="col">
-        <TopBar view={view} onView={setView} onSearch={() => setPaletteOpen(true)} warnings={t.warnings} />
+        <TopBar view={view} onView={setView} onSearch={() => setPaletteOpen(true)} alerts={t.alerts} onAlert={onAlert} />
         <div className="dragbar" aria-hidden="true" />
         <main className="main" id="main">
           {error && <p className="notice" role="alert">Could not read PortPilot state: {error}</p>}
+          {notice && <p className="notice" role="alert">{notice}</p>}
           {view === 'home' && <Home host={host} onDone={refresh} t={t} loaded={loaded} onView={setView} onOpenItem={openItem} snap={snap} thumbs={thumbs} />}
           {view === 'localhost' && <Localhost host={host} snap={snap} thumbs={thumbs} onDone={refresh} manage={manage} onManage={setManage} inspectId={focus?.kind === 'app' ? focus.id : undefined} onPorts={() => setView('ports')} />}
           {view === 'history' && <History host={host} />}
@@ -99,6 +121,9 @@ export function App({ host }: { host: Host }) {
       </div>
       <Palette open={paletteOpen} onClose={() => setPaletteOpen(false)} host={host} snap={snap}
         view={view} onView={setView} onDone={refresh} />
+      <CrashToasts host={host} onRestart={restart} onLogs={setLogsFor} />
+      {logsApp && <AppInspector host={host} app={logsApp} port={snap.running[logsApp.id]?.port} running={!!snap.running[logsApp.id]}
+        crashed={!!snap.crashed[logsApp.id]} onClose={() => setLogsFor(null)} />}
     </div>
   );
 }

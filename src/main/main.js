@@ -229,17 +229,21 @@ if (!gotTheLock) {
     setInterval(sweepSessions, 3600 * 1000).unref();
 
     // Notify (OS notification + in-app toast) when a running app crashes.
-    const { onAppCrash, getRunningApps } = require('./processManager');
+    const { onAppCrash, getRunningApps, forgetCrash, dismissedSince } = require('./processManager');
     const reserver = require('./portReserver');
     const { recordCrash, readRuntime, liveSessions } = require('../core/configFile');
     const { pickSession, createCrashHistory, buildCrashAlert } = require('../core/crashAlert');
     const crashHistory = createCrashHistory();
-    onAppCrash(async ({ id, name, code, errorTail }) => {
+    onAppCrash(async ({ id, name, code, errorTail, pid = null, at = Date.now() }) => {
       // MCP stop_app (and the VS Code extension) kill from another process and
       // delete the sidecar entry once the kill returns: give them a moment, and
       // treat an entry that vanished as a stop, not a crash.
       await new Promise((r) => setTimeout(r, 1500));
-      if (!readRuntime(configStore.configPath).apps[id]) return;
+      const entry = readRuntime(configStore.configPath).apps[id];
+      if (!entry) { forgetCrash(id); return; } // stopped from outside: the card must not read crashed
+      // Stamp only the run that died: a restart inside the delay wrote a new
+      // entry (another pid), and a crash the person already dismissed stays gone.
+      if (entry.crashed || (entry.pid ?? null) !== (pid ?? null) || dismissedSince(id, at)) return;
       const cfg = configStore.getApp(id);
       recordCrash(configStore.configPath, id, code, { errorTail, port: cfg?.preferredPort });
       const count = crashHistory.note(id);

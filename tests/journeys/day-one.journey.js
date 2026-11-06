@@ -3,8 +3,9 @@
  * Run: npm run build:ui && node tests/journeys/day-one.journey.js
  *
  * Fresh install (no config at all) -> add two apps through the drawer -> start one -> the other
- * crashes on start -> a server started from a terminal is noticed -> a stranger takes a port ->
- * the stranger leaves -> stop everything -> quit for the night -> open it again: the apps are kept.
+ * crashes on start (toast, bell, Logs) -> a server started from a terminal is noticed -> a stranger
+ * takes a port -> the stranger leaves -> stop everything -> quit for the night -> open it again: the
+ * apps are kept and the crash is still shown -> Restart from the bell, it crashes again, Dismiss clears it.
  *
  * Every step is read from outside the app as well as on screen: the config file, runs.json,
  * netstat, an HTTP answer. Screenshots at each checkpoint (1440 and 390) go to the run's record
@@ -100,10 +101,28 @@ const h = require('../e2e-harness');
       j.check('the card says crashed', await j.waitFor(async () => (await j.stateOf(ids.blog)) === 'crashed', 15000));
       const note = await j.card(ids.blog).textContent();
       j.check('and gives the exit code', /code 3/.test(note), note);
-      const bell = await j.win.locator('.bell-count').count();
-      j.note(`alerts bell after a crash: ${bell ? 'has a count' : 'empty'} (v5 has no crash alert; open question in PROJECT-PLAN)`);
+      const toast = j.win.locator(`.toast.crash[data-app="${ids.blog}"]`);
+      j.check('a crash toast names the app', await j.waitFor(() => toast.isVisible(), 10000) && /blog crashed/.test(await toast.textContent()), await toast.textContent().catch(() => 'no toast'));
+      const meta = await toast.locator('.toast-meta').textContent().catch(() => '');
+      j.check('with its port and exit code', meta === `:${blogPort} · exit 3`, meta);
+      const lines = await toast.locator('.toast-lines').textContent().catch(() => '');
+      j.check('and the last output lines', /crashed on purpose/.test(lines), lines);
+      j.check('offering Restart, Logs and Dismiss, no Ask Claude',
+        (await toast.getByRole('button').allTextContents()).join('|') === 'Restart|Logs|Dismiss', (await toast.getByRole('button').allTextContents()).join('|'));
+      j.check('the alerts bell counts the crash', await j.waitFor(async () => (await j.bellCount()) === '1', 10000), await j.bellCount());
+      j.check('the runtime file stamps the crash with exit code 3', j.runtime()[ids.blog]?.crashed?.exitCode === 3, JSON.stringify(j.runtime()[ids.blog]));
       j.check('shop is unaffected', (await j.answers(shopPort))?.title === 'Shop');
       await j.shot('03-crashed');
+      await toast.getByRole('button', { name: 'Logs' }).click();
+      const logs = j.win.locator('role=dialog[name="blog details"]');
+      j.check('Logs opens the crashed app\'s output', await j.waitFor(() => logs.isVisible(), 5000));
+      await j.shot('03b-crash-logs');
+      await j.win.keyboard.press('Escape');
+      await logs.waitFor({ state: 'detached', timeout: 5000 });
+      await toast.getByRole('button', { name: 'Dismiss' }).click();
+      j.check('Dismiss closes the toast', await j.waitFor(async () => (await toast.count()) === 0, 5000));
+      await h.sleep(5500); // one refresh, so a cleared state would show
+      j.check('but the card and the bell keep the crash', (await j.stateOf(ids.blog)) === 'crashed' && (await j.bellCount()) === '1', `${await j.stateOf(ids.blog)} / bell ${await j.bellCount()}`);
     }],
 
     ['a server started from a terminal is noticed', async () => {
@@ -150,7 +169,13 @@ const h = require('../e2e-harness');
       j.check('blog\'s port is free again', await j.portFree(blogPort));
       // A named state, not just "not conflict": a missing card reads as null and must not pass.
       j.check('the card goes back to crashed (its last real state)', await j.waitFor(async () => (await j.stateOf(ids.blog)) === 'crashed', 30000), await j.stateOf(ids.blog));
-      j.check('the bell clears', await j.waitFor(async () => (await j.win.locator('.bell-count').count()) === 0, 15000));
+      j.check('the bell is back to the crash alone', await j.waitFor(async () => {
+        if ((await j.bellCount()) !== '1') return false;
+        await j.win.locator('.bell:visible').first().click();
+        const kinds = await j.win.locator('.alerts-pop li').evaluateAll((els) => els.map((e) => e.getAttribute('data-alert')));
+        await j.win.keyboard.press('Escape');
+        return kinds.join() === 'crash';
+      }, 15000), await j.bellCount());
     }],
 
     ['stop shop and the terminal server', async () => {
@@ -181,7 +206,28 @@ const h = require('../e2e-harness');
       j.check('none of them is running', ['shop', 'blog'].every((k) => j.listeners(k === 'shop' ? shopPort : blogPort).length === 0));
       const open = j.runs().filter((r) => !r.stoppedAt);
       j.check('runs.json has no run left open', open.length === 0, open.map((r) => r.appName || r.appId).join(', '));
+      j.check('blog still reads crashed after the relaunch', await j.waitFor(async () => (await j.stateOf(ids.blog)) === 'crashed', 15000), await j.stateOf(ids.blog));
+      j.check('with its exit code', /code 3/.test(await j.card(ids.blog).textContent()));
+      j.check('and the bell still counts it', await j.waitFor(async () => (await j.bellCount()) === '1', 10000), await j.bellCount());
       await j.shot('07-next-morning');
+    }],
+
+    ['restart blog from the bell, then dismiss its crash', async () => {
+      await j.win.locator('.bell:visible').first().click();
+      await j.win.locator('.alerts-pop li[data-alert="crash"]').getByRole('button', { name: 'Restart' }).click();
+      const up = await j.waitFor(() => j.answers(blogPort), 15000);
+      j.check('Restart starts blog again', up && up.title === 'Blog', JSON.stringify(up));
+      const toast = j.win.locator(`.toast.crash[data-app="${ids.blog}"]`);
+      j.check('it crashes again and a fresh toast says so', await j.waitFor(() => toast.isVisible(), 20000));
+      const runs = j.runs().filter((r) => r.appId === ids.blog && r.endedBy === 'crash');
+      j.check('runs.json now holds two crashed runs for blog', runs.length === 2, `${runs.length}`);
+      await toast.getByRole('button', { name: 'Dismiss' }).click();
+      await j.win.locator('.bell:visible').first().click();
+      await j.win.locator('.alerts-pop li[data-alert="crash"]').getByRole('button', { name: 'Dismiss' }).click();
+      j.check('Dismiss in the bell clears the crash: the card reads stopped', await j.waitFor(async () => (await j.stateOf(ids.blog)) === 'stopped', 10000), await j.stateOf(ids.blog));
+      j.check('the bell is empty', await j.waitFor(async () => (await j.bellCount()) === '', 10000), await j.bellCount());
+      j.check('the runtime file no longer holds the stamp', !j.runtime()[ids.blog], JSON.stringify(j.runtime()[ids.blog]));
+      await j.shot('08-crash-dismissed');
     }],
   ]);
 })().catch((e) => { console.error(e); process.exit(1); });
