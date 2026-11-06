@@ -13,8 +13,12 @@ export const ACCENTS = [
 export type AccentId = (typeof ACCENTS)[number]['id'];
 
 /** How the Apps list is drawn. */
-export const VIEWS = [{ v: 'rows', l: 'Rows' }, { v: 'cards', l: 'Cards' }] as const;
+export const VIEWS = [{ v: 'rows', l: 'Rows' }, { v: 'tiles', l: 'Tiles' }, { v: 'cards', l: 'Cards' }] as const;
 export type AppView = (typeof VIEWS)[number]['v'];
+/** The grid class for a view. 'tiles' is the small one (`minis`); the large Cards grid keeps the older `tiles` class. */
+export const gridClass = (v: AppView) => (v === 'cards' ? 'tiles' : v === 'tiles' ? 'minis' : v);
+/** Both picture views show a screenshot on every item. */
+export const showsShot = (v: AppView) => v === 'cards' || v === 'tiles';
 export type Density = 'cozy' | 'tight';
 export type Thumbs = 'off' | 'peek' | 'inline';
 export type StatusStyle = 'dot' | 'glyph';
