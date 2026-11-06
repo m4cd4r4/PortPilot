@@ -212,10 +212,13 @@ t('getRunningApps exposes a boolean crashed field', () => {
     t('a real crash (server killed outside PortPilot) still emits', () => assert.ok(crashes.includes('real-crash')));
     t('a real crash still reads crashed', () => assert.equal(state('real-crash')?.crashed, true));
 
+    cf.recordCrash(cfg, 'real-crash', 1, { port: 45872 }); // as the desktop's crash handler does
     await boot('quit-clean', 45873);
     assert.ok(cf.readRuntime(cfg).apps['quit-clean']);
     await pm.cleanupAllProcesses(cfg);
     t('app quit records a stop for every tracked app', () => assert.equal(cf.readRuntime(cfg).apps['quit-clean'], undefined));
+    t('app quit keeps the crash stamp of an app that already crashed', () => assert.equal(cf.readRuntime(cfg).apps['real-crash']?.crashed?.exitCode, 1));
+    t('app quit still records a stop for an app that exited without crashing', () => assert.equal(cf.readRuntime(cfg).apps['kill-by-port'], undefined));
     t('app quit is not a crash', () => assert.ok(!crashes.includes('quit-clean')));
 
     // Dead on arrival: still a failed start, but flagged so the desktop can raise a crash for it.

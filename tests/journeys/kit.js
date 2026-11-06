@@ -222,6 +222,32 @@ async function journey(name, { ports: nPorts = 4, detectIntervalMs = 1000 } = {}
       log({ kind: 'event', step: stepName, event: 'holdPort', port, pid: child.pid });
       return { child, port, stop: () => j.stopChild(child) };
     },
+    /**
+     * Time passes while PortPilot is down: every run, browser session and crash stamp moves `days`
+     * into the past (there is no fake clock in the app). Returns how many records moved.
+     */
+    ageHistory(days) {
+      if (current) throw new Error('ageHistory runs between launches; quit first');
+      const ms = days * 24 * 3600 * 1000;
+      const back = (iso) => (iso ? new Date(Date.parse(iso) - ms).toISOString() : iso);
+      let moved = 0;
+      for (const file of ['runs.json', 'browser-runs.json']) {
+        const p = path.join(configDir, 'history', file);
+        const data = readJson(p, null);
+        if (!data) continue;
+        const list = Array.isArray(data) ? data : (data.runs || []);
+        for (const r of list) { for (const k of ['startedAt', 'stoppedAt', 'sampledAt']) if (r[k]) r[k] = back(r[k]); moved++; }
+        fs.writeFileSync(p, JSON.stringify(data));
+      }
+      const rtPath = path.join(configDir, 'portpilot-runtime.json');
+      const rt = readJson(rtPath, null);
+      if (rt && rt.apps) {
+        for (const a of Object.values(rt.apps)) if (a && a.crashed && Number.isFinite(a.crashed.at)) { a.crashed.at -= ms; moved++; }
+        fs.writeFileSync(rtPath, JSON.stringify(rt, null, 2));
+      }
+      log({ kind: 'event', step: stepName, event: 'ageHistory', days, moved });
+      return moved;
+    },
     async stopChild(child) {
       if (!child || child.exitCode !== null) return;
       child.kill();
@@ -328,4 +354,4 @@ async function journey(name, { ports: nPorts = 4, detectIntervalMs = 1000 } = {}
   return j;
 }
 
-module.exports = { journey, listeners, answers, SERVER_JS, REAL_RUNS };
+module.exports = { journey, listeners, answers, worldProcesses, SERVER_JS, REAL_RUNS };
