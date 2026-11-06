@@ -1051,7 +1051,26 @@ var require_browserCdp = __commonJS({
         return false;
       }
     }
-    module2.exports = { version, pageTabs, openTab, SETUP_PAGES, openSetupPage, withBrowserSession, withSocket, closeBrowser, parkOffscreen, getWindowBounds, setWindowBounds, bringToFront };
+    async function showBrowser(port, url) {
+      if (await bringToFront(port)) return "raised";
+      let target = "about:blank";
+      try {
+        const u = new URL(String(url));
+        if (u.protocol === "http:" || u.protocol === "https:") target = u.href;
+      } catch {
+      }
+      try {
+        const r = await withBrowserSession(port, async (send) => {
+          const t = await send("Target.createTarget", { url: target });
+          if (t && t.targetId) await send("Target.activateTarget", { targetId: t.targetId });
+          return t;
+        });
+        return r && r.targetId ? "opened" : null;
+      } catch {
+        return null;
+      }
+    }
+    module2.exports = { version, pageTabs, openTab, SETUP_PAGES, openSetupPage, withBrowserSession, withSocket, closeBrowser, parkOffscreen, getWindowBounds, setWindowBounds, bringToFront, showBrowser };
   }
 });
 

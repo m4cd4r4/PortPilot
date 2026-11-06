@@ -9,6 +9,7 @@
  *   browser:art:clear    forget the picture
  *   browser:health       names -> 'in' | 'out' | 'unknown' from the running browser's cookies
  *   browser:signInSetup  name, 'sync' | 'passwords' -> open Brave's own Sync / import page in that profile
+ *   browser:show         raise a running profile's window, or open its start page if no tab is left
  *   browser:release      end the lease on a profile; the browser keeps running
  *
  * The renderer sends a profile NAME only, never a path or URL: every file lives at
@@ -79,6 +80,7 @@ function setupBrowserExtraIpc(ipcMain, configStore, injected = {}) {
   const runDeps = () => injected.runDeps || run.defaultDeps();
   const cookiesOf = injected.cookies || ((port) => cdp.withBrowserSession(port, (send) => send('Storage.getCookies')).then((r) => (r && r.cookies) || null));
   const openSetup = injected.openSetup || cdp.openSetupPage;
+  const show = injected.show || cdp.showBrowser;
   const pickFile = injected.pickFile || (async () => {
     const { dialog, BrowserWindow } = require('electron');
     const r = await dialog.showOpenDialog(BrowserWindow.getFocusedWindow(), {
@@ -229,6 +231,16 @@ function setupBrowserExtraIpc(ipcMain, configStore, injected = {}) {
     if (st.state !== 'up') return fail('NOT_RUNNING', 'Start the profile first.');
     const opened = await openSetup(p.port, which);
     return opened ? { success: true } : fail('OPEN_FAILED', 'The browser did not open the page.');
+  }));
+
+  /** Bring a running profile's window forward; if every tab was closed, open its start page. */
+  ipcMain.handle('browser:show', guarded(async (name) => {
+    if (!isPlainName(name)) return fail('BAD_ARGS', 'name is required.');
+    const p = stored(name);
+    const st = await run.profileStatus(configPath(), p, runDeps());
+    if (st.state !== 'up') return fail('NOT_RUNNING', 'Start the profile first.');
+    const how = await show(p.port, p.url);
+    return how ? { success: true, how } : fail('OPEN_FAILED', 'The browser did not respond. Stop it and start it again.');
   }));
 
   /** Ends the lease only: the claim stays as a record of who started the browser, minus its session. */

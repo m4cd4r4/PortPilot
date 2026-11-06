@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { Host, Run, Scene, Snapshot } from '../host';
+import type { Host, Profile, Run, Scene, Snapshot } from '../host';
 import { ago, cards, groupOf, hueOf, type Card, type Tally, type View } from '../model';
 import { sceneRun, sceneSummary, startScene, stopScene } from '../scenes';
 import { usePrefs } from '../prefs';
@@ -138,6 +138,12 @@ export function Home({ host, t, loaded, onView, onOpenItem, snap, thumbs, onDone
     onView('localhost');
   });
   const run = (fn: () => Promise<void>) => { fn().catch(() => { /* the card state shows what happened */ }).finally(onDone); };
+  // A browser tile is a shortcut: running -> bring its window forward, stopped -> start it.
+  // A blocked port, or a browser that does not answer, opens the profile's settings instead.
+  const openProfile = (p: Profile) => {
+    const go = p.state === 'up' ? host.showBrowser(p.name) : p.state === 'blocked' ? Promise.reject() : host.startBrowser(p.name);
+    go.catch(() => onOpenItem('browser', p.name)).finally(onDone);
+  };
 
   return (
     <section className={`home${scene ? ' has-scene' : ''}${loaded ? '' : last ? ' stale' : ' loading'}`} aria-label="Home" aria-busy={!loaded}>
@@ -195,7 +201,7 @@ export function Home({ host, t, loaded, onView, onOpenItem, snap, thumbs, onDone
         </div>
         <div className="mini">
           {profiles.map((p) => (
-            <button key={p.name} className="th-wrap" onClick={() => onOpenItem('browser', p.name)}>
+            <button key={p.name} className="th-wrap" title={p.state === 'up' ? `Show ${p.name}` : p.state === 'blocked' ? `${p.name} settings` : `Start ${p.name}`} onClick={() => openProfile(p)}>
               <span className={`th${art.byName[p.name] ? ' art' : ''}${p.state === 'up' ? ' sel' : ''}`}
                 style={art.byName[p.name] ? { backgroundImage: `url(${art.byName[p.name]})`, backgroundColor: gradient(p.name) } : { background: gradient(p.name) }} />
               <span className="cap">{p.name}</span>

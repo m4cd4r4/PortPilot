@@ -28,6 +28,7 @@ export function Browsers({ host, snap, onDone, editName }: Props) {
   const actions: Actions = {
     start: (p) => act(p.name, () => host.startBrowser(p.name)),
     stop: (p) => act(p.name, () => host.stopBrowser(p.name)),
+    show: (p) => act(p.name, () => host.showBrowser(p.name)),
     release: (p) => act(p.name, () => host.releaseBrowser(p.name)),
     edit: (p) => setDrawer({ name: p.name }),
     setup: (p, which) => act(p.name, () => host.openSignInSetup(p.name, which)),
@@ -89,7 +90,7 @@ export function Browsers({ host, snap, onDone, editName }: Props) {
 }
 
 interface Actions {
-  start(p: Profile): void; stop(p: Profile): void; release(p: Profile): void; edit(p: Profile): void;
+  start(p: Profile): void; stop(p: Profile): void; show(p: Profile): void; release(p: Profile): void; edit(p: Profile): void;
   setup(p: Profile, which: 'sync' | 'passwords'): void;
 }
 
@@ -159,7 +160,7 @@ function ProfileCard({ c, prefs, art, signIn, busy, actions }: { c: BrowserCard;
       </div>
       <div className="acts">
         {up
-          ? <button onClick={() => actions.stop(p)} disabled={busy}>{busy ? 'Working' : 'Stop'}</button>
+          ? <><button onClick={() => actions.show(p)} disabled={busy}>Open</button><button onClick={() => actions.stop(p)} disabled={busy}>{busy ? 'Working' : 'Stop'}</button></>
           : <button onClick={() => actions.start(p)} disabled={busy || c.group === 'blocked'}>{busy ? 'Working' : 'Start'}</button>}
         <button onClick={() => actions.edit(p)}>Edit</button>
       </div>
