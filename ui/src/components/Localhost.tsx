@@ -5,6 +5,7 @@ import { STALE_MS, cards, grouped, type Card } from '../model';
 import { VIEWS, gridClass, setPrefs, showsShot, usePrefs, type Prefs } from '../prefs';
 import type { Thumbs } from '../useThumbs';
 import { AppInspector } from './AppInspector';
+import { IconButton } from './icons';
 import { Library } from './Library';
 
 interface Props { host: Host; snap: Snapshot; thumbs: Thumbs; onDone: () => void; manage: boolean; onManage: (on: boolean) => void; inspectId?: string }
@@ -182,8 +183,9 @@ function AppCard({ c, title, more, member, prefs, thumbs, actions }: { c: Card; 
       </div>
       {peek && <img className="peek" src={thumb.url} alt="" loading="lazy" />}
       <div className="acts">
-        {c.state === 'running' && <><button onClick={() => actions.open(c)}>Open</button><button onClick={() => actions.stop(c)}>Stop</button></>}
-        {c.state !== 'running' && <button onClick={() => actions.start(c)}>Start</button>}
+        {c.state === 'running' && <><IconButton icon="open" label="Open" tip={`Open ${c.app.name} in the browser`} onClick={() => actions.open(c)} />
+          <IconButton icon="stop" label="Stop" tip={`Stop ${c.app.name}`} onClick={() => actions.stop(c)} /></>}
+        {c.state !== 'running' && <IconButton icon="start" label="Start" tip={`Start ${c.app.name}`} onClick={() => actions.start(c)} />}
       </div>
     </article>
   );

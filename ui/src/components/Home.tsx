@@ -5,6 +5,7 @@ import { sceneRun, sceneSummary, startScene, stopScene } from '../scenes';
 import { usePrefs } from '../prefs';
 import type { Thumbs } from '../useThumbs';
 import { useBrowserArt } from '../useBrowserMeta';
+import { IconButton } from './icons';
 
 interface Props { host: Host; t: Tally; loaded: boolean; onView: (v: View) => void; onOpenItem: (kind: 'app' | 'browser', id: string) => void; snap: Snapshot; thumbs: Thumbs; onDone: () => void }
 
@@ -239,7 +240,7 @@ export function Home({ host, t, loaded, onView, onOpenItem, snap, thumbs, onDone
                 <span className="th" style={thumbs.byApp[c.app.id] ? { backgroundImage: `url(${thumbs.byApp[c.app.id].url})` } : { background: gradient(c.app.name) }} />
                 <span className="cap">{c.app.name}</span>
               </button>
-              {c.state !== 'running' && <button className="th-start" aria-label={`Start ${c.app.name}`} onClick={() => run(() => host.startApp(c.app))}>Start</button>}
+              {c.state !== 'running' && <IconButton icon="start" className="primary th-start" label={`Start ${c.app.name}`} onClick={() => run(() => host.startApp(c.app))} />}
             </div>
           ))}
           {strip.length === 0 && <span className="tile-sub">Apps you run will show up here</span>}

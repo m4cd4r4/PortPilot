@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { Host, Scene, Snapshot } from '../host';
 import { captureRunning, sceneRun, sceneSummary, startScene, stopScene, type SceneReport } from '../scenes';
 import { SceneDrawer } from './SceneDrawer';
+import { IconButton } from './icons';
 
 interface Props { host: Host; snap: Snapshot; onDone: () => void }
 
@@ -67,9 +68,10 @@ export function Scenes({ host, snap, onDone }: Props) {
                 <h3>{s.name}</h3>
                 <span className="muted">{sceneSummary(s)}, {up} up</span>
                 <span className="spacer" />
-                <button className="primary" disabled={busy === s.id} onClick={() => start(s)}>{busy === s.id ? 'Working' : 'Start'}</button>
-                <button disabled={busy === s.id || !run} title={run ? '' : 'This scene has not started anything'} onClick={() => stop(s)}>Stop</button>
-                <button onClick={() => { setDraft(null); setEditing(s); }}>Edit</button>
+                <IconButton icon="start" label="Start" tip={`Start ${s.name}`} className="primary" busy={busy === s.id} onClick={() => start(s)} />
+                <IconButton icon="stop" label="Stop" tip={run ? `Stop what ${s.name} started` : 'This scene has not started anything'}
+                  disabled={busy === s.id || !run} onClick={() => stop(s)} />
+                <IconButton icon="edit" label="Edit" tip={`Edit ${s.name}`} onClick={() => { setDraft(null); setEditing(s); }} />
               </header>
               <div className="chips">
                 {s.apps.map((id) => <span className="chip" key={id}>{nameOf(id)}</span>)}

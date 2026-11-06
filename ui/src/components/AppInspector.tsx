@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { AppRec, DiagnoseStatus, Host, ShareInfo } from '../host';
+import { IconButton } from './icons';
 
 interface Props { host: Host; app: AppRec; port?: number; running: boolean; crashed: boolean; onClose: () => void }
 
@@ -24,7 +25,7 @@ export function AppInspector({ host, app, port, running, crashed, onClose }: Pro
       <div className="drawer wide" role="dialog" aria-modal="true" aria-label={`${app.name} details`}>
         <header className="drawer-head">
           <h2>{app.name}</h2>
-          <button type="button" className="icon" onClick={onClose} aria-label="Close">Close</button>
+          <IconButton icon="close" label="Close" onClick={onClose} />
         </header>
         <nav className="seg small tabs" role="tablist" aria-label="Details">
           {tabs.filter((t) => t.show).map((t) => (

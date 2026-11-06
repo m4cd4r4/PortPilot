@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Host, Scene, Snapshot } from '../host';
+import { IconButton } from './icons';
 
 interface Props {
   host: Host; snap: Snapshot;
@@ -51,7 +52,7 @@ export function SceneDrawer({ host, snap, scene, seed, onClose, onDone }: Props)
       <form className="drawer" role="dialog" aria-modal="true" aria-label={scene ? `Edit ${scene.name}` : 'New scene'} onSubmit={save}>
         <header className="drawer-head">
           <h2>{scene ? scene.name : 'New scene'}</h2>
-          <button type="button" className="icon" onClick={onClose} aria-label="Close">Close</button>
+          <IconButton icon="close" label="Close" onClick={onClose} />
         </header>
         <div className="drawer-body">
           <label>Name
