@@ -21,7 +21,7 @@ function Icon({ name }: { name: string }) {
   );
 }
 
-const MARK = (
+export const MARK = (
   <svg width="22" height="22" viewBox="0 0 64 64" aria-hidden="true">
     <rect x="2" y="2" width="60" height="60" rx="15" fill="#24283b" />
     <rect x="16" y="13" width="9" height="39" rx="4.5" fill="#c0caf5" />
@@ -38,7 +38,7 @@ export function Sidebar({ view, onView, onSearch, warnings }: Props) {
   );
   return (
     <aside className="sidebar" aria-label="Sidebar">
-      <div className="brand"><span className="mark">{MARK}</span>PortPilot</div>
+      <div className="brand" role="img" aria-label="PortPilot" title="PortPilot"><span className="mark">{MARK}</span></div>
       <button className="search" onClick={onSearch} aria-label="Search and run commands">
         <span>Search or jump</span><kbd>Ctrl K</kbd>
       </button>

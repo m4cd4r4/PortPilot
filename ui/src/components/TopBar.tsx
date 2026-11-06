@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { MORE_VIEWS, VIEWS, type View } from '../model';
 
 import { AlertsBell } from './AlertsBell';
+import { MARK } from './Sidebar';
 
 interface Props { view: View; onView: (v: View) => void; onSearch: () => void; warnings: string[] }
 
@@ -20,7 +21,7 @@ export function TopBar({ view, onView, onSearch, warnings }: Props) {
 
   return (
     <header className="topbar" role="banner">
-      <div className="brand">PortPilot</div>
+      <div className="brand" role="img" aria-label="PortPilot" title="PortPilot"><span className="mark">{MARK}</span></div>
       <nav className="seg" role="tablist" aria-label="Section">
         {VIEWS.map((v) => (
           <button key={v.view} role="tab" aria-selected={view === v.view}

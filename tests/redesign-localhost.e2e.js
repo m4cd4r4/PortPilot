@@ -119,6 +119,28 @@ async function main() {
     check('History lists the shop run', (await win.locator('.run .name').allTextContents()).some((t) => /shop/i.test(t)));
     check('runs sit under a day heading', (await win.locator('.history-view .group-h').count()) >= 1);
     check('the run shows the page title', (await win.locator('.run').first().textContent()).includes('Shop demo'));
+    // At a mid width the run's time used to run under the Open / Start again buttons. A live run is
+    // needed so a button shows at all (an ended run with nothing to do has no buttons to collide with).
+    await win.evaluate((a) => window.portpilot.process.start(a), { id: 'app_idle', name: 'idle', command: `node server.js --port ${idlePort}`, cwd: shop, preferredPort: idlePort });
+    await until(() => win.locator('.run .acts button').count().then((n) => n >= 1), 30000, 'a run with a button');
+    const overlaps = () => win.evaluate(() => [...document.querySelectorAll('.run')].filter((r) => {
+      const acts = r.querySelector('.acts')?.getBoundingClientRect();
+      if (!acts || !acts.width) return false;
+      // Only the visible part counts: text clipped by its own line (.sub overflow) is not under the buttons.
+      return [...r.querySelectorAll('.meta *')].some((e) => {
+        const b = e.getBoundingClientRect();
+        const line = e.closest('.sub, .title')?.getBoundingClientRect() || b;
+        const right = Math.min(b.right, line.right);
+        return b.width && right > acts.left + 1 && b.left < acts.right;
+      });
+    }).length);
+    for (const w of [1440, 1100, 900]) {
+      await win.setViewportSize({ width: w, height: 800 });
+      await win.waitForTimeout(250);
+      check(`at ${w} wide no run text sits under its buttons`, (await overlaps()) === 0);
+      if (process.env.PORTPILOT_SHOTS_DIR) await win.screenshot({ path: path.join(process.env.PORTPILOT_SHOTS_DIR, `history-${w}.png`) });
+    }
+    await win.setViewportSize({ width: 1440, height: 900 });
     await win.click('role=tab[name="Home"]');
     check('the Home tab leaves History', await win.evaluate(() => document.querySelector('[role="tab"][aria-selected="true"]')?.textContent === 'Home'));
 

@@ -1,7 +1,7 @@
 import { useMemo, useState, type SyntheticEvent } from 'react';
 import type { Host, Profile, SignIn, Snapshot } from '../host';
 import { BROWSER_GROUPS, ago, browserCards, hueOf, type BrowserCard } from '../model';
-import { VIEWS, setPrefs, usePrefs, type Prefs } from '../prefs';
+import { VIEWS, gridClass, setPrefs, showsShot, usePrefs, type Prefs } from '../prefs';
 import { useBrowserArt, useSignIns, type BrowserArt } from '../useBrowserMeta';
 import { BrowserDrawer } from './BrowserDrawer';
 
@@ -35,7 +35,7 @@ export function Browsers({ host, snap, onDone, editName }: Props) {
   };
 
   const grid = (rows: BrowserCard[]) => (
-    <div className={`cards ${prefs.view === 'cards' ? 'tiles' : prefs.view}`} data-density={prefs.density} data-status={prefs.status} data-thumbs={prefs.thumbs}>
+    <div className={`cards ${gridClass(prefs.view)}`} data-density={prefs.density} data-status={prefs.status} data-thumbs={prefs.thumbs}>
       {rows.map((c) => <ProfileCard key={c.profile.name} c={c} prefs={prefs} art={art} signIn={signIns[c.profile.name]} busy={busy === c.profile.name} actions={actions} />)}
     </div>
   );
@@ -105,8 +105,7 @@ function ProfileCard({ c, prefs, art, signIn, busy, actions }: { c: BrowserCard;
   const accounts = p.accounts || [];
   const hue = hueOf(p.name);
   const lease = p.leasedTo;
-  const tiles = prefs.view === 'cards';
-  const showShot = tiles || prefs.thumbs === 'inline';
+  const showShot = showsShot(prefs.view) || prefs.thumbs === 'inline';
   const state = up ? 'running' : c.group === 'blocked' ? 'conflict' : 'stopped';
   const [small, setSmall] = useState(false);
   // A favicon or touch icon is a small square: show it whole on the gradient, not stretched to fill the hero.

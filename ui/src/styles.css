@@ -39,7 +39,7 @@ button:disabled { cursor: default; opacity: 0.45; }
   background: var(--side); border-right: 1px solid var(--bd); overflow: auto;
 }
 .sidebar .brand { display: flex; align-items: center; gap: 8px; padding: 2px 8px; font-size: 15px; -webkit-app-region: drag; }
-.sidebar .brand .mark { color: var(--acc); display: flex; }
+.sidebar .brand .mark, .topbar .brand .mark { color: var(--acc); display: flex; }
 .sidebar .search { flex: none; max-width: none; width: 100%; }
 .snav { display: flex; flex-direction: column; gap: 2px; }
 .snav button {
@@ -245,6 +245,28 @@ button.tile:hover { border-color: var(--acc); }
 @container (max-width: 800px) { .cards.tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @container (max-width: 560px) { .cards.tiles { grid-template-columns: minmax(0, 1fr); } }
 
+/* Tiles: the small picture grid, as many across as fit. Cards (`.tiles`) stays the large one. */
+.cards.minis { grid-template-columns: repeat(auto-fill, minmax(176px, 1fr)); gap: 10px; }
+.cards.minis .shot { aspect-ratio: 16 / 9; }
+.cards.minis .letter { font-size: 26px; }
+.cards.minis .meta { padding: 7px 9px 8px; }
+.cards.minis .title { gap: 6px; font-size: 13px; align-items: flex-start; }
+/* A long name wraps onto a second line rather than losing its end. */
+.cards.minis .name { white-space: normal; overflow-wrap: anywhere; overflow: visible; line-height: 1.3; }
+/* The status word gives way to its glyph (colour carries the state) so the name keeps the width. */
+.cards.minis .stat { width: auto; font-size: 0; }
+.cards.minis .stat > span { font-size: 12px; }
+@media (max-width: 720px) { .cards.minis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.cards.minis .sub { font-size: 11.5px; gap: 2px 8px; flex-wrap: nowrap; white-space: nowrap; overflow: hidden; }
+.cards.minis .acts { top: 6px; }
+.cards.minis .acts button { padding: 2px 9px; font-size: 12px; }
+.cards.minis .badge { top: 6px; left: 6px; font-size: 10.5px; padding: 1px 6px; }
+.cards.minis .bshot.small-art img { max-width: 34%; max-height: 54%; border-radius: 10px; }
+.cards.minis .bcard .pill { margin-left: auto; font-size: 10.5px; padding: 1px 6px; }
+.cards.minis .bcard .purpose, .cards.minis .bcard .chips, .cards.minis .bcard .signin-setup, .cards.minis .bcard .note-warn, .cards.minis .bcard .lease { display: none; }
+.cards.minis .bcard:has([data-lease]) { border-color: color-mix(in srgb, var(--acc) 55%, var(--bd)); }
+.cards .minis .peek, .cards.minis .peek { display: none !important; }
+
 .card { min-width: 0; position: relative; display: flex; flex-direction: column; background: var(--pn); border: 1px solid var(--bd); border-radius: var(--r); overflow: hidden; }
 .card:hover, .card:focus-within { border-color: color-mix(in srgb, var(--acc) 55%, var(--bd)); }
 .shot { position: relative; display: block; width: 100%; aspect-ratio: 16 / 10; padding: 0; border: 0; border-bottom: 1px solid var(--bd); background: var(--pn2); overflow: hidden; }
@@ -285,8 +307,11 @@ button.tile:hover { border-color: var(--acc); }
 .cards.rows[data-density='cozy'] .card { min-height: 54px; }
 .cards.rows[data-density='tight'] .card { min-height: 36px; }
 .cards.rows .meta{ flex: 1; display: flex; align-items: center; gap: 12px; padding: 6px 0; }
-.cards.rows .sub{ margin: 0; flex-wrap: nowrap; white-space: nowrap; }
-.cards.rows .title { flex: 0 1 280px; }
+/* The name never clips in a row: its column is at least 280px (so rows line up) and grows to fit a
+   long name. The facts beside it (.sub) give way instead, clipping at the right edge. */
+.cards.rows .sub{ margin: 0; flex-wrap: nowrap; white-space: nowrap; min-width: 0; overflow: hidden; }
+.cards.rows .title { flex: 0 0 auto; min-width: 280px; }
+.cards.rows .name { overflow: visible; }
 .cards.rows .acts{ position: static; opacity: 1; padding: 0; }
 .cards.rows .acts button{ background: none; backdrop-filter: none; padding: 2px 10px; }
 .cards.rows .shot { width: 72px; flex: none; border: 1px solid var(--bd); border-radius: 6px; margin: 4px 0; }
@@ -301,7 +326,8 @@ button.tile:hover { border-color: var(--acc); }
 @media (max-width: 720px) {
   .cards.rows .card { padding: 6px 12px; }
   .cards.rows .meta { flex-direction: column; align-items: flex-start; gap: 0; }
-  .cards.rows .title { flex: none; max-width: 100%; }
+  .cards.rows .title, .cards.rows .run .title, .cards.rows .bcard .title { flex: none; max-width: 100%; min-width: 0; }
+  .cards.rows .name { white-space: normal; overflow-wrap: anywhere; }
   .cards .peek { display: none !important; }
 }
 
@@ -310,7 +336,10 @@ button.tile:hover { border-color: var(--acc); }
 .run { min-height: 40px; }
 .run .shot.small { width: 56px; aspect-ratio: 16 / 10; flex: none; margin: 4px 0; border: 1px solid var(--bd); border-radius: 6px; }
 .run .meta { flex: 1; }
-.cards.rows .run .title { flex: 0 0 380px; }
+.cards.rows .run .title { flex: 0 0 auto; min-width: 380px; }
+/* Mid widths: the name columns step down so the facts (port, time) keep their room. */
+@media (max-width: 1180px) { .cards.rows .title, .cards.rows .run .title { min-width: 200px; } .cards.rows .bcard .title { min-width: 260px; } }
+.run .sub .note { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .run .branch { flex: none; white-space: nowrap; }
 .scene-list:empty { display: none; }
 .run .sub .note { color: var(--tx2); }
@@ -383,7 +412,8 @@ button.primary:disabled { opacity: 0.6; }
 .bcard .badge { background: var(--pn); }
 /* Ledger rows for profiles: one line of facts, the purpose fills the gap, chips and set-up links stay out of the way. */
 .cards.rows .bcard .meta{ flex-wrap: wrap; gap: 2px 12px; }
-.cards.rows .bcard .title { flex: 0 1 200px; }
+/* Room for the status word, a full profile name and the Signed in pill; a longer name widens it. */
+.cards.rows .bcard .title { flex: 0 0 auto; min-width: 340px; }
 .cards.rows .bcard .purpose { flex: 1; min-width: 120px; margin: 0; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cards.rows .bcard .pill { margin-left: 0; }
 .cards.rows .bcard .chips{ margin: 0; }

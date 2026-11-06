@@ -186,6 +186,11 @@ let configStore;
 // Detect if running in test mode (Playwright adds --remote-debugging-port)
 const isTestMode = process.argv.some(arg => arg.includes('--remote-debugging-port'));
 
+// Windows groups the taskbar button and picks its icon by AppUserModelID. Without an explicit one the
+// app is "electron.app.PortPilot" and the taskbar can keep an old Electron icon; the installer's
+// shortcuts carry the appId (package.json build.appId), so using it ties the window to them.
+if (process.platform === 'win32') app.setAppUserModelId('com.macdara.portpilot');
+
 // Single instance lock - prevent multiple copies of PortPilot from running (skip in test mode)
 const gotTheLock = isTestMode || app.requestSingleInstanceLock();
 

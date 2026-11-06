@@ -2,7 +2,7 @@ import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import type { Host, Snapshot } from '../host';
 import { clusterCards, type Cluster } from '../clusters';
 import { STALE_MS, cards, grouped, type Card } from '../model';
-import { VIEWS, setPrefs, usePrefs, type Prefs } from '../prefs';
+import { VIEWS, gridClass, setPrefs, showsShot, usePrefs, type Prefs } from '../prefs';
 import type { Thumbs } from '../useThumbs';
 import { AppInspector } from './AppInspector';
 import { Library } from './Library';
@@ -60,7 +60,7 @@ export function Localhost({ host, snap, thumbs, onDone, manage, onManage, inspec
   const toggle = (key: string) => setExpandedKeys((o) => { const n = new Set(o); if (n.has(key)) n.delete(key); else n.add(key); return n; });
 
   const grid = (rows: Cluster[]) => (
-    <div className={`cards ${prefs.view === 'cards' ? 'tiles' : prefs.view}`} data-density={prefs.density} data-status={prefs.status} data-thumbs={prefs.thumbs}>
+    <div className={`cards ${gridClass(prefs.view)}`} data-density={prefs.density} data-status={prefs.status} data-thumbs={prefs.thumbs}>
       {rows.map((cl) => {
         const many = cl.members.length > 1;
         // A search names a branch more often than a project, so it opens every cluster.
@@ -151,7 +151,7 @@ interface More { count: number; open: boolean; toggle(): void }
 function AppCard({ c, title, more, member, prefs, thumbs, actions }: { c: Card; title?: string; more?: More; member?: boolean; prefs: Prefs; thumbs: Thumbs; actions: Actions }) {
   const thumb = thumbs.byApp[c.app.id];
   // An app with nothing to show drops the screenshot box: a tile of one grey letter is the clutter, not the app.
-  const showShot = !member && (prefs.view === 'cards' || prefs.thumbs === 'inline') && (!!thumb || c.state !== 'stopped');
+  const showShot = !member && (showsShot(prefs.view) || prefs.thumbs === 'inline') && (!!thumb || c.state !== 'stopped');
   const peek = !showShot && prefs.thumbs === 'peek' && thumb;
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const hover = () => {
