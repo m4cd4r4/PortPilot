@@ -15,8 +15,7 @@ Unit checks (`npm run test:unit`, `npm run test:mcp`) cover the logic; these sce
 | A running app has served a page | Wait for the row after the first thumbnail capture | One 32 x 18 preview on the running row, none on stopped rows; hovering or focusing it opens a 256 x 144 popover without changing the row height | `desktop-apps.e2e.js`, `desktop-preview.e2e.js` |
 | A stranger process holds an app's port | Start a node server on the port, rescan | `Port blocked` row, a strip naming `:port`, the holder and its PID, and the actions Use free port, Kill & start, Show process in that order | `desktop-apps.e2e.js` |
 | You press Kill & start | Click twice (the first only arms it), check the stranger's pid | The stranger is gone and the app is `Running` on its own port | `desktop-apps.e2e.js` |
-| An app exits non-zero seconds after starting | Watch for the toast, then the row | A sticky toast: `<app> crashed`, `:port · exit N`, the last output lines, Restart / Logs / Ask Claude / Dismiss; the row reads `Crashed exit N` within a few seconds of the toast, not after the start countdown | `desktop-apps.e2e.js` |
-| A Claude session is live when an app crashes | Seed `sessions/<id>.json`, click Ask Claude | Button reads `Sent to <short>` and `inbox/<id>.json` holds a request for that app | `desktop-apps.e2e.js` |
+| An app exits non-zero seconds after starting | Watch for the toast, then the row | A sticky toast: `<app> crashed`, `:port · exit N`, the last output lines, Restart / Logs / Dismiss; the row reads `Crashed exit N` within a few seconds of the toast, not after the start countdown | `desktop-apps.e2e.js` |
 | You open Logs or Restart from the toast | Click each | Logs opens for the crashed app; Restart closes the toast and starts the app; the row reads `Starting` for the new run, never the old `Crashed` | `desktop-apps.e2e.js` |
 | A past run had git state | History tab, Re-run this version | A new run for that app, marked `re-run`, on a free port in a new worktree | `desktop-apps.e2e.js` |
 | History has stopped, crashed and no-git runs | Open the History tab, filter, pin | Rows labelled by state, crashed run pinned, no-git run cannot be re-run or copied | `tests/history-ui.e2e.js` |
@@ -25,7 +24,7 @@ Unit checks (`npm run test:unit`, `npm run test:mcp`) cover the logic; these sce
 
 | Situation | Check from outside | Pass looks like | Run by |
 |---|---|---|---|
-| A dev server nobody registered is started from a terminal (absolute script path in a folder with a `package.json`) | Wait on `history/runs.json` | Within ~40 s a run for the folder's name, folder, port, `startCommand` and `startedBy.kind: detected`; no app was registered | `tests/desktop-detect.e2e.js` |
+| A dev server nobody registered is started from a terminal (absolute script path in a folder with a `package.json`) | Wait on `history/runs.json` | Within ~40 s a run for the folder's name, folder, port, `startCommand` and `startedBy.kind: detected`; no app was registered | `tests/journeys/day-one.journey.js` |
 | That server answers a page with a `<title>` | Wait for the run's `page` | A thumbnail file under `history/thumbs/` and `page.title` set | `desktop-detect.e2e.js` |
 | You open the History tab | Read the row | A `detected` tag, the thumbnail, state `Running`, Open URL enabled, no Start again | `desktop-detect.e2e.js` |
 | A registered app's server is started outside PortPilot (a terminal, an agent) | Wait on `runs.json`, read the History row | A `detected` run under the registered app's id (never a second open run for an app PortPilot started), with a thumbnail and Open URL; it closes when the server stops | `desktop-detect.e2e.js` |

@@ -42,12 +42,16 @@ export function BrowserDrawer({ host, profile, taken, art, onClose, onDone }: Pr
   const first = useRef<HTMLInputElement>(null);
   const picture = profile ? art.byName[profile.name] : undefined;
 
+  // Focus once, on open. The parent passes a new onClose on every render (each 5 s refresh), so keying
+  // this effect on it pulled focus back to the first field while the person was typing in another.
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
   useEffect(() => {
     first.current?.focus();
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') closeRef.current(); };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
+  }, []);
 
   const run = async (fn: () => Promise<void>) => {
     setWorking(true);

@@ -148,7 +148,9 @@ function createLocalhostWatcher(o) {
       const appId = owned.get(info.port);
       if (owned.has(info.port) && !appId) continue; // a stranger on a registered app's port is a conflict, not a server to track
       if (only && !only.has(info.port)) continue;
-      if (!detect.classify(info, { ownPorts }).dev) continue;
+      // A test that names its ports owns what listens there, so its marked servers count; an
+      // installed PortPilot never sets onlyPorts and keeps ignoring them.
+      if (!detect.classify(info, { ownPorts, allowTestMarker: !!only }).dev) continue;
       if (appId) { out.push({ info, proj: null, id: appId, registered: true }); continue; }
       const proj = projectFor(info, groups);
       out.push({ info, proj, id: detect.detectedAppId(proj.cwd, proj.name, info.port) });

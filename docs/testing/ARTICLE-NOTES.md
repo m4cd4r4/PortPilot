@@ -31,8 +31,9 @@ To be tested by the journeys, not assumed: the article reports what the journeys
 | Short-visit tests missed a self-feeding history bug for 3 weeks | F1 dates (2026-10-14 to 2026-11-06), count 315/1000 | have |
 | Outside checks catch what the app reports as fine | F2: +2 runs per pass seen only in the real `runs.json` | have |
 | Screenshots catch what DOM checks pass | F4: 390 px overflow with all checks green | have |
-| Journeys find defects the old suite did not | findings tagged `Found by: journey` | needed (Waves 1-2) |
+| Journeys find defects the old suite did not | F10 (focus pulled from the field being typed in, on every 5 s refresh: no short visit sat in a drawer that long), F14, F15 | started (3 from Wave 1) |
 | The method is affordable | wall time per journey, flake rate over N runs | needed (Wave 3) |
+| A failed check is not a finding until the screen is read | F12: 2 failures, screen correct (test bugs) | have |
 
 ## Editorial rules for the draft
 
@@ -55,4 +56,5 @@ To be tested by the journeys, not assumed: the article reports what the journeys
 | History > Browsers at 1440 and 390, before/after the overflow fix | redesign-history-browsers screenshots | have (local, regenerate for publication) |
 | `runs.json` before/after counts for F1 | EVIDENCE-LOG cleanup table | have |
 | A journey timeline diagram (days x events x checks) | to draw from PROJECT-PLAN | needed |
-| One journey's step log (JSONL) excerpt | journey kit output | needed (Wave 1) |
+| One journey's step log (JSONL) excerpt | `test-results/journeys/day-one-*/journey.jsonl` (local, gitignored; regenerate for publication) | have |
+| F10 before/after: the saved name `shop52068`, the focus check reading `My app` then `3000` | EVIDENCE-LOG runs 20:24 to 20:27 | have |
