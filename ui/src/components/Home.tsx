@@ -5,7 +5,9 @@ import { sceneRun, sceneSummary, startScene, stopScene } from '../scenes';
 import { usePrefs } from '../prefs';
 import type { Thumbs } from '../useThumbs';
 import { useBrowserArt } from '../useBrowserMeta';
+import { appBlocked, openApp as openAppRule, openBrowser, profileBlocked, type TileNotice } from '../tileRule';
 import { IconButton } from './icons';
+import { TileNoticeLine } from './TileNoticeLine';
 
 interface Props { host: Host; t: Tally; loaded: boolean; onView: (v: View) => void; onOpenItem: (kind: 'app' | 'browser', id: string) => void; snap: Snapshot; thumbs: Thumbs; onDone: () => void }
 
@@ -54,6 +56,7 @@ export function Home({ host, t, loaded, onView, onOpenItem, snap, thumbs, onDone
   const [runs, setRuns] = useState<Run[]>([]);
   const [scenes, setScenes] = useState<Scene[]>([]);
   const [sceneNote, setSceneNote] = useState('');
+  const [notice, setNotice] = useState<TileNotice | null>(null);
   const [sceneId, setSceneId] = useState(() => { try { return localStorage.getItem(SCENE_KEY) || ''; } catch { return ''; } });
   useEffect(() => {
     let off = false;
@@ -124,31 +127,28 @@ export function Home({ host, t, loaded, onView, onOpenItem, snap, thumbs, onDone
     ['Path', hero.app.cwd || ''],
   ] as Array<[string, string]>).filter(([, v]) => v) : [];
   const heroShot = hero ? thumbs.byApp[hero.app.id]?.url : undefined;
-  // Open an app's page; a stopped one is started first and opened as soon as it answers.
-  const openApp = (c: Card) => run(async () => {
-    const url = (port: number) => `http://localhost:${port}`;
-    // Ask the host, not the card: the card can be a poll behind.
-    const now = (await host.snapshot()).running[c.app.id]?.port;
-    if (now) { await host.openUrl(url(now)); return; }
-    await host.startApp(c.app);
-    for (let i = 0; i < 40; i++) {
-      await new Promise((r) => setTimeout(r, 750));
-      const port = (await host.snapshot()).running[c.app.id]?.port;
-      if (port) { await host.openUrl(url(port)); return; }
-    }
-    onView('localhost');
-  });
-  const run = (fn: () => Promise<void>) => { fn().catch(() => { /* the card state shows what happened */ }).finally(onDone); };
-  // A browser tile is a shortcut: running -> bring its window forward, stopped -> start it.
-  // A blocked port, or a browser that does not answer, opens the profile's settings instead.
-  const openProfile = (p: Profile) => {
-    const go = p.state === 'up' ? host.showBrowser(p.name) : p.state === 'blocked' ? Promise.reject() : host.startBrowser(p.name);
-    go.catch(() => onOpenItem('browser', p.name)).finally(onDone);
+  const run = (fn: () => Promise<unknown>) => {
+    setNotice(null);
+    fn().catch((e) => setNotice({ text: (e as Error)?.message || 'That did not work.' })).finally(onDone);
   };
+  // Every tile follows the one rule in tileRule.ts: running opens, stopped starts then opens, blocked says why.
+  const openApp = (c: Card) => {
+    const why = appBlocked(snap, c.app);
+    if (why) { setNotice(why); return; }
+    run(() => openAppRule(host, c.app));
+  };
+  const openProfile = (p: Profile) => {
+    const why = profileBlocked(p);
+    if (why) { setNotice(why); return; }
+    run(() => openBrowser(host, p));
+  };
+  const tileLabel = (c: Card) => (c.state === 'conflict' ? `Why ${c.app.name} cannot start`
+    : c.state === 'running' && c.port ? `Open ${c.app.name}` : `Start and open ${c.app.name}`);
 
   return (
     <section className={`home${scene ? ' has-scene' : ''}${loaded ? '' : last ? ' stale' : ' loading'}`} aria-label="Home" aria-busy={!loaded}>
       <div className="tile h-hero">
+        <TileNoticeLine notice={notice} onPorts={() => onView('ports')} onClose={() => setNotice(null)} />
         {hero ? (
           <>
             <span className="tile-title">{runningList.length ? `Running, ${runningList.length} of ${t.apps} apps` : 'Last used'}</span>
@@ -156,13 +156,10 @@ export function Home({ host, t, loaded, onView, onOpenItem, snap, thumbs, onDone
             {(runningList.length ? runningList.slice(0, RUN_ROWS) : [hero]).map((c) => {
               const shot = thumbs.byApp[c.app.id]?.url;
               const last = lastRunText(recent.get(c.app.id));
-              const isOpen = c.state === 'running' && !!c.port;
-              const primary = () => run(() => (isOpen ? host.openUrl(`http://localhost:${c.port}`) : host.startApp(c.app)));
               return (
                 <div className="run-row" key={c.app.id}>
-                  <button className="th-wrap row-wrap" title={`${isOpen ? 'Open' : 'Start'} ${c.app.name}`} aria-label={`${isOpen ? 'Open' : 'Start'} ${c.app.name}`} onClick={primary}>
+                  <button className="th-wrap row-wrap" title={tileLabel(c)} aria-label={tileLabel(c)} onClick={() => openApp(c)}>
                     <span className="th row-th" style={shot ? { backgroundImage: `url(${shot})` } : { background: gradient(c.app.name) }} />
-                    <span className="sr">{isOpen ? 'Open' : 'Start'}</span>
                   </button>
                   <div className="row-main">
                     <h2>{prefs.status === 'dot'
@@ -202,7 +199,7 @@ export function Home({ host, t, loaded, onView, onOpenItem, snap, thumbs, onDone
         </div>
         <div className="mini">
           {profiles.map((p) => (
-            <button key={p.name} className="th-wrap" title={p.state === 'up' ? `Show ${p.name}` : p.state === 'blocked' ? `${p.name} settings` : `Start ${p.name}`} onClick={() => openProfile(p)}>
+            <button key={p.name} className="th-wrap" title={p.state === 'up' ? `Show ${p.name}` : p.state === 'blocked' ? `Why ${p.name} cannot start` : `Start ${p.name}`} onClick={() => openProfile(p)}>
               <span className={`th${art.byName[p.name] ? ' art' : ''}${p.state === 'up' ? ' sel' : ''}`}
                 style={art.byName[p.name] ? { backgroundImage: `url(${art.byName[p.name]})`, backgroundColor: gradient(p.name) } : { background: gradient(p.name) }} />
               <span className="cap">{p.name}</span>
@@ -236,11 +233,12 @@ export function Home({ host, t, loaded, onView, onOpenItem, snap, thumbs, onDone
         <div className="mini five">
           {strip.map((c) => (
             <div key={c.app.id} className="th-card">
-              <button className="th-wrap" title={`Open ${c.app.name}`} onClick={() => openApp(c)}>
+              <button className="th-wrap" title={tileLabel(c)} onClick={() => openApp(c)}>
                 <span className="th" style={thumbs.byApp[c.app.id] ? { backgroundImage: `url(${thumbs.byApp[c.app.id].url})` } : { background: gradient(c.app.name) }} />
                 <span className="cap">{c.app.name}</span>
               </button>
-              {c.state !== 'running' && <IconButton icon="start" className="primary th-start" label={`Start ${c.app.name}`} onClick={() => run(() => host.startApp(c.app))} />}
+              {c.state !== 'running' && <IconButton icon="start" className="primary th-start" label={`Start ${c.app.name}`}
+                onClick={() => { const why = appBlocked(snap, c.app); if (why) setNotice(why); else run(() => host.startApp(c.app)); }} />}
             </div>
           ))}
           {strip.length === 0 && <span className="tile-sub">Apps you run will show up here</span>}

@@ -3,17 +3,19 @@ import type { Host, Profile, SignIn, Snapshot } from '../host';
 import { BROWSER_GROUPS, ago, browserCards, hueOf, type BrowserCard } from '../model';
 import { VIEWS, gridClass, setPrefs, showsShot, usePrefs, type Prefs } from '../prefs';
 import { useBrowserArt, useSignIns, type BrowserArt } from '../useBrowserMeta';
+import { openBrowser, profileBlocked, type TileNotice } from '../tileRule';
 import { BrowserDrawer } from './BrowserDrawer';
+import { TileNoticeLine } from './TileNoticeLine';
 import { IconButton } from './icons';
 
-interface Props { host: Host; snap: Snapshot; onDone: () => void; editName?: string }
+interface Props { host: Host; snap: Snapshot; onDone: () => void; editName?: string; onPorts: () => void }
 
 const MAX_CHIPS = 3;
 
-export function Browsers({ host, snap, onDone, editName }: Props) {
+export function Browsers({ host, snap, onDone, editName, onPorts }: Props) {
   const prefs = usePrefs();
   const [query, setQuery] = useState('');
-  const [error, setError] = useState('');
+  const [notice, setNotice] = useState<TileNotice | null>(null);
   const [busy, setBusy] = useState<string>('');
   // null = closed; { name: null } = adding; { name } = editing that profile
   const [drawer, setDrawer] = useState<{ name: string | null } | null>(editName ? { name: editName } : null);
@@ -24,7 +26,7 @@ export function Browsers({ host, snap, onDone, editName }: Props) {
   const act = async (name: string, fn: () => Promise<void>) => {
     if (busy) return;
     setBusy(name);
-    try { setError(''); await fn(); onDone(); } catch (e) { setError((e as Error).message); } finally { setBusy(''); }
+    try { setNotice(null); await fn(); onDone(); } catch (e) { setNotice({ text: (e as Error).message }); } finally { setBusy(''); }
   };
   const actions: Actions = {
     start: (p) => act(p.name, () => host.startBrowser(p.name)),
@@ -33,6 +35,8 @@ export function Browsers({ host, snap, onDone, editName }: Props) {
     release: (p) => act(p.name, () => host.releaseBrowser(p.name)),
     edit: (p) => setDrawer({ name: p.name }),
     setup: (p, which) => act(p.name, () => host.openSignInSetup(p.name, which)),
+    // The picture is the shortcut: running shows the window, stopped starts it, blocked says why.
+    tile: (p) => { const why = profileBlocked(p); if (why) setNotice(why); else act(p.name, () => openBrowser(host, p)); },
   };
 
   const grid = (rows: BrowserCard[]) => (
@@ -80,7 +84,7 @@ export function Browsers({ host, snap, onDone, editName }: Props) {
           <button className="primary" onClick={() => setDrawer({ name: null })}>Add profile</button>
         </div>
       </div>
-      {error && <p className="notice" role="alert">{error}</p>}
+      <TileNoticeLine notice={notice} onPorts={onPorts} onClose={() => setNotice(null)} />
       {body()}
       {drawer && (
         <BrowserDrawer host={host} profile={drawer.name ? snap.profiles.find((p) => p.name === drawer.name) || null : null}
@@ -92,9 +96,10 @@ export function Browsers({ host, snap, onDone, editName }: Props) {
 
 interface Actions {
   start(p: Profile): void; stop(p: Profile): void; show(p: Profile): void; release(p: Profile): void; edit(p: Profile): void;
-  setup(p: Profile, which: 'sync' | 'passwords'): void;
+  setup(p: Profile, which: 'sync' | 'passwords'): void; tile(p: Profile): void;
 }
 
+const tileLabel = (p: Profile) => (p.state === 'up' ? `Show ${p.name}` : p.state === 'blocked' ? `Why ${p.name} cannot start` : `Start ${p.name}`);
 const GLYPH = { running: '●', conflict: '▲', stopped: '○' } as const;
 const WORD: Record<BrowserCard['group'], string> = { inuse: 'in use', open: 'open', blocked: 'blocked', stopped: 'stopped' };
 const SIGN_LABEL: Record<SignIn, string> = { in: 'Signed in', out: 'Signed out', unknown: '' };
@@ -113,7 +118,8 @@ function ProfileCard({ c, prefs, art, signIn, busy, actions }: { c: BrowserCard;
   const sized = (e: SyntheticEvent<HTMLImageElement>) => setSmall(e.currentTarget.naturalWidth < 320);
   return (
     <article className={`card bcard ${c.group}`} data-profile={p.name} data-group={c.group}>
-      {showShot && <button className={`shot bshot${picture && small ? ' small-art' : ''}`} onClick={() => actions.edit(p)} aria-label={`Edit ${p.name}`}
+      {showShot && <button className={`shot bshot${picture && small ? ' small-art' : ''}`} onClick={() => actions.tile(p)}
+        aria-label={tileLabel(p)} title={tileLabel(p)} disabled={busy}
         style={{ background: `hsl(${hue} 26% 22%)` }}>
         {picture
           ? <img src={picture} alt="" loading="lazy" onLoad={sized} />
