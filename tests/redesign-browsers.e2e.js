@@ -87,7 +87,7 @@ async function main() {
 
     console.log('step: start real Brave from the card');
     await card('blog').hover();
-    await card('blog').getByRole('button', { name: 'Start' }).click();
+    await card('blog').getByRole('button', { name: 'Start', exact: true }).click();
     await until(async () => (await group('blog')) === 'open', 60000, 'blog running');
     check('Start launches the browser and the card moves to Open', await isUp(pBlog));
     check('running profile sorts first', (await win.locator('.bcard').first().getAttribute('data-profile')) === 'blog');
@@ -141,7 +141,13 @@ async function main() {
     foreign = h.holdPort(pHeld);
     await until(async () => (await group('held')) === 'blocked', 30000, 'held card blocked');
     check('a held port badges its card and disables Start', (await card('held').locator('.badge').textContent()) === 'Port held'
-      && await card('held').getByRole('button', { name: 'Start' }).isDisabled());
+      && await card('held').getByRole('button', { name: 'Start', exact: true }).isDisabled());
+    await card('held').locator('.shot').click();
+    const why = await win.locator('.tile-notice').textContent().catch(() => '');
+    check('its picture says why it cannot start, with a link to Ports', why.includes('held cannot start')
+      && (await win.locator('.tile-notice >> role=button[name="Go to Ports"]').count()) === 1, why);
+    check('and opens no form', (await win.locator('[role=dialog]').count()) === 0);
+    await win.click('.tile-notice >> role=button[name="Dismiss"]');
 
     console.log('step: view modes and filter');
     for (const mode of ['cards', 'rows']) {

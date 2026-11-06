@@ -53,7 +53,7 @@ async function main() {
     check('Home is the first screen', (await tabOn()) === 'Home');
     await until(() => win.evaluate(() => !!document.querySelector('.h-hero .run-row h2') && !/Welcome/.test(document.querySelector('.h-hero')?.textContent || '')), 15000, 'home loads');
     check('Home has no Localhost or news tile', await win.evaluate(() => !document.querySelector('.h-local') && !document.querySelector('.h-news')));
-    check('the hero names an app and offers Start', await win.evaluate(() => { const h = document.querySelector('.h-hero'); return !!h?.querySelector('h2')?.textContent && /Start/.test(h.textContent); }));
+    check('the hero names an app and offers Start', await win.evaluate(() => { const h = document.querySelector('.h-hero'); return !!h?.querySelector('h2')?.textContent && /^Start and open /.test(h.querySelector('.row-wrap')?.getAttribute('aria-label') || ''); }));
     check('Home fits the window without scrolling', await win.evaluate(() => { const m = document.querySelector('.main'); return m.scrollHeight <= m.clientHeight + 1; }));
     check('Recently used is there and the Scene card waits for a scene', await win.evaluate(() => !!document.querySelector('.h-recent') && !document.querySelector('.h-scene')));
 

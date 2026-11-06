@@ -89,12 +89,12 @@ export function App({ host }: { host: Host }) {
         <main className="main" id="main">
           {error && <p className="notice" role="alert">Could not read PortPilot state: {error}</p>}
           {view === 'home' && <Home host={host} onDone={refresh} t={t} loaded={loaded} onView={setView} onOpenItem={openItem} snap={snap} thumbs={thumbs} />}
-          {view === 'localhost' && <Localhost host={host} snap={snap} thumbs={thumbs} onDone={refresh} manage={manage} onManage={setManage} inspectId={focus?.kind === 'app' ? focus.id : undefined} />}
+          {view === 'localhost' && <Localhost host={host} snap={snap} thumbs={thumbs} onDone={refresh} manage={manage} onManage={setManage} inspectId={focus?.kind === 'app' ? focus.id : undefined} onPorts={() => setView('ports')} />}
           {view === 'history' && <History host={host} />}
           {view === 'scenes' && <Scenes host={host} snap={snap} onDone={refresh} />}
           {view === 'ports' && <Ports host={host} snap={snap} onDone={refresh} />}
           {view === 'settings' && <Settings host={host} />}
-          {view === 'browsers' && <Browsers host={host} snap={snap} onDone={refresh} editName={focus?.kind === 'browser' ? focus.id : undefined} />}
+          {view === 'browsers' && <Browsers host={host} snap={snap} onDone={refresh} editName={focus?.kind === 'browser' ? focus.id : undefined} onPorts={() => setView('ports')} />}
         </main>
       </div>
       <Palette open={paletteOpen} onClose={() => setPaletteOpen(false)} host={host} snap={snap}

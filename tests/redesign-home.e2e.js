@@ -86,16 +86,20 @@ async function main() {
     check('Details on a Home tile opens that app\'s details', true);
     check('Details keeps the normal Apps view with its view switch', (await win.locator('[aria-label="View mode"]').count()) === 1);
     await win.click('[role=dialog] >> role=button[name="Close"]');
-    // A browser tile is a shortcut (running: show it, stopped: start it); a blocked one opens its settings.
+    // A browser tile is a shortcut (running: show it, stopped: start it); a blocked one says why and links to Ports.
     await win.click('role=tab[name="Home"]');
     const tile = win.locator('.h-browsers .th-wrap', { hasText: 'Work' });
     check('a stopped browser tile offers Start', (await tile.getAttribute('title')) === 'Start Work');
     held = h.holdPort(workPort);
-    await until(async () => (await tile.getAttribute('title')) === 'Work settings', 30000, 'Work tile blocked');
+    await until(async () => (await tile.getAttribute('title')) === 'Why Work cannot start', 30000, 'Work tile blocked');
     await tile.click();
-    await win.waitForSelector('[role=dialog][aria-label="Edit Work"]', { timeout: 5000 });
-    check('a blocked Home browser tile opens that profile\'s settings', true);
-    await win.click('[role=dialog] >> role=button[name="Close"]');
+    await win.waitForSelector('.h-hero .tile-notice', { timeout: 5000 });
+    const why = await win.locator('.h-hero .tile-notice').textContent();
+    check('a blocked Home browser tile says why', why.includes('Work cannot start'), why);
+    check('and opens no form', (await win.locator('[role=dialog]').count()) === 0);
+    await win.click('.tile-notice >> role=button[name="Go to Ports"]');
+    await until(() => win.evaluate(() => document.querySelector('[role="tab"][aria-selected="true"]')?.textContent === 'Ports'), 5000, 'Ports tab');
+    check('its Go to Ports link opens the Ports screen', true);
     held.kill(); held = null;
     // Status style reaches the Home tiles.
     await win.click('role=tab[name="Home"]');

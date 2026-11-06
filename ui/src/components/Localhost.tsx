@@ -4,21 +4,23 @@ import { clusterCards, type Cluster } from '../clusters';
 import { STALE_MS, cards, grouped, type Card } from '../model';
 import { VIEWS, gridClass, setPrefs, showsShot, usePrefs, type Prefs } from '../prefs';
 import type { Thumbs } from '../useThumbs';
+import { appBlocked, openApp, type TileNotice } from '../tileRule';
 import { AppInspector } from './AppInspector';
+import { TileNoticeLine } from './TileNoticeLine';
 import { IconButton } from './icons';
 import { Library } from './Library';
 
-interface Props { host: Host; snap: Snapshot; thumbs: Thumbs; onDone: () => void; manage: boolean; onManage: (on: boolean) => void; inspectId?: string }
+interface Props { host: Host; snap: Snapshot; thumbs: Thumbs; onDone: () => void; manage: boolean; onManage: (on: boolean) => void; inspectId?: string; onPorts: () => void }
 
 const HOVER_MS = 500;
 const SWEEP_MS = 30000;
 /** Stopped apps shown before "Show all"; running and blocked ones always show. */
 const STOPPED_SHOWN = 12;
 
-export function Localhost({ host, snap, thumbs, onDone, manage, onManage, inspectId }: Props) {
+export function Localhost({ host, snap, thumbs, onDone, manage, onManage, inspectId, onPorts }: Props) {
   const prefs = usePrefs();
   const [query, setQuery] = useState('');
-  const [error, setError] = useState('');
+  const [notice, setNotice] = useState<TileNotice | null>(null);
   const [allStopped, setAllStopped] = useState(false);
   const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set());
   // Details opened from Home land on the normal Apps view with the panel up.
@@ -45,13 +47,16 @@ export function Localhost({ host, snap, thumbs, onDone, manage, onManage, inspec
   }, []);
 
   const act = async (fn: () => Promise<void>) => {
-    try { setError(''); await fn(); onDone(); } catch (e) { setError((e as Error).message); }
+    try { setNotice(null); await fn(); onDone(); } catch (e) { setNotice({ text: (e as Error).message }); }
   };
   const open = (c: Card) => c.port && act(() => host.openUrl(`http://localhost:${c.port}`));
-  const actions = {
+  // A held port is explained, not retried: the host would only fail the same way.
+  const blockedOr = (c: Card, fn: () => void) => { const why = appBlocked(snap, c.app); if (why) setNotice(why); else fn(); };
+  const actions: Actions = {
     open,
-    start: (c: Card) => act(() => host.startApp(c.app)),
-    stop: (c: Card) => act(() => host.stopApp(c.app.id)),
+    start: (c) => blockedOr(c, () => act(() => host.startApp(c.app))),
+    stop: (c) => act(() => host.stopApp(c.app.id)),
+    tile: (c) => blockedOr(c, () => act(() => openApp(host, c.app))),
   };
 
   const showAll = (n: number) => (
@@ -131,7 +136,7 @@ export function Localhost({ host, snap, thumbs, onDone, manage, onManage, inspec
           <button onClick={() => onManage(true)}>Manage</button>
         </div>
       </div>
-      {error && <p className="notice" role="alert">{error}</p>}
+      <TileNoticeLine notice={notice} onPorts={onPorts} onClose={() => setNotice(null)} />
       {body()}
       {(() => {
         const a = snap.apps.find((x) => x.id === inspectApp);
@@ -142,10 +147,14 @@ export function Localhost({ host, snap, thumbs, onDone, manage, onManage, inspec
   );
 }
 
-interface Actions { open(c: Card): void; start(c: Card): void; stop(c: Card): void }
+interface Actions { open(c: Card): void; start(c: Card): void; stop(c: Card): void; tile(c: Card): void }
 
 const GLYPH: Record<Card['state'], string> = { running: '●', conflict: '▲', crashed: '✕', stopped: '○' };
 const WORD: Record<Card['state'], string> = { running: 'running', conflict: 'blocked', crashed: 'crashed', stopped: 'stopped' };
+
+/** The picture is the shortcut: running opens, stopped starts then opens, a held port says why. */
+const tileLabel = (c: Card) => (c.state === 'conflict' ? `Why ${c.app.name} cannot start`
+  : c.state === 'running' ? `Open ${c.app.name}` : `Start and open ${c.app.name}`);
 
 interface More { count: number; open: boolean; toggle(): void }
 
@@ -165,7 +174,7 @@ function AppCard({ c, title, more, member, prefs, thumbs, actions }: { c: Card; 
 
   return (
     <article className={`card ${c.state}${member ? ' member' : ''}`} data-app={c.app.id} data-state={c.state} onMouseEnter={hover} onMouseLeave={() => clearTimeout(timer.current)}>
-      {showShot && <button className="shot" onClick={() => actions.open(c)} disabled={c.state !== 'running'} aria-label={`Open ${c.app.name}`}>
+      {showShot && <button className="shot" onClick={() => actions.tile(c)} aria-label={tileLabel(c)} title={tileLabel(c)}>
         {thumb ? <img src={thumb.url} alt="" loading="lazy" /> : <span className="letter" aria-hidden="true">{c.app.name.slice(0, 1).toUpperCase()}</span>}
         {c.state === 'conflict' && <span className="badge warn">Port held</span>}
         {c.state === 'crashed' && <span className="badge warn">Crashed</span>}

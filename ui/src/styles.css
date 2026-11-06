@@ -113,6 +113,9 @@ button.ib .ic { display: block; }
 
 .main { flex: 1; overflow: auto; padding: 24px 16px; }
 .notice { color: var(--warn); }
+.tile-notice { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; margin: 0 0 8px; }
+.tile-notice span { flex: 0 1 auto; }
+.tile-notice .link { color: var(--acc); font-size: 12.5px; }
 .placeholder { max-width: 640px; margin: 48px auto; color: var(--tx2); }
 
 /* Home: the spotlight grid. The Scene tile only exists once a scene does, and Browsers takes its row. */

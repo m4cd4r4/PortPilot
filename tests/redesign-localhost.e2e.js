@@ -113,6 +113,33 @@ async function main() {
     await until(async () => (await stateOf('app_blocked')) === 'conflict', 30000, 'blocked card shows the conflict');
     check('a held port badges its card', (await card('app_blocked').locator('.badge').textContent()) === 'Port held');
 
+    console.log('step: the picture follows the tile rule');
+    await card('app_blocked').locator('.shot').click();
+    const why = await win.locator('.tile-notice').textContent().catch(() => '');
+    check('a blocked picture says why instead of starting', why.includes('blocked cannot start') && why.includes(`:${heldPort} is held by`), why);
+    check('and the app was not started', (await stateOf('app_blocked')) === 'conflict');
+    if (SHOTS) {
+      for (const w of [1440, 390]) {
+        await win.setViewportSize({ width: w, height: 800 });
+        await win.screenshot({ path: path.join(SHOTS, `localhost-blocked-notice-${w}.png`) });
+      }
+      await win.setViewportSize({ width: 1440, height: 900 });
+    }
+    await win.click('.tile-notice >> role=button[name="Go to Ports"]');
+    await until(() => win.evaluate(() => document.querySelector('[role="tab"][aria-selected="true"]')?.textContent === 'Ports'), 5000, 'Ports tab');
+    check('Go to Ports opens the Ports screen', true);
+    await win.click('role=tab[name="Apps"]');
+    await app.evaluate(({ shell }) => { global.__opened = []; shell.openExternal = async (u) => { global.__opened.push(u); }; });
+    await card('app_shop').locator('.shot').click();
+    await until(() => app.evaluate(() => global.__opened.length > 0), 30000, 'shop page opened');
+    const opened = await app.evaluate(() => global.__opened[0]);
+    check('a stopped picture starts the app and opens its page', opened === `http://localhost:${shopPort}`, opened);
+    // The card catches up on the next poll.
+    await until(async () => (await stateOf('app_shop')) === 'running', 30000, 'shop card running');
+    await card('app_shop').hover();
+    await card('app_shop').getByRole('button', { name: 'Stop' }).click();
+    await until(async () => (await stateOf('app_shop')) === 'stopped', 30000, 'shop stopped again');
+
     console.log('step: history');
     await win.click('role=tab[name="History"]');
     await until(() => win.locator('.run').count().then((n) => n >= 1), 30000, 'a run in the timeline');
