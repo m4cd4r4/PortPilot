@@ -21,12 +21,16 @@ export function SceneDrawer({ host, snap, scene, seed, onClose, onDone }: Props)
   const [confirmDelete, setConfirmDelete] = useState(false);
   const first = useRef<HTMLInputElement>(null);
 
+  // Focus once, on open. The parent passes a new onClose on every render (each 5 s refresh), so keying
+  // this effect on it pulled focus back to the first field while the person was typing in another.
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
   useEffect(() => {
     first.current?.focus();
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') closeRef.current(); };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
+  }, []);
 
   const flip = (set: Set<string>, setter: (s: Set<string>) => void, key: string) => {
     const next = new Set(set);

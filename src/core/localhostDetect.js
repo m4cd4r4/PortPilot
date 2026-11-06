@@ -104,6 +104,7 @@ function inspectorPorts(commandLine) {
 /**
  * Is this listening port a developer's localhost server?
  * opts.ownPorts: extra ports PortPilot serves on (default OWN_PORTS are always skipped).
+ * opts.allowTestMarker: count servers marked --portpilot-test (a test that limits the watcher to its own ports).
  */
 function classify(portInfo, opts = {}) {
   const p = portInfo || {};
@@ -122,17 +123,17 @@ function classify(portInfo, opts = {}) {
       address: b.address || p.address,
       processName: b.processName || (same ? p.processName : ''),
       commandLine: b.commandLine || (same ? p.commandLine : ''),
-    });
+    }, !!opts.allowTestMarker);
     if (verdict.dev) return verdict;
     why = verdict.reason;
   }
   return no(why);
 }
 
-function classifyBinding(port, b) {
+function classifyBinding(port, b, allowTestMarker = false) {
   const no = (reason) => ({ dev: false, reason });
   const name = procName(b.processName);
-  const cmd = String(b.commandLine || '');
+  const cmd = String(b.commandLine || '').replace(allowTestMarker ? /\s--portpilot-test\b/g : /$^/, '');
   if (!name || name === 'unknown') return no('process name unknown');
   if (NOT_A_SERVER_NAME.test(name)) return no(`not a dev server: ${name}`);
   if (!DEV_RUNTIMES.has(name)) return no(`not a dev runtime: ${name}`);

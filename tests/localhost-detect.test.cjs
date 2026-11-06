@@ -56,6 +56,8 @@ t('PortPilot itself and its own ports are skipped', () => {
   assert.strictEqual(classify(item({ port: 4555, address: '127.0.0.1:4555' }), { ownPorts: [4555] }).dev, false);
   assert.strictEqual(dev({ commandLine: 'node server.js --portpilot-test --port 4555' }), false, 'PortPilot e2e servers mark themselves');
   assert.strictEqual(dev({ commandLine: 'node server.js --portpilot-tester' }), true);
+  assert.strictEqual(classify(item({ commandLine: 'node server.js --portpilot-test --port 4555' }), { allowTestMarker: true }).dev, true, 'a test watching its own ports counts its marked servers');
+  assert.strictEqual(classify(item({ commandLine: 'node mcp-server.js --portpilot-test' }), { allowTestMarker: true }).dev, false, 'the marker exemption does not let tools through');
 });
 t('inspector and debug ports are skipped', () => {
   assert.strictEqual(dev({ port: 9229, address: '127.0.0.1:9229' }), false);

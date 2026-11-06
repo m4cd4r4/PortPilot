@@ -23,6 +23,12 @@ Every number published about this work (see [ARTICLE-NOTES.md](ARTICLE-NOTES.md)
 | F7 | 2026-11-06 | `npm run test:e2e:ui` skipped 2 of 9 redesign specs, so they never ran outside a manual run. | Reading `package.json` while planning | real | docs/journeys-plan PR |
 | F8 | 2026-11-06 | 7 specs named in `docs/SCENARIOS.md` no longer exist; their scenarios (auto-detection, crash toast, re-run, browser lease) have no e2e. | Checking every spec name in SCENARIOS.md against `tests/` | real | open (Waves 1-3) |
 | F9 | 2026-11-06 | CI runs no e2e: unit, MCP and a packaging smoke only. | Reading `.github/workflows/ci.yml` | real | open (Wave 3) |
+| F10 | 2026-11-06 | Add app drawer: every 5 s refresh pulled focus back to Name, so text typed in another field landed in Name. The journey saved an app called `shop52068` (its port typed into Name). Same pattern in the browser and scene drawers. | day-one journey: outside check of the config file, then a focus check (click Port, wait 6.5 s, read the focused field: before the fix `My app`, after `3000`) | real | journey-wave1 PR |
+| F11 | 2026-11-06 | Drawer fields found by label matched two inputs: each label also holds its button's text (Browse, Free). | Playwright strict-mode error in the day-one journey | test bug | journey-wave1 PR (fields found by placeholder) |
+| F12 | 2026-11-06 | Two journey checks failed while the screen was right: Rows view has no `.badge` (it says `Port held by node` in the row), and the sidebar and narrow top bar each carry a `.bell-count`. | Reading the `05-port-held` screenshot against the failed checks | test bug | journey-wave1 PR |
+| F13 | 2026-11-06 | Since #207 marked test servers `--portpilot-test`, the app under test ignored them too, so no e2e could check that a terminal-started server is detected. | Planning the day-one journey's detection step | test bug | journey-wave1 PR (marker counts only on ports a test names via `PORTPILOT_DETECT_ONLY_PORTS`; an installed PortPilot never sets it) |
+| F14 | 2026-11-06 | A crash is forgotten after a relaunch: blog crashed (exit 3) in the evening and read `stopped` next morning. History still has the crash. A crash also raises no alert (the bell counts port conflicts only). | day-one journey, `07-next-morning` and `03-crashed` screenshots | real | open (product question, Wave 2 gate) |
+| F15 | 2026-11-06 | At 390 px the History filter placeholder is cut mid-word (`Filter runs by app, branch, p`). | day-one journey, `04-detected-in-history-390` screenshot | real | open (cosmetic) |
 
 ## Runs
 
@@ -31,6 +37,14 @@ Every number published about this work (see [ARTICLE-NOTES.md](ARTICLE-NOTES.md)
 | 2026-11-06 | branch of #205 (source) | 9 redesign specs + browser IPC unit | all pass after rerunning 1 flake (F6); per-spec totals not kept | not recorded | first full pass with the Browsers history view |
 | 2026-11-06 | b958a6a, packaged (`win-unpacked`) | history-browsers, localhost, browsers, tiles | 106/106 | not recorded | packaged build before install |
 | 2026-11-06 | b958a6a installed; specs from #207 branch | localhost, scenes, shell, browsers, web-portal-tabs | 115/115; real `runs.json` +0 runs | not recorded | outside check for F1/F2 |
+| 2026-11-06 20:23 | source bf20baf + journey-wave1 | day-one journey | stopped at step 2 (F11) | 9.1 s | first run |
+| 2026-11-06 20:24 | same | day-one journey | stopped at step 3: app saved as `shop52068` (F10) | 35.7 s | |
+| 2026-11-06 20:25 | same, before the drawer fix | day-one journey with the focus check | focus check FAIL (`My app`) | not recorded | before measurement for F10 |
+| 2026-11-06 20:27 | same, drawer fix | day-one journey | 40/42 (F12) | 85.7 s | after measurement for F10: focus check PASS (`3000`) |
+| 2026-11-06 20:29 | same | day-one journey | 43/43; real `runs.json` +0 of ours | 48.0 s | first clean pass; screenshots read at 1440 and 390 |
+| 2026-11-06 20:30 | same | day-one journey x2 | 43/43, 43/43 | 59.1 s, 53.0 s | stability |
+| 2026-11-06 20:32 | same | `npm run test:e2e:ui` (9 suites) | 197/197 | 4 min 27 s | after the drawer fix |
+| 2026-11-06 20:37 | same | day-one journey (+ start command check) | 44/44; real `runs.json` +0 of ours | 45.7 s | |
 
 ## Cleanups done on real data
 

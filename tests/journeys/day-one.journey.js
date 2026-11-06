@@ -1,0 +1,186 @@
+/**
+ * Journey A, day one: a person installs PortPilot and uses it for their first day.
+ * Run: npm run build:ui && node tests/journeys/day-one.journey.js
+ *
+ * Fresh install (no config at all) -> add two apps through the drawer -> start one -> the other
+ * crashes on start -> a server started from a terminal is noticed -> a stranger takes a port ->
+ * the stranger leaves -> stop everything -> quit for the night -> open it again: the apps are kept.
+ *
+ * Every step is read from outside the app as well as on screen: the config file, runs.json,
+ * netstat, an HTTP answer. Screenshots at each checkpoint (1440 and 390) go to the run's record
+ * folder and are read by a person before the run is called passing.
+ */
+const { journey } = require('./kit');
+const fs = require('fs');
+const path = require('path');
+const h = require('../e2e-harness');
+
+(async () => {
+  if (!fs.existsSync(path.join(h.root, 'src', 'ui-dist', 'index.html'))) throw new Error('src/ui-dist is missing; run "npm run build:ui" first');
+  const j = await journey('day-one', { ports: 3 });
+  const [shopPort, blogPort, notesPort] = j.ports;
+  const shopDir = j.project('shop');
+  const blogDir = j.project('blog');
+  const ids = {};
+  let notes = null;
+  let stranger = null;
+
+  const appByName = (name) => (j.config()?.apps || []).find((a) => a.name === name);
+
+  /** Fill and submit the Add app drawer, as a person would. */
+  async function addApp({ name, cwd, command, port }) {
+    const w = j.win;
+    await w.click('role=button[name="Add app"]');
+    const d = w.locator('role=dialog[name="Add app"]');
+    await d.waitFor({ timeout: 5000 });
+    // By placeholder: each label also holds its button's text (Browse, Free), so label names overlap.
+    await d.getByPlaceholder('I:/Scratch/my-app').fill(cwd);
+    await d.getByPlaceholder('My app').fill(name);
+    await d.getByPlaceholder('npm run dev').fill(command);
+    await d.getByPlaceholder('3000').fill(String(port));
+    await j.blur();
+    await d.getByRole('button', { name: 'Add', exact: true }).click();
+    await d.waitFor({ state: 'detached', timeout: 10000 });
+  }
+
+  await j.run([
+    ['fresh install: first launch with no config', async () => {
+      j.check('the world starts with no config file', !fs.existsSync(path.join(j.configDir, 'portpilot-config.json')));
+      await j.launch();
+      await j.tab('Apps');
+      const empty = await j.waitFor(() => j.win.locator('.empty-note').textContent(), 10000);
+      j.check('Apps says there are no apps yet and how to add one', /No apps yet/.test(empty || ''), empty);
+      j.check('the app wrote a config of its own', await j.waitFor(() => j.config(), 10000));
+      await j.shot('01-first-launch');
+    }],
+
+    ['add two apps through the drawer', async () => {
+      await j.win.click('role=button[name="Manage"]');
+      // A person clicks into a field and reads for a moment; the app refreshes every 5 s meanwhile.
+      await j.win.click('role=button[name="Add app"]');
+      await j.win.locator('role=dialog[name="Add app"]').getByPlaceholder('3000').click();
+      await h.sleep(6500);
+      const focused = await j.win.evaluate(() => document.activeElement && document.activeElement.getAttribute('placeholder'));
+      j.check('focus stays in the field the person clicked while PortPilot refreshes', focused === '3000', `focus is on "${focused}"`);
+      await j.win.keyboard.press('Escape');
+      await j.win.locator('role=dialog[name="Add app"]').waitFor({ state: 'detached', timeout: 5000 });
+      await addApp({ name: 'shop', cwd: shopDir, command: j.command(shopPort, { title: 'Shop' }), port: shopPort });
+      await addApp({ name: 'blog', cwd: blogDir, command: j.command(blogPort, { title: 'Blog', crashAfterMs: 3000, exitCode: 3 }), port: blogPort });
+      const shop = appByName('shop');
+      const blog = appByName('blog');
+      j.check('the config file holds both apps', shop && blog, JSON.stringify((j.config()?.apps || []).map((a) => a.name)));
+      j.check('shop is saved with its folder, command and port', shop && path.resolve(shop.cwd) === path.resolve(shopDir) && shop.preferredPort === shopPort && /--port/.test(shop.command), JSON.stringify(shop));
+      ids.shop = shop && shop.id;
+      ids.blog = blog && blog.id;
+      j.check('neither app is running (nothing listens on their ports)', j.listeners(shopPort).length === 0 && j.listeners(blogPort).length === 0);
+      await j.win.click('role=button[name="Done"]');
+      const n = await j.waitFor(() => j.win.locator('.card[data-app]').count().then((c) => c === 2 && c), 10000);
+      j.check('Apps shows a card for each', n === 2, `cards ${n}`);
+      await j.shot('02-two-apps');
+    }],
+
+    ['start shop from its card', async () => {
+      await j.card(ids.shop).hover();
+      await j.card(ids.shop).getByRole('button', { name: 'Start' }).click();
+      const page = await j.waitFor(() => j.answers(shopPort), 30000);
+      j.check('shop answers on its port with its own page', page && page.status === 200 && page.title === 'Shop', JSON.stringify(page));
+      j.check('the card says running', (await j.waitFor(async () => (await j.stateOf(ids.shop)) === 'running', 15000)));
+      const run = await j.waitFor(() => j.runs().find((r) => r.appId === ids.shop && !r.stoppedAt), 10000);
+      j.check('runs.json has an open run for shop on its port', run && Number(run.port) === shopPort, JSON.stringify(run));
+    }],
+
+    ['blog crashes on start', async () => {
+      await j.card(ids.blog).hover();
+      await j.card(ids.blog).getByRole('button', { name: 'Start' }).click();
+      const up = await j.waitFor(() => j.answers(blogPort), 15000);
+      j.check('blog answered before it crashed', up && up.title === 'Blog', JSON.stringify(up));
+      j.check('then its port went quiet', await j.portFree(blogPort, 15000));
+      const run = await j.waitFor(() => j.runs().find((r) => r.appId === ids.blog && r.stoppedAt), 15000);
+      j.check('runs.json closed the run as a crash with exit code 3', run && run.endedBy === 'crash' && run.exitCode === 3, JSON.stringify(run && { endedBy: run.endedBy, exitCode: run.exitCode }));
+      j.check('the card says crashed', await j.waitFor(async () => (await j.stateOf(ids.blog)) === 'crashed', 15000));
+      const note = await j.card(ids.blog).textContent();
+      j.check('and gives the exit code', /code 3/.test(note), note);
+      const bell = await j.win.locator('.bell-count').count();
+      j.note(`alerts bell after a crash: ${bell ? 'has a count' : 'empty'} (v5 has no crash alert; open question in PROJECT-PLAN)`);
+      j.check('shop is unaffected', (await j.answers(shopPort))?.title === 'Shop');
+      await j.shot('03-crashed');
+    }],
+
+    ['a server started from a terminal is noticed', async () => {
+      notes = j.startServer('notes', notesPort, { title: 'Notes' });
+      j.check('the terminal server answers', await j.waitFor(() => j.answers(notesPort), 10000));
+      const run = await j.waitFor(() => j.runs().find((r) => Number(r.port) === notesPort && !r.stoppedAt), 30000);
+      j.check('runs.json records it as detected', run && run.detected === true, JSON.stringify(run && { appId: run.appId, detected: run.detected, startedBy: run.startedBy }));
+      j.check('under the folder it was started in', run && path.resolve(run.cwd || '') === path.resolve(notes.dir), run && run.cwd);
+      j.check('named after that folder, with the folder\'s own start command', run && run.appName === 'notes' && /run dev/.test(run.startCommand || ''), run && JSON.stringify({ appName: run.appName, startCommand: run.startCommand }));
+      j.check('it is not added to the app list', !appByName('notes') && (j.config()?.apps || []).length === 2);
+      await j.tab('History');
+      const row = await j.waitFor(async () => {
+        const rows = await j.win.locator('.run').allTextContents();
+        return rows.find((t) => /notes/i.test(t) && /Running/i.test(t));
+      }, 15000);
+      j.check('History lists notes as running', row, row);
+      await j.shot('04-detected-in-history');
+      await j.tab('Apps');
+    }],
+
+    ['a stranger takes blog\'s port', async () => {
+      stranger = j.holdPort(blogPort);
+      j.check('the stranger is listening', await j.waitFor(() => j.listeners(blogPort).length > 0, 5000));
+      j.check('the blog card shows the conflict', await j.waitFor(async () => (await j.stateOf(ids.blog)) === 'conflict', 30000));
+      const row = await j.card(ids.blog).textContent();
+      j.check('and names who holds the port', /Port held by node/.test(row), row);
+      // The sidebar and the narrow top bar each carry a bell; only one is visible.
+      const count = await j.waitFor(() => j.win.locator('.bell-count:visible').first().textContent(), 10000);
+      j.check('the alerts bell counts one', count === '1', count);
+      await j.shot('05-port-held');
+      console.log('  a person presses Start on the blocked app anyway');
+      await j.card(ids.blog).hover();
+      await j.card(ids.blog).getByRole('button', { name: 'Start' }).click();
+      const said = await j.waitFor(() => j.win.locator('.tile-notice, [role="alert"]').first().textContent(), 5000);
+      j.check('PortPilot says why it cannot start', said && /held/i.test(said), said);
+      await j.shot('05b-start-blocked');
+      await h.sleep(1500);
+      j.check('PortPilot did not kill the stranger', h.alive(stranger.child.pid) && j.listeners(blogPort).includes(stranger.child.pid));
+      j.check('and did not start blog over it', !j.runs().some((r) => r.appId === ids.blog && !r.stoppedAt));
+    }],
+
+    ['the stranger leaves', async () => {
+      await stranger.stop();
+      j.check('blog\'s port is free again', await j.portFree(blogPort));
+      j.check('the card leaves the conflict state', await j.waitFor(async () => (await j.stateOf(ids.blog)) !== 'conflict', 30000), await j.stateOf(ids.blog));
+      j.check('the bell clears', await j.waitFor(async () => (await j.win.locator('.bell-count').count()) === 0, 15000));
+    }],
+
+    ['stop shop and the terminal server', async () => {
+      await j.card(ids.shop).hover();
+      await j.card(ids.shop).getByRole('button', { name: 'Stop' }).click();
+      j.check('shop\'s port goes quiet', await j.portFree(shopPort, 15000));
+      const run = await j.waitFor(() => j.runs().find((r) => r.appId === ids.shop && r.stoppedAt), 10000);
+      j.check('runs.json closes shop\'s run as stopped', run && run.endedBy === 'stop', run && run.endedBy);
+      await notes.stop();
+      j.check('the terminal server is gone', await j.portFree(notesPort));
+      const nrun = await j.waitFor(() => j.runs().find((r) => Number(r.port) === notesPort && r.stoppedAt), 30000);
+      j.check('its detected run closes on its own', nrun, nrun && nrun.endedBy);
+      await j.shot('06-end-of-day');
+    }],
+
+    ['quit for the night, open it again', async () => {
+      const before = JSON.stringify((j.config()?.apps || []).map((a) => [a.id, a.name, a.command, a.preferredPort]));
+      const pid = j.app.process().pid;
+      await j.quit();
+      j.check('PortPilot has exited', !h.alive(pid));
+      j.check('nothing is left listening on the journey\'s ports', j.ports.every((p) => j.listeners(p).length === 0), j.ports.map((p) => `${p}:${j.listeners(p).join('/')}`).join(' '));
+      await j.launch();
+      await j.tab('Apps');
+      const n = await j.waitFor(() => j.win.locator('.card[data-app]').count().then((c) => c === 2 && c), 15000);
+      j.check('both apps are still there', n === 2, `cards ${n}`);
+      const after = JSON.stringify((j.config()?.apps || []).map((a) => [a.id, a.name, a.command, a.preferredPort]));
+      j.check('their saved settings are unchanged', before === after);
+      j.check('none of them is running', ['shop', 'blog'].every((k) => j.listeners(k === 'shop' ? shopPort : blogPort).length === 0));
+      const open = j.runs().filter((r) => !r.stoppedAt);
+      j.check('runs.json has no run left open', open.length === 0, open.map((r) => r.appName || r.appId).join(', '));
+      await j.shot('07-next-morning');
+    }],
+  ]);
+})().catch((e) => { console.error(e); process.exit(1); });
