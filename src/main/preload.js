@@ -93,7 +93,8 @@ contextBridge.exposeInMainWorld('portpilot', {
     artClear: (name) => ipcRenderer.invoke('browser:art:clear', name),
     signIns: (names) => ipcRenderer.invoke('browser:health', names),
     signInSetup: (name, which) => ipcRenderer.invoke('browser:signInSetup', name, which),
-    release: (name) => ipcRenderer.invoke('browser:release', name)
+    release: (name) => ipcRenderer.invoke('browser:release', name),
+    show: (name) => ipcRenderer.invoke('browser:show', name)
   },
 
   // Health probe

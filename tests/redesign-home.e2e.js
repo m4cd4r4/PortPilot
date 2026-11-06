@@ -14,14 +14,15 @@ const world = h.makeWorld('pp-home-');
 
 async function main() {
   if (!fs.existsSync(path.join(h.root, 'src', 'ui-dist', 'index.html'))) throw new Error('src/ui-dist is missing; run "npm run build:ui" first');
-  const [pa, pb, pc] = await h.freePorts(3);
+  const [pa, pb, pc, workPort] = await h.freePorts(4);
+  let held = null;
   const dir = world.mkdir('srv');
   fs.writeFileSync(path.join(dir, 'server.js'), h.SERVER);
   const mk = (id, name, port) => ({ id, name, command: `node server.js --port ${port}`, cwd: dir, preferredPort: port });
   const apps = [mk('app_a', 'alpha', pa), mk('app_b', 'beta', pb), mk('app_c', 'gamma', pc)];
   world.writeConfig({
     apps,
-    browserProfiles: [{ name: 'Work', port: pa + 1000 > 65000 ? 9400 : pa + 1000, browser: 'brave', mode: 'headless', url: 'about:blank' }],
+    browserProfiles: [{ name: 'Work', port: workPort, browser: 'brave', mode: 'headless', url: 'about:blank' }],
     scenes: [{ id: 'sc_one', name: 'First', apps: ['app_a'], browsers: [] }, { id: 'sc_two', name: 'Second', apps: ['app_c'], browsers: [] }],
   });
 
@@ -85,12 +86,17 @@ async function main() {
     check('Details on a Home tile opens that app\'s details', true);
     check('Details keeps the normal Apps view with its view switch', (await win.locator('[aria-label="View mode"]').count()) === 1);
     await win.click('[role=dialog] >> role=button[name="Close"]');
-    // A browser card on Home opens that profile.
+    // A browser tile is a shortcut (running: show it, stopped: start it); a blocked one opens its settings.
     await win.click('role=tab[name="Home"]');
-    await win.locator('.h-browsers .th-wrap', { hasText: 'Work' }).click();
+    const tile = win.locator('.h-browsers .th-wrap', { hasText: 'Work' });
+    check('a stopped browser tile offers Start', (await tile.getAttribute('title')) === 'Start Work');
+    held = h.holdPort(workPort);
+    await until(async () => (await tile.getAttribute('title')) === 'Work settings', 30000, 'Work tile blocked');
+    await tile.click();
     await win.waitForSelector('[role=dialog][aria-label="Edit Work"]', { timeout: 5000 });
-    check('a Home browser card opens that profile', true);
+    check('a blocked Home browser tile opens that profile\'s settings', true);
     await win.click('[role=dialog] >> role=button[name="Close"]');
+    held.kill(); held = null;
     // Status style reaches the Home tiles.
     await win.click('role=tab[name="Home"]');
     const word = () => win.locator('.run-row .stat-word').count();
@@ -103,6 +109,7 @@ async function main() {
 
     check('no console errors', errors.length === 0, errors.join(' | '));
   } finally {
+    if (held) held.kill();
     await h.closeApp(app);
   }
 }

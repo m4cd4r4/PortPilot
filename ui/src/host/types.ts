@@ -77,6 +77,8 @@ export interface Host {
   openUrl(url: string): Promise<void>;
   startBrowser(name: string): Promise<void>;
   stopBrowser(name: string): Promise<void>;
+  /** Bring a running profile's window forward; opens its start page if every tab was closed. */
+  showBrowser(name: string): Promise<void>;
   /** End a lease; the browser keeps running. */
   releaseBrowser(name: string): Promise<void>;
   /** Add (original null) or edit a profile. Rejects with the host's plain-English reason. */

@@ -54,11 +54,27 @@ async function setup(opts = {}) {
 (async () => {
   console.log('\n=== browser extra ipc ===\n');
 
-  await t('registers exactly the eight channels', async () => {
+  await t('registers exactly the nine channels', async () => {
     const { handlers } = await setup();
     assert.deepStrictEqual([...handlers.keys()].sort(), [
-      'browser:art:choose', 'browser:art:clear', 'browser:art:get', 'browser:art:index', 'browser:art:refresh', 'browser:health', 'browser:release', 'browser:signInSetup',
+      'browser:art:choose', 'browser:art:clear', 'browser:art:get', 'browser:art:index', 'browser:art:refresh', 'browser:health', 'browser:release', 'browser:show', 'browser:signInSetup',
     ]);
+  });
+
+  await t('show: a stopped profile is refused; a running one is shown with its port and start page', async () => {
+    const asked = [];
+    let how = 'raised';
+    const { call, port, w } = await setup({ show: async (p, url) => { asked.push([p, url]); return how; } });
+    assert.strictEqual((await call('browser:show', 'shop')).code, 'NOT_RUNNING');
+    assert.strictEqual(asked.length, 0);
+    await w.foreign(port, null, true);
+    assert.deepStrictEqual(await call('browser:show', 'shop'), { success: true, how: 'raised' });
+    assert.deepStrictEqual(asked, [[port, 'https://shop.example.com/']]);
+    how = null;
+    assert.strictEqual((await call('browser:show', 'shop')).code, 'OPEN_FAILED');
+    assert.strictEqual((await call('browser:show', 'nope')).code, 'NOT_FOUND');
+    assert.strictEqual((await call('browser:show', 7)).code, 'BAD_ARGS');
+    await w.cleanup();
   });
 
   await t('refresh fetches the og:image, stores it, and index + get return it as a data URL', async () => {

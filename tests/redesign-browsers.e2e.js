@@ -6,6 +6,7 @@
  *
  * Covers: one card per profile with account chips, purpose and brand art (a seeded picture) or a
  * gradient and letter; Start from the card (real Brave) and its Signed out pill from real cookies;
+ * Open on a running profile whose tabs were all closed opens its start page again;
  * a lease line with Release that keeps the browser running; a held port badges its card; the two
  * view modes and the filter; add, edit and remove through the drawer, accounts included; no classic switch.
  */
@@ -106,6 +107,18 @@ async function main() {
     await card('blog').getByRole('button', { name: 'Import passwords' }).click();
     await until(async () => (await tabUrls(pBlog)).some((u) => isPage(u, 'importData')), 15000, 'import page open in the profile');
     check('Import passwords opens Brave\'s own import page', true);
+
+    console.log('step: Open after every tab is closed');
+    const pages = async (port) => (await (await fetch(`http://127.0.0.1:${port}/json`)).json()).filter((t) => t.type === 'page');
+    for (const t of await pages(pBlog)) await fetch(`http://127.0.0.1:${pBlog}/json/close/${t.id}`);
+    await until(async () => (await pages(pBlog)).length === 0, 15000, 'every tab closed');
+    check('the browser keeps running with no tab open', await isUp(pBlog));
+    await card('blog').getByRole('button', { name: 'Open', exact: true }).click();
+    await until(async () => (await pages(pBlog)).length === 1, 15000, 'Open made a tab');
+    check('Open on a running profile with no tab opens its start page', (await pages(pBlog))[0].url === 'about:blank');
+    await card('blog').getByRole('button', { name: 'Open', exact: true }).click();
+    await h.sleep(1000);
+    check('Open with a tab already there raises it and adds none', (await pages(pBlog)).length === 1);
 
     console.log('step: lease and Release');
     const sid = 'abcd-1234-e2e';
