@@ -84,6 +84,13 @@ button:disabled { cursor: default; opacity: 0.45; }
 kbd { font: 11px var(--font); border: 1px solid var(--bd); border-radius: 5px; padding: 2px 6px; color: var(--tx2); }
 .actions { display: flex; gap: 6px; margin-left: auto; }
 .icon { background: none; border: 1px solid var(--bd); border-radius: 8px; padding: 4px 10px; color: var(--tx2); }
+/* Icon buttons: the actions that repeat on every row and card. The word lives in aria-label and the tooltip. */
+/* padding is !important: card, row, table and scene button rules set text padding at higher specificity. */
+button.ib { flex: none; width: 28px; height: 28px; padding: 0 !important; display: inline-grid; place-items: center; background: none; border: 1px solid var(--bd); border-radius: 7px; color: var(--tx2); }
+button.ib:hover:not(:disabled):not(.primary) { color: var(--tx); border-color: var(--acc); }
+button.ib.primary { background: var(--acc); border-color: var(--acc); color: var(--onacc); padding: 0; }
+button.ib.on { color: var(--acc); }
+button.ib .ic { display: block; }
 
 /* Alerts: a bell with a count; the list opens on click. */
 .alerts { position: relative; -webkit-app-region: no-drag; }

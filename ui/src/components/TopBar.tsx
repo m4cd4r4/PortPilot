@@ -3,6 +3,7 @@ import { MORE_VIEWS, VIEWS, type View } from '../model';
 
 import { AlertsBell } from './AlertsBell';
 import { MARK } from './Sidebar';
+import { IconButton } from './icons';
 
 interface Props { view: View; onView: (v: View) => void; onSearch: () => void; warnings: string[] }
 
@@ -45,7 +46,8 @@ export function TopBar({ view, onView, onSearch, warnings }: Props) {
       </button>
       <div className="actions">
         <AlertsBell warnings={warnings} where="top" onFix={() => onView('ports')} />
-        <button className={`icon${view === 'settings' ? ' on' : ''}`} title="Settings" aria-label="Settings" onClick={() => { setMore(false); onView('settings'); }}>Settings</button>
+        <IconButton icon="settings" label="Settings" className={view === 'settings' ? 'on' : ''} aria-pressed={view === 'settings'}
+          onClick={() => { setMore(false); onView('settings'); }} />
       </div>
     </header>
   );

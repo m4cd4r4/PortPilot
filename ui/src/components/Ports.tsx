@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import type { Host, Snapshot } from '../host';
+import { IconButton } from './icons';
 
 interface Props { host: Host; snap: Snapshot; onDone: () => void }
 
@@ -83,11 +84,11 @@ export function Ports({ host, snap, onDone }: Props) {
                     <td className="mono">{p.pid ?? ''}</td>
                     <td>{owner.get(p.port) ? <span className="stat running"><span aria-hidden="true">●</span> {owner.get(p.port)}</span> : <span className="muted">none</span>}</td>
                     <td className="row-acts">
-                      <button onClick={() => host.openUrl(`http://localhost:${p.port}`)}>Open</button>
+                      <IconButton icon="open" label="Open" tip={`Open localhost:${p.port}`} onClick={() => host.openUrl(`http://localhost:${p.port}`)} />
                       {armed === p.port
                         ? <><button className="danger" disabled={busy} onClick={() => kill(p.port)}>{sys ? 'Kill system process' : 'Confirm kill'}</button>
                           <button onClick={() => setArmed(null)}>Keep</button></>
-                        : <button onClick={() => setArmed(p.port)}>Kill</button>}
+                        : <IconButton icon="kill" label="Kill" tip={`Kill what holds :${p.port}`} onClick={() => setArmed(p.port)} />}
                     </td>
                   </tr>
                 );

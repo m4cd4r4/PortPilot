@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { AppRec, Group, Host } from '../host';
+import { IconButton } from './icons';
 
 interface Props {
   host: Host;
@@ -78,7 +79,7 @@ export function AppDrawer({ host, app, groups, onClose, onDone }: Props) {
       <form className="drawer" role="dialog" aria-modal="true" aria-label={adding ? 'Add app' : `Edit ${app!.name}`} onSubmit={save}>
         <header className="drawer-head">
           <h2>{adding ? 'Add app' : app!.name}</h2>
-          <button type="button" className="icon" onClick={onClose} aria-label="Close">Close</button>
+          <IconButton icon="close" label="Close" onClick={onClose} />
         </header>
 
         <div className="drawer-body">

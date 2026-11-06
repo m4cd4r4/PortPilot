@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { HistoryData, Host, Run } from '../host';
 import { runView } from '../legacy';
+import { IconButton } from './icons';
 
 interface Props { host: Host }
 
@@ -107,8 +108,8 @@ export function History({ host }: Props) {
                     {r.page?.title && r.page.title !== rv.labelOf(r) && <div className="sub"><span className="note">{r.page.title}</span></div>}
                   </div>
                   <div className="acts shown">
-                    {live && r.port && <button onClick={() => host.openUrl(`http://localhost:${r.port}`)}>Open</button>}
-                    {canRestart && <button disabled={busy === r.id} onClick={() => startAgain(r)}>{busy === r.id ? 'Starting' : 'Start again'}</button>}
+                    {live && r.port && <IconButton icon="open" label="Open" tip={`Open localhost:${r.port}`} onClick={() => host.openUrl(`http://localhost:${r.port}`)} />}
+                    {canRestart && <IconButton icon="again" label="Start again" tip={`Start ${rv.labelOf(r)} again`} busy={busy === r.id} onClick={() => startAgain(r)} />}
                   </div>
                 </li>
               );

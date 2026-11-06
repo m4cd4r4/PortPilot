@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Account, Host, Profile } from '../host';
+import { IconButton } from './icons';
 import type { BrowserArt } from '../useBrowserMeta';
 
 interface Props {
@@ -75,7 +76,7 @@ export function BrowserDrawer({ host, profile, taken, art, onClose, onDone }: Pr
       <form className="drawer" role="dialog" aria-modal="true" aria-label={adding ? 'Add profile' : `Edit ${profile!.name}`} onSubmit={save}>
         <header className="drawer-head">
           <h2>{adding ? 'Add profile' : profile!.name}</h2>
-          <button type="button" className="icon" onClick={onClose} aria-label="Close">Close</button>
+          <IconButton icon="close" label="Close" onClick={onClose} />
         </header>
 
         <div className="drawer-body">
@@ -122,7 +123,7 @@ export function BrowserDrawer({ host, profile, taken, art, onClose, onDone }: Pr
                 <input aria-label={`Account ${i + 1} platform`} placeholder="Platform" value={a.platform || ''} maxLength={40} onChange={(e) => setAccount(i, 'platform', e.target.value)} />
                 <input aria-label={`Account ${i + 1} username`} placeholder="Username" value={a.username || ''} maxLength={120} onChange={(e) => setAccount(i, 'username', e.target.value)} />
                 <input aria-label={`Account ${i + 1} note`} placeholder="Note" value={a.note || ''} maxLength={200} onChange={(e) => setAccount(i, 'note', e.target.value)} />
-                <button type="button" className="icon" aria-label={`Remove account ${i + 1}`} onClick={() => setAccounts((rows) => rows.filter((_, j) => j !== i))}>Remove</button>
+                <IconButton icon="close" label={`Remove account ${i + 1}`} onClick={() => setAccounts((rows) => rows.filter((_, j) => j !== i))} />
               </div>
             ))}
             {accounts.length < ACCOUNTS_MAX && (

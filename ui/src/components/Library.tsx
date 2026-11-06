@@ -3,6 +3,7 @@ import type { AppRec, Host, Snapshot } from '../host';
 import { groupOf } from '../model';
 import { AppDrawer } from './AppDrawer';
 import { AppInspector } from './AppInspector';
+import { IconButton } from './icons';
 
 interface Props { host: Host; snap: Snapshot; onDone: () => void; onExit: () => void }
 
@@ -78,10 +79,13 @@ export function Library({ host, snap, onDone, onExit }: Props) {
                       <td>{groupName_(a) || <span className="muted">none</span>}</td>
                       <td className="mono cmd" title={a.command}>{a.command}</td>
                       <td className="row-acts">
-                        <button aria-pressed={!!a.isFavorite} onClick={() => act(() => host.toggleFavorite(a.id))}>{a.isFavorite ? 'Unstar' : 'Star'}</button>
-                        {live ? <button onClick={() => act(() => host.stopApp(a.id))}>Stop</button> : <button onClick={() => act(() => host.startApp(a))}>Start</button>}
-                        <button onClick={() => setInspect(a)}>Details</button>
-                        <button onClick={() => setEditing(a)}>Edit</button>
+                        <IconButton icon="star" label="Star" tip={a.isFavorite ? `Unstar ${a.name}` : `Star ${a.name}`} aria-pressed={!!a.isFavorite}
+                          filled={!!a.isFavorite} className={a.isFavorite ? 'on' : ''} onClick={() => act(() => host.toggleFavorite(a.id))} />
+                        {live
+                          ? <IconButton icon="stop" label="Stop" tip={`Stop ${a.name}`} onClick={() => act(() => host.stopApp(a.id))} />
+                          : <IconButton icon="start" label="Start" tip={`Start ${a.name}`} onClick={() => act(() => host.startApp(a))} />}
+                        <IconButton icon="details" label="Details" tip={`Details for ${a.name}`} onClick={() => setInspect(a)} />
+                        <IconButton icon="edit" label="Edit" tip={`Edit ${a.name}`} onClick={() => setEditing(a)} />
                       </td>
                     </tr>
                   );
@@ -108,7 +112,7 @@ function GroupRow({ name, count, onRename, onDelete }: { name: string; count: nu
       <small>{count} {count === 1 ? 'app' : 'apps'}</small>
       {armed
         ? <><button className="danger" onClick={onDelete}>Delete group</button><button onClick={() => setArmed(false)}>Keep</button></>
-        : <button onClick={() => setArmed(true)}>Delete</button>}
+        : <IconButton icon="delete" label="Delete" tip={`Delete group ${name}`} onClick={() => setArmed(true)} />}
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { BROWSER_GROUPS, ago, browserCards, hueOf, type BrowserCard } from '../m
 import { VIEWS, gridClass, setPrefs, showsShot, usePrefs, type Prefs } from '../prefs';
 import { useBrowserArt, useSignIns, type BrowserArt } from '../useBrowserMeta';
 import { BrowserDrawer } from './BrowserDrawer';
+import { IconButton } from './icons';
 
 interface Props { host: Host; snap: Snapshot; onDone: () => void; editName?: string }
 
@@ -152,16 +153,17 @@ function ProfileCard({ c, prefs, art, signIn, busy, actions }: { c: BrowserCard;
         {lease && (
           <div className="lease" data-lease>
             <span>{lease.starting ? 'Starting for' : 'In use by'} {lease.by}{lease.since ? ` · ${ago(lease.since)}` : ''}</span>
-            {!lease.starting && <button onClick={() => actions.release(p)} disabled={busy}>Release</button>}
+            {!lease.starting && <IconButton icon="release" label="Release" tip={`Release ${p.name} from ${lease.by}`} onClick={() => actions.release(p)} disabled={busy} />}
           </div>
         )}
         {c.group === 'blocked' && p.warning && <p className="note-warn">{p.warning}</p>}
       </div>
       <div className="acts">
         {up
-          ? <><button onClick={() => actions.show(p)} disabled={busy}>Open</button><button onClick={() => actions.stop(p)} disabled={busy}>{busy ? 'Working' : 'Stop'}</button></>
-          : <button onClick={() => actions.start(p)} disabled={busy || c.group === 'blocked'}>{busy ? 'Working' : 'Start'}</button>}
-        <button onClick={() => actions.edit(p)}>Edit</button>
+          ? <><IconButton icon="open" label="Open" tip={`Show ${p.name}`} onClick={() => actions.show(p)} disabled={busy} />
+            <IconButton icon="stop" label="Stop" tip={`Stop ${p.name}`} onClick={() => actions.stop(p)} busy={busy} /></>
+          : <IconButton icon="start" label="Start" tip={`Start ${p.name}`} onClick={() => actions.start(p)} busy={busy} disabled={c.group === 'blocked'} />}
+        <IconButton icon="edit" label="Edit" tip={`Edit ${p.name}`} onClick={() => actions.edit(p)} />
       </div>
     </article>
   );
