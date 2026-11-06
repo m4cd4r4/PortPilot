@@ -86,6 +86,15 @@ function worldProcesses(dir) {
   } catch { return []; }
 }
 
+/** "name: start of its command line" for a stray, so the record says what outlived the journey. */
+function describe(pid) {
+  if (process.platform !== 'win32') return '';
+  try {
+    const ps = `$p = Get-CimInstance Win32_Process -Filter "ProcessId=${Number(pid)}"; if ($p) { "$($p.Name): $($p.CommandLine)" }`;
+    return `(${execFileSync('powershell.exe', ['-NoProfile', '-Command', ps], { encoding: 'utf8', windowsHide: true }).trim().slice(0, 200)})`;
+  } catch { return ''; }
+}
+
 /** A comparable folder key: real path, forward slashes, lower case (runs.json stores I:/x, os.tmpdir() may be 8.3 and backslashed). */
 function dirKey(p) {
   let r = String(p || '');
@@ -283,10 +292,16 @@ async function journey(name, { ports: nPorts = 4, detectIntervalMs = 1000 } = {}
       if (errors.length) j.check('no page errors in the last session', false, errors.join(' | '));
       for (const c of [...children]) await j.stopChild(c);
       // Stragglers: an Electron a failed launch never handed back, or a server PortPilot started that
-      // outlived a quit. The world folder and the ports belong to this journey alone.
-      const strays = [...new Set([...worldProcesses(tmp), ...ports.flatMap((p) => listeners(p))])];
+      // outlived a quit. The world folder and the ports belong to this journey alone. A journey port still
+      // held right after quit is a stray at once. Electron's helpers (a renderer) can outlive the main
+      // process by ~10 s on a busy machine, so world processes get up to 20 s, timed and recorded.
+      const portHolders = ports.flatMap((p) => listeners(p));
+      const w0 = Date.now();
+      const worldClear = await j.waitFor(() => worldProcesses(tmp).length === 0, 20000);
+      j.note(worldClear ? `world clear after ${((Date.now() - w0) / 1000).toFixed(1)} s` : 'world not clear after 20 s');
+      const strays = [...new Set([...portHolders, ...worldProcesses(tmp)])];
       if (strays.length) {
-        j.check('nothing outlives the journey', false, `killed ${strays.join(', ')}`);
+        j.check('nothing outlives the journey', false, `killed ${strays.map((p) => `${p} ${describe(p)}`).join(', ')}`);
         strays.forEach(killTree);
       }
 
