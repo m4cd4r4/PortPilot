@@ -54,6 +54,15 @@ Every number published about this work (see [ARTICLE-NOTES.md](ARTICLE-NOTES.md)
 | F38 | 2026-11-06 | At 390 px the Browsers history filter placeholder is cut. Duplicate of F28. | long-haul journey screenshot | real | see F28 |
 | F39 | 2026-11-07 | Review of the long-haul diff: the first F31 fix skipped every app that had already exited, so an app that exited without crashing (stopped by port, or killed outside PortPilot as a non-crash) kept its run open and its runtime entry after quit; nothing else closes it. | Sonnet review of the diff, then a unit check that failed before the change | real | long-haul PR (quit skips only crashed apps; `app quit still records a stop for an app that exited without crashing`) |
 | F40 | 2026-11-07 | Review of the long-haul diff: the "History files day 1 under the day 6 days ago" check matched the day number anywhere in the header, so `1` also matched `11` or `21`. The first tightened version then failed on a right screen (`Sunday 1 November2`: the row count follows the date). | Sonnet review of the diff; the rerun's failed check | test bug | long-haul PR (matches `<day> <month>` with no letter after it) |
+| F41 | 2026-11-06 | Cause of F30: Electron does not wait for an async `before-quit` handler, so the process exited at its first `await` and "Stop PortPilot-started apps on quit" never stopped anything. | restarts journey: shop's port still held and its run open after a clean quit | real | restarts PR (the first quit is held until the cleanup ends, 10 s cap, then quits). Whether quit should stop apps at all: product decision 2026-11-07, default to off, separate PR |
+| F42 | 2026-11-06 | Stop does nothing on a server PortPilot started, then adopted after a relaunch. | restarts journey (kept as a KNOWN OPEN note) | real | open (decided 2026-11-07: fix, separate PR) |
+| F43 | 2026-11-06 | After a hard kill of PortPilot, runs stay open in `runs.json` until the next relaunch notices. | restarts journey | real | open |
+| F44 | 2026-11-06 | After a hard kill, UI preferences kept in `localStorage` were lost in 3 of 5 runs. | restarts journey | real | open |
+| F45 | 2026-11-06 | Brave keeps the profile folder open after it is closed from outside, so Start straight after fails with `START_TIMEOUT`. Same family as F21/F22. | restarts journey | real | open (decided 2026-11-07: Start checks nothing holds the folder first, separate PR) |
+| F46 | 2026-11-06 | Choosing a view in Settings for Apps also sets the Browsers view. | restarts journey | real | open |
+| F47 | 2026-11-06 | Three test bugs found while building the restarts journey, fixed before it first passed. | restarts journey's own failed checks | test bug | restarts PR |
+| F48 | 2026-11-07 | After the rebase, "beta now has two records" read `browser-runs.json` straight after Start, before the start call had written the record; two later checks then failed from it. Same race the day-2 step already waited for. | restarts journey, 1 of 2 runs | test bug | restarts PR (waits up to 10 s) |
+| F49 | 2026-11-07 | `page.screenshot: Timeout 30000ms` again: once in restarts (step 2) and once in long-haul (last step, after its raise-and-retry). F18 and F35 are the same flake; the retry does not cure it. | restarts and long-haul journeys | flake (watch; see F18) | open |
 
 ## Runs
 
@@ -82,6 +91,11 @@ Every number published about this work (see [ARTICLE-NOTES.md](ARTICLE-NOTES.md)
 | 2026-11-06 22:42-23:46 | 1959594 + long-haul (in progress) | long-haul journey, 16 runs while it was built | 23/24 to 67/69, 6 clean; failures came from F30-F36 and test bugs fixed on the way | 118.9-232.1 s | |
 | 2026-11-06 23:51-23:58 | 1959594 + long-haul (26a3575) | long-haul x3, day-one x1, one at a time | 66/66 x3, 63/63 | 157.0, 135.6, 128.6 s; 97.4 s | |
 | 2026-11-07 06:35 | a3d13f5 (long-haul rebased onto a9bb0a5) | long-haul x2, then day-one, one at a time | 66/66, 66/66, 63/63; real `runs.json` +0 of ours | 90.0, 89.2, 81.8 s | world clear after 1.4 s |
+| 2026-11-06 22:40-23:31 | 1959594 + restarts (in progress) | restarts journey, 11 runs while it was built | 4/5 to 75/79; failures came from F41-F47 | 48.3-372.4 s | |
+| 2026-11-06 23:37-23:47 | 1959594 + restarts (d4967fc) | restarts x3 | 75/75 x3 | 261.7, 227.1, 287.4 s | |
+| 2026-11-07 07:38 | 1c25068 (restarts rebased onto 83dbd6b) | restarts x2, one at a time | 72/75 (F48), 75/75 | 159.5, 137.6 s | |
+| 2026-11-07 07:43 | + F48 fix | restarts x2, day-one, restarts, one at a time | 12/14 (F49, step 2), 75/75, 63/63, 75/75 | 109.8, 149.8, 84.7, 139.8 s | |
+| 2026-11-07 07:56 | + review fix (quit logs when the 10 s cap cuts the cleanup short) | restarts | 75/75 | 115.9 s | |
 | 2026-11-07 06:48 | + review fixes (F39, first F40 attempt) | long-haul | 62/65: F40's failed check, then the last step stopped on `page.screenshot: Timeout 30000ms` (F18/F35 kind), so the two journey servers outlived it and were killed | 159.3 s | |
 | 2026-11-07 06:51 | + F40 fixed | long-haul x2, then day-one, one at a time | 66/66, 66/66, 63/63 | 82.2, 78.8, 73.3 s | |
 

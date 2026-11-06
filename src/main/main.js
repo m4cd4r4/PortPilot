@@ -418,8 +418,9 @@ app.on('before-quit', (event) => {
   event.preventDefault();
   if (quitCleanup === 'running') return;
   quitCleanup = 'running';
-  const timeout = new Promise((r) => setTimeout(r, QUIT_CLEANUP_MS));
+  const timeout = new Promise((r) => setTimeout(() => r('timeout'), QUIT_CLEANUP_MS));
   Promise.race([cleanupBeforeQuit(), timeout])
+    .then((r) => { if (r === 'timeout') console.error(`Quit cleanup still running after ${QUIT_CLEANUP_MS} ms; quitting anyway`); })
     .catch((err) => console.error('Error during quit cleanup:', err))
     .finally(() => { quitCleanup = 'done'; app.quit(); });
 });
