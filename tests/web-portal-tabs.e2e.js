@@ -20,7 +20,7 @@ async function main() {
   const shop = world.mkdir('shop');
   fs.writeFileSync(path.join(shop, 'server.js'), h.SERVER);
   world.writeConfig({
-    apps: [{ id: 'app_shop', name: 'shop', command: 'node server.js', cwd: shop, preferredPort: 0 }],
+    apps: [{ id: 'app_shop', name: 'shop', command: 'node server.js --portpilot-test', cwd: shop, preferredPort: 0 }],
   });
 
   // APPDATA picks the throwaway config dir on Windows; XDG_CONFIG_HOME does it elsewhere.

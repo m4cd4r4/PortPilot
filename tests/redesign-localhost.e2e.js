@@ -24,9 +24,9 @@ async function main() {
   world.writeConfig({
     groups: [{ id: 'g_web', name: 'Web' }],
     apps: [
-      { id: 'app_shop', name: 'shop', command: `node server.js --port ${shopPort}`, cwd: shop, preferredPort: shopPort, groupId: 'g_web' },
-      { id: 'app_idle', name: 'idle', command: `node server.js --port ${idlePort}`, cwd: shop, preferredPort: idlePort },
-      { id: 'app_blocked', name: 'blocked', command: `node server.js --port ${heldPort}`, cwd: shop, preferredPort: heldPort },
+      { id: 'app_shop', name: 'shop', command: `node server.js --portpilot-test --port ${shopPort}`, cwd: shop, preferredPort: shopPort, groupId: 'g_web' },
+      { id: 'app_idle', name: 'idle', command: `node server.js --portpilot-test --port ${idlePort}`, cwd: shop, preferredPort: idlePort },
+      { id: 'app_blocked', name: 'blocked', command: `node server.js --portpilot-test --port ${heldPort}`, cwd: shop, preferredPort: heldPort },
     ],
   });
 
@@ -148,7 +148,7 @@ async function main() {
     check('the run shows the page title', (await win.locator('.run').first().textContent()).includes('Shop demo'));
     // At a mid width the run's time used to run under the Open / Start again buttons. A live run is
     // needed so a button shows at all (an ended run with nothing to do has no buttons to collide with).
-    await win.evaluate((a) => window.portpilot.process.start(a), { id: 'app_idle', name: 'idle', command: `node server.js --port ${idlePort}`, cwd: shop, preferredPort: idlePort });
+    await win.evaluate((a) => window.portpilot.process.start(a), { id: 'app_idle', name: 'idle', command: `node server.js --portpilot-test --port ${idlePort}`, cwd: shop, preferredPort: idlePort });
     await until(() => win.locator('.run .acts button').count().then((n) => n >= 1), 30000, 'a run with a button');
     const overlaps = () => win.evaluate(() => [...document.querySelectorAll('.run')].filter((r) => {
       const acts = r.querySelector('.acts')?.getBoundingClientRect();

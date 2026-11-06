@@ -18,7 +18,7 @@ async function main() {
   let held = null;
   const dir = world.mkdir('srv');
   fs.writeFileSync(path.join(dir, 'server.js'), h.SERVER);
-  const mk = (id, name, port) => ({ id, name, command: `node server.js --port ${port}`, cwd: dir, preferredPort: port });
+  const mk = (id, name, port) => ({ id, name, command: `node server.js --portpilot-test --port ${port}`, cwd: dir, preferredPort: port });
   const apps = [mk('app_a', 'alpha', pa), mk('app_b', 'beta', pb), mk('app_c', 'gamma', pc)];
   world.writeConfig({
     apps,
