@@ -326,9 +326,12 @@ function getAppLogs(appId) {
  */
 async function cleanupAllProcesses(configPath) {
   const pids = [];
-  const ids = [...runningProcesses.keys()];
+  const ids = [];
 
   for (const [id, info] of runningProcesses) {
+    // An app that already exited stays tracked for its logs: its crash stamp and closed run are kept as they are.
+    if (info.running === false) continue;
+    ids.push(id);
     if (info.process && !info.process.killed && info.pid) {
       pids.push(info.pid);
     }
