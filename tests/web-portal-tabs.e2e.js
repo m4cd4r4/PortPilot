@@ -24,7 +24,7 @@ async function main() {
   });
 
   // APPDATA picks the throwaway config dir on Windows; XDG_CONFIG_HOME does it elsewhere.
-  const agent = spawn(process.execPath, [path.join(h.root, 'src/agent/server.js'), '--no-open'], {
+  const agent = spawn(process.execPath, [path.join(h.root, 'src/agent/server.js'), '--no-open', '--portpilot-test'], {
     cwd: h.root,
     env: { ...process.env, APPDATA: world.tmp, XDG_CONFIG_HOME: world.tmp, PORTPILOT_AGENT_PORT: String(agentPort), PORTPILOT_NO_OPEN: '1' },
     stdio: 'ignore',
