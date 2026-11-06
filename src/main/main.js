@@ -407,9 +407,24 @@ app.on('window-all-closed', () => {
   }
 });
 
-app.on('before-quit', async (event) => {
+// Electron does not wait for an async before-quit handler: the process exited at the first await,
+// so "Stop PortPilot-started apps on quit" never stopped anything (restarts journey, 2026-11-06).
+// The first quit is held until the cleanup ends (at most QUIT_CLEANUP_MS), then quits for real.
+const QUIT_CLEANUP_MS = 10000;
+let quitCleanup = null; // null, 'running' or 'done'
+app.on('before-quit', (event) => {
   app.isQuitting = true;
+  if (quitCleanup === 'done') return;
+  event.preventDefault();
+  if (quitCleanup === 'running') return;
+  quitCleanup = 'running';
+  const timeout = new Promise((r) => setTimeout(r, QUIT_CLEANUP_MS));
+  Promise.race([cleanupBeforeQuit(), timeout])
+    .catch((err) => console.error('Error during quit cleanup:', err))
+    .finally(() => { quitCleanup = 'done'; app.quit(); });
+});
 
+async function cleanupBeforeQuit() {
   // Stop the shared MCP HTTP server first: once quitting, a death must not be restarted.
   if (mcpServer) {
     try { mcpServer.stop(); } catch (err) { console.error('Error stopping MCP server:', err); }
@@ -440,4 +455,4 @@ app.on('before-quit', async (event) => {
       }
     }
   }
-});
+}
