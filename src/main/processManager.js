@@ -105,7 +105,7 @@ async function startApp(appConfig) {
             // Tail taken at exit: stderr, else stdout (many dev servers print
             // their fatal error there).
             const errorTail = (processInfo.errorOutput || processInfo.output || '').slice(-2000) || null;
-            emitCrash({ id, name, code, errorTail });
+            emitCrash({ id, name, code, errorTail, pid: processInfo.pid, at: Date.now() });
           }
         }
       });
@@ -255,6 +255,25 @@ async function killByPort(port) {
   return result;
 }
 
+// When each app's crash was last dismissed: a crash handler still inside its
+// delay must not stamp a crash the person has already dismissed.
+const dismissedAt = new Map();
+
+/** Forget a dead app's entry so it no longer reads crashed. A live one is kept. */
+function forgetCrash(appId, { dismissed = false } = {}) {
+  if (dismissed) dismissedAt.set(appId, Date.now());
+  const info = runningProcesses.get(appId);
+  if (!info || (info.running && info.process && !info.process.killed)) return false;
+  runningProcesses.delete(appId);
+  return true;
+}
+
+/** True when the app's crash was dismissed at or after `at`. */
+function dismissedSince(appId, at) {
+  const t = dismissedAt.get(appId);
+  return t != null && t >= at;
+}
+
 /**
  * Get status of all managed processes
  * @returns {Array} Array of process status objects
@@ -288,7 +307,7 @@ function getRunningApps() {
  */
 function getAppLogs(appId) {
   const processInfo = runningProcesses.get(appId);
-  
+
   if (!processInfo) {
     return { stdout: '', stderr: '', error: 'App not found' };
   }
@@ -331,5 +350,7 @@ module.exports = {
   cleanupAllProcesses,
   onAppCrash,
   emitCrash,
+  forgetCrash,
+  dismissedSince,
   isCrashed
 };

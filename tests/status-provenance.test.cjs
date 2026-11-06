@@ -13,7 +13,7 @@ const os = require('os');
 const path = require('path');
 
 const status = require('../src/core/status');
-const { recordStart, recordStop, readRuntime, runtimePathFor } = require('../src/core/configFile');
+const { recordStart, recordStop, recordCrash, clearCrash, readRuntime, runtimePathFor } = require('../src/core/configFile');
 
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'portpilot-provenance-'));
 let n = 0;
@@ -152,6 +152,21 @@ t('recordStart refuses a missing appId or startedBy', () => {
   assert.equal(recordStart(cfg, '', status.makeStartedBy({ kind: 'human', surface: 'desktop' })), false);
   assert.equal(recordStart(cfg, 'app_1', null), false);
   assert.ok(!fs.existsSync(runtimePathFor(cfg)));
+});
+
+t('a crash stamp outlives a reread (a relaunch) until clearCrash drops it', () => {
+  const cfg = tmpConfig();
+  const by = status.makeStartedBy({ kind: 'human', surface: 'desktop' });
+  recordStart(cfg, 'app_1', by, { pid: 1, port: 3000 });
+  recordStart(cfg, 'app_2', by, { pid: 2, port: 3001 });
+  assert.equal(recordCrash(cfg, 'app_1', 3, { errorTail: 'boom' }), true);
+  assert.equal(readRuntime(cfg).apps.app_1.crashed.exitCode, 3);
+  assert.equal(clearCrash(cfg, 'app_1'), true);
+  assert.equal(readRuntime(cfg).apps.app_1, undefined);
+  assert.ok(readRuntime(cfg).apps.app_2, 'the other app is untouched');
+  assert.equal(clearCrash(cfg, 'app_2'), false, 'a live entry (startedBy, no crash) is not cleared');
+  assert.ok(readRuntime(cfg).apps.app_2.startedBy);
+  assert.equal(clearCrash(cfg, 'never'), false);
 });
 
 fs.rmSync(root, { recursive: true, force: true });

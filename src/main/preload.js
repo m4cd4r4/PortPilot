@@ -21,6 +21,7 @@ contextBridge.exposeInMainWorld('portpilot', {
     start: (appConfig) => ipcRenderer.invoke('process:start', appConfig),
     stop: (appId) => ipcRenderer.invoke('process:stop', appId),
     list: () => ipcRenderer.invoke('process:list'),
+    dismissCrash: (appId) => ipcRenderer.invoke('process:dismissCrash', appId),
     logs: (appId) => ipcRenderer.invoke('process:logs', appId)
   },
 

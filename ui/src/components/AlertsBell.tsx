@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
+import type { Alert } from '../model';
 
-interface Props { warnings: string[]; onFix: () => void; where: 'side' | 'top' }
+export type AlertAct = 'fix' | 'restart' | 'dismiss';
+interface Props { alerts: Alert[]; onAct: (a: Alert, act: AlertAct) => void; where: 'side' | 'top' }
 
-/** Blocked ports live behind a bell with a count, not a banner over every screen. Fix opens Ports. */
-export function AlertsBell({ warnings, onFix, where }: Props) {
+/** Blocked ports and crashed apps live behind a bell with a count, not a banner over every screen. */
+export function AlertsBell({ alerts, onAct, where }: Props) {
   const [open, setOpen] = useState(false);
   const box = useRef<HTMLDivElement>(null);
-  const n = warnings.length;
+  const n = alerts.length;
 
   useEffect(() => {
     if (!open) return;
@@ -18,6 +20,7 @@ export function AlertsBell({ warnings, onFix, where }: Props) {
   }, [open]);
   useEffect(() => { if (n === 0) setOpen(false); }, [n]);
 
+  const act = (a: Alert, what: AlertAct) => { if (what === 'fix') setOpen(false); onAct(a, what); };
   const label = n === 0 ? 'Alerts, none' : `Alerts, ${n}`;
   return (
     <div className={`alerts alerts-${where}`} ref={box}>
@@ -34,9 +37,15 @@ export function AlertsBell({ warnings, onFix, where }: Props) {
         <div className="alerts-pop" role="dialog" aria-label="Alerts">
           {n === 0 ? <p className="alerts-none">Nothing needs you.</p> : (
             <ul>
-              {warnings.map((w, i) => (
-                <li key={i}><span className="dot warn" aria-hidden="true" /><span className="msg">{w}</span>
-                  <button onClick={() => { setOpen(false); onFix(); }}>Fix</button></li>
+              {alerts.map((a, i) => (
+                <li key={`${a.kind}-${a.appId || i}`} data-alert={a.kind}><span className="dot warn" aria-hidden="true" /><span className="msg">{a.text}</span>
+                  {a.kind === 'conflict'
+                    ? <button onClick={() => act(a, 'fix')}>Fix</button>
+                    : <>
+                        <button onClick={() => act(a, 'restart')}>Restart</button>
+                        <button onClick={() => act(a, 'dismiss')}>Dismiss</button>
+                      </>}
+                </li>
               ))}
             </ul>
           )}

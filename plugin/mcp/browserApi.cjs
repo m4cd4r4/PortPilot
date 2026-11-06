@@ -221,6 +221,23 @@ var require_configFile = __commonJS({
         return false;
       }
     }
+    function clearCrash(configPath, appId) {
+      if (!appId) return false;
+      try {
+        let cleared = false;
+        updateJson(runtimePathFor(configPath), (runtime) => {
+          const entry = runtime.apps && runtime.apps[appId];
+          if (entry && entry.crashed && !entry.startedBy) {
+            delete runtime.apps[appId];
+            cleared = true;
+          }
+        }, emptyRuntime);
+        return cleared;
+      } catch (err) {
+        console.error("[configFile] Failed to clear app crash:", err.message);
+        return false;
+      }
+    }
     function logPathFor(configPath, appId) {
       const safe = String(appId).replace(/[^A-Za-z0-9_-]/g, "_").slice(0, 120);
       return path2.join(path2.dirname(configPath), "logs", `${safe}.log`);
@@ -325,6 +342,7 @@ var require_configFile = __commonJS({
       recordStart,
       recordStop,
       recordCrash,
+      clearCrash,
       logPathFor,
       readLogTail,
       CRASH_TAIL_CHARS,

@@ -1,6 +1,6 @@
 const { scanPorts, checkPort, findAvailablePort, parseTasklistCsv } = require('./portScanner');
 const { ownedPidsByApp } = require('./processTree');
-const { startApp, stopApp, killProcess, killByPort, getRunningApps, getAppLogs, emitCrash } = require('./processManager');
+const { startApp, stopApp, killProcess, killByPort, getRunningApps, getAppLogs, emitCrash, forgetCrash } = require('./processManager');
 const path = require('path');
 const fs = require('fs');
 const { exec, execSync } = require('child_process');
@@ -8,7 +8,7 @@ const os = require('os');
 const { probe } = require('./healthCheck');
 const { shareInfo } = require('./shareInfo');
 const reserver = require('./portReserver');
-const { recordStart, recordStop, readRuntime, liveSessions, sendToSession, readLogTail } = require('../core/configFile');
+const { recordStart, recordStop, clearCrash, readRuntime, liveSessions, sendToSession, readLogTail } = require('../core/configFile');
 const { createRunner, findClaude } = require('./diagnoseRunner');
 const { makeStartedBy, shortSession } = require('../core/status');
 const { isOwnBinding, cmdNamesPath, cmdNamesFolder, cmdNamesSibling } = require('../core/selfGuard');
@@ -508,7 +508,7 @@ function setupIpcHandlers(ipcMain, configStore) {
         // Claude work for it, and tell the renderer not to show a bare error.
         recordStart(configStore.configPath, appConfig.id, makeStartedBy({ kind: 'human', surface: 'desktop' }),
           { pid: null, port: appConfig.preferredPort });
-        emitCrash({ id: appConfig.id, name: appConfig.name, code: result.exitCode, errorTail: result.errorTail });
+        emitCrash({ id: appConfig.id, name: appConfig.name, code: result.exitCode, errorTail: result.errorTail, pid: null, at: Date.now() });
         return { ...result, crashRaised: true };
       }
       return result;
@@ -562,6 +562,18 @@ function setupIpcHandlers(ipcMain, configStore) {
       const apps = getRunningApps();
       // runtime: who started each app (startedBy), for the row state cell.
       return { success: true, apps, runtime: readRuntime(configStore.configPath).apps };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+
+  /** The person dismissed a crash alert: the app reads stopped from now on, also after a relaunch. */
+  ipcMain.handle('process:dismissCrash', async (_, appId) => {
+    try {
+      if (!appId) return { success: false, error: 'No app given' };
+      const forgot = forgetCrash(appId, { dismissed: true });
+      const cleared = clearCrash(configStore.configPath, appId);
+      return { success: true, cleared: forgot || cleared };
     } catch (error) {
       return { success: false, error: error.message };
     }
@@ -645,6 +657,11 @@ function setupIpcHandlers(ipcMain, configStore) {
   ipcMain.handle('process:logs', async (_, appId) => {
     try {
       const logs = getAppLogs(appId);
+      // No live output (dead on arrival, or after a relaunch): show what the crash stamp kept.
+      if (!logs.stdout && !logs.stderr) {
+        const tail = readRuntime(configStore.configPath).apps[appId]?.crashed?.errorTail;
+        if (tail) return { success: true, stdout: '', stderr: tail };
+      }
       return { success: true, ...logs };
     } catch (error) {
       return { success: false, error: error.message };

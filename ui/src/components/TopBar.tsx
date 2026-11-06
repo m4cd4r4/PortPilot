@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
-import { MORE_VIEWS, VIEWS, type View } from '../model';
+import { MORE_VIEWS, VIEWS, type Alert, type View } from '../model';
 
-import { AlertsBell } from './AlertsBell';
+import { AlertsBell, type AlertAct } from './AlertsBell';
 import { MARK } from './Sidebar';
 import { IconButton } from './icons';
 
-interface Props { view: View; onView: (v: View) => void; onSearch: () => void; warnings: string[] }
+interface Props { view: View; onView: (v: View) => void; onSearch: () => void; alerts: Alert[]; onAlert: (a: Alert, act: AlertAct) => void }
 
-export function TopBar({ view, onView, onSearch, warnings }: Props) {
+export function TopBar({ view, onView, onSearch, alerts, onAlert }: Props) {
   const [more, setMore] = useState(false);
   const moreBox = useRef<HTMLDivElement>(null);
 
@@ -45,7 +45,7 @@ export function TopBar({ view, onView, onSearch, warnings }: Props) {
         <span>Search apps, ports, profiles</span><kbd>Ctrl K</kbd>
       </button>
       <div className="actions">
-        <AlertsBell warnings={warnings} where="top" onFix={() => onView('ports')} />
+        <AlertsBell alerts={alerts} where="top" onAct={onAlert} />
         <IconButton icon="settings" label="Settings" className={view === 'settings' ? 'on' : ''} aria-pressed={view === 'settings'}
           onClick={() => { setMore(false); onView('settings'); }} />
       </div>

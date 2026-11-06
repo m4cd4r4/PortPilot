@@ -17,7 +17,7 @@ Scope chosen 2026-11-06: desktop app + MCP (Claude sessions simulated by MCP cal
 | `npm run test:e2e:ui` skips 2 of the 9 redesign specs (`redesign-tiles`, `redesign-history-browsers`) | `package.json` |
 | 7 specs named in `docs/SCENARIOS.md` no longer exist (retired with the v3 UI) | `desktop-detect`, `desktop-apps`, `desktop-preview`, `browsers-ui`, `browsers-history`, `browsers-purpose`, `history-ui` |
 | No spec relaunches the app against the same data | none |
-| The v5 UI has no crash toast, Ask Claude or Re-run this version (v3 had all three) | `ui/src` - product question, see Open questions |
+| The v5 UI has no crash toast, Ask Claude or Re-run this version (v3 had all three) | `ui/src` - decided: toast back, the other two retired (see Decisions) |
 
 ## Status table
 
@@ -25,7 +25,7 @@ Scope chosen 2026-11-06: desktop app + MCP (Claude sessions simulated by MCP cal
 |---|------|-------|--------|------|
 | 0 | journeys-plan | This plan, evidence log, article notes; add the 2 skipped specs to `test:e2e:ui` | merged (PR #208) | 0 |
 | 1 | journey-kit | `tests/journeys/kit.js`: persistent world, relaunch, events library (below), outside-checks, screenshot checkpoints, JSONL step log | materialised | 1 |
-| 2 | journey-day-one | Journey A, day 1: fresh install, add apps, start, crash, detected terminal server, stranger on a port | materialised (`npm run test:journeys`, 44 checks, ~50 s) | 1 |
+| 2 | journey-day-one | Journey A, day 1: fresh install, add apps, start, crash, detected terminal server, stranger on a port | materialised (`npm run test:journeys`, 62 checks with the crash toast, ~95 s) | 1 |
 | 3 | journey-restarts | Journey A, days 2-3: quit with servers and browsers up, close a browser outside PortPilot, relaunch; runs adopted or closed, nothing duplicated, prefs kept | later | 2 |
 | 4 | journey-claude-sessions | Journey B: two simulated Claude sessions via MCP: `start_browser` for a site, `IN_USE`, stale heartbeat, `start_app` stamped `claude <id>`, browser history "started by claude" | later | 2 |
 | 5 | journey-long-haul | Journey C: aged history (seeded 1000+ runs, 2 weeks), caps, filters, Open again, Scenes, 390 px | later | 2 |
@@ -82,11 +82,11 @@ Default for all work: **Opus 5.5 on medium**.
 - CI e2e runs on Windows only. The full week against the installed exe is the pre-release gate.
 - Ask Claude (the v3 crash-toast button) is retired as redundant; its SCENARIOS row is removed.
 - Version bump to 5.1.0 (desktop + plugin) waits until after the journeys and an in-app check. Publishing is ask-first every time.
+- The crash toast comes back in the v5 UI (Restart / Logs / Dismiss, no Ask Claude). A crash stays on the card and in the alerts bell across relaunches until the app starts again or is dismissed from the bell; the bell counts crashes. History "Re-run this version" is retired with its SCENARIOS row. (F14, F16; crash-toast PR)
 
 ## Open questions (ask at the Wave 2 gate)
 
-- Bring back the v3 crash toast (Logs, Restart) and History "Re-run this version", or retire their SCENARIOS rows?
-- A crash is forgotten after a relaunch, and raises no alert (F14). Keep the crashed state across launches? Count crashes in the bell?
+None open. Wave 2 journeys (rows 3-5) may start in parallel worktrees.
 
 ## What Wave 1 taught the kit
 

@@ -259,6 +259,24 @@ function recordCrash(configPath, appId, exitCode, { errorTail = null, port = nul
   }
 }
 
+// The person has seen the crash (Dismiss in the alerts bell): drop the stamp,
+// so the app reads stopped. Only a crash stamp is removed; an entry a later
+// start wrote (it has startedBy, no crashed) is left alone.
+function clearCrash(configPath, appId) {
+  if (!appId) return false;
+  try {
+    let cleared = false;
+    updateJson(runtimePathFor(configPath), (runtime) => {
+      const entry = runtime.apps && runtime.apps[appId];
+      if (entry && entry.crashed && !entry.startedBy) { delete runtime.apps[appId]; cleared = true; }
+    }, emptyRuntime);
+    return cleared;
+  } catch (err) {
+    console.error('[configFile] Failed to clear app crash:', err.message);
+    return false;
+  }
+}
+
 // ---- App output logs -------------------------------------------------------
 // An app started detached (MCP, VS Code) has no live process handle to read
 // stderr from, so its output goes to logs/<appId>.log beside the config,
@@ -373,7 +391,7 @@ function sendToSession(configPath, sessionId, appId, now = Date.now()) {
 
 module.exports = {
   readJson, writeJsonAtomic, withLock, updateJson,
-  runtimePathFor, readRuntime, recordStart, recordStop, recordCrash,
+  runtimePathFor, readRuntime, recordStart, recordStop, recordCrash, clearCrash,
   logPathFor, readLogTail, CRASH_TAIL_CHARS,
   sessionsDirFor, inboxPathFor, liveSessions, sendToSession, pruneSessions, SESSION_LIVE_MS, SESSION_KEEP_MS,
 };

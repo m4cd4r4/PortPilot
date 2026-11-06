@@ -1,4 +1,4 @@
-import type { AppRec, Host, Snapshot } from './types';
+import type { AppRec, CrashAlert, Host, Snapshot } from './types';
 
 // window.portpilot is the contextBridge object from src/main/preload.js.
 type Api = any;
@@ -12,12 +12,14 @@ async function ok(p: Promise<any>): Promise<any> {
 
 export function createElectronHost(): Host {
   const listeners = new Set<() => void>();
+  const crashListeners = new Set<(a: CrashAlert) => void>();
   let wired = false;
   const wire = () => {
     if (wired) return;
     wired = true;
     // preload.on has no unsubscribe, so register once and fan out here.
     for (const ch of ['config-changed', 'trigger-scan']) api().on(ch, () => listeners.forEach((l) => l()));
+    api().on('crash-toast', (a: CrashAlert) => { crashListeners.forEach((l) => l(a)); listeners.forEach((l) => l()); });
   };
 
   return {
@@ -28,9 +30,13 @@ export function createElectronHost(): Host {
       ]);
       const running: Snapshot['running'] = {};
       const crashed: Snapshot['crashed'] = {};
+      // The runtime stamp outlives PortPilot, so a crash still reads crashed after a relaunch.
+      for (const [id, rt] of Object.entries<any>(proc?.runtime || {})) {
+        if (rt?.crashed) crashed[id] = { exitCode: rt.crashed.exitCode ?? null, at: rt.crashed.at, port: rt.crashed.port ?? null };
+      }
       for (const r of proc?.apps || []) {
         if (r.running) running[r.id] = { pid: r.pid };
-        else if (r.crashed) crashed[r.id] = { exitCode: r.exitCode };
+        else if (r.crashed) crashed[r.id] = { ...crashed[r.id], exitCode: r.exitCode };
       }
       // The scan knows the port an app is really on, and also finds apps another tool started.
       for (const [id, m] of Object.entries<any>(scan?.matches || {})) running[id] = { ...running[id], port: m.port, pid: running[id]?.pid ?? m.pid };
@@ -45,8 +51,15 @@ export function createElectronHost(): Host {
         profiles: br?.profiles || [],
       };
     },
-    async startApp(app: AppRec) { await ok(api().process.start(app)); },
+    async startApp(app: AppRec) {
+      const r = await api().process.start(app);
+      // Dead on arrival: main raised a crash toast for it, so this is not a second error.
+      if (r && r.success === false && r.crashRaised) return;
+      await ok(Promise.resolve(r));
+    },
     async stopApp(id) { await ok(api().process.stop(id)); },
+    async dismissCrash(id) { await ok(api().process.dismissCrash(id)); },
+    onCrash(cb) { wire(); crashListeners.add(cb); return () => crashListeners.delete(cb); },
     async openUrl(url) { await api().openExternal(url); },
     async startBrowser(name) { await ok(api().browsers.start(name)); },
     async stopBrowser(name) { await ok(api().browsers.stop(name)); },
