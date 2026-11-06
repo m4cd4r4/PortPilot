@@ -31,6 +31,9 @@ Every number published about this work (see [ARTICLE-NOTES.md](ARTICLE-NOTES.md)
 | F15 | 2026-11-06 | At 390 px the History filter placeholder is cut mid-word (`Filter runs by app, branch, p`). | day-one journey, `04-detected-in-history-390` screenshot | real | open (cosmetic) |
 | F16 | 2026-11-06 | Resolution of F14, decided by the developer: the crash toast is back (`<app> crashed`, `:port · exit N`, last output lines, Restart / Logs / Dismiss, no Ask Claude); a crash stays on the card and in the bell across a relaunch until the app starts again or is dismissed from the bell; the bell counts crashes. Before: `07-next-morning` read `stopped`, bell empty after the crash. After: `crashed`, `Exited with code 3`, bell 1; Dismiss in the bell clears the runtime stamp. | day-one journey, same steps before (20:37 run) and after (21:36 run) | real | crash-toast PR |
 | F17 | 2026-11-06 | F8 narrowed: the crash toast scenarios now run in the day-one journey; "Re-run this version" is retired (the v5 UI has no such button), so its SCENARIOS row is removed. The other F8 rows still point at missing specs. | Rewriting the SCENARIOS rows for the crash-toast PR | real | crash-toast PR (part of F8) |
+| F18 | 2026-11-06 | The day-one journey stopped at step 2 with `page.screenshot: Timeout 30000ms exceeded`; that step runs before the code under change. The next run passed 63/63 on the same code. | day-one journey | flake | open (watch) |
+| F19 | 2026-11-06 | Grouped Rows view: the header reads `All apps 2` but lists only blog; shop sits under a separate `Stopped 1` section. The count includes an app shown elsewhere. | day-one journey, `07-next-morning` screenshots at 1440 and 390 | real | open (cosmetic, product question) |
+| F20 | 2026-11-06 | Resolution of a gap in F16: a crash stamp more than 7 days old no longer shows as `crashed`; the card reads `stopped` and the bell counts only the fresh crash (1). Decided by the developer. | day-one journey seeds an 8-day-old stamp for shop after quit; `07-next-morning` reads `stopped` | real | crash-stamp-age PR |
 
 ## Runs
 
@@ -52,6 +55,7 @@ Every number published about this work (see [ARTICLE-NOTES.md](ARTICLE-NOTES.md)
 | 2026-11-06 21:48 | same + review fixes (outside stop, restart and dismiss races, restart errors, Logs fallback) | day-one journey | 62/62 | 86.5 s | screenshots read at 1440 and 390 |
 | 2026-11-06 21:50 | same | `npm run test:e2e:ui` | stopped in `redesign-shell` at the alerts popover check (F6 again); the 8 later suites did not run | 36 s | |
 | 2026-11-06 21:52 | same | `redesign-shell` x3, then the other 8 suites one by one | 22/22 x3; 175/175 (197 in all) | 223 s for the 8 | F6 is a flake: same build, three clean reruns |
+| 2026-11-06 22:14 | c78e736 + crash-stamp-age | day-one journey with an 8-day-old crash stamp | 63/63; real `runs.json` +0 of ours | 94.2 s | previous attempt stopped at step 2 (F18); screenshots read at 1440 and 390 |
 
 ## Cleanups done on real data
 

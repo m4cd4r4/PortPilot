@@ -195,6 +195,11 @@ const h = require('../e2e-harness');
       const before = JSON.stringify((j.config()?.apps || []).map((a) => [a.id, a.name, a.command, a.preferredPort]));
       const pid = j.app.process().pid;
       await j.quit();
+      // While PortPilot is down, leave an 8-day-old crash stamp for shop, as an older version would have.
+      const rtPath = path.join(j.configDir, 'portpilot-runtime.json');
+      const rt = JSON.parse(fs.readFileSync(rtPath, 'utf8'));
+      rt.apps[ids.shop] = { crashed: { exitCode: 9, at: Date.now() - 8 * 24 * 3600 * 1000, port: shopPort, startedBy: null, errorTail: null } };
+      fs.writeFileSync(rtPath, JSON.stringify(rt, null, 2));
       j.check('PortPilot has exited', !h.alive(pid));
       j.check('nothing is left listening on the journey\'s ports', j.ports.every((p) => j.listeners(p).length === 0), j.ports.map((p) => `${p}:${j.listeners(p).join('/')}`).join(' '));
       await j.launch();
@@ -208,7 +213,8 @@ const h = require('../e2e-harness');
       j.check('runs.json has no run left open', open.length === 0, open.map((r) => r.appName || r.appId).join(', '));
       j.check('blog still reads crashed after the relaunch', await j.waitFor(async () => (await j.stateOf(ids.blog)) === 'crashed', 15000), await j.stateOf(ids.blog));
       j.check('with its exit code', /code 3/.test(await j.card(ids.blog).textContent()));
-      j.check('and the bell still counts it', await j.waitFor(async () => (await j.bellCount()) === '1', 10000), await j.bellCount());
+      j.check('a crash stamp over a week old does not show: shop reads stopped', (await j.stateOf(ids.shop)) === 'stopped', await j.stateOf(ids.shop));
+      j.check('and the bell still counts it',await j.waitFor(async () => (await j.bellCount()) === '1', 10000), await j.bellCount());
       await j.shot('07-next-morning');
     }],
 
