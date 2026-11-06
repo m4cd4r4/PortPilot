@@ -243,6 +243,8 @@ function openRun(configPath, appId, startedBy, { port = null, rerunOf = null, me
     record.detected = true;
     const start = detectedMeta ? detectedMeta.startCommand : (app && app.command);
     record.startCommand = start ? String(start).slice(0, 300) : null;
+    // The folder came from matching a relative script name, not from the process: never a seed for the next match.
+    if (detectedMeta && detectedMeta.guessed) record.guessed = true;
   }
   let reusedId = null;
   const { result: dropped } = configFile.updateJson(runsPathFor(configPath), (data) => {

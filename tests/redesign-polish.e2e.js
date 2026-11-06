@@ -13,7 +13,7 @@ async function main() {
   if (!fs.existsSync(path.join(h.root, 'src', 'ui-dist', 'index.html'))) throw new Error('src/ui-dist is missing; run "npm run build:ui" first');
   const dir = world.mkdir('app');
   fs.writeFileSync(path.join(dir, 'server.js'), h.SERVER);
-  const apps = Array.from({ length: 15 }, (_, i) => ({ id: `app_${i}`, name: `app-${String(i).padStart(2, '0')}`, command: 'node server.js --port 1', cwd: dir }));
+  const apps = Array.from({ length: 15 }, (_, i) => ({ id: `app_${i}`, name: `app-${String(i).padStart(2, '0')}`, command: 'node server.js --portpilot-test --port 1', cwd: dir }));
   world.writeConfig({ apps });
 
   const { app, win } = await h.launch(world, { width: 1440, height: 900 });

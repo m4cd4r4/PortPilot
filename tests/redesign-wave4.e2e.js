@@ -23,7 +23,7 @@ async function main() {
   const shop = world.mkdir('shop');
   fs.writeFileSync(path.join(shop, 'server.js'), LOUD);
   world.writeConfig({
-    apps: [{ id: 'app_shop', name: 'shop', command: `node server.js --port ${shopPort}`, cwd: shop, preferredPort: shopPort }],
+    apps: [{ id: 'app_shop', name: 'shop', command: `node server.js --portpilot-test --port ${shopPort}`, cwd: shop, preferredPort: shopPort }],
   });
   const cfg = () => JSON.parse(fs.readFileSync(world.configPath, 'utf8'));
 
@@ -54,7 +54,7 @@ async function main() {
     await until(async () => (await rowNames()).includes('shop'), 10000, 'shop listed');
     await win.click('role=button[name="Add app"]');
     await win.fill('input[placeholder="My app"]', 'second');
-    await win.fill('input[placeholder="npm run dev"]', `node server.js --port ${newPort}`);
+    await win.fill('input[placeholder="npm run dev"]', `node server.js --portpilot-test --port ${newPort}`);
     await win.fill('input[placeholder="I:/Scratch/my-app"]', shop);
     await win.fill('input[placeholder="3000"]', String(newPort));
     await win.click('role=button[name="Add"]');

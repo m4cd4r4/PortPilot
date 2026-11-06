@@ -22,9 +22,9 @@ async function main() {
   fs.writeFileSync(path.join(shop, 'server.js'), h.SERVER);
   world.writeConfig({
     apps: [
-      { id: 'app_shop', name: 'shop', command: `node server.js --port ${shopPort}`, cwd: shop, preferredPort: shopPort },
-      { id: 'app_idle', name: 'idle', command: `node server.js --port ${idlePort}`, cwd: shop, preferredPort: idlePort },
-      { id: 'app_blocked', name: 'blocked', command: `node server.js --port ${heldPort}`, cwd: shop, preferredPort: heldPort },
+      { id: 'app_shop', name: 'shop', command: `node server.js --portpilot-test --port ${shopPort}`, cwd: shop, preferredPort: shopPort },
+      { id: 'app_idle', name: 'idle', command: `node server.js --portpilot-test --port ${idlePort}`, cwd: shop, preferredPort: idlePort },
+      { id: 'app_blocked', name: 'blocked', command: `node server.js --portpilot-test --port ${heldPort}`, cwd: shop, preferredPort: heldPort },
     ],
   });
 

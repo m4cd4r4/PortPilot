@@ -43,6 +43,7 @@ function setup(over = {}) {
     startCommandFor: async () => 'npm run dev',
     startedByPortPilot: (id) => world.started.has(id),
     log: () => {},
+    tempDir: path.join(path.parse(root).root, 'pp-no-such-temp'), // fixtures live in the real temp dir; cases opt in
     ...over,
   });
   const runs = () => runHistory.readRuns(configPath);
@@ -362,6 +363,36 @@ function setup(over = {}) {
     r.world.ports = [SYSTEM, NODE(3111, { commandLine: SCRIPT_CMD })];
     await r.ticks(2);
     assert.equal(r.runs().find((x) => x.port === 3111).cwd, runDir);
+  });
+
+  await t('a guessed folder is marked on the run, and a guessed run never seeds the next guess', async () => {
+    const dir = projectWith('guessed-once');
+    const s = setup({ liveSessions: () => [{ cwd: dir }], startCommandFor: async () => null });
+    s.world.ports = [SYSTEM, NODE(3111, { commandLine: SCRIPT_CMD })];
+    await s.ticks(2);
+    assert.equal(s.runs()[0].guessed, true);
+
+    const r = setup({ liveSessions: () => [], startCommandFor: async () => null });
+    runHistory.openRun(r.configPath, 'det_guessed', { kind: 'detected', surface: 'desktop' }, { port: 9999, meta: { name: 'guessed-once', cwd: dir, command: 'x', startCommand: null, guessed: true } });
+    r.world.ports = [SYSTEM, NODE(3111, { commandLine: SCRIPT_CMD })];
+    await r.ticks(2);
+    assert.equal(r.runs().find((x) => x.port === 3111).cwd, null, 'one wrong guess must not be repeated for every later server');
+  });
+
+  await t('a recent run in the temp folder is not a place to look for a relative script', async () => {
+    const runDir = projectWith('temp-run');
+    const r = setup({ liveSessions: () => [], startCommandFor: async () => null, tempDir: root });
+    runHistory.openRun(r.configPath, 'det_temp', { kind: 'detected', surface: 'desktop' }, { port: 9999, meta: { name: 'temp-run', cwd: runDir, command: 'x', startCommand: null } });
+    r.world.ports = [SYSTEM, NODE(3111, { commandLine: SCRIPT_CMD })];
+    await r.ticks(2);
+    assert.equal(r.runs().find((x) => x.port === 3111).cwd, null);
+  });
+
+  await t('a server marked --portpilot-test is never recorded', async () => {
+    const s = setup();
+    s.world.ports = [SYSTEM, NODE(3111, { commandLine: 'node server.js --portpilot-test --port 3111' })];
+    await s.ticks(4);
+    assert.equal(s.runs().length, 0);
   });
 
   await t('two folders that both hold the script and cannot be told apart leave the folder unknown', async () => {

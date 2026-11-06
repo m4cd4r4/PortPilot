@@ -27,6 +27,7 @@
  * Scan, probe, history and clock are injectable for tests.
  */
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 
 const detect = require('../core/localhostDetect');
@@ -35,6 +36,8 @@ const runHistory = require('../core/runHistory');
 const INTERVAL_MS = 10000;
 const CONFIRM_SCANS = 2; // answers in a row before a run opens
 const ABSENT_SCANS = 2;  // scans without the port before a run closes
+/** A folder as a comparable prefix: resolved, forward slashes, lower case, trailing slash. */
+const keyOfDir = (d) => `${path.resolve(String(d)).replace(/\\/g, '/').replace(/\/+$/, '').toLowerCase()}/`;
 const RECENT_RUNS = 20;  // runs whose folders may hold a relative script
 
 const startedBy = () => ({ kind: 'detected', surface: 'desktop', at: new Date().toISOString() });
@@ -70,6 +73,7 @@ const hostFor = (info) => (detect.hostOf(info.address) === '::1' ? '::1' : '127.
  * @param {Function} [o.liveSessions]  () => [{ cwd }] live Claude sessions (default: configFile.liveSessions)
  * @param {Function} [o.startedByPortPilot] (appId) => boolean, a runtime-sidecar start exists for the app
  * @param {Function} o.probe             (port, path, timeoutMs, host) => Promise<'healthy'|'unhealthy'|'down'>
+ * @param {string} [o.tempDir]  the OS temp folder (default os.tmpdir()); runs in it never seed a relative-script guess
  * @param {number[]|Function} [o.ownPorts]  ports PortPilot serves on (or a function returning them)
  * @param {number[]} [o.onlyPorts]       test seam: look at these ports and no others
  */
@@ -102,7 +106,11 @@ function createLocalhostWatcher(o) {
     try { apps = o.getApps() || []; } catch { /* none */ }
     let runs = [];
     try { runs = history.readRuns(o.configPath); } catch { /* none */ }
-    const recent = runs.filter((r) => r && r.cwd).sort((a, b) => Date.parse(b.startedAt) - Date.parse(a.startedAt)).slice(0, RECENT_RUNS);
+    // A guessed run's folder never seeds the next guess, and a throwaway temp folder is never a
+    // candidate: one wrong guess (a test fixture's server.js in %TEMP%) used to claim every later
+    // "node server.js" on the machine, and each claim kept that folder recent (315 runs, 2026-11).
+    const temp = keyOfDir(o.tempDir || os.tmpdir());
+    const recent = runs.filter((r) => r && r.cwd && !r.guessed && !keyOfDir(r.cwd).startsWith(temp)).sort((a, b) => Date.parse(b.startedAt) - Date.parse(a.startedAt)).slice(0, RECENT_RUNS);
     return detect.candidateFolders({
       sessionCwds: sessions.map((x) => x.cwd),
       appCwds: apps.map((a) => a.cwd),
@@ -189,7 +197,7 @@ function createLocalhostWatcher(o) {
     let startCommand = c.proj.cwd ? await startFor(c.proj.cwd) : null;
     // A script found by its relative name was started from this folder, so the command line runs from it.
     if (!startCommand && c.proj.relative) startCommand = c.info.commandLine || null;
-    const meta = { name: c.proj.name, cwd: c.proj.cwd, command: startCommand || c.info.commandLine || null, startCommand };
+    const meta = { name: c.proj.name, cwd: c.proj.cwd, command: startCommand || c.info.commandLine || null, startCommand, guessed: !!c.proj.relative };
     const { id: runId } = history.openRun(o.configPath, c.id, startedBy(), { port: c.info.port, meta });
     open.set(c.id, { runId, port: c.info.port, absent: 0 });
     pending.delete(c.info.port);

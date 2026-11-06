@@ -59,6 +59,8 @@ const NOT_A_SERVER_CMD = [
   /programs[\\/](cursor|microsoft vs code|windsurf)|[\\/]\.vscode(-server|-insiders)?[\\/]extensions|vscode-server|--type=(extensionhost|utility|renderer|gpu-process)|bootstrap-fork|extensionhost/i,
   /tsserver|typingsinstaller|typescript[\\/]lib|language-?server|languageserver|\blsp\b|jdtls|jdt\.ls|eslint_d|prettierd|github[.-]copilot|copilot-(language-server|agent)/i,
   /gradledaemon|kotlin-daemon|jetbrains|elasticsearch|kibana|logstash/i,
+  // PortPilot's own e2e servers mark themselves, so an installed PortPilot does not record them as runs.
+  /--portpilot-test\b/,
 ];
 // A service run through a generic runtime (a python redis proxy, a Jupyter kernel).
 // Judged on the first words of the command line only, so a project folder that
