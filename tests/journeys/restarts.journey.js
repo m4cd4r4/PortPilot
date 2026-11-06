@@ -168,7 +168,8 @@ async function cdp(port) {
 
     ['beta again, then a clean quit for the night', async () => {
       await startBrowser('beta', betaPort);
-      j.check('beta now has two records, one open', bruns('beta').length === 2 && openB('beta').length === 1, `${bruns('beta').length} records`);
+      // As on day 2: the card can read Open before the start call has written its record.
+      j.check('beta now has two records, one open', await j.waitFor(() => bruns('beta').length === 2 && openB('beta').length === 1, 10000), `${bruns('beta').length} records`);
       was.notesRun = openRuns((r) => Number(r.port) === notesPort)[0]?.id;
       was.alphaRec = openB('alpha')[0]?.id;
       was.betaRec = openB('beta')[0]?.id;
