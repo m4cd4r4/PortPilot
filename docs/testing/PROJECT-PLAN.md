@@ -27,7 +27,7 @@ Scope chosen 2026-11-06: desktop app + MCP (Claude sessions simulated by MCP cal
 | 1 | journey-kit | `tests/journeys/kit.js`: persistent world, relaunch, events library (below), outside-checks, screenshot checkpoints, JSONL step log | materialised | 1 |
 | 2 | journey-day-one | Journey A, day 1: fresh install, add apps, start, crash, detected terminal server, stranger on a port | materialised (`npm run test:journeys`, 62 checks with the crash toast, ~95 s) | 1 |
 | 3 | journey-restarts | Journey A, days 2-3: quit with servers and browsers up, close a browser outside PortPilot, relaunch; runs adopted or closed, nothing duplicated, prefs kept | later | 2 |
-| 4 | journey-claude-sessions | Journey B: two simulated Claude sessions via MCP: `start_browser` for a site, `IN_USE`, stale heartbeat, `start_app` stamped `claude <id>`, browser history "started by claude" | later | 2 |
+| 4 | journey-claude-sessions | Journey B: two simulated Claude sessions via MCP: `start_browser` for a site, `IN_USE`, stale heartbeat, `start_app` stamped `claude <id>`, browser history "started by claude" | materialised (`node tests/journeys/claude-sessions.journey.js`, 66 checks, ~175 s) | 2 |
 | 5 | journey-long-haul | Journey C: aged history (seeded 1000+ runs, 2 weeks), caps, filters, Open again, Scenes, 390 px | later | 2 |
 | 6 | journeys-ci | Short journeys on every PR (Windows runner); full set as a pre-release gate against the installed exe; SCENARIOS.md rows point at real files | later | 3 |
 
@@ -93,6 +93,13 @@ None open. Wave 2 journeys (rows 3-5) may start in parallel worktrees.
 - Find drawer fields by placeholder, not label: labels hold their buttons' text (F11).
 - A failed check is not a finding until the screenshot is read (F12: two failures, screen correct).
 - Test servers stay marked; the app under test counts them only on the ports the journey names (F13).
+
+## What Wave 2 taught the kit
+
+- One HTTP request per MCP call, no kept-alive agent: a reused socket dies on the server's keep-alive timer (F25).
+- Electron helpers outlive the main process by seconds: teardown checks journey ports at once, world processes after a timed grace (F26).
+- A guard that protects real data throws; a recorded check that lets the run continue is no guard (F29).
+- Journeys run one at a time on one machine: parallel runs produced the only unexplained stops (F27).
 
 ## What this plan does NOT cover
 
