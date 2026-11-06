@@ -43,6 +43,17 @@ Every number published about this work (see [ARTICLE-NOTES.md](ARTICLE-NOTES.md)
 | F27 | 2026-11-06 | day-one stopped at "restart blog from the bell" on a 30 s click timeout while another journey ran alongside; it passed 63/63 alone before and after. No checkpoint screenshot for that step, so unconfirmed. | day-one journey run in parallel | flake (watch; see F18) | open |
 | F28 | 2026-11-06 | At 390 px the Browsers history filter placeholder is cut (`Filter by profile, tab or addr`). Same kind as F15. | claude-sessions journey, `06-browser-history-390` screenshot | real | open (cosmetic) |
 | F29 | 2026-11-06 | Review of the claude-sessions journey: the "own MCP port" check recorded a failure but the journey went on to connect, so a misconfigured run could reach the developer's real MCP server. Also a slow Brave answer could throw inside a check's detail. | Sonnet review of the diff | test bug | claude-sessions PR (throws before connecting if the port is 0, 8788 or 9222-9241) |
+| F30 | 2026-11-06 | Quit cleanup (`cleanupAllProcesses`) never ran when the journey quit PortPilot, so servers PortPilot started outlived it. Found again by the restarts journey. | long-haul journey: runs left open and listeners after quit | real | open (product decision 2026-11-07: quit keeps PortPilot-started servers by default; restarts PR) |
+| F31 | 2026-11-06 | Once quit cleanup did run, it erased the crash stamp of an app that had already crashed: it recorded a stop for every tracked app, exited ones included. A crash then read `stopped` after the relaunch. | long-haul journey, then a unit check in `tests/row-state.test.cjs` | real | long-haul PR (cleanup skips apps that already crashed; see F39) |
+| F32 | 2026-11-06 | Apps History renders the newest 200 runs only and says nothing about the rest; with 1,200 runs on disk a filter for an older run finds nothing. | long-haul journey, `History shows N of M runs` note and screenshots | real | open (product question) |
+| F33 | 2026-11-06 | Browsers history fetches the newest 50 sessions and filters only those: a session from about 11 days ago, still on disk, cannot be found by filter. | long-haul journey, `filter "page-100"` note | real | open (product question) |
+| F34 | 2026-11-06 | Right after Open again, the new Browsers history row reads 0 tabs until the next sample. | long-haul journey, Open again note and screenshot | real | open (cosmetic) |
+| F35 | 2026-11-06 | `page.screenshot` timed out once with the test window behind another window (same kind as F18). | long-haul journey | test bug | long-haul PR (raise the window with `moveTop` and retry once, recorded as a note) |
+| F36 | 2026-11-06 | Electron helpers outlived quit by a few seconds and were flagged as strays (same as F26). | long-haul journey teardown | test bug | covered by F26's 20 s timed grace (kept master's teardown on rebase) |
+| F37 | 2026-11-06 | Brave helper processes of the profile can still run 20 s after Stop; the journey ends them and records how many. Brave's own behaviour, same family as F21/F22. | long-haul journey, Brave processes on the profile folder after Stop | real (Brave's behaviour) | open (see F21) |
+| F38 | 2026-11-06 | At 390 px the Browsers history filter placeholder is cut. Duplicate of F28. | long-haul journey screenshot | real | see F28 |
+| F39 | 2026-11-07 | Review of the long-haul diff: the first F31 fix skipped every app that had already exited, so an app that exited without crashing (stopped by port, or killed outside PortPilot as a non-crash) kept its run open and its runtime entry after quit; nothing else closes it. | Sonnet review of the diff, then a unit check that failed before the change | real | long-haul PR (quit skips only crashed apps; `app quit still records a stop for an app that exited without crashing`) |
+| F40 | 2026-11-07 | Review of the long-haul diff: the "History files day 1 under the day 6 days ago" check matched the day number anywhere in the header, so `1` also matched `11` or `21`. The first tightened version then failed on a right screen (`Sunday 1 November2`: the row count follows the date). | Sonnet review of the diff; the rerun's failed check | test bug | long-haul PR (matches `<day> <month>` with no letter after it) |
 
 ## Runs
 
@@ -68,6 +79,11 @@ Every number published about this work (see [ARTICLE-NOTES.md](ARTICLE-NOTES.md)
 | 2026-11-06 23:34 | 1959594 + claude-sessions (67aed28) | claude-sessions journey x2 | 66/66, 66/66 | 210.0 s, 180.9 s | screenshots read at 1440 and 390 |
 | 2026-11-06 23:34 | same | day-one, alongside claude-sessions | stopped at the bell restart step (F27) | 191.5 s | parallel run |
 | 2026-11-06 23:48 | + review fixes (2f1b6e5) | claude-sessions x2, then day-one, one at a time | 66/66, 66/66, 63/63 | 173.0 s, 170.1 s, 95.4 s | world clear after 1.9-2.1 s |
+| 2026-11-06 22:42-23:46 | 1959594 + long-haul (in progress) | long-haul journey, 16 runs while it was built | 23/24 to 67/69, 6 clean; failures came from F30-F36 and test bugs fixed on the way | 118.9-232.1 s | |
+| 2026-11-06 23:51-23:58 | 1959594 + long-haul (26a3575) | long-haul x3, day-one x1, one at a time | 66/66 x3, 63/63 | 157.0, 135.6, 128.6 s; 97.4 s | |
+| 2026-11-07 06:35 | a3d13f5 (long-haul rebased onto a9bb0a5) | long-haul x2, then day-one, one at a time | 66/66, 66/66, 63/63; real `runs.json` +0 of ours | 90.0, 89.2, 81.8 s | world clear after 1.4 s |
+| 2026-11-07 06:48 | + review fixes (F39, first F40 attempt) | long-haul | 62/65: F40's failed check, then the last step stopped on `page.screenshot: Timeout 30000ms` (F18/F35 kind), so the two journey servers outlived it and were killed | 159.3 s | |
+| 2026-11-07 06:51 | + F40 fixed | long-haul x2, then day-one, one at a time | 66/66, 66/66, 63/63 | 82.2, 78.8, 73.3 s | |
 
 ## Cleanups done on real data
 

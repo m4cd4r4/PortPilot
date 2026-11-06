@@ -218,6 +218,7 @@ t('getRunningApps exposes a boolean crashed field', () => {
     await pm.cleanupAllProcesses(cfg);
     t('app quit records a stop for every tracked app', () => assert.equal(cf.readRuntime(cfg).apps['quit-clean'], undefined));
     t('app quit keeps the crash stamp of an app that already crashed', () => assert.equal(cf.readRuntime(cfg).apps['real-crash']?.crashed?.exitCode, 1));
+    t('app quit still records a stop for an app that exited without crashing', () => assert.equal(cf.readRuntime(cfg).apps['kill-by-port'], undefined));
     t('app quit is not a crash', () => assert.ok(!crashes.includes('quit-clean')));
 
     // Dead on arrival: still a failed start, but flagged so the desktop can raise a crash for it.

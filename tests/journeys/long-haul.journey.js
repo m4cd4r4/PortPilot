@@ -139,7 +139,9 @@ const BRAVE = 'C:/Program Files/BraveSoftware/Brave-Browser/Application/brave.ex
       j.check('and the bell counts it', await j.waitFor(async () => (await j.bellCount()) === '1', 10000), await j.bellCount());
       await j.tab('History');
       const head = await j.waitFor(() => w().locator('.group-h').first().textContent(), 15000);
-      j.check('History files day 1 under the day 6 days ago', head && head.includes(String(new Date(Date.now() - 6 * DAY).getDate())), head);
+      const day1 = new Date(Date.now() - 6 * DAY);
+      const day1Label = `${day1.getDate()} ${day1.toLocaleString('en-GB', { month: 'long' })}`; // the header reads "Sunday 1 November" then the row count
+      j.check('History files day 1 under the day 6 days ago', !!head && new RegExp(`\\b${day1Label}(?![a-z])`).test(head), `${head} (want ${day1Label})`);
       await shot('02-six-days-later');
       await j.quit();
     }],
