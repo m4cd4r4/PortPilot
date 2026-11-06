@@ -4,6 +4,9 @@ import type { AppRec, CrashAlert, Host, Snapshot } from './types';
 type Api = any;
 const api = (): Api => (window as any).portpilot;
 
+/** How long a crash recorded in the runtime file is shown on the card and in the bell. History keeps it for good. */
+const CRASH_SHOWN_MS = 7 * 24 * 60 * 60 * 1000;
+
 async function ok(p: Promise<any>): Promise<any> {
   const r = await p;
   if (r && r.success === false) throw new Error(r.error || 'Request failed');
@@ -31,8 +34,11 @@ export function createElectronHost(): Host {
       const running: Snapshot['running'] = {};
       const crashed: Snapshot['crashed'] = {};
       // The runtime stamp outlives PortPilot, so a crash still reads crashed after a relaunch.
+      // A stamp over a week old (or with no time, from an older version) is history, not an alert.
+      const now = Date.now();
       for (const [id, rt] of Object.entries<any>(proc?.runtime || {})) {
-        if (rt?.crashed) crashed[id] = { exitCode: rt.crashed.exitCode ?? null, at: rt.crashed.at, port: rt.crashed.port ?? null };
+        const c = rt?.crashed;
+        if (c && Number.isFinite(c.at) && now - c.at < CRASH_SHOWN_MS) crashed[id] = { exitCode: c.exitCode ?? null, at: c.at, port: c.port ?? null };
       }
       for (const r of proc?.apps || []) {
         if (r.running) running[r.id] = { pid: r.pid };
