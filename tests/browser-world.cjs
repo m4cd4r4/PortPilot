@@ -79,6 +79,9 @@ function world({ installed = [{ id: 'brave', label: 'Brave', path: '/fake/brave'
     windowBounds: async () => (w.windowFails ? null : (w.actual || { left: 10, top: 20, width: 1000, height: 700, windowState: 'normal' })),
     bringToFront: async (port) => { w.fronted.push(port); return !w.frontFails; },
     pinTopmost: async (pid) => { w.pinned.push(pid); return w.pinResult; },
+    // A process here lives exactly as long as it holds its port, so the real process table is never read.
+    processInfo: async (pid) => [...w.holders.values()].find((h) => h.pid === pid) || null,
+    dirHolders: async () => [...w.holders.values()],
   };
   w.drop = async (port) => {
     const s = w.servers.get(port);

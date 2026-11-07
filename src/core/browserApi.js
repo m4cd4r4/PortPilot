@@ -113,6 +113,7 @@ const NEXT = {
   BROWSER_NOT_FOUND: 'Call list_browsers, then ask the user to set the profile to an installed browser.',
   START_TIMEOUT: 'Call start_browser once more. If it fails again, ask the user to close any window using this profile.',
   LAUNCH_FAILED: 'Ask the user to check that the browser starts normally.',
+  FOLDER_IN_USE: 'Do not kill it. Tell the user a browser window PortPilot did not start has this profile open and ask them to close it, then call start_browser again.',
   STOP_FAILED: 'Ask the user to close that browser window by hand.',
   BAD_MODE: `Use one of: ${profiles.MODES.join(', ')}.`,
   IN_USE: 'Do not use it. Call list_browser_profiles and pick a free profile (free: true) that suits the task. name "any" gives a throwaway browser with no logins: use it only when the task is not tied to a site. Only if the user agrees to share this one, call again with takeover:true.',
@@ -441,6 +442,8 @@ const TOOLS = {
       tabs: st0.state === 'up' ? st0.tabs : [],
     }));
     const out = { ...view(r, null), already: !!r.already };
+    // Whether the browser process itself is gone: { pid, how: exited | killed | still-running, ms }.
+    if (r.browserExit) out.browserExit = r.browserExit;
     if (held) {
       out.takeoverNote = `Stopped "${profile.name}", which ${held.by} was using. Tell the user.`;
     } else if (before && before.by !== caller.by) {

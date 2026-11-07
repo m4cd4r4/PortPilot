@@ -16,6 +16,7 @@ const cdp = require('./browserCdp');
 const { detectBrowsers, BROWSERS } = require('./browserDetect');
 const { getProfile, userDataDirFor, MODES } = require('./browserProfiles');
 const { describeConflict } = require('./conflict');
+const { describePid, processInfo, dirHolders, parsePsTable, holdsDir, remember, awaitBrowserExit, freeFolder } = require('./browserProcess');
 
 const OFFSCREEN_LEFT = -2400;
 const START_TIMEOUT_MS = 10000;
@@ -59,20 +60,6 @@ async function listenerPid(port) {
   return s ? Number(s[1]) : null;
 }
 
-async function describePid(pid) {
-  if (process.platform === 'win32') {
-    const out = await run('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command',
-      `Get-CimInstance Win32_Process -Filter "ProcessId=${Number(pid)}" | Select-Object Name,CommandLine | ConvertTo-Json -Compress`]);
-    try {
-      const j = JSON.parse(out);
-      return { processName: j.Name || null, commandLine: j.CommandLine || null };
-    } catch { return { processName: null, commandLine: null }; }
-  }
-  const args = await run('ps', ['-ww', '-o', 'args=', '-p', String(pid)]);
-  const comm = await run('ps', ['-o', 'comm=', '-p', String(pid)]);
-  return { processName: comm ? path.basename(comm.trim()) : null, commandLine: args ? args.trim() : null };
-}
-
 /** { pid, processName, commandLine } of whatever listens on `port`, or null. */
 async function inspectPort(port) {
   const pid = await listenerPid(port);
@@ -104,34 +91,10 @@ function pinTopmost(pid) {
 }
 
 const defaultDeps = () => ({
-  spawn, inspectPort, kill: killPid, sleep, detect: () => detectBrowsers(),
+  spawn, inspectPort, processInfo, dirHolders, kill: killPid, sleep, detect: () => detectBrowsers(),
   version: cdp.version, pageTabs: cdp.pageTabs, openTab: cdp.openTab, closeBrowser: cdp.closeBrowser, park: cdp.parkOffscreen,
   placeWindow: cdp.setWindowBounds, windowBounds: cdp.getWindowBounds, bringToFront: cdp.bringToFront, pinTopmost,
 });
-
-const norm = (s) => String(s).replace(/\\/g, '/').replace(/\/+$/, '').toLowerCase();
-const BROWSER_PROCESS_RE = /chrome|chromium|msedge|brave|opera|vivaldi|browser/i;
-
-/**
- * True when the holder is a browser launched with exactly this profile's user-data-dir.
- * The flag's value is compared whole, not searched for: "/p/shop" must not match a browser
- * started for "/p/shop-a". Unquoted command lines (ps output) carry the start URL after the
- * path, so the value may be followed by whitespace and then another flag or URL, nothing else.
- */
-function holdsDir(holder, dir) {
-  if (!holder || !holder.commandLine) return false;
-  if (holder.processName && !BROWSER_PROCESS_RE.test(holder.processName)) return false;
-  const line = String(holder.commandLine).replace(/\\/g, '/');
-  const want = norm(dir);
-  const flag = /--user-data-dir=/gi;
-  for (let m = flag.exec(line); m; m = flag.exec(line)) {
-    const rest = line.slice(m.index + m[0].length).replace(/^"/, '').toLowerCase();
-    if (!rest.startsWith(want)) continue;
-    const tail = rest.slice(want.length);
-    if (/^\/?"?(\s+(-|https?:|file:|about:)|\s*$)/.test(tail)) return true;
-  }
-  return false;
-}
 
 // ---- Status and the reservation warning --------------------------------------
 
@@ -208,11 +171,24 @@ function clearSessions(dir) {
   }
 }
 
+/** Nothing may hold the profile folder before a launch (F45): see browserProcess.freeFolder. */
+async function clearFolder(profile, dir, o, d) {
+  const held = await freeFolder(dir, o, d);
+  if (!held) return;
+  const named = (ps) => ps.map((p) => `PID ${p.pid} (${p.processName})`).join(', ');
+  if (held.strangers) {
+    throw new RunError('FOLDER_IN_USE', `${profile.name}: its profile folder is open in a browser PortPilot did not start: ${named(held.strangers)}. `
+      + 'Close that browser window and retry. Nothing was killed.', { holders: held.strangers });
+  }
+  throw new RunError('FOLDER_IN_USE', `${profile.name}: browser processes still hold its profile folder after they were ended: ${named(held.stuck)}. Not started.`,
+    { holders: held.stuck });
+}
+
 /**
  * Start a profile. Resolves with its status plus { already, offscreen? }.
  * Rejects with RunError: PORT_HELD (holder named, never killed), BROWSER_NOT_FOUND,
- * LAUNCH_FAILED, START_TIMEOUT.
- * @param {object} [o] { mode, timeoutMs, pollMs }
+ * LAUNCH_FAILED, FOLDER_IN_USE (another browser has the profile folder open), START_TIMEOUT.
+ * @param {object} [o] { mode, timeoutMs, pollMs, folderMs }
  */
 async function startProfile(configPath, name, o = {}, d = defaultDeps()) {
   const profile = getProfile(configPath, name);
@@ -243,6 +219,7 @@ async function startProfile(configPath, name, o = {}, d = defaultDeps()) {
 
   const dir = userDataDirFor(configPath, profile);
   fs.mkdirSync(dir, { recursive: true });
+  await clearFolder(profile, dir, o, d);
   clearSessions(dir);
 
   let spawnError = null;
@@ -251,6 +228,7 @@ async function startProfile(configPath, name, o = {}, d = defaultDeps()) {
   });
   if (child && child.on) child.on('error', (err) => { spawnError = err; });
   if (child && child.unref) child.unref();
+  if (child) remember(dir, child.pid);
 
   const timeoutMs = o.timeoutMs || START_TIMEOUT_MS;
   const pollMs = o.pollMs || 250;
@@ -274,6 +252,7 @@ async function startProfile(configPath, name, o = {}, d = defaultDeps()) {
     throw new RunError('PORT_HELD', `${after.warning ? after.warning.sentence : `:${profile.port} is not held by this profile`}. The launch did not take the port.`,
       after.warning ? { holder: after.warning.holder, warning: after.warning } : {});
   }
+  remember(dir, after.pid);
   const out = { ...after, already: false };
   if (mode === 'offscreen') out.offscreen = await d.park(profile.port, OFFSCREEN_LEFT);
   else if (mode === 'headed' && profile.window) out.window = await placeWindow(profile, after.pid, d);
@@ -340,8 +319,9 @@ async function waitDown(profile, d, ms, pollMs) {
  * Stop a profile's browser: ask it to quit over CDP first (a clean shutdown keeps logins and
  * session state sound), then end the verified PID. Only a browser whose command line carries this
  * profile's user-data-dir is ever stopped. Rejects NOT_OURS (port held by something else),
- * NOT_VERIFIED (cannot identify the holder) or STOP_FAILED.
- * @param {object} [o] { pollMs, graceMs, killMs }
+ * NOT_VERIFIED (cannot identify the holder) or STOP_FAILED. Once the port is quiet it waits for the
+ * browser's main process too (F21): the result's `browserExit` says whether it exited or was killed.
+ * @param {object} [o] { pollMs, graceMs, killMs, exitMs }
  */
 async function stopProfile(configPath, name, o = {}, d = defaultDeps()) {
   const profile = getProfile(configPath, name);
@@ -356,21 +336,27 @@ async function stopProfile(configPath, name, o = {}, d = defaultDeps()) {
   }
 
   const pollMs = o.pollMs || 250;
+  const dir = userDataDirFor(configPath, profile);
+  remember(dir, st.pid);
   await d.closeBrowser(profile.port);
   if (await waitDown(profile, d, o.graceMs ?? GRACE_MS, pollMs)) {
-    return { ...(await profileStatus(configPath, profile, d)), already: false, stoppedBy: 'cdp' };
+    const browserExit = await awaitBrowserExit(st.pid, dir, d, o, pollMs);
+    return { ...(await profileStatus(configPath, profile, d)), already: false, stoppedBy: 'cdp', browserExit };
   }
   // The grace period can be long enough for the pid to be reused: re-check the listener is still
   // this profile's browser, with the same pid, immediately before ending it.
   const now = await d.inspectPort(profile.port);
-  if (now && now.pid === st.pid && holdsDir(now, userDataDirFor(configPath, profile))) await d.kill(st.pid);
+  const killed = !!(now && now.pid === st.pid && holdsDir(now, dir));
+  if (killed) await d.kill(st.pid);
   if (await waitDown(profile, d, o.killMs ?? KILL_MS, pollMs)) {
-    return { ...(await profileStatus(configPath, profile, d)), already: false, stoppedBy: 'pid' };
+    const browserExit = await awaitBrowserExit(st.pid, dir, d, o, pollMs);
+    if (killed && browserExit.how === 'exited') browserExit.how = 'killed';
+    return { ...(await profileStatus(configPath, profile, d)), already: false, stoppedBy: 'pid', browserExit };
   }
   throw new RunError('STOP_FAILED', `${profile.name} (PID ${st.pid}) is still up on :${profile.port}. Close it by hand.`);
 }
 
 module.exports = {
-  RunError, OFFSCREEN_LEFT, defaultDeps, inspectPort, parseNetstat, holdsDir, reservationWarning,
+  RunError, OFFSCREEN_LEFT, defaultDeps, inspectPort, processInfo, dirHolders, parsePsTable, parseNetstat, holdsDir, reservationWarning,
   profileStatus, allStatus, buildArgs, startProfile, stopProfile, placeWindow, pinTopmost, PLACE_TOLERANCE,
 };

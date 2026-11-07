@@ -146,6 +146,15 @@ async function setup(fields = {}) {
     await w.cleanup();
   });
 
+  await t('stop_browser says whether the browser process itself is gone', async () => {
+    const { cfg, w, ctx } = await setup();
+    await api.call(cfg, 'start_browser', { name: 'shop-a' }, ctx());
+    const r = await api.call(cfg, 'stop_browser', { name: 'shop-a' }, ctx());
+    assert.strictEqual(r.browserExit && r.browserExit.how, 'exited');
+    assert.strictEqual(r.browserExit.pid, w.pid, 'the pid of the browser it launched');
+    await w.cleanup();
+  });
+
   await t('stopping an already-stopped profile succeeds', async () => {
     const { cfg, ctx } = await setup();
     const r = await api.call(cfg, 'stop_browser', { name: 'shop-a' }, ctx());
