@@ -398,6 +398,18 @@ async function setup(fields = {}) {
       (err) => err.code === 'FOLDER_IN_USE' && /nothing was killed/.test(err.message) && !/ended them/.test(err.message));
   });
 
+  await t('macOS/Linux: a helper re-parented to pid 1 (init, launchd) is an orphan, ended; then the launch goes ahead', async () => {
+    const w = world(); const { cfg, profile } = await setup();
+    w.deps.platform = 'linux';
+    const dir = bp.userDataDirFor(cfg, profile);
+    w.procs.set(1, { pid: 1, ppid: 0, processName: 'systemd', commandLine: '/sbin/init', createdAt: '2026-11-01T00:00:00.0000000Z' });
+    w.procs.set(4600, { pid: 4600, ppid: 1, processName: 'brave', commandLine: `/opt/brave/brave --type=crashpad-handler --user-data-dir=${dir} --`, createdAt: '2026-11-07T01:00:00.0000000Z' });
+    const r = await run.startProfile(cfg, 'shop-a', { pollMs: 5, folderMs: 20 }, w.deps);
+    assert.strictEqual(r.state, 'up');
+    assert.deepStrictEqual(w.killed, [4600]);
+    await w.cleanup();
+  });
+
   await t('a pid seen gone is forgotten: a browser opened by hand that reuses it is not ended as ours', async () => {
     const w = world(); const { cfg, profile } = await setup();
     await run.startProfile(cfg, 'shop-a', { pollMs: 5 }, w.deps);
@@ -604,6 +616,18 @@ async function setup(fields = {}) {
     const r = await run.stopProfile(cfg, 'shop-a', { pollMs: 5, exitMs: 30 }, w.deps);
     assert.strictEqual(r.browserExit.how, 'mismatch');
     assert.deepStrictEqual(w.killed, []);
+  });
+
+  await t('stop whose identity read failed at the start never kills the lingering process: still-running, no kill', async () => {
+    const w = world(); const { cfg } = await setup();
+    w.failPids.add(5001); // nothing about 5001 can be read: not at launch, not when Stop begins
+    await run.startProfile(cfg, 'shop-a', { pollMs: 5 }, w.deps);
+    const close = w.deps.closeBrowser;
+    w.deps.closeBrowser = async (port) => { w.failPids.clear(); return close(port); }; // readable again from here on
+    w.lingerPolls = Infinity;
+    const r = await run.stopProfile(cfg, 'shop-a', { pollMs: 5, exitMs: 30 }, w.deps);
+    assert.strictEqual(r.browserExit.how, 'still-running');
+    assert.deepStrictEqual(w.killCalls, []);
   });
 
   await t('stop never kills a reused pid: same number, another command line', async () => {

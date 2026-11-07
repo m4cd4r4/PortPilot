@@ -103,7 +103,7 @@ async function waitExit(pid, dir, d, ms, pollMs, createdAt) {
  *   exited         it went by itself (or its pid now names another process: never killed)
  *   killed         it outlived the wait and passed the identity check, so it was ended
  *   mismatch       the last check before the kill refused it (another process now): not killed
- *   still-running  it survived the kill too
+ *   still-running  it survived the kill, or its start time was never read so it was not killed
  *   unknown        the process could not be queried: nothing was killed and nothing is claimed
  */
 async function awaitBrowserExit(pid, dir, d, o, pollMs) {
@@ -112,8 +112,11 @@ async function awaitBrowserExit(pid, dir, d, o, pollMs) {
     if (how === 'exited' || how === 'killed') forget(dir, pid);
     return { pid, how, ms: Date.now() - t0 };
   };
-  const first = await waitExit(pid, dir, d, o.exitMs ?? EXIT_MS, pollMs, recorded(dir, pid));
+  const known = recorded(dir, pid);
+  const first = await waitExit(pid, dir, d, o.exitMs ?? EXIT_MS, pollMs, known);
   if (first.state !== 'alive') return done(first.state === 'gone' ? 'exited' : 'unknown');
+  // No start time was read when Stop began: what is on this pid now cannot be told from a reuse (F86).
+  if (!known) return done('still-running');
   const r = await d.killVerified({ pid, createdAt: first.info.createdAt, dir, main: true });
   if (r === 'gone') return done('exited');
   if (r === 'mismatch') { forget(dir, pid); return done('mismatch'); }
@@ -170,7 +173,9 @@ async function freeFolder(dir, o, d) {
     if (!isHelper(p)) v = isOurs(dir, p) ? 'ours' : 'stranger';
     else {
       const inList = left.find((x) => x.pid === p.ppid);
-      const parent = inList || await d.processInfo(p.ppid);
+      // macOS and Linux hand an orphan to pid 1 (launchd, init); Windows has no such parent (F87).
+      const reparented = (d.platform || process.platform) !== 'win32' && p.ppid === 1;
+      const parent = reparented ? null : inList || await d.processInfo(p.ppid);
       if (!parent) v = 'orphan';
       else if (parent.unknown) v = 'stranger';
       else if (startMs(parent.createdAt) > startMs(p.createdAt)) v = 'orphan';

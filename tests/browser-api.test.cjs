@@ -146,6 +146,19 @@ async function setup(fields = {}) {
     await w.cleanup();
   });
 
+  await t('FOLDER_IN_USE next step follows the reason: its own leftover that could not be ended is not called a browser it cannot confirm', async () => {
+    const { cfg, port, w, ctx } = await setup();
+    await api.call(cfg, 'start_browser', { name: 'shop-a' }, ctx());
+    w.linger = true;
+    await w.drop(port); // closed from outside; its process stays on the folder
+    w.deps.killVerified = async () => 'mismatch';
+    const r = await api.call(cfg, 'start_browser', { name: 'shop-a' }, { ...ctx(), folderMs: 20, killMs: 20 });
+    assert.strictEqual(r.code, 'FOLDER_IN_USE');
+    assert.ok(!/cannot confirm/.test(r.action), r.action);
+    assert.ok(/could not be ended/.test(r.action), r.action);
+    await w.cleanup();
+  });
+
   await t('stop_browser says whether the browser process itself is gone: exited by itself, or killed when it outlives the port', async () => {
     const { cfg, w, ctx } = await setup();
     await api.call(cfg, 'start_browser', { name: 'shop-a' }, ctx());

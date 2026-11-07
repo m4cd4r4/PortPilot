@@ -174,12 +174,12 @@ async function clearFolder(profile, dir, o, d) {
   const named = (ps) => ps.map((p) => `PID ${p.pid} (${p.processName})`).join(', ');
   if (held.strangers) {
     throw new RunError('FOLDER_IN_USE', `${profile.name}: its profile folder is open in a browser PortPilot cannot confirm it started: ${named(held.strangers)}. `
-      + 'Close that browser window and retry. Nothing was killed.', { holders: held.strangers });
+      + 'Close that browser window and retry. Nothing was killed.', { holders: held.strangers, reason: 'stranger' });
   }
   const how = held.killed
     ? 'browser processes still hold its profile folder after PortPilot ended them'
     : 'browser processes still hold its profile folder; they did not pass the check right before ending them, so nothing was killed';
-  throw new RunError('FOLDER_IN_USE', `${profile.name}: ${how}: ${named(held.stuck)}. Not started.`, { holders: held.stuck });
+  throw new RunError('FOLDER_IN_USE', `${profile.name}: ${how}: ${named(held.stuck)}. Not started.`, { holders: held.stuck, reason: 'stuck', killed: held.killed > 0 });
 }
 
 /**

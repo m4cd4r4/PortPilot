@@ -1649,8 +1649,10 @@ var require_browserProcess = __commonJS({
         if (how === "exited" || how === "killed") forget(dir, pid);
         return { pid, how, ms: Date.now() - t0 };
       };
-      const first = await waitExit(pid, dir, d, o.exitMs ?? EXIT_MS, pollMs, recorded(dir, pid));
+      const known = recorded(dir, pid);
+      const first = await waitExit(pid, dir, d, o.exitMs ?? EXIT_MS, pollMs, known);
       if (first.state !== "alive") return done(first.state === "gone" ? "exited" : "unknown");
+      if (!known) return done("still-running");
       const r = await d.killVerified({ pid, createdAt: first.info.createdAt, dir, main: true });
       if (r === "gone") return done("exited");
       if (r === "mismatch") {
@@ -1690,7 +1692,8 @@ var require_browserProcess = __commonJS({
         if (!isHelper(p)) v = isOurs(dir, p) ? "ours" : "stranger";
         else {
           const inList = left.find((x) => x.pid === p.ppid);
-          const parent = inList || await d.processInfo(p.ppid);
+          const reparented = (d.platform || process.platform) !== "win32" && p.ppid === 1;
+          const parent = reparented ? null : inList || await d.processInfo(p.ppid);
           if (!parent) v = "orphan";
           else if (parent.unknown) v = "stranger";
           else if (startMs(parent.createdAt) > startMs(p.createdAt)) v = "orphan";
@@ -1896,10 +1899,10 @@ var require_browserRun = __commonJS({
       if (!held) return;
       const named = (ps) => ps.map((p) => `PID ${p.pid} (${p.processName})`).join(", ");
       if (held.strangers) {
-        throw new RunError("FOLDER_IN_USE", `${profile.name}: its profile folder is open in a browser PortPilot cannot confirm it started: ${named(held.strangers)}. Close that browser window and retry. Nothing was killed.`, { holders: held.strangers });
+        throw new RunError("FOLDER_IN_USE", `${profile.name}: its profile folder is open in a browser PortPilot cannot confirm it started: ${named(held.strangers)}. Close that browser window and retry. Nothing was killed.`, { holders: held.strangers, reason: "stranger" });
       }
       const how = held.killed ? "browser processes still hold its profile folder after PortPilot ended them" : "browser processes still hold its profile folder; they did not pass the check right before ending them, so nothing was killed";
-      throw new RunError("FOLDER_IN_USE", `${profile.name}: ${how}: ${named(held.stuck)}. Not started.`, { holders: held.stuck });
+      throw new RunError("FOLDER_IN_USE", `${profile.name}: ${how}: ${named(held.stuck)}. Not started.`, { holders: held.stuck, reason: "stuck", killed: held.killed > 0 });
     }
     async function startProfile(configPath, name, o = {}, d = defaultDeps()) {
       const profile = getProfile(configPath, name);
@@ -2463,6 +2466,8 @@ var NEXT = {
   START_TIMEOUT: "Call start_browser once more. If it fails again, ask the user to close any window using this profile.",
   LAUNCH_FAILED: "Ask the user to check that the browser starts normally.",
   FOLDER_IN_USE: "Do not kill it. Tell the user a browser window PortPilot cannot confirm it started has this profile open and ask them to close it, then call start_browser again.",
+  // FOLDER_IN_USE with reason 'stuck': processes PortPilot would end are still on the folder (F88).
+  FOLDER_IN_USE_STUCK: "Do not kill them. Tell the user browser processes left on this profile folder could not be ended (the PIDs are in the error) and ask them to end those processes or restart the computer, then call start_browser again.",
   STOP_FAILED: "Ask the user to close that browser window by hand.",
   BAD_MODE: `Use one of: ${profiles.MODES.join(", ")}.`,
   IN_USE: 'Do not use it. Call list_browser_profiles and pick a free profile (free: true) that suits the task. name "any" gives a throwaway browser with no logins: use it only when the task is not tied to a site. Only if the user agrees to share this one, call again with takeover:true.',
@@ -2477,7 +2482,7 @@ function failure(err, configPath) {
     success: false,
     code,
     error: String(err.message || err).replace(/\s+/g, " ").trim(),
-    action: typeof err.action === "string" && err.action || NEXT[code] || "Report this error to the user."
+    action: typeof err.action === "string" && err.action || NEXT[code === "FOLDER_IN_USE" && err.reason === "stuck" ? "FOLDER_IN_USE_STUCK" : code] || "Report this error to the user."
   };
   if (err.holder) out.holder = err.holder;
   if (err.leasedTo) out.leasedTo = err.leasedTo;
@@ -2524,7 +2529,9 @@ var nameOf = (args) => {
 var runOpts = (ctx) => ({
   ...ctx.pollMs ? { pollMs: ctx.pollMs } : {},
   ...ctx.timeoutMs ? { timeoutMs: ctx.timeoutMs } : {},
-  ...ctx.exitMs ? { exitMs: ctx.exitMs } : {}
+  ...ctx.exitMs ? { exitMs: ctx.exitMs } : {},
+  ...ctx.folderMs ? { folderMs: ctx.folderMs } : {},
+  ...ctx.killMs ? { killMs: ctx.killMs } : {}
 });
 function startedByOf(caller) {
   const out = { kind: caller.surface === "desktop" ? "human" : "claude", surface: caller.surface, label: caller.by, at: caller.at };
