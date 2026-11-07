@@ -1,6 +1,6 @@
 /**
  * Which processes are a browser profile's browser, and what a browser leaves on its folder
- * (findings F21, F22, F45, F64-F82).
+ * (findings F21, F22, F45, F64-F69, F73-F84).
  *
  * A browser's debug port can go quiet seconds before its main process exits, and Brave's crash
  * reporter (--type=crashpad-handler) can keep the profile folder open a minute or more. Stop waits
