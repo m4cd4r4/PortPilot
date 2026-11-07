@@ -2555,7 +2555,7 @@ async function loadSettings() {
     document.getElementById('setting-interval').value = state.settings.scanInterval / 1000 || 5;
     document.getElementById('setting-devtools').checked = state.settings.openDevTools === true;
     document.getElementById('setting-close-to-tray').checked = state.settings.closeToTray !== false;
-    document.getElementById('setting-stop-apps-on-quit').checked = state.settings.stopAppsOnQuit !== false;
+    document.getElementById('setting-stop-apps-on-quit').checked = state.settings.stopAppsOnQuit === true;
     document.getElementById('setting-auto-resize').checked = state.settings.autoResizeWindow === true;
     document.getElementById('setting-notify-crash').checked = state.settings.notifyOnCrash !== false;
     document.getElementById('setting-open-at-login').checked = state.settings.openAtLogin !== false;

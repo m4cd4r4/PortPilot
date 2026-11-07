@@ -158,12 +158,15 @@ async function startApp(appConfig) {
 /**
  * Stop a running application by ID
  * @param {string} appId - App identifier
+ * @param {{configPath?: string}} [opts] - with configPath, an app an earlier session started (left
+ *   running by a quit, adopted on relaunch) is stopped too, once adoptedApps proves the server is it (F42)
  * @returns {Promise<Object>} Result
  */
-async function stopApp(appId) {
+async function stopApp(appId, { configPath } = {}) {
   const processInfo = runningProcesses.get(appId);
-  
+
   if (!processInfo || !processInfo.process) {
+    if (configPath) return require('./adoptedApps').stopAdopted(configPath, appId);
     return { success: false, error: 'App not found or not running' };
   }
 

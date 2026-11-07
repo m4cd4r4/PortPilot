@@ -41,6 +41,8 @@ const FILES = [
   'main/configStore.js',
   'main/portScanner.js',
   'main/processManager.js',
+  'main/adoptedApps.js',
+  'main/processTree.js',
   'main/ipcHandlers.js',
   'main/projectScanner.js',
   'renderer/index.html',

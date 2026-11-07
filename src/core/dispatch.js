@@ -64,7 +64,7 @@ function createDispatcher(configStore, { surface = 'web' } = {}) {
       return result;
     },
     'process:stop': async (appId) => {
-      const result = await stopApp(appId);
+      const result = await stopApp(appId, { configPath: configStore.configPath }); // adopted apps too (F42)
       if (result && result.success) recordStop(configStore.configPath, appId);
       // Re-acquire the reservation if the app opted in.
       const app = configStore.getApp(appId);

@@ -443,17 +443,14 @@ async function cleanupBeforeQuit() {
     webAgent = null;
   }
 
-  // Clean up child processes if enabled in settings
+  // PortPilot-started apps keep running unless "Stop PortPilot-started apps on quit" is ticked
+  // (decision 2026-11-07); their runs stay open and the next launch adopts them.
   if (configStore) {
-    const settings = configStore.getSettings();
-    if (settings.stopAppsOnQuit !== false) {
-      try {
-        const { cleanupAllProcesses } = require('./processManager');
-        await cleanupAllProcesses(configStore.configPath);
-        console.log('Stopped all PortPilot-managed apps');
-      } catch (err) {
-        console.error('Error cleaning up processes:', err);
-      }
+    try {
+      const { stopping } = await require('./quitApps').stopAppsForQuit(configStore.getSettings(), configStore.configPath);
+      if (stopping) console.log('Stopped all PortPilot-managed apps');
+    } catch (err) {
+      console.error('Error cleaning up processes:', err);
     }
   }
 }

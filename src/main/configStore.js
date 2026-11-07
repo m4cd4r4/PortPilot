@@ -106,7 +106,7 @@ class ConfigStore {
 
         // Window behavior
         closeToTray: true,  // Close button minimizes to tray (true) or exits (false)
-        stopAppsOnQuit: true,  // Stop PortPilot-managed apps when quitting
+        stopAppsOnQuit: false,  // Quit leaves PortPilot-started apps running (decision 2026-11-07); true stops them
         openAtLogin: true,  // Start PortPilot (and the shared MCP server) at login
         autoResizeWindow: false,  // Auto-grow/shrink window height to app count (off by default - it fights manual resizing)
         notifyOnCrash: true,  // OS notification + toast when a running app exits unexpectedly

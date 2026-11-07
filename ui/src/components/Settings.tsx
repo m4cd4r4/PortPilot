@@ -14,7 +14,7 @@ const TOGGLES: Array<{ title: string; rows: Array<{ key: BoolKey; label: string;
     { key: 'autoResizeWindow', label: 'Resize the window to the app count', hint: 'Off by default; it fights manual resizing.', fallback: false },
   ] },
   { title: 'Apps', rows: [
-    { key: 'stopAppsOnQuit', label: 'Stop PortPilot-started apps on quit', hint: 'Apps started elsewhere are never touched.', fallback: true },
+    { key: 'stopAppsOnQuit', label: 'Stop PortPilot-started apps on quit', hint: 'Off by default: they keep running and PortPilot picks them up next time. Apps started elsewhere are never touched.', fallback: false },
     { key: 'notifyOnCrash', label: 'Tell me when an app exits unexpectedly', hint: 'A toast, plus an OS notification when the window is hidden.', fallback: true },
     { key: 'autoRegister', label: 'Register apps I start from a terminal', hint: 'Adds a localhost server to the Library the first time it is seen.', fallback: false },
   ] },

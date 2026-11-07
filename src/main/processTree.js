@@ -50,6 +50,35 @@ function listProcessPairs() {
 }
 
 /**
+ * Every process as { pid, ppid, created } (created = start time, epoch ms; null when unknown).
+ * [] when the platform query fails. Windows reads CIM; elsewhere `ps` (whole seconds).
+ */
+function listProcesses() {
+  return new Promise((resolve) => {
+    const opts = { encoding: 'utf8', maxBuffer: 8 * 1024 * 1024, timeout: 15000, windowsHide: true };
+    const now = Date.now();
+    const done = (err, stdout) => {
+      if (err || !stdout) return resolve([]);
+      const out = [];
+      for (const line of String(stdout).split(/\r?\n/)) {
+        const m = line.trim().match(/^(\d+)\s+(\d+)\s+(-?\d+)?$/);
+        if (!m) continue;
+        const t = m[3] == null ? null : Number(m[3]);
+        const created = t == null ? null : (os.platform() === 'win32' ? t : now - t * 1000);
+        out.push({ pid: parseInt(m[1], 10), ppid: parseInt(m[2], 10), created });
+      }
+      resolve(out);
+    };
+    if (os.platform() === 'win32') {
+      execFile('powershell', ['-NoProfile', '-NonInteractive', '-Command',
+        'Get-CimInstance Win32_Process | ForEach-Object { $c = ""; if ($_.CreationDate) { $c = ([DateTimeOffset]$_.CreationDate).ToUnixTimeMilliseconds() }; "$($_.ProcessId) $($_.ParentProcessId) $c" }'], opts, done);
+    } else {
+      execFile('ps', ['-A', '-o', 'pid=,ppid=,etimes='], opts, done);
+    }
+  });
+}
+
+/**
  * appId -> Set of pids PortPilot owns for that app (the tracked shell pid and its descendants).
  * @param {Array<{id: string, pid: number, running: boolean}>} running from getRunningApps()
  */
@@ -62,4 +91,4 @@ async function ownedPidsByApp(running) {
   return owned;
 }
 
-module.exports = { descendantsOf, ownedPidsByApp, listProcessPairs };
+module.exports = { descendantsOf, ownedPidsByApp, listProcessPairs, listProcesses };
