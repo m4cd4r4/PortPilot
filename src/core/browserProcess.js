@@ -127,7 +127,9 @@ async function awaitBrowserExit(pid, dir, d, o, pollMs) {
  * launch for itself and Start times out (F45). Waits up to `folderMs` for holders to go; then ends
  * what is left only when every one of them is a leftover of our own:
  *   - a main browser process this PortPilot process recorded (same pid and start time)
- *   - a helper (crash reporter and the like) whose parent is gone, or is one of ours
+ *   - a helper (crash reporter and the like) whose parent is gone, or is one of ours. By the owner's
+ *     decision (F81) an orphan helper is ended whoever launched its browser, a hand-launched one
+ *     included: with its browser closed it only holds the folder.
  * A main we did not record, a helper whose parent is alive and not ours, or a parent that cannot be
  * queried makes the whole folder someone else's: nothing is killed.
  * Resolves null when the folder is free (or cannot be queried: the launch goes ahead as before),
