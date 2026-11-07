@@ -3,11 +3,18 @@ const os = require('os');
 
 /**
  * Scan all listening TCP ports and return process information
+ * @param {{timeoutMs?: number}} [opts] cap the whole scan (process-name lookup included); a scan
+ *   that runs over answers [] (a failed scan), as quit's snapshot needs inside its 10 s hold (F105)
  * @returns {Promise<Array>} Array of port info objects
  */
-async function scanPorts() {
+async function scanPorts({ timeoutMs } = {}) {
+  if (timeoutMs > 0) {
+    let timer;
+    const late = new Promise((r) => { timer = setTimeout(() => r([]), timeoutMs); });
+    try { return await Promise.race([scanPorts(), late]); } finally { clearTimeout(timer); }
+  }
   const platform = os.platform();
-  
+
   try {
     if (platform === 'win32') {
       return await scanPortsWindows();

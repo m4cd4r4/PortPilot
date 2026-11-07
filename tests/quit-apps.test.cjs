@@ -103,7 +103,7 @@ const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pp-quit-apps-'));
         signal: (pid, sig) => { sent.push(`${sig} ${pid}`); if (sig === 'SIGKILL' || pid !== 300) dead.add(pid); },
         alive: (pid) => !dead.has(pid), // 300 (the server) ignores SIGTERM
         graceMs: 200,
-        checkPort: async () => (freesPort && dead.has(300) ? null : { pid: 300 }),
+        scanPorts: async () => [freesPort && dead.has(300) ? { port: 9999, pid: 9 } : { port: entry.port, pid: 300 }],
         freeWithinMs: 300,
       };
       return { r: await adopted.stopAdopted('cfg', 'a', deps), sent };
@@ -113,6 +113,51 @@ const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pp-quit-apps-'));
     assert.equal(ok.r.success, true, JSON.stringify(ok.r));
     const held = await run({ freesPort: false });
     assert.equal(held.r.success, false, 'reported success while the port was still held');
+  });
+
+  // reconcileStale against a fake OS: tree is shell 100 -> npm 200 -> node 300; 9 is unrelated on 9999.
+  const reconcileWith = async (e, { procs = tree, ports = [] } = {}) => {
+    const gone = [];
+    await adopted.reconcileStale('cfg', { before: at + 60000, deps: {
+      readRuntime: () => ({ apps: { app: e } }),
+      recordGone: (_c, id) => { gone.push(id); return true; },
+      listProcesses: async () => [...procs, { pid: 9, ppid: 0, created: at - 1e7 }],
+      scanPorts: async () => [...ports, { port: 9999, pid: 9 }],
+    } });
+    return gone;
+  };
+  await t('F102: launch keeps a start whose server is alive but not bound yet (slow compile, nodemon restart), shell gone', async () => {
+    assert.deepEqual(await reconcileWith(entry, { procs: tree.slice(1) }), []);
+  });
+  await t('F102: launch keeps a start whose server bound a fallback port (Vite 5174 for a recorded 5173)', async () => {
+    assert.deepEqual(await reconcileWith(entry, { ports: [{ port: entry.port + 1, pid: 300 }] }), []);
+  });
+  await t('F102: launch never drops a start that recorded no port (an app with no preferredPort), even with its shell gone', async () => {
+    assert.deepEqual(await reconcileWith({ ...entry, port: null }, { procs: [] }), []);
+  });
+  await t('F102: launch still drops a start whose shell and children are all gone and whose port is quiet', async () => {
+    assert.deepEqual(await reconcileWith(entry, { procs: [] }), ['app']);
+  });
+  await t('F105: the quit snapshot caps the port scan as well as the process list', async () => {
+    const seen = {};
+    await adopted.snapshot({ listProcesses: async (o) => { seen.procs = o; return tree; }, scanPorts: async (o) => { seen.ports = o; return [{ port: 1, pid: 9 }]; } }, { timeoutMs: 4000 });
+    assert.deepEqual(seen, { procs: { timeoutMs: 4000 }, ports: { timeoutMs: 4000 } });
+  });
+  await t('F103: Stop never clears an adopted app when the port scan failed (an empty netstat), even with its shell gone', async () => {
+    const gone = [];
+    const r = await adopted.stopAdopted('cfg', 'app', { readRuntime: () => ({ apps: { app: entry } }), recordGone: (_c, id) => gone.push(id),
+      scanPorts: async () => [], listProcesses: async () => tree.slice(1) });
+    assert.equal(r.success, false, JSON.stringify(r));
+    assert.deepEqual(gone, []);
+  });
+  await t('F103: after the kill, a failed port scan is not read as a free port', async () => {
+    let scans = 0;
+    let checks = 0; // checkPort is scanPorts().find(): a failed scan reads as null, i.e. "free"
+    const r = await adopted.stopAdopted('cfg', 'app', { readRuntime: () => ({ apps: { app: entry } }), platform: 'win32',
+      killProcess: async () => ({ success: true }), listProcesses: async () => tree, freeWithinMs: 300,
+      scanPorts: async () => (scans++ === 0 ? [{ port: entry.port, pid: 300 }] : []),
+      checkPort: async () => (checks++ === 0 ? { port: entry.port, pid: 300 } : null) });
+    assert.equal(r.success, false, JSON.stringify(r));
   });
 
   // A runtime file of four starts, and a quit that records what it would stop.
@@ -302,6 +347,24 @@ pm.startApp({ id: 'chatty', name: 'chatty', command: 'node ' + JSON.stringify(${
     assert.ok(/GET \/x/.test(log) && /served \/x/.test(log), `log file: ${JSON.stringify(log)}`);
     pm.setLogConfigPath(cfg); // the in-app log of an app this process never started reads the same file
     assert.ok(/GET \/x/.test(pm.getAppLogs('chatty').stdout), JSON.stringify(pm.getAppLogs('chatty')));
+  });
+  await t('F104: a new Start appends to the log (an older copy may still write it); its errors come from this run only', async () => {
+    pm.setLogConfigPath(cfg);
+    const file = cf.logPathFor(cfg, 'appender');
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, 'older run still writing\n');
+    const r = await pm.startApp({ id: 'appender', name: 'appender', command: 'node -e "console.error(\'second run failed\'); process.exit(3)"' });
+    assert.equal(r.success, false, JSON.stringify(r));
+    assert.ok(/second run failed/.test(r.error) && !/older run/.test(r.error), r.error);
+    const body = fs.readFileSync(file, 'utf8');
+    assert.ok(/older run still writing/.test(body) && /second run failed/.test(body), JSON.stringify(body));
+  });
+  await t('F104: a log over 10 MB is moved to <id>.log.1 at Start, so appending never grows it without bound', async () => {
+    const file = cf.logPathFor(cfg, 'big');
+    fs.writeFileSync(file, Buffer.alloc(10 * 1024 * 1024 + 1, 0x61));
+    await pm.startApp({ id: 'big', name: 'big', command: 'node -e "console.log(\'fresh\')"' });
+    assert.equal(fs.statSync(`${file}.1`).size, 10 * 1024 * 1024 + 1, 'not rotated');
+    assert.ok(fs.statSync(file).size < 1000, `${fs.statSync(file).size} bytes left in the live log`);
   });
 
   for (const c of children) { if (c.exitCode === null) { try { await pm.killProcess(c.pid); } catch { /* gone */ } } }

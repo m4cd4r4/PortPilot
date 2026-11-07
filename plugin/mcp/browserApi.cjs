@@ -263,12 +263,12 @@ var require_configFile = __commonJS({
     function readLogTail(configPath, appId, chars = CRASH_TAIL_CHARS) {
       return readFileTail(logPathFor(configPath, appId), chars);
     }
-    function readFileTail(file, chars = CRASH_TAIL_CHARS) {
+    function readFileTail(file, chars = CRASH_TAIL_CHARS, from = 0) {
       try {
         const { size } = fs.statSync(file);
         const fd = fs.openSync(file, "r");
         try {
-          const len = Math.min(size, chars * 4);
+          const len = Math.max(0, Math.min(size - from, chars * 4));
           const buf = Buffer.alloc(len);
           fs.readSync(fd, buf, 0, len, size - len);
           return buf.toString("utf8").slice(-chars);

@@ -55,12 +55,26 @@ function verifyAdopted({ entry, listenerPid, procs }) {
   return no(`the process on its port (${listenerPid}) was not started by it`);
 }
 
-/** Is the process the entry's shell pid names now the shell it was started under? */
-function shellAlive(entry, procs) {
+/**
+ * Could the entry's server still be running, wherever it listens (or before it binds)? True when
+ * a live process is the recorded shell, or a direct child of it, created with the start. The
+ * server may be compiling, restarting under nodemon, or on a fallback port (F102): none of those
+ * is "gone".
+ */
+function startStillAlive(entry, procs) {
   const at = Date.parse(entry.startedBy && entry.startedBy.at);
-  const p = (procs || []).find((x) => x.pid === Number(entry.pid));
-  return !!p && Number.isFinite(p.created) && Number.isFinite(at)
-    && p.created >= at - CREATED_BEFORE_MS && p.created <= at + CREATED_AFTER_MS;
+  const shellPid = Number(entry.pid);
+  if (!Number.isFinite(at) || !Number.isInteger(shellPid) || shellPid < 1) return false;
+  const withStart = (p) => Number.isFinite(p.created) && p.created >= at - CREATED_BEFORE_MS && p.created <= at + CREATED_AFTER_MS;
+  return (procs || []).some((p) => (p.pid === shellPid || p.ppid === shellPid) && withStart(p));
+}
+
+/** The pid listening on `port` from a fresh scan; undefined when the scan failed (an empty list). */
+async function scanListener(scanPorts, port) {
+  const ports = await scanPorts();
+  if (!Array.isArray(ports) || !ports.length) return undefined;
+  const hit = ports.find((p) => Number(p.port) === Number(port));
+  return (hit && hit.pid) || null;
 }
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -92,7 +106,7 @@ async function killTreeUnix(rootPid, procs, deps = {}) {
  * Success only once its port is free. When nothing listens and its shell is gone too, the server
  * died while nobody watched: the entry is dropped, its run closed as 'unknown', and Stop says it
  * was not running (F93). The caller records the stop (as for any Stop).
- * deps (tests, and quit's single snapshot): readRuntime, checkPort, listProcesses, killProcess,
+ * deps (tests, and quit's single snapshot): readRuntime, scanPorts, listProcesses, killProcess,
  * snap ({procs, listenerOf}), platform, signal/alive/graceMs, freeWithinMs.
  * @returns {Promise<{success: boolean, adopted?: boolean, notRunning?: boolean, pid?: number, message?: string, error?: string}>}
  */
@@ -100,7 +114,8 @@ async function stopAdopted(configPath, appId, deps = {}) {
   const cf = require('../core/configFile');
   const readRuntime = deps.readRuntime || cf.readRuntime;
   const recordGone = deps.recordGone || cf.recordGone;
-  const checkPort = deps.checkPort || require('./portScanner').checkPort;
+  // scanPorts, not checkPort: checkPort reads a failed scan ([]) as "nothing listens" (F103).
+  const scanPorts = deps.scanPorts || require('./portScanner').scanPorts;
   const listProcesses = deps.listProcesses || require('./processTree').listProcesses;
   const killProcess = deps.killProcess || require('./processManager').killProcess;
   const platform = deps.platform || require('os').platform();
@@ -108,10 +123,11 @@ async function stopAdopted(configPath, appId, deps = {}) {
   if (!entry || !entry.startedBy) return { success: false, error: 'App not found or not running' };
   const port = Number(entry.port);
   if (!Number.isInteger(port) || port < 1) return { success: false, error: 'Not stopped: its start recorded no port' };
-  const listenerPid = deps.snap ? deps.snap.listenerOf(port) : ((await checkPort(port)) || {}).pid;
+  const listenerPid = deps.snap ? deps.snap.listenerOf(port) : await scanListener(scanPorts, port);
+  if (listenerPid === undefined) return { success: false, error: 'Not stopped: the port scan could not be read' };
   const procs = deps.snap ? deps.snap.procs : await listProcesses();
   if (!Array.isArray(procs) || !procs.length) return { success: false, error: 'Not stopped: the process list could not be read' };
-  if (!listenerPid && !entry.crashed && !shellAlive(entry, procs)) {
+  if (!listenerPid && !entry.crashed && !startStillAlive(entry, procs)) {
     recordGone(configPath, appId, entry.startedBy.at);
     return { success: true, adopted: true, notRunning: true, message: `${appId} was not running; its record is cleared` };
   }
@@ -121,9 +137,13 @@ async function stopAdopted(configPath, appId, deps = {}) {
   if (!r || !r.success) return r || { success: false, error: 'Failed to kill process' };
   const freeWithinMs = deps.freeWithinMs == null ? 5000 : deps.freeWithinMs;
   for (let waited = 0; ; waited += 150) {
-    const still = await checkPort(port);
-    if (!still || still.pid !== listenerPid) break;
-    if (waited >= freeWithinMs) return { success: false, error: `Not stopped: port ${port} is still held by PID ${listenerPid}` };
+    const still = await scanListener(scanPorts, port); // undefined (failed scan) is not "free"
+    if (still === null || (still !== undefined && still !== listenerPid)) break;
+    if (waited >= freeWithinMs) {
+      return { success: false, error: still === undefined
+        ? `Not confirmed: the port scan failed while waiting for port ${port} to free`
+        : `Not stopped: port ${port} is still held by PID ${listenerPid}` };
+    }
     await sleep(150);
   }
   return { success: true, adopted: true, pid: v.pid, message: `Stopped the server on port ${port} (PID ${v.pid})` };
@@ -143,7 +163,8 @@ function startedByDesktop(entry) {
 async function snapshot(deps = {}, { timeoutMs } = {}) {
   const listProcesses = deps.listProcesses || require('./processTree').listProcesses;
   const scanPorts = deps.scanPorts || require('./portScanner').scanPorts;
-  const [procs, ports] = await Promise.all([listProcesses(timeoutMs ? { timeoutMs } : undefined), scanPorts()]);
+  const opts = timeoutMs ? { timeoutMs } : undefined; // both reads capped inside quit's budget (F105)
+  const [procs, ports] = await Promise.all([listProcesses(opts), scanPorts(opts)]);
   if (!Array.isArray(procs) || !procs.length || !Array.isArray(ports) || !ports.length) return null;
   const byPort = new Map(ports.map((p) => [Number(p.port), p.pid]));
   return { procs, listenerOf: (port) => byPort.get(Number(port)) || null };
@@ -160,15 +181,18 @@ async function reconcileStale(configPath, { before = Date.now(), deps = {} } = {
   const cf = require('../core/configFile');
   const readRuntime = deps.readRuntime || cf.readRuntime;
   const recordGone = deps.recordGone || cf.recordGone;
+  // No recorded port: nothing can show it is gone, so it is never dropped here (F102).
+  const hasPort = (e) => Number.isInteger(Number(e.port)) && Number(e.port) > 0;
   const stale = Object.entries(readRuntime(configPath).apps || {})
-    .filter(([, e]) => startedByDesktop(e) && Date.parse(e.startedBy.at) < before);
+    .filter(([, e]) => startedByDesktop(e) && hasPort(e) && Date.parse(e.startedBy.at) < before);
   if (!stale.length) return [];
   const snap = await snapshot(deps);
   if (!snap) return [];
   const dropped = [];
   for (const [id, entry] of stale) {
-    const v = verifyAdopted({ entry, listenerPid: snap.listenerOf(entry.port), procs: snap.procs });
-    if (v.ok) continue;
+    // Gone only when nothing on its port is it AND neither its shell nor a child of it lives (F102).
+    if (verifyAdopted({ entry, listenerPid: snap.listenerOf(entry.port), procs: snap.procs }).ok) continue;
+    if (startStillAlive(entry, snap.procs)) continue;
     if (recordGone(configPath, id, entry.startedBy.at)) dropped.push(id);
   }
   return dropped;

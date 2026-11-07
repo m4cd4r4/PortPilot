@@ -25,11 +25,24 @@ function logFileFor(appId) {
   const safe = String(appId).replace(/[^A-Za-z0-9_-]/g, '_').slice(0, 120);
   return path.join(os.tmpdir(), 'portpilot-logs', `${safe}.log`);
 }
-/** Truncate and open the app's log for the child to write; null (output discarded) when it cannot. */
+// A log over this size is moved to <id>.log.1 at Start (replacing the previous one).
+const LOG_ROTATE_BYTES = 10 * 1024 * 1024;
+
+/**
+ * Open the app's log for the child to write, appending (F104): an older copy of the app may still
+ * be running and writing it, and truncating under it fills the file with NULs. Over the size cap it
+ * is rotated first. Returns { fd, from } (from = where this run's output starts), or null (output
+ * discarded) when it cannot be opened.
+ */
 function openLog(file) {
   try {
     fs.mkdirSync(path.dirname(file), { recursive: true });
-    return fs.openSync(file, 'w');
+    let size = 0;
+    try { size = fs.statSync(file).size; } catch { /* new file */ }
+    if (size > LOG_ROTATE_BYTES) {
+      try { fs.renameSync(file, `${file}.1`); size = 0; } catch { /* held without delete sharing: keep appending */ }
+    }
+    return { fd: fs.openSync(file, 'a'), from: size };
   } catch {
     return null;
   }
@@ -88,7 +101,8 @@ async function startApp(appConfig) {
 
       // stdout and stderr go straight to the log file (no pipe, no maxBuffer kill).
       const logFile = logFileFor(id);
-      const fd = openLog(logFile);
+      const log = openLog(logFile);
+      const fd = log ? log.fd : null;
       const out = fd == null ? 'ignore' : fd;
       let childProcess;
       try {
@@ -102,7 +116,8 @@ async function startApp(appConfig) {
       } finally {
         if (fd != null) { try { fs.closeSync(fd); } catch { /* the child has its own handle */ } }
       }
-      const tail = (chars) => (fd == null ? '' : readFileTail(logFile, chars) || '');
+      // This run's output only: the log may hold an earlier run's lines before `from`.
+      const tail = (chars) => (fd == null ? '' : readFileTail(logFile, chars, log.from) || '');
 
       childProcess.on('error', (err) => {
         runningProcesses.delete(id);
