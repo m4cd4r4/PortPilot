@@ -78,10 +78,11 @@ function killTree(pid) {
 }
 
 /** PIDs whose command line names the world folder: an Electron a failed launch never handed back, its helpers. */
-function worldProcesses(dir) {
+function worldProcesses(dir, exeName = '') {
   if (process.platform !== 'win32') return [];
   try {
-    const ps = `Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -and $_.CommandLine.ToLower().Contains('${dir.toLowerCase().replace(/'/g, "''")}') -and $_.ProcessId -ne ${process.pid} -and $_.ProcessId -ne $PID -and -not $_.CommandLine.Contains('Get-CimInstance') } | ForEach-Object { $_.ProcessId }`;
+    const only = exeName ? ` -and $_.Name -eq '${exeName.replace(/'/g, "''")}'` : '';
+    const ps = `Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -and $_.CommandLine.ToLower().Contains('${dir.toLowerCase().replace(/'/g, "''")}') -and $_.ProcessId -ne ${process.pid} -and $_.ProcessId -ne $PID -and -not $_.CommandLine.Contains('Get-CimInstance')${only} } | ForEach-Object { $_.ProcessId }`;
     return execFileSync('powershell.exe', ['-NoProfile', '-Command', ps], { encoding: 'utf8', windowsHide: true }).split(/\s+/).filter(Boolean).map(Number);
   } catch { return []; }
 }
@@ -119,6 +120,7 @@ async function journey(name, { ports: nPorts = 4, detectIntervalMs = 1000 } = {}
   const configDir = path.join(tmp, 'portpilot');
   fs.mkdirSync(configDir, { recursive: true });
   const tmpKey = dirKey(tmp);
+  const appExe = path.basename(process.env.PORTPILOT_E2E_EXE || require('electron'));
   const ports = await h.freePorts(nPorts);
   // Positive control: "port free" checks mean nothing if listeners() cannot see a port we know is held
   // (a netstat in another language, a failed spawn).
@@ -185,7 +187,10 @@ async function journey(name, { ports: nPorts = 4, detectIntervalMs = 1000 } = {}
       else await app.evaluate(({ app: a }) => a.quit()).catch(() => {});
       let gone = await j.waitFor(() => !h.alive(pid), 15000);
       if (!gone) { await h.closeApp(app); killTree(pid); gone = await j.waitFor(() => !h.alive(pid), 5000); }
-      log({ kind: 'event', step: stepName, event: hard ? 'kill' : 'quit', pid, exited: !!gone });
+      // The main process can exit a moment before its helpers (the network utility): a quit is over when they are gone too.
+      const t1 = Date.now();
+      const helpersGone = !!(await j.waitFor(() => worldProcesses(tmp, appExe).length === 0, 10000));
+      log({ kind: 'event', step: stepName, event: hard ? 'kill' : 'quit', pid, exited: !!gone, helpersGone, helpersMs: Date.now() - t1 });
       current = null;
       return errors;
     },
