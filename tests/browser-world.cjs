@@ -84,11 +84,11 @@ function world({ installed = [{ id: 'brave', label: 'Brave', path: '/fake/brave'
       w.killCalls.push(target);
       const p = w.procs().find((h) => h.pid === target.pid);
       if (!p) return 'gone';
-      if (p.createdAt !== target.createdAt) return 'mismatch';
+      if (!target.createdAt || p.createdAt !== target.createdAt) return 'mismatch';
+      if (target.main && /--type=/.test(p.commandLine || '')) return 'mismatch';
       w.killed.push(target.pid);
-      w.lingering.delete(target.pid);
       for (const [port, h] of w.holders) if (h.pid === target.pid) await w.drop(port);
-      w.lingering.delete(target.pid);
+      w.lingering.delete(target.pid); // after the drop, which parks a lingering process here
       return 'killed';
     },
   };

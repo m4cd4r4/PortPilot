@@ -1,6 +1,6 @@
 /**
  * Which processes are a browser profile's browser, and what a browser leaves on its folder
- * (findings F21, F22, F45, F64-F69).
+ * (findings F21, F22, F45, F64-F79).
  *
  * A browser's debug port can go quiet seconds before its main process exits, and Brave's crash
  * reporter (--type=crashpad-handler) can keep the profile folder open a minute or more. Stop waits
@@ -23,7 +23,7 @@ const EXIT_MS = 5000;
 const KILL_MS = 5000;
 
 const norm = (s) => String(s).replace(/\\/g, '/').replace(/\/+$/, '').toLowerCase();
-const BROWSER_PROCESS_RE = /chrome|chromium|msedge|brave|opera|vivaldi|browser/i;
+const BROWSER_PROCESS_RE = q.BROWSER_NAME_RE;
 
 /**
  * True when the holder is a browser launched with exactly this profile's user-data-dir.
@@ -50,24 +50,23 @@ function holdsDir(holder, dir) {
 // ---- Our own browsers ----------------------------------------------------------
 
 // Main processes this PortPilot process launched or stopped, per profile folder: pid -> createdAt
-// (null until known). In memory and per process: the desktop app and each MCP server keep their
-// own, so a browser started by another of them is one this process "cannot confirm" (F63, F68).
+// In memory and per process: the desktop app and each MCP server keep their own, so a browser
+// started by another of them is one this process "cannot confirm" (F63, F68). A pid whose start
+// time could not be read is never recorded: a pid alone cannot tell our browser from a reuse (F74).
 const ours = new Map();
-function remember(dir, pid, createdAt = null) {
-  if (!Number.isInteger(pid) || pid <= 0) return;
+function remember(dir, pid, createdAt) {
+  if (!Number.isInteger(pid) || pid <= 0 || !createdAt) return;
   const k = norm(dir);
   if (!ours.has(k)) ours.set(k, new Map());
-  const m = ours.get(k);
-  if (createdAt || !m.has(pid)) m.set(pid, createdAt || m.get(pid) || null);
+  ours.get(k).set(pid, createdAt);
 }
 const recorded = (dir, pid) => (ours.get(norm(dir)) || new Map()).get(pid);
-/** True when `p` is a process we recorded: same pid and, when both are known, the same start time. */
+/** True when `p` is a process we recorded: same pid and the same start time, both known. */
 function isOurs(dir, p) {
-  const m = ours.get(norm(dir));
-  if (!m || !m.has(p.pid)) return false;
-  const at = m.get(p.pid);
-  return !at || !p.createdAt || at === p.createdAt;
+  const at = recorded(dir, p.pid);
+  return !!(at && p.createdAt && at === p.createdAt);
 }
+const startMs = (at) => (at ? Date.parse(at) : NaN);
 // Once a pid is seen gone it is forgotten, so a later process with the same pid never inherits "ours".
 const forget = (dir, pid) => { if (ours.get(norm(dir))) ours.get(norm(dir)).delete(pid); };
 const isHelper = (p) => /--type=/i.test(String(p.commandLine || ''));
@@ -103,6 +102,7 @@ async function waitExit(pid, dir, d, ms, pollMs, createdAt) {
  * own helpers) if it is still there after `exitMs`. Resolves { pid, how, ms } with how one of
  *   exited         it went by itself (or its pid now names another process: never killed)
  *   killed         it outlived the wait and passed the identity check, so it was ended
+ *   mismatch       the last check before the kill refused it (another process now): not killed
  *   still-running  it survived the kill too
  *   unknown        the process could not be queried: nothing was killed and nothing is claimed
  */
@@ -114,8 +114,9 @@ async function awaitBrowserExit(pid, dir, d, o, pollMs) {
   };
   const first = await waitExit(pid, dir, d, o.exitMs ?? EXIT_MS, pollMs, recorded(dir, pid));
   if (first.state !== 'alive') return done(first.state === 'gone' ? 'exited' : 'unknown');
-  const r = await d.killVerified({ pid, createdAt: first.info.createdAt, dir });
-  if (r === 'gone' || r === 'mismatch') return done('exited');
+  const r = await d.killVerified({ pid, createdAt: first.info.createdAt, dir, main: true });
+  if (r === 'gone') return done('exited');
+  if (r === 'mismatch') { forget(dir, pid); return done('mismatch'); }
   if (r !== 'killed') return done('unknown');
   const after = await waitExit(pid, dir, d, o.killMs ?? KILL_MS, pollMs, first.info.createdAt);
   return done({ gone: 'killed', alive: 'still-running' }[after.state] || 'unknown');
@@ -130,8 +131,8 @@ async function awaitBrowserExit(pid, dir, d, o, pollMs) {
  * A main we did not record, a helper whose parent is alive and not ours, or a parent that cannot be
  * queried makes the whole folder someone else's: nothing is killed.
  * Resolves null when the folder is free (or cannot be queried: the launch goes ahead as before),
- * else { strangers } (nothing killed) or { stuck } (still there after being ended):
- * arrays of { pid, processName }.
+ * else { strangers } (nothing killed) or { stuck, killed } (still there; killed: how many kills
+ * were accepted): arrays of { pid, processName }.
  */
 async function freeFolder(dir, o, d) {
   const pollMs = o.pollMs || 250;
@@ -151,21 +152,28 @@ async function freeFolder(dir, o, d) {
   const left = await until(o.folderMs ?? EXIT_MS);
   if (!left || !left.length) return null;
 
+  // ps rows carry no start time (macOS, Linux): read it per process, or the holder cannot be ours.
+  for (const p of left) {
+    if (p.createdAt) continue;
+    const pi = await d.processInfo(p.pid);
+    if (pi && !pi.unknown && pi.createdAt) p.createdAt = pi.createdAt;
+  }
   // Whose is each holder? A helper follows its parent; a parent outside the list is asked directly.
+  // A "parent" that started after its child is a later process on a reused pid: the child is an
+  // orphan (F75).
   const verdict = new Map();
   const judge = async (p, depth = 0) => {
     if (verdict.has(p.pid)) return verdict.get(p.pid);
     let v;
     if (!isHelper(p)) v = isOurs(dir, p) ? 'ours' : 'stranger';
     else {
-      const parent = left.find((x) => x.pid === p.ppid);
-      if (parent && depth < 8) v = await judge(parent, depth + 1);
-      else {
-        const pi = await d.processInfo(p.ppid);
-        if (pi === null) v = 'orphan';
-        else if (pi.unknown) v = 'stranger';
-        else v = isOurs(dir, pi) ? 'ours' : 'stranger';
-      }
+      const inList = left.find((x) => x.pid === p.ppid);
+      const parent = inList || await d.processInfo(p.ppid);
+      if (!parent) v = 'orphan';
+      else if (parent.unknown) v = 'stranger';
+      else if (startMs(parent.createdAt) > startMs(p.createdAt)) v = 'orphan';
+      else if (inList && depth < 8) v = await judge(inList, depth + 1);
+      else v = isOurs(dir, parent) ? 'ours' : 'stranger';
     }
     verdict.set(p.pid, v);
     return v;
@@ -175,14 +183,15 @@ async function freeFolder(dir, o, d) {
   if (strangers.length) return { strangers: brief(strangers) };
 
   // Main processes first: killVerified ends a main's own helpers with it.
+  let killed = 0;
   for (const p of [...left].sort((a, b) => isHelper(a) - isHelper(b))) {
     const now = await identify(p.pid, dir, d, p.createdAt);
-    if (now && !now.unknown) await d.killVerified({ pid: p.pid, createdAt: now.createdAt, dir });
+    if (now && !now.unknown && await d.killVerified({ pid: p.pid, createdAt: now.createdAt, dir, main: false }) === 'killed') killed++;
   }
   const stuck = await until(o.killMs ?? KILL_MS);
-  if (stuck == null) return { stuck: brief(left) };
+  if (stuck == null) return { stuck: brief(left), killed };
   for (const p of left) if (!stuck.some((s) => s.pid === p.pid)) forget(dir, p.pid);
-  return stuck.length ? { stuck: brief(stuck) } : null;
+  return stuck.length ? { stuck: brief(stuck), killed } : null;
 }
 
 module.exports = {

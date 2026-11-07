@@ -176,8 +176,10 @@ async function clearFolder(profile, dir, o, d) {
     throw new RunError('FOLDER_IN_USE', `${profile.name}: its profile folder is open in a browser PortPilot cannot confirm it started: ${named(held.strangers)}. `
       + 'Close that browser window and retry. Nothing was killed.', { holders: held.strangers });
   }
-  throw new RunError('FOLDER_IN_USE', `${profile.name}: browser processes still hold its profile folder after they were ended: ${named(held.stuck)}. Not started.`,
-    { holders: held.stuck });
+  const how = held.killed
+    ? 'browser processes still hold its profile folder after PortPilot ended them'
+    : 'browser processes still hold its profile folder; they did not pass the check right before ending them, so nothing was killed';
+  throw new RunError('FOLDER_IN_USE', `${profile.name}: ${how}: ${named(held.stuck)}. Not started.`, { holders: held.stuck });
 }
 
 /**
@@ -226,8 +228,9 @@ async function startProfile(configPath, name, o = {}, d = defaultDeps()) {
   if (child && child.unref) child.unref();
   // Record the launched process with its start time while its pid is certainly still its own (F65):
   // the browser is starting meanwhile, so this costs no wall time against the CDP wait below.
-  const launched = child && child.pid ? await identify(child.pid, dir, d) : null;
-  if (child) remember(dir, child.pid, launched && !launched.unknown ? launched.createdAt : null);
+  const seen = child && child.pid ? await identify(child.pid, dir, d) : null;
+  const launched = seen && !seen.unknown && seen.createdAt ? seen : null;
+  if (launched) remember(dir, child.pid, launched.createdAt);
 
   const timeoutMs = o.timeoutMs || START_TIMEOUT_MS;
   const pollMs = o.pollMs || 250;
@@ -239,12 +242,13 @@ async function startProfile(configPath, name, o = {}, d = defaultDeps()) {
   if (spawnError) throw new RunError('LAUNCH_FAILED', `could not launch ${exe.path}: ${spawnError.message}`);
   if (!v) {
     // Left alone the child would hold the folder locked. But it may have handed off to another
-    // instance and exited, and its pid been reused: end it only if it is still that same process (F64).
-    if (child && child.pid) {
-      const now = await identify(child.pid, dir, d, launched && !launched.unknown ? launched.createdAt : null);
-      if (now && !now.unknown) await d.killVerified({ pid: child.pid, createdAt: now.createdAt, dir });
-      forget(dir, child.pid);
+    // instance and exited, and its pid been reused: end it only if it is still that same process
+    // (F64), which needs the start time read at launch. Without one nothing is killed (F76).
+    if (launched) {
+      const now = await identify(child.pid, dir, d, launched.createdAt);
+      if (now && !now.unknown) await d.killVerified({ pid: child.pid, createdAt: launched.createdAt, dir, main: true });
     }
+    if (child && child.pid) forget(dir, child.pid);
     throw new RunError('START_TIMEOUT', `${profile.name}: nothing answered CDP on :${profile.port} within ${timeoutMs} ms. ` +
       'If this user-data-dir is already open in another browser window, that window took the launch; close it and retry.');
   }
@@ -256,7 +260,7 @@ async function startProfile(configPath, name, o = {}, d = defaultDeps()) {
     throw new RunError('PORT_HELD', `${after.warning ? after.warning.sentence : `:${profile.port} is not held by this profile`}. The launch did not take the port.`,
       after.warning ? { holder: after.warning.holder, warning: after.warning } : {});
   }
-  if (after.pid !== (child && child.pid)) {
+  if (!launched || after.pid !== child.pid) {
     const main = await identify(after.pid, dir, d);
     remember(dir, after.pid, main && !main.unknown ? main.createdAt : null);
   }
@@ -356,9 +360,10 @@ async function stopProfile(configPath, name, o = {}, d = defaultDeps()) {
   // this profile's browser, with the same pid and start time, immediately before ending it.
   const now = await d.inspectPort(profile.port);
   let killed = false;
-  if (now && now.pid === st.pid && holdsDir(now, dir)) {
+  // Without a start time read before the close there is no identity to check against: no kill (F74).
+  if (createdAt && now && now.pid === st.pid && holdsDir(now, dir)) {
     const same = await identify(st.pid, dir, d, createdAt);
-    if (same && !same.unknown) killed = (await d.killVerified({ pid: st.pid, createdAt: same.createdAt, dir })) === 'killed';
+    if (same && !same.unknown) killed = (await d.killVerified({ pid: st.pid, createdAt, dir, main: true })) === 'killed';
   }
   if (await waitDown(profile, d, o.killMs ?? KILL_MS, pollMs)) {
     const browserExit = await awaitBrowserExit(st.pid, dir, d, o, pollMs);

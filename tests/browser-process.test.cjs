@@ -22,13 +22,18 @@ const dir = path.join(root, 'profile');
 fs.mkdirSync(dir);
 const pidsFile = path.join(root, 'pids.json');
 const mainJs = path.join(root, 'main.js');
+// The stand-in reads its folder from its own --user-data-dir. Children: a helper (same exe,
+// --type=renderer, the folder), a twin (same exe, no folder) and other (plain node: another name).
 fs.writeFileSync(mainJs, `
 const { spawn } = require('child_process');
 const fs = require('fs');
+const dir = process.argv.find((a) => a.startsWith('--user-data-dir=')).slice(16);
 const keep = ['-e', 'setInterval(() => {}, 1000)'];
-const helper = spawn(process.execPath, [...keep, '--', '--type=renderer', '--user-data-dir=' + ${JSON.stringify(dir)}], { stdio: 'ignore', detached: true });
-const other = spawn(${JSON.stringify(process.execPath)}, keep, { stdio: 'ignore', detached: true });
-fs.writeFileSync(${JSON.stringify(pidsFile)}, JSON.stringify({ helper: helper.pid, other: other.pid }));
+const opts = { stdio: 'ignore', detached: true };
+const helper = spawn(process.execPath, [...keep, '--', '--type=renderer', '--user-data-dir=' + dir], opts);
+const twin = spawn(process.execPath, keep, opts);
+const other = spawn(${JSON.stringify(process.execPath)}, keep, opts);
+fs.writeFileSync(${JSON.stringify(pidsFile)}, JSON.stringify({ helper: helper.pid, twin: twin.pid, other: other.pid }));
 setInterval(() => {}, 1000);
 `);
 
@@ -41,14 +46,14 @@ async function t(name, fn) {
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const alive = (pid) => { try { process.kill(pid, 0); return true; } catch { return false; } };
 
-/** Start the stand-in browser; resolves { main, helper, other } pids once all three run. */
-async function startBrowser() {
+/** Start the stand-in browser on `folder`; resolves { main, helper, twin, other } pids once all run. */
+async function startBrowser(folder = dir, file = exe) {
   try { fs.rmSync(pidsFile, { force: true }); } catch { /* none */ }
-  const child = spawn(exe, [mainJs, `--user-data-dir=${dir}`], { stdio: 'ignore', windowsHide: true });
+  const child = spawn(file, [mainJs, `--user-data-dir=${folder}`], { stdio: 'ignore', windowsHide: true });
   mine.push(child.pid);
   for (let i = 0; i < 100 && !fs.existsSync(pidsFile); i++) await sleep(100);
   const p = JSON.parse(fs.readFileSync(pidsFile, 'utf8'));
-  mine.push(p.helper, p.other);
+  mine.push(p.helper, p.twin, p.other);
   return { main: child.pid, ...p };
 }
 
@@ -64,6 +69,7 @@ async function startBrowser() {
     assert.strictEqual(alive(b.main), false, 'main ended');
     assert.strictEqual(alive(b.helper), false, 'its helper ended');
     assert.strictEqual(alive(b.other), true, 'the unrelated child survives');
+    assert.strictEqual(alive(b.twin), true, 'a child of the same exe that does not name the folder survives');
   });
 
   await t('killVerified refuses the right pid with another start time (a reused pid), and the wrong folder', async () => {
@@ -73,6 +79,37 @@ async function startBrowser() {
     assert.strictEqual(await q.killVerified({ pid: b.main, createdAt: info.createdAt, dir: path.join(root, 'other') }), 'mismatch');
     assert.strictEqual(alive(b.main), true, 'not killed');
     assert.strictEqual(await q.killVerified({ pid: b.main, createdAt: info.createdAt, dir }), 'killed', 'the control: the true identity is accepted');
+  });
+
+  await t('killVerified refuses a process that names the folder but is not a browser (exe name check)', async () => {
+    const b = await startBrowser(dir, process.execPath); // node.exe, the same command line
+    const info = await q.processInfo(b.main);
+    assert.strictEqual(await q.killVerified({ pid: b.main, createdAt: info.createdAt, dir }), 'mismatch');
+    assert.strictEqual(alive(b.main), true);
+  });
+
+  await t('killVerified with main: true refuses a helper (--type=) on the folder; main: false ends it', async () => {
+    const b = await startBrowser();
+    const info = await q.processInfo(b.helper);
+    assert.strictEqual(await q.killVerified({ pid: b.helper, createdAt: info.createdAt, dir, main: true }), 'mismatch');
+    assert.strictEqual(alive(b.helper), true);
+    assert.strictEqual(await q.killVerified({ pid: b.helper, createdAt: info.createdAt, dir, main: false }), 'killed');
+  });
+
+  await t('a folder with quotes (\' and U+2019), a space and non-ASCII is read, found and killed by its own value, never as script', async () => {
+    const odd = path.join(root, 'pro\'f ’Seán');
+    fs.mkdirSync(odd);
+    const b = await startBrowser(odd);
+    const info = await q.processInfo(b.main);
+    assert.ok(info.commandLine.includes(odd), `command line read back as: ${info.commandLine}`);
+    const held = await q.dirHolders(odd);
+    assert.ok(held && held.some((h) => h.pid === b.main), JSON.stringify(held));
+    assert.strictEqual(await q.killVerified({ pid: b.main, createdAt: info.createdAt, dir: odd }), 'killed');
+  });
+
+  await t('a failing CIM query is null (unknown), never an empty list that reads as "nothing holds the folder"', async () => {
+    assert.strictEqual(await q.winList('Get-CimInstance -ClassName PP_NoSuchClass'), null);
+    assert.deepStrictEqual(await q.winList('Get-CimInstance Win32_Process -Filter "ProcessId=999999999"'), [], 'the control: a query that works and finds nothing');
   });
 
   for (const pid of mine) { try { process.kill(pid); } catch { /* gone */ } }

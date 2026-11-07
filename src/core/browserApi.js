@@ -444,7 +444,7 @@ const TOOLS = {
       tabs: st0.state === 'up' ? st0.tabs : [],
     }));
     const out = { ...view(r, null), already: !!r.already };
-    // Whether the browser process itself is gone: { pid, how: exited | killed | still-running, ms }.
+    // Whether the browser process itself is gone: { pid, how: exited | killed | mismatch | still-running | unknown, ms }.
     if (r.browserExit) out.browserExit = r.browserExit;
     if (held) {
       out.takeoverNote = `Stopped "${profile.name}", which ${held.by} was using. Tell the user.`;
