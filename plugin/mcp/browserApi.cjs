@@ -1464,44 +1464,51 @@ var require_conflict = __commonJS({
   }
 });
 
-// src/core/browserProcess.js
-var require_browserProcess = __commonJS({
-  "src/core/browserProcess.js"(exports2, module2) {
+// src/core/browserProcessQuery.js
+var require_browserProcessQuery = __commonJS({
+  "src/core/browserProcessQuery.js"(exports2, module2) {
     var path2 = require("path");
     var { execFile } = require("child_process");
-    var EXIT_MS = 5e3;
-    var KILL_MS = 5e3;
-    var run2 = (file, args) => new Promise((resolve) => {
-      execFile(
-        file,
-        args,
-        { encoding: "utf8", timeout: 5e3, windowsHide: true, maxBuffer: 4 * 1024 * 1024 },
-        (err, stdout) => resolve(err ? null : stdout)
-      );
+    var UNKNOWN = Object.freeze({ unknown: true });
+    var BROWSER_NAME_PS = "chrome|chromium|msedge|brave|opera|vivaldi|browser";
+    var QUERY_OPTS = { encoding: "utf8", timeout: 5e3, windowsHide: true, maxBuffer: 4 * 1024 * 1024 };
+    var runFull = (file, args) => new Promise((resolve) => {
+      execFile(file, args, QUERY_OPTS, (err, stdout) => resolve({ err, code: err ? err.code : 0, stdout: stdout || "" }));
     });
+    var ps1 = (script) => runFull("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", script]);
+    var lit = (s) => String(s).replace(/'/g, "''");
+    var winDir = (dir) => String(dir).replace(/\//g, "\\").toLowerCase();
+    var WIN_FIELDS = "ProcessId,ParentProcessId,Name,CommandLine,@{n='Created';e={$_.CreationDate.ToUniversalTime().ToString('o')}}";
+    var fromWin = (p) => ({ pid: p.ProcessId, ppid: p.ParentProcessId, processName: p.Name || null, commandLine: p.CommandLine || null, createdAt: p.Created || null });
     async function describePid(pid) {
-      if (process.platform === "win32") {
-        const out = await run2("powershell.exe", [
-          "-NoProfile",
-          "-NonInteractive",
-          "-Command",
-          `Get-CimInstance Win32_Process -Filter "ProcessId=${Number(pid)}" | Select-Object Name,CommandLine | ConvertTo-Json -Compress`
-        ]);
-        try {
-          const j = JSON.parse(out);
-          return { processName: j.Name || null, commandLine: j.CommandLine || null };
-        } catch {
-          return { processName: null, commandLine: null };
-        }
-      }
-      const args = await run2("ps", ["-ww", "-o", "args=", "-p", String(pid)]);
-      const comm = await run2("ps", ["-o", "comm=", "-p", String(pid)]);
-      return { processName: comm ? path2.basename(comm.trim()) : null, commandLine: args ? args.trim() : null };
+      const info = await processInfo(pid);
+      return info && !info.unknown ? { processName: info.processName, commandLine: info.commandLine } : { processName: null, commandLine: null };
     }
     async function processInfo(pid) {
       if (!Number.isInteger(pid) || pid <= 0) return null;
-      const info = await describePid(pid);
-      return info.processName || info.commandLine ? { pid, ...info } : null;
+      if (process.platform === "win32") {
+        const r = await ps1(`Get-CimInstance Win32_Process -Filter "ProcessId=${pid}" | Select-Object ${WIN_FIELDS} | ConvertTo-Json -Compress`);
+        if (r.err) return UNKNOWN;
+        if (!r.stdout.trim()) return null;
+        try {
+          return fromWin(JSON.parse(r.stdout));
+        } catch {
+          return UNKNOWN;
+        }
+      }
+      const head = await runFull("ps", ["-o", "ppid=,lstart=", "-p", String(pid)]);
+      if (head.err) return head.code === 1 && !head.stdout.trim() ? null : UNKNOWN;
+      const args = await runFull("ps", ["-ww", "-o", "args=", "-p", String(pid)]);
+      const comm = await runFull("ps", ["-o", "comm=", "-p", String(pid)]);
+      if (args.err || comm.err) return args.code === 1 ? null : UNKNOWN;
+      const m = head.stdout.trim().match(/^(\d+)\s+(.+)$/);
+      return {
+        pid,
+        ppid: m ? Number(m[1]) : null,
+        createdAt: m ? m[2].trim() : null,
+        processName: path2.basename(comm.stdout.trim()) || null,
+        commandLine: args.stdout.trim() || null
+      };
     }
     function parsePsTable(out) {
       const rows = [];
@@ -1509,29 +1516,68 @@ var require_browserProcess = __commonJS({
         const m = line.match(/^\s*(\d+)\s+(\d+)\s+(.+)$/);
         if (!m) continue;
         const exe = m[3].trim().split(/\s+/)[0];
-        rows.push({ pid: Number(m[1]), ppid: Number(m[2]), processName: path2.basename(exe), commandLine: m[3].trim() });
+        rows.push({ pid: Number(m[1]), ppid: Number(m[2]), processName: path2.basename(exe), commandLine: m[3].trim(), createdAt: null });
       }
       return rows;
     }
     async function dirHolders(dir) {
-      const key = String(dir).replace(/\//g, path2.sep === "\\" ? "\\" : "/").toLowerCase();
       if (process.platform === "win32") {
-        const lit = key.replace(/'/g, "''");
-        const out = await run2("powershell.exe", [
-          "-NoProfile",
-          "-NonInteractive",
-          "-Command",
-          `@(Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -and $_.CommandLine.ToLower().Contains('${lit}') } | Select-Object ProcessId,ParentProcessId,Name,CommandLine) | ConvertTo-Json -Compress`
-        ]);
+        const r2 = await ps1(`ConvertTo-Json -Compress -InputObject @(Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -and $_.CommandLine.ToLower().Contains('${lit(winDir(dir))}') } | Select-Object ${WIN_FIELDS})`);
+        if (r2.err) return null;
         try {
-          const j = JSON.parse(out);
-          return (Array.isArray(j) ? j : [j]).filter(Boolean).map((p) => ({ pid: p.ProcessId, ppid: p.ParentProcessId, processName: p.Name || null, commandLine: p.CommandLine || null }));
+          const j = JSON.parse(r2.stdout);
+          return (Array.isArray(j) ? j : [j]).filter(Boolean).map(fromWin);
         } catch {
-          return [];
+          return null;
         }
       }
-      return parsePsTable(await run2("ps", ["-A", "-ww", "-o", "pid=,ppid=,args="])).filter((p) => p.commandLine.toLowerCase().includes(key));
+      const r = await runFull("ps", ["-A", "-ww", "-o", "pid=,ppid=,args="]);
+      if (r.err) return null;
+      const key = String(dir).toLowerCase();
+      return parsePsTable(r.stdout).filter((p) => p.commandLine.toLowerCase().includes(key));
     }
+    async function killVerified({ pid, createdAt, dir }) {
+      if (!Number.isInteger(pid) || pid <= 0 || !createdAt) return "mismatch";
+      if (process.platform === "win32") {
+        const script = [
+          "$ErrorActionPreference = 'Stop'",
+          "try {",
+          `  $p = Get-CimInstance Win32_Process -Filter "ProcessId=${pid}"`,
+          "  if (-not $p) { 'gone'; exit 0 }",
+          `  $d = '${lit(winDir(dir))}'`,
+          `  if ($p.CreationDate.ToUniversalTime().ToString('o') -ne '${lit(createdAt)}') { 'mismatch'; exit 0 }`,
+          `  if (-not ($p.Name -match '${BROWSER_NAME_PS}') -or -not $p.CommandLine -or -not $p.CommandLine.ToLower().Contains($d)) { 'mismatch'; exit 0 }`,
+          `  $kids = @(Get-CimInstance Win32_Process -Filter "ParentProcessId=${pid}" | Where-Object { $_.Name -eq $p.Name -and $_.CommandLine -and $_.CommandLine.ToLower().Contains($d) })`,
+          `  try { Stop-Process -Id ${pid} -Force } catch { if (Get-Process -Id ${pid} -ErrorAction SilentlyContinue) { 'unknown' } else { 'gone' }; exit 0 }`,
+          "  foreach ($k in $kids) { try { Stop-Process -Id $k.ProcessId -Force } catch { } }",
+          "  'killed'",
+          "} catch { 'unknown' }"
+        ].join("\n");
+        const r = await ps1(script);
+        const out = r.stdout.trim().split(/\r?\n/).pop();
+        return ["killed", "gone", "mismatch"].includes(out) ? out : "unknown";
+      }
+      const info = await processInfo(pid);
+      if (info === null) return "gone";
+      if (info.unknown) return "unknown";
+      if (info.createdAt !== createdAt || !new RegExp(BROWSER_NAME_PS, "i").test(info.processName || "") || !String(info.commandLine || "").toLowerCase().includes(String(dir).toLowerCase())) return "mismatch";
+      try {
+        process.kill(pid, "SIGTERM");
+        return "killed";
+      } catch {
+        return "gone";
+      }
+    }
+    module2.exports = { UNKNOWN, describePid, processInfo, parsePsTable, dirHolders, killVerified };
+  }
+});
+
+// src/core/browserProcess.js
+var require_browserProcess = __commonJS({
+  "src/core/browserProcess.js"(exports2, module2) {
+    var q = require_browserProcessQuery();
+    var EXIT_MS = 5e3;
+    var KILL_MS = 5e3;
     var norm = (s) => String(s).replace(/\\/g, "/").replace(/\/+$/, "").toLowerCase();
     var BROWSER_PROCESS_RE = /chrome|chromium|msedge|brave|opera|vivaldi|browser/i;
     function holdsDir(holder, dir) {
@@ -1549,45 +1595,63 @@ var require_browserProcess = __commonJS({
       return false;
     }
     var ours = /* @__PURE__ */ new Map();
-    function remember(dir, pid) {
+    function remember(dir, pid, createdAt = null) {
       if (!Number.isInteger(pid) || pid <= 0) return;
       const k = norm(dir);
-      if (!ours.has(k)) ours.set(k, /* @__PURE__ */ new Set());
-      ours.get(k).add(pid);
+      if (!ours.has(k)) ours.set(k, /* @__PURE__ */ new Map());
+      const m = ours.get(k);
+      if (createdAt || !m.has(pid)) m.set(pid, createdAt || m.get(pid) || null);
     }
-    var isOurs = (dir, pid) => !!(ours.get(norm(dir)) && ours.get(norm(dir)).has(pid));
+    var recorded = (dir, pid) => (ours.get(norm(dir)) || /* @__PURE__ */ new Map()).get(pid);
+    function isOurs(dir, p) {
+      const m = ours.get(norm(dir));
+      if (!m || !m.has(p.pid)) return false;
+      const at = m.get(p.pid);
+      return !at || !p.createdAt || at === p.createdAt;
+    }
     var forget = (dir, pid) => {
       if (ours.get(norm(dir))) ours.get(norm(dir)).delete(pid);
     };
     var isHelper = (p) => /--type=/i.test(String(p.commandLine || ""));
-    async function stillOnDir(pid, dir, d) {
+    async function identify(pid, dir, d, createdAt = null) {
       const info = await d.processInfo(pid);
-      return info && info.processName && holdsDir(info, dir) ? info : null;
+      if (info && info.unknown) return q.UNKNOWN;
+      if (!info || !info.processName || !holdsDir(info, dir)) return null;
+      if (createdAt && info.createdAt && info.createdAt !== createdAt) return null;
+      return info;
     }
-    async function waitExit(pid, dir, d, ms, pollMs) {
+    async function waitExit(pid, dir, d, ms, pollMs, createdAt) {
       for (const end = Date.now() + ms; ; ) {
-        if (!await stillOnDir(pid, dir, d)) return true;
-        if (Date.now() >= end) return false;
+        const r = await identify(pid, dir, d, createdAt);
+        if (r === null) return { state: "gone" };
+        const last = r.unknown ? { state: "unknown" } : { state: "alive", info: r };
+        if (Date.now() >= end) return last;
         await d.sleep(pollMs);
       }
     }
     async function awaitBrowserExit(pid, dir, d, o, pollMs) {
       const t0 = Date.now();
       const done = (how) => {
-        if (how !== "still-running") forget(dir, pid);
+        if (how === "exited" || how === "killed") forget(dir, pid);
         return { pid, how, ms: Date.now() - t0 };
       };
-      if (await waitExit(pid, dir, d, o.exitMs ?? EXIT_MS, pollMs)) return done("exited");
-      if (!await stillOnDir(pid, dir, d)) return done("exited");
-      await d.kill(pid);
-      return done(await waitExit(pid, dir, d, o.killMs ?? KILL_MS, pollMs) ? "killed" : "still-running");
+      const first = await waitExit(pid, dir, d, o.exitMs ?? EXIT_MS, pollMs, recorded(dir, pid));
+      if (first.state !== "alive") return done(first.state === "gone" ? "exited" : "unknown");
+      const r = await d.killVerified({ pid, createdAt: first.info.createdAt, dir });
+      if (r === "gone" || r === "mismatch") return done("exited");
+      if (r !== "killed") return done("unknown");
+      const after = await waitExit(pid, dir, d, o.killMs ?? KILL_MS, pollMs, first.info.createdAt);
+      return done({ gone: "killed", alive: "still-running" }[after.state] || "unknown");
     }
     async function freeFolder(dir, o, d) {
       const pollMs = o.pollMs || 250;
-      const holders = async () => (await d.dirHolders(dir)).filter((p) => p.processName && holdsDir(p, dir));
+      const holders = async () => {
+        const all = await d.dirHolders(dir);
+        return all == null ? null : all.filter((p) => p.processName && holdsDir(p, dir));
+      };
       const until = async (ms) => {
         let now = await holders();
-        for (const end = Date.now() + ms; now.length && Date.now() < end; ) {
+        for (const end = Date.now() + ms; (now == null || now.length) && Date.now() < end; ) {
           await d.sleep(pollMs);
           now = await holders();
         }
@@ -1595,26 +1659,50 @@ var require_browserProcess = __commonJS({
       };
       const brief = (ps) => ps.map((p) => ({ pid: p.pid, processName: p.processName }));
       const left = await until(o.folderMs ?? EXIT_MS);
-      if (!left.length) return null;
-      const strangers = left.filter((p) => !isHelper(p) && !isOurs(dir, p.pid));
+      if (!left || !left.length) return null;
+      const verdict = /* @__PURE__ */ new Map();
+      const judge = async (p, depth = 0) => {
+        if (verdict.has(p.pid)) return verdict.get(p.pid);
+        let v;
+        if (!isHelper(p)) v = isOurs(dir, p) ? "ours" : "stranger";
+        else {
+          const parent = left.find((x) => x.pid === p.ppid);
+          if (parent && depth < 8) v = await judge(parent, depth + 1);
+          else {
+            const pi = await d.processInfo(p.ppid);
+            if (pi === null) v = "orphan";
+            else if (pi.unknown) v = "stranger";
+            else v = isOurs(dir, pi) ? "ours" : "stranger";
+          }
+        }
+        verdict.set(p.pid, v);
+        return v;
+      };
+      for (const p of left) await judge(p);
+      const strangers = left.filter((p) => verdict.get(p.pid) === "stranger");
       if (strangers.length) return { strangers: brief(strangers) };
       for (const p of [...left].sort((a, b) => isHelper(a) - isHelper(b))) {
-        if (await stillOnDir(p.pid, dir, d)) await d.kill(p.pid);
+        const now = await identify(p.pid, dir, d, p.createdAt);
+        if (now && !now.unknown) await d.killVerified({ pid: p.pid, createdAt: now.createdAt, dir });
       }
       const stuck = await until(o.killMs ?? KILL_MS);
+      if (stuck == null) return { stuck: brief(left) };
       for (const p of left) if (!stuck.some((s) => s.pid === p.pid)) forget(dir, p.pid);
       return stuck.length ? { stuck: brief(stuck) } : null;
     }
     module2.exports = {
       EXIT_MS,
-      describePid,
-      processInfo,
-      parsePsTable,
-      dirHolders,
       holdsDir,
       remember,
+      forget,
+      identify,
       awaitBrowserExit,
-      freeFolder
+      freeFolder,
+      describePid: q.describePid,
+      processInfo: q.processInfo,
+      dirHolders: q.dirHolders,
+      parsePsTable: q.parsePsTable,
+      killVerified: q.killVerified
     };
   }
 });
@@ -1629,7 +1717,19 @@ var require_browserRun = __commonJS({
     var { detectBrowsers, BROWSERS } = require_browserDetect();
     var { getProfile, userDataDirFor, MODES } = require_browserProfiles();
     var { describeConflict } = require_conflict();
-    var { describePid, processInfo, dirHolders, parsePsTable, holdsDir, remember, awaitBrowserExit, freeFolder } = require_browserProcess();
+    var {
+      describePid,
+      processInfo,
+      dirHolders,
+      parsePsTable,
+      killVerified,
+      holdsDir,
+      remember,
+      forget,
+      identify,
+      awaitBrowserExit,
+      freeFolder
+    } = require_browserProcess();
     var OFFSCREEN_LEFT = -2400;
     var START_TIMEOUT_MS = 1e4;
     var GRACE_MS = 6e3;
@@ -1672,14 +1772,6 @@ var require_browserRun = __commonJS({
       if (pid == null) return null;
       return { pid, ...await describePid(pid) };
     }
-    function killPid(pid) {
-      if (process.platform === "win32") return run2("taskkill", ["/PID", String(pid), "/T", "/F"]);
-      try {
-        process.kill(pid, "SIGTERM");
-      } catch {
-      }
-      return Promise.resolve();
-    }
     function pinTopmost(pid) {
       if (process.platform !== "win32" || !Number.isInteger(pid) || pid <= 0) return Promise.resolve(null);
       const script = `Add-Type -Namespace PP -Name Win -MemberDefinition '[DllImport("user32.dll")] public static extern bool SetWindowPos(IntPtr h, IntPtr a, int x, int y, int cx, int cy, uint f);'; $h = (Get-Process -Id ${pid}).MainWindowHandle; if ($h -eq [IntPtr]::Zero) { exit 3 }; if ([PP.Win]::SetWindowPos($h, [IntPtr](-1), 0, 0, 0, 0, 0x13)) { exit 0 } else { exit 4 }`;
@@ -1697,7 +1789,7 @@ var require_browserRun = __commonJS({
       inspectPort,
       processInfo,
       dirHolders,
-      kill: killPid,
+      killVerified,
       sleep,
       detect: () => detectBrowsers(),
       version: cdp.version,
@@ -1781,7 +1873,7 @@ var require_browserRun = __commonJS({
       if (!held) return;
       const named = (ps) => ps.map((p) => `PID ${p.pid} (${p.processName})`).join(", ");
       if (held.strangers) {
-        throw new RunError("FOLDER_IN_USE", `${profile.name}: its profile folder is open in a browser PortPilot did not start: ${named(held.strangers)}. Close that browser window and retry. Nothing was killed.`, { holders: held.strangers });
+        throw new RunError("FOLDER_IN_USE", `${profile.name}: its profile folder is open in a browser PortPilot cannot confirm it started: ${named(held.strangers)}. Close that browser window and retry. Nothing was killed.`, { holders: held.strangers });
       }
       throw new RunError(
         "FOLDER_IN_USE",
@@ -1829,7 +1921,8 @@ var require_browserRun = __commonJS({
         spawnError = err;
       });
       if (child && child.unref) child.unref();
-      if (child) remember(dir, child.pid);
+      const launched = child && child.pid ? await identify(child.pid, dir, d) : null;
+      if (child) remember(dir, child.pid, launched && !launched.unknown ? launched.createdAt : null);
       const timeoutMs = o.timeoutMs || START_TIMEOUT_MS;
       const pollMs = o.pollMs || 250;
       let v = null;
@@ -1839,7 +1932,11 @@ var require_browserRun = __commonJS({
       }
       if (spawnError) throw new RunError("LAUNCH_FAILED", `could not launch ${exe.path}: ${spawnError.message}`);
       if (!v) {
-        if (child && child.pid) await d.kill(child.pid);
+        if (child && child.pid) {
+          const now = await identify(child.pid, dir, d, launched && !launched.unknown ? launched.createdAt : null);
+          if (now && !now.unknown) await d.killVerified({ pid: child.pid, createdAt: now.createdAt, dir });
+          forget(dir, child.pid);
+        }
         throw new RunError("START_TIMEOUT", `${profile.name}: nothing answered CDP on :${profile.port} within ${timeoutMs} ms. If this user-data-dir is already open in another browser window, that window took the launch; close it and retry.`);
       }
       const after = await profileStatus(configPath, profile, d);
@@ -1850,7 +1947,10 @@ var require_browserRun = __commonJS({
           after.warning ? { holder: after.warning.holder, warning: after.warning } : {}
         );
       }
-      remember(dir, after.pid);
+      if (after.pid !== (child && child.pid)) {
+        const main = await identify(after.pid, dir, d);
+        remember(dir, after.pid, main && !main.unknown ? main.createdAt : null);
+      }
       const out = { ...after, already: false };
       if (mode === "offscreen") out.offscreen = await d.park(profile.port, OFFSCREEN_LEFT);
       else if (mode === "headed" && profile.window) out.window = await placeWindow(profile, after.pid, d);
@@ -1912,15 +2012,20 @@ var require_browserRun = __commonJS({
       }
       const pollMs = o.pollMs || 250;
       const dir = userDataDirFor(configPath, profile);
-      remember(dir, st.pid);
+      const main = await identify(st.pid, dir, d);
+      const createdAt = main && !main.unknown ? main.createdAt : null;
+      remember(dir, st.pid, createdAt);
       await d.closeBrowser(profile.port);
       if (await waitDown(profile, d, o.graceMs ?? GRACE_MS, pollMs)) {
         const browserExit = await awaitBrowserExit(st.pid, dir, d, o, pollMs);
         return { ...await profileStatus(configPath, profile, d), already: false, stoppedBy: "cdp", browserExit };
       }
       const now = await d.inspectPort(profile.port);
-      const killed = !!(now && now.pid === st.pid && holdsDir(now, dir));
-      if (killed) await d.kill(st.pid);
+      let killed = false;
+      if (now && now.pid === st.pid && holdsDir(now, dir)) {
+        const same = await identify(st.pid, dir, d, createdAt);
+        if (same && !same.unknown) killed = await d.killVerified({ pid: st.pid, createdAt: same.createdAt, dir }) === "killed";
+      }
       if (await waitDown(profile, d, o.killMs ?? KILL_MS, pollMs)) {
         const browserExit = await awaitBrowserExit(st.pid, dir, d, o, pollMs);
         if (killed && browserExit.how === "exited") browserExit.how = "killed";
@@ -1936,6 +2041,7 @@ var require_browserRun = __commonJS({
       processInfo,
       dirHolders,
       parsePsTable,
+      killVerified,
       parseNetstat,
       holdsDir,
       reservationWarning,
@@ -2335,7 +2441,7 @@ var NEXT = {
   BROWSER_NOT_FOUND: "Call list_browsers, then ask the user to set the profile to an installed browser.",
   START_TIMEOUT: "Call start_browser once more. If it fails again, ask the user to close any window using this profile.",
   LAUNCH_FAILED: "Ask the user to check that the browser starts normally.",
-  FOLDER_IN_USE: "Do not kill it. Tell the user a browser window PortPilot did not start has this profile open and ask them to close it, then call start_browser again.",
+  FOLDER_IN_USE: "Do not kill it. Tell the user a browser window PortPilot cannot confirm it started has this profile open and ask them to close it, then call start_browser again.",
   STOP_FAILED: "Ask the user to close that browser window by hand.",
   BAD_MODE: `Use one of: ${profiles.MODES.join(", ")}.`,
   IN_USE: 'Do not use it. Call list_browser_profiles and pick a free profile (free: true) that suits the task. name "any" gives a throwaway browser with no logins: use it only when the task is not tied to a site. Only if the user agrees to share this one, call again with takeover:true.',
@@ -2394,7 +2500,11 @@ var nameOf = (args) => {
   }
   return args.name.trim();
 };
-var runOpts = (ctx) => ({ ...ctx.pollMs ? { pollMs: ctx.pollMs } : {}, ...ctx.timeoutMs ? { timeoutMs: ctx.timeoutMs } : {} });
+var runOpts = (ctx) => ({
+  ...ctx.pollMs ? { pollMs: ctx.pollMs } : {},
+  ...ctx.timeoutMs ? { timeoutMs: ctx.timeoutMs } : {},
+  ...ctx.exitMs ? { exitMs: ctx.exitMs } : {}
+});
 function startedByOf(caller) {
   const out = { kind: caller.surface === "desktop" ? "human" : "claude", surface: caller.surface, label: caller.by, at: caller.at };
   if (caller.sessionId) out.sessionId = caller.sessionId;

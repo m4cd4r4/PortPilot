@@ -146,12 +146,15 @@ async function setup(fields = {}) {
     await w.cleanup();
   });
 
-  await t('stop_browser says whether the browser process itself is gone', async () => {
+  await t('stop_browser says whether the browser process itself is gone: exited by itself, or killed when it outlives the port', async () => {
     const { cfg, w, ctx } = await setup();
     await api.call(cfg, 'start_browser', { name: 'shop-a' }, ctx());
     const r = await api.call(cfg, 'stop_browser', { name: 'shop-a' }, ctx());
-    assert.strictEqual(r.browserExit && r.browserExit.how, 'exited');
-    assert.strictEqual(r.browserExit.pid, w.pid, 'the pid of the browser it launched');
+    assert.deepStrictEqual(r.browserExit && [r.browserExit.pid, r.browserExit.how], [w.pid, 'exited']);
+    await api.call(cfg, 'start_browser', { name: 'shop-a' }, ctx());
+    w.linger = true; // this time the process outlives its quiet port
+    const k = await api.call(cfg, 'stop_browser', { name: 'shop-a' }, { ...ctx(), exitMs: 30 });
+    assert.deepStrictEqual(k.browserExit && [k.browserExit.pid, k.browserExit.how], [w.pid, 'killed']);
     await w.cleanup();
   });
 
