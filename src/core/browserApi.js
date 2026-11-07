@@ -113,6 +113,9 @@ const NEXT = {
   BROWSER_NOT_FOUND: 'Call list_browsers, then ask the user to set the profile to an installed browser.',
   START_TIMEOUT: 'Call start_browser once more. If it fails again, ask the user to close any window using this profile.',
   LAUNCH_FAILED: 'Ask the user to check that the browser starts normally.',
+  FOLDER_IN_USE: 'Do not kill it. Tell the user a browser window PortPilot cannot confirm it started has this profile open and ask them to close it, then call start_browser again.',
+  // FOLDER_IN_USE with reason 'stuck': processes PortPilot would end are still on the folder (F88).
+  FOLDER_IN_USE_STUCK: 'Do not kill them. Tell the user browser processes left on this profile folder could not be ended (the PIDs are in the error) and ask them to end those processes or restart the computer, then call start_browser again.',
   STOP_FAILED: 'Ask the user to close that browser window by hand.',
   BAD_MODE: `Use one of: ${profiles.MODES.join(', ')}.`,
   IN_USE: 'Do not use it. Call list_browser_profiles and pick a free profile (free: true) that suits the task. name "any" gives a throwaway browser with no logins: use it only when the task is not tied to a site. Only if the user agrees to share this one, call again with takeover:true.',
@@ -128,7 +131,7 @@ function failure(err, configPath) {
     success: false,
     code,
     error: String(err.message || err).replace(/\s+/g, ' ').trim(),
-    action: (typeof err.action === 'string' && err.action) || NEXT[code] || 'Report this error to the user.',
+    action: (typeof err.action === 'string' && err.action) || NEXT[code === 'FOLDER_IN_USE' && err.reason === 'stuck' ? 'FOLDER_IN_USE_STUCK' : code] || 'Report this error to the user.',
   };
   if (err.holder) out.holder = err.holder;
   if (err.leasedTo) out.leasedTo = err.leasedTo;
@@ -178,7 +181,10 @@ const nameOf = (args) => {
   return args.name.trim();
 };
 
-const runOpts = (ctx) => ({ ...(ctx.pollMs ? { pollMs: ctx.pollMs } : {}), ...(ctx.timeoutMs ? { timeoutMs: ctx.timeoutMs } : {}) });
+const runOpts = (ctx) => ({
+  ...(ctx.pollMs ? { pollMs: ctx.pollMs } : {}), ...(ctx.timeoutMs ? { timeoutMs: ctx.timeoutMs } : {}), ...(ctx.exitMs ? { exitMs: ctx.exitMs } : {}),
+  ...(ctx.folderMs ? { folderMs: ctx.folderMs } : {}), ...(ctx.killMs ? { killMs: ctx.killMs } : {}),
+});
 
 // ---- History and lease helpers -----------------------------------------------
 
@@ -441,6 +447,8 @@ const TOOLS = {
       tabs: st0.state === 'up' ? st0.tabs : [],
     }));
     const out = { ...view(r, null), already: !!r.already };
+    // Whether the browser process itself is gone: { pid, how: exited | killed | mismatch | still-running | unknown, ms }.
+    if (r.browserExit) out.browserExit = r.browserExit;
     if (held) {
       out.takeoverNote = `Stopped "${profile.name}", which ${held.by} was using. Tell the user.`;
     } else if (before && before.by !== caller.by) {

@@ -351,9 +351,12 @@ function worldProcs(dir) {
       j.check('stop_browser goes through for the holder', !r.isError, r.body.code || '');
       j.check('the debug port goes quiet', await j.portFree(shopDebug, 15000), j.listeners(shopDebug).join('/'));
       j.check('Brave no longer answers there', !(await brave(shopDebug)));
-      // stop_browser answers once the debug port is quiet. The browser it launched can live on after
-      // that (seen past 60 s, main process included): measured and recorded, not a check, until the
-      // product decides whether stop_browser should wait for the process (journey finding, Wave 2).
+      // stop_browser waits for the Brave main process it launched, and ends it after ~5 s (F21, decided
+      // 2026-11-07). Its helpers may take a moment more: measured and recorded, not a check.
+      const exit = r.body.browserExit || {};
+      j.check('stop_browser says the browser process is gone (exited or killed)', exit.pid === braveA.pid && ['exited', 'killed'].includes(exit.how), JSON.stringify(r.body.browserExit));
+      j.check('the main browser it launched is gone when stop_browser returns', !braveMain(shopDir).includes(braveA.pid), braveMain(shopDir).join(','));
+      j.note(`stop_browser: the browser process ${exit.how} ${((exit.ms || 0) / 1000).toFixed(1)} s after the port went quiet`);
       const left = braveOn(shopDir);
       j.note(`Brave processes on the profile folder when stop_browser returned: ${left.length ? left.join(',') : 'none'}${left.includes(braveA.pid) ? ' (the main browser it launched among them)' : ''}`);
       const s0 = Date.now();
@@ -383,7 +386,7 @@ function worldProcs(dir) {
     }],
 
     ['session B changes its mind: stop, then start the same profile at once', async () => {
-      // stop_browser answers once the debug port is quiet; Brave's own processes can take seconds more to exit.
+      // stop_browser waits for the main browser process; start_browser checks nothing holds the folder first.
       const r1 = await b.tool('start_browser', { name: 'shop-admin', sessionId: B });
       j.check('start_browser succeeds', !r1.isError, r1.body.code || '');
       const up = await j.waitFor(() => brave(shopDebug), 30000);
@@ -391,7 +394,8 @@ function worldProcs(dir) {
       const pid1 = j.listeners(shopDebug)[0];
       const stop = await b.tool('stop_browser', { name: 'shop-admin', sessionId: B });
       const lingering = braveOn(shopDir);
-      j.note(`stop_browser returned with ${lingering.length} Brave processes still on the folder${lingering.includes(pid1) ? ', the main browser among them' : ''}`);
+      j.note(`stop_browser returned with ${lingering.length} Brave processes still on the folder${lingering.includes(pid1) ? ', the main browser among them' : ''}; it said ${JSON.stringify(stop.body.browserExit)}`);
+      j.check('the stopped main browser is not among them', !lingering.includes(pid1), lingering.join(','));
       const r2 = await b.tool('start_browser', { name: 'shop-admin', sessionId: B });
       j.note(`start_browser right after the stop said: ${JSON.stringify({ isError: r2.isError, code: r2.body.code, error: r2.body.error, already: r2.body.already }).slice(0, 300)}`);
       const again = await j.waitFor(() => brave(shopDebug), 30000);

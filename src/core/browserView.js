@@ -180,6 +180,7 @@
     BROWSER_NOT_FOUND: 'Edit the profile and pick a browser that is installed.',
     START_TIMEOUT: 'Try Start again. If it fails again, close any window already using this profile.',
     LAUNCH_FAILED: 'Check that the browser starts normally on its own.',
+    FOLDER_IN_USE: 'Close the browser window that has this profile open, then press Start again.',
     STOP_FAILED: 'Close that browser window yourself.',
     SOURCE_RUNNING: 'Stop the profile first, then duplicate it.',
     PROFILE_RUNNING: 'Stop the profile first.',

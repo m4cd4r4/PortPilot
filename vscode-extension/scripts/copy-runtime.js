@@ -30,6 +30,8 @@ const FILES = [
   'core/browserProfiles.js',
   'core/browserView.js',
   'core/browserRun.js',
+  'core/browserProcess.js',
+  'core/browserProcessQuery.js',
   'core/conflict.js',
   'core/configPath.js',
   'core/configFile.js',

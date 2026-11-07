@@ -63,6 +63,9 @@ function world({ installed = [{ id: 'brave', label: 'Brave', path: '/fake/brave'
   const w = {
     servers: new Map(), holders: new Map(), spawned: [], killed: [], parked: [],
     closeWorks: true, neverListens: false, spawnThrows: null, pid: 5000,
+    // The process table: pid -> { pid, ppid, processName, commandLine }. A browser leaves it when its
+    // port drops, unless `lingerPolls` says how many process lookups it outlives that (Infinity: never goes).
+    procs: new Map(), lingerPolls: 0, lookups: 0, killCalls: [], queryFails: false, failPids: new Set(), psStyle: false, refuseKill: false,
   };
   w.deps = {
     ...run.defaultDeps(),
@@ -72,30 +75,57 @@ function world({ installed = [{ id: 'brave', label: 'Brave', path: '/fake/brave'
       w.spawned.push({ exe, args });
       const pid = ++w.pid;
       const child = { pid, unref() {}, on(ev, cb) { if (ev === 'error' && w.spawnThrows) setImmediate(() => cb(w.spawnThrows)); } };
-      if (w.neverListens || w.spawnThrows) return child;
+      if (w.spawnThrows) return child;
+      const proc = { pid, ppid: 1, processName: 'fake-browser', commandLine: `${exe} ${args.join(' ')}`, createdAt: `t${pid}` };
+      // A pid a test already put in the table stands for one the OS has reused: it is not replaced.
+      if (!w.procs.has(pid)) w.procs.set(pid, { ...proc });
+      if (w.neverListens) return child;
       const port = Number(args.find((a) => a.startsWith('--remote-debugging-port=')).split('=')[1]);
       if (w.takenDuringStart) {
         w.foreign(port, w.takenDuringStart, true);
         return child;
       }
-      w.holders.set(port, { pid, processName: 'fake-browser', commandLine: `${exe} ${args.join(' ')}` });
+      w.holders.set(port, proc);
       listen(port, true).then((s) => w.servers.set(port, s));
       return child;
     },
     inspectPort: async (port) => w.holders.get(port) || null,
+    processInfo: async (pid) => {
+      if (w.queryFails || w.failPids.has(pid)) return { unknown: true };
+      const p = w.procs.get(pid);
+      if (p && p.leaving !== undefined && ++w.lookups > p.leaving) { w.procs.delete(pid); return null; }
+      return p ? { ...p } : null;
+    },
+    // psStyle: rows as macOS/Linux ps gives them, with no start time.
+    dirHolders: async () => (w.queryFails ? null : [...w.procs.values()].map((p) => ({ ...p, ...(w.psStyle ? { createdAt: null } : {}) }))),
     closeBrowser: async (port) => {
       if (!w.closeWorks) return false;
       await w.drop(port);
       return true;
     },
-    kill: async (pid) => {
-      w.killed.push(pid);
-      for (const [port, h] of w.holders) if (h.pid === pid) await w.drop(port);
+    // The contract of browserProcessQuery.killVerified: same pid AND start time, or nothing happens;
+    // its children go only when they are the same browser exe. Every call is recorded as asked.
+    killVerified: async (target) => {
+      w.killCalls.push(target);
+      if (w.queryFails) return 'unknown';
+      const p = w.procs.get(target.pid);
+      if (!p) return 'gone';
+      if (!target.createdAt || p.createdAt !== target.createdAt) return 'mismatch';
+      if (target.main && /--type=/.test(p.commandLine || '')) return 'mismatch';
+      if (w.refuseKill) return 'mismatch';
+      w.killed.push(target.pid);
+      for (const [port, h] of w.holders) if (h.pid === target.pid) await w.drop(port);
+      for (const c of [...w.procs.values()]) if (c.pid === target.pid || (c.ppid === target.pid && c.processName === p.processName)) w.procs.delete(c.pid);
+      return 'killed';
     },
     park: async (port, left) => { w.parked.push({ port, left }); return { parked: true, left }; },
   };
   w.drop = async (port) => {
     const s = w.servers.get(port);
+    const h = w.holders.get(port);
+    const p = h && w.procs.get(h.pid);
+    if (p && w.lingerPolls) p.leaving = w.lookups + w.lingerPolls;
+    else if (p) w.procs.delete(h.pid);
     w.holders.delete(port);
     w.servers.delete(port);
     if (s) await closeServer(s);
@@ -224,6 +254,32 @@ async function setup(fields = {}) {
     assert.deepStrictEqual(w.killed, [5001]);
   });
 
+  await t('a start that times out never kills its child pid once that pid names another process', async () => {
+    const w = world(); w.neverListens = true; const { cfg } = await setup();
+    // The launched browser handed off and exited; the OS reused its pid for something else.
+    w.procs.set(5001, { pid: 5001, ppid: 1, processName: 'editor.exe', commandLine: 'editor.exe notes.txt', createdAt: 'later' });
+    await assert.rejects(run.startProfile(cfg, 'shop-a', { timeoutMs: 20, pollMs: 5 }, w.deps), (err) => err.code === 'START_TIMEOUT');
+    assert.deepStrictEqual(w.killed, []);
+    assert.ok(w.procs.has(5001));
+  });
+
+  await t('a start that times out kills nothing when the launch identity (start time) was never read', async () => {
+    const w = world(); w.neverListens = true; const { cfg, profile } = await setup();
+    const dir = bp.userDataDirFor(cfg, profile);
+    w.failPids.add(5001); // the lookup right after spawn fails (slow query)
+    const sleep = w.deps.sleep;
+    w.deps.sleep = async (ms) => {
+      // Meanwhile the child handed off and exited; the pid now names a renderer of a browser on the folder.
+      if (w.failPids.size) {
+        w.failPids.clear();
+        w.procs.set(5001, { pid: 5001, ppid: 900, processName: 'fake-browser', commandLine: `/fake/brave --type=renderer --user-data-dir=${dir} --lang=en`, createdAt: 'other' });
+      }
+      return sleep(ms);
+    };
+    await assert.rejects(run.startProfile(cfg, 'shop-a', { timeoutMs: 20, pollMs: 5 }, w.deps), (err) => err.code === 'START_TIMEOUT');
+    assert.deepStrictEqual(w.killCalls, []);
+  });
+
   await t('start refuses a foreign CDP browser it cannot identify, and spawns nothing', async () => {
     const w = world(); const { cfg, port } = await setup();
     w.servers.set(port, await listen(port, true));
@@ -236,6 +292,144 @@ async function setup(fields = {}) {
     const w = world(); const { cfg } = await setup();
     w.takenDuringStart = { pid: 999, processName: 'node.exe', commandLine: 'node late.js' };
     await assert.rejects(run.startProfile(cfg, 'shop-a', { timeoutMs: 100, pollMs: 5 }, w.deps), (err) => err.code === 'PORT_HELD' && err.holder.pid === 999);
+    await w.cleanup();
+  });
+
+  await t('start ends a crash reporter left on the folder by a browser that is gone, then launches', async () => {
+    const w = world(); const { cfg, profile } = await setup();
+    const dir = bp.userDataDirFor(cfg, profile);
+    w.procs.set(4100, { pid: 4100, ppid: 4000, processName: 'fake-browser', commandLine: `/fake/brave --type=crashpad-handler --user-data-dir=${dir} /prefetch:4`, createdAt: 'c4100' });
+    const r = await run.startProfile(cfg, 'shop-a', { pollMs: 5, folderMs: 20 }, w.deps);
+    assert.strictEqual(r.state, 'up');
+    assert.deepStrictEqual(w.killed, [4100]);
+    assert.strictEqual(w.spawned.length, 1);
+    await w.cleanup();
+  });
+
+  await t('start refuses a browser it did not launch that has the folder open: FOLDER_IN_USE, nothing killed or spawned', async () => {
+    const w = world(); const { cfg, profile } = await setup();
+    const dir = bp.userDataDirFor(cfg, profile);
+    w.procs.set(4200, { pid: 4200, ppid: 1, processName: 'fake-browser', commandLine: `/fake/brave --user-data-dir=${dir} --` });
+    w.procs.set(4201, { pid: 4201, ppid: 4200, processName: 'fake-browser', commandLine: `/fake/brave --type=crashpad-handler --user-data-dir=${dir} /prefetch:4` });
+    await assert.rejects(run.startProfile(cfg, 'shop-a', { pollMs: 5, folderMs: 20 }, w.deps),
+      (err) => err.code === 'FOLDER_IN_USE' && /PID 4200/.test(err.message) && !/START_TIMEOUT/.test(err.code));
+    assert.deepStrictEqual(w.killed, []);
+    assert.strictEqual(w.spawned.length, 0);
+  });
+
+  await t('start after an outside close ends the lingering browser it launched itself, then launches (F45)', async () => {
+    const w = world(); const { cfg, port } = await setup();
+    await run.startProfile(cfg, 'shop-a', { pollMs: 5 }, w.deps);
+    w.lingerPolls = Infinity;
+    await w.drop(port); // closed from outside: the port is quiet, the main process is still on the folder
+    const r = await run.startProfile(cfg, 'shop-a', { pollMs: 5, folderMs: 20 }, w.deps);
+    assert.strictEqual(r.state, 'up');
+    assert.deepStrictEqual(w.killed, [5001]);
+    assert.strictEqual(r.pid, 5002);
+    await w.cleanup();
+  });
+
+  await t('start never ends helpers whose parent is alive and not ours (a hand-launched browser the check cannot read)', async () => {
+    const w = world(); const { cfg, profile } = await setup();
+    const dir = bp.userDataDirFor(cfg, profile);
+    // Its own command line ends in a bare site name, so holdsDir does not match it; its helpers do.
+    w.procs.set(4400, { pid: 4400, ppid: 1, processName: 'fake-browser', commandLine: `/fake/brave --user-data-dir=${dir} example.com`, createdAt: 'a' });
+    w.procs.set(4401, { pid: 4401, ppid: 4400, processName: 'fake-browser', commandLine: `/fake/brave --type=renderer --user-data-dir=${dir} --lang=en`, createdAt: 'b' });
+    await assert.rejects(run.startProfile(cfg, 'shop-a', { pollMs: 5, folderMs: 20 }, w.deps), (err) => err.code === 'FOLDER_IN_USE' && /PID 4401/.test(err.message));
+    assert.deepStrictEqual(w.killCalls, []);
+    assert.strictEqual(w.spawned.length, 0);
+  });
+
+  await t('start refuses a reused pid with a different start time, even on the same folder: not ours, not killed', async () => {
+    const w = world(); const { cfg, port, profile } = await setup();
+    await run.startProfile(cfg, 'shop-a', { pollMs: 5 }, w.deps);
+    await w.drop(port); // our browser closes from outside and is gone
+    const dir = bp.userDataDirFor(cfg, profile);
+    // Someone opens the folder by hand and the OS gives that browser our old pid.
+    w.procs.set(5001, { pid: 5001, ppid: 1, processName: 'fake-browser', commandLine: `/fake/brave --user-data-dir=${dir} --`, createdAt: 'reborn' });
+    await assert.rejects(run.startProfile(cfg, 'shop-a', { pollMs: 5, folderMs: 20 }, w.deps), (err) => err.code === 'FOLDER_IN_USE');
+    assert.deepStrictEqual(w.killCalls, []);
+  });
+
+  await t('a launch whose start time could not be read is not remembered: a later browser on that pid is not ended as ours', async () => {
+    const w = world(); const { cfg, port, profile } = await setup();
+    w.failPids.add(5001); // every lookup of the launched pid fails during this Start
+    await run.startProfile(cfg, 'shop-a', { pollMs: 5 }, w.deps);
+    w.failPids.clear();
+    await w.drop(port);
+    const dir = bp.userDataDirFor(cfg, profile);
+    w.procs.set(5001, { pid: 5001, ppid: 1, processName: 'fake-browser', commandLine: `/fake/brave --user-data-dir=${dir} --`, createdAt: 'reborn' });
+    await assert.rejects(run.startProfile(cfg, 'shop-a', { pollMs: 5, folderMs: 20 }, w.deps), (err) => err.code === 'FOLDER_IN_USE');
+    assert.deepStrictEqual(w.killCalls, []);
+  });
+
+  await t('ps-style holders (no start time, macOS and Linux): its own leftover is still found by pid AND start time and ended', async () => {
+    const w = world(); const { cfg, port } = await setup();
+    await run.startProfile(cfg, 'shop-a', { pollMs: 5 }, w.deps);
+    w.lingerPolls = Infinity;
+    await w.drop(port);
+    w.psStyle = true;
+    const r = await run.startProfile(cfg, 'shop-a', { pollMs: 5, folderMs: 20 }, w.deps);
+    assert.strictEqual(r.state, 'up');
+    assert.deepStrictEqual(w.killCalls.map((k) => [k.pid, k.createdAt]), [[5001, 't5001']]);
+    await w.cleanup();
+  });
+
+  await t('a helper whose parent pid now names a process started after it is an orphan: ended, then the launch goes ahead', async () => {
+    const w = world(); const { cfg, profile } = await setup();
+    const dir = bp.userDataDirFor(cfg, profile);
+    w.procs.set(4500, { pid: 4500, ppid: 4499, processName: 'fake-browser', commandLine: `/fake/brave --type=crashpad-handler --user-data-dir=${dir} /prefetch:4`, createdAt: '2026-11-07T01:00:00.0000000Z' });
+    // Its browser is gone and the OS gave pid 4499 to an editor started later.
+    w.procs.set(4499, { pid: 4499, ppid: 1, processName: 'editor.exe', commandLine: 'editor.exe notes.txt', createdAt: '2026-11-07T02:00:00.0000000Z' });
+    const r = await run.startProfile(cfg, 'shop-a', { pollMs: 5, folderMs: 20 }, w.deps);
+    assert.strictEqual(r.state, 'up');
+    assert.deepStrictEqual(w.killed, [4500]);
+    assert.ok(w.procs.has(4499), 'the editor is untouched');
+    await w.cleanup();
+  });
+
+  await t('FOLDER_IN_USE for a leftover that refused the kill says nothing was killed, not that it was ended', async () => {
+    const w = world(); const { cfg, port } = await setup();
+    await run.startProfile(cfg, 'shop-a', { pollMs: 5 }, w.deps);
+    w.lingerPolls = Infinity;
+    await w.drop(port);
+    w.refuseKill = true;
+    await assert.rejects(run.startProfile(cfg, 'shop-a', { pollMs: 5, folderMs: 20, killMs: 20 }, w.deps),
+      (err) => err.code === 'FOLDER_IN_USE' && /nothing was killed/.test(err.message) && !/ended them/.test(err.message));
+  });
+
+  await t('macOS/Linux: a helper re-parented to pid 1 (init, launchd) is an orphan, ended; then the launch goes ahead', async () => {
+    const w = world(); const { cfg, profile } = await setup();
+    w.deps.platform = 'linux';
+    const dir = bp.userDataDirFor(cfg, profile);
+    w.procs.set(1, { pid: 1, ppid: 0, processName: 'systemd', commandLine: '/sbin/init', createdAt: '2026-11-01T00:00:00.0000000Z' });
+    w.procs.set(4600, { pid: 4600, ppid: 1, processName: 'brave', commandLine: `/opt/brave/brave --type=crashpad-handler --user-data-dir=${dir} --`, createdAt: '2026-11-07T01:00:00.0000000Z' });
+    const r = await run.startProfile(cfg, 'shop-a', { pollMs: 5, folderMs: 20 }, w.deps);
+    assert.strictEqual(r.state, 'up');
+    assert.deepStrictEqual(w.killed, [4600]);
+    await w.cleanup();
+  });
+
+  await t('a pid seen gone is forgotten: a browser opened by hand that reuses it is not ended as ours', async () => {
+    const w = world(); const { cfg, profile } = await setup();
+    await run.startProfile(cfg, 'shop-a', { pollMs: 5 }, w.deps);
+    await run.stopProfile(cfg, 'shop-a', { pollMs: 5 }, w.deps);
+    const dir = bp.userDataDirFor(cfg, profile);
+    w.procs.set(5001, { pid: 5001, ppid: 1, processName: 'fake-browser', commandLine: `/fake/brave --user-data-dir=${dir} --` });
+    await assert.rejects(run.startProfile(cfg, 'shop-a', { pollMs: 5, folderMs: 20 }, w.deps), (err) => err.code === 'FOLDER_IN_USE');
+    assert.deepStrictEqual(w.killed, []);
+  });
+
+  await t('start waits for a browser that is leaving the folder by itself and kills nothing', async () => {
+    const w = world(); const { cfg, profile } = await setup();
+    const dir = bp.userDataDirFor(cfg, profile);
+    w.procs.set(4300, { pid: 4300, ppid: 1, processName: 'fake-browser', commandLine: `/fake/brave --user-data-dir=${dir} --` });
+    const sleep = w.deps.sleep;
+    let naps = 0;
+    w.deps.sleep = async (ms) => { if (++naps === 3) w.procs.delete(4300); return sleep(ms); };
+    const r = await run.startProfile(cfg, 'shop-a', { pollMs: 5, folderMs: 1000 }, w.deps);
+    assert.strictEqual(r.state, 'up');
+    assert.deepStrictEqual(w.killed, []);
     await w.cleanup();
   });
 
@@ -299,6 +493,32 @@ async function setup(fields = {}) {
     assert.strictEqual(run.holdsDir({ processName: 'node.exe', commandLine: 'node /srv/app/server.js' }, '/'), false);
   });
 
+  await t('holdsDir sees Brave\'s crash reporter on the folder (unquoted value, then /prefetch:4), whole value only', () => {
+    const line = (dir) => `"C:\\B\\brave.exe" --type=crashpad-handler --user-data-dir=${dir} /prefetch:4 --database=${dir}\\Crashpad`;
+    assert.strictEqual(run.holdsDir({ processName: 'brave.exe', commandLine: line('C:\\cfg\\browser-profiles\\shop') }, 'C:/cfg/browser-profiles/shop'), true);
+    assert.strictEqual(run.holdsDir({ processName: 'brave.exe', commandLine: line('C:\\cfg\\browser-profiles\\shop-a') }, 'C:/cfg/browser-profiles/shop'), false);
+  });
+
+  await t('parsePsTable reads pid, parent pid and the command line from ps (macOS and Linux)', () => {
+    const rows = run.parsePsTable('  812     1 /opt/brave/brave --user-data-dir=/h/pp/shop --\n  813   812 /opt/brave/brave --type=crashpad-handler\nbad line\n');
+    assert.deepStrictEqual(rows.map((r) => [r.pid, r.ppid, r.processName]), [[812, 1, 'brave'], [813, 812, 'brave']]);
+    assert.strictEqual(run.holdsDir(rows[0], '/h/pp/shop'), true);
+  });
+
+  await t('parsePsTable names macOS browsers whose path has spaces (Chrome, Edge), so their folder holders are seen', () => {
+    const rows = run.parsePsTable([
+      '  900     1 /Applications/Google Chrome.app/Contents/MacOS/Google Chrome --user-data-dir=/h/pp/shop --',
+      '  901     1 /Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge --user-data-dir=/h/pp/shop --',
+    ].join('\n'));
+    assert.deepStrictEqual(rows.map((r) => r.processName), ['Google Chrome', 'Microsoft Edge']);
+    assert.deepStrictEqual(rows.map((r) => run.holdsDir(r, '/h/pp/shop')), [true, true]);
+  });
+
+  await t('a signal refused for lack of permission is unknown, never gone: only ESRCH means no such process', () => {
+    const { signalResult } = require('../src/core/browserProcessQuery');
+    assert.deepStrictEqual([null, { code: 'ESRCH' }, { code: 'EPERM' }].map(signalResult), ['killed', 'gone', 'unknown']);
+  });
+
   await t('parseNetstat finds IPv4 and IPv6-only listeners, any language, and ignores connections and UDP', () => {
     const out = [
       '  Proto  Local Address          Foreign Address        State           PID',
@@ -357,6 +577,76 @@ async function setup(fields = {}) {
     await w.cleanup();
   });
 
+  await t('stop waits for the browser process it launched to exit after the port goes quiet, and kills nothing', async () => {
+    const w = world(); const { cfg } = await setup();
+    await run.startProfile(cfg, 'shop-a', { pollMs: 5 }, w.deps);
+    w.lingerPolls = 3;
+    const r = await run.stopProfile(cfg, 'shop-a', { pollMs: 5 }, w.deps);
+    assert.strictEqual(r.stoppedBy, 'cdp');
+    assert.strictEqual(w.procs.has(5001), false, 'the browser process is gone when stop returns');
+    assert.deepStrictEqual(r.browserExit && { pid: r.browserExit.pid, how: r.browserExit.how }, { pid: 5001, how: 'exited' });
+    assert.deepStrictEqual(w.killed, []);
+  });
+
+  await t('stop ends the launched browser when it outlives the wait: one verified kill by pid and start time, reported as killed', async () => {
+    const w = world(); const { cfg, profile } = await setup();
+    await run.startProfile(cfg, 'shop-a', { pollMs: 5 }, w.deps);
+    w.lingerPolls = Infinity;
+    const r = await run.stopProfile(cfg, 'shop-a', { pollMs: 5, exitMs: 30 }, w.deps);
+    assert.strictEqual(r.browserExit.how, 'killed');
+    assert.deepStrictEqual(w.killCalls, [{ pid: 5001, createdAt: 't5001', dir: bp.userDataDirFor(cfg, profile), main: true }]);
+  });
+
+  await t('stop with a failing process query says unknown, never exited, and kills nothing', async () => {
+    const w = world(); const { cfg } = await setup();
+    await run.startProfile(cfg, 'shop-a', { pollMs: 5 }, w.deps);
+    w.lingerPolls = Infinity;
+    w.queryFails = true;
+    const r = await run.stopProfile(cfg, 'shop-a', { pollMs: 5, exitMs: 30 }, w.deps);
+    assert.strictEqual(r.state, 'down');
+    assert.strictEqual(r.browserExit.how, 'unknown');
+    assert.deepStrictEqual(w.killCalls, []);
+  });
+
+  await t('stop reports mismatch, not exited, when the check inside the kill refuses the process', async () => {
+    const w = world(); const { cfg } = await setup();
+    await run.startProfile(cfg, 'shop-a', { pollMs: 5 }, w.deps);
+    w.lingerPolls = Infinity;
+    w.refuseKill = true;
+    const r = await run.stopProfile(cfg, 'shop-a', { pollMs: 5, exitMs: 30 }, w.deps);
+    assert.strictEqual(r.browserExit.how, 'mismatch');
+    assert.deepStrictEqual(w.killed, []);
+  });
+
+  await t('stop whose identity read failed at the start never kills the lingering process: still-running, no kill', async () => {
+    const w = world(); const { cfg } = await setup();
+    w.failPids.add(5001); // nothing about 5001 can be read: not at launch, not when Stop begins
+    await run.startProfile(cfg, 'shop-a', { pollMs: 5 }, w.deps);
+    const close = w.deps.closeBrowser;
+    w.deps.closeBrowser = async (port) => { w.failPids.clear(); return close(port); }; // readable again from here on
+    w.lingerPolls = Infinity;
+    const r = await run.stopProfile(cfg, 'shop-a', { pollMs: 5, exitMs: 30 }, w.deps);
+    assert.strictEqual(r.browserExit.how, 'still-running');
+    assert.deepStrictEqual(w.killCalls, []);
+  });
+
+  await t('stop never kills a reused pid: same number, another command line', async () => {
+    const w = world(); const { cfg } = await setup();
+    await run.startProfile(cfg, 'shop-a', { pollMs: 5 }, w.deps);
+    w.lingerPolls = Infinity;
+    const close = w.deps.closeBrowser;
+    w.deps.closeBrowser = async (port) => {
+      const ok = await close(port);
+      // The browser is gone and the OS hands its pid to another browser, on another folder.
+      w.procs.set(5001, { pid: 5001, ppid: 1, processName: 'fake-browser', commandLine: '/fake/brave --user-data-dir=/elsewhere/other --' });
+      return ok;
+    };
+    const r = await run.stopProfile(cfg, 'shop-a', { pollMs: 5, exitMs: 30 }, w.deps);
+    assert.strictEqual(r.browserExit.how, 'exited');
+    assert.deepStrictEqual(w.killed, []);
+    assert.ok(w.procs.has(5001), 'the other process is untouched');
+  });
+
   await t('stop on a down profile is a no-op', async () => {
     const w = world(); const { cfg } = await setup();
     const r = await run.stopProfile(cfg, 'shop-a', { pollMs: 5 }, w.deps);
@@ -384,7 +674,7 @@ async function setup(fields = {}) {
     const w = world(); const { cfg } = await setup();
     await run.startProfile(cfg, 'shop-a', { pollMs: 5 }, w.deps);
     w.closeWorks = false;
-    w.deps.kill = async (pid) => { w.killed.push(pid); };
+    w.deps.killVerified = async ({ pid }) => { w.killed.push(pid); return 'killed'; };
     await assert.rejects(run.stopProfile(cfg, 'shop-a', { pollMs: 5, graceMs: 20, killMs: 20 }, w.deps), (err) => err.code === 'STOP_FAILED');
     await w.cleanup();
   });
