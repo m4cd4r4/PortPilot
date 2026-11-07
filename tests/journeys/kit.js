@@ -33,6 +33,7 @@ const title = arg('--title', 'demo');
 const crashAfter = Number(arg('--crash-after', 0));
 const code = Number(arg('--exit-code', 1));
 require('http').createServer((q, r) => {
+  console.log(new Date().toISOString() + ' ' + q.method + ' ' + q.url); // logs per request, as dev servers do (F92)
   r.setHeader('content-type', 'text/html');
   r.end('<title>' + title + '</title><body style="background:#1d4ed8;color:#fff;font:48px sans-serif"><h1>' + title + '</h1></body>');
 }).listen(port, '127.0.0.1', () => {

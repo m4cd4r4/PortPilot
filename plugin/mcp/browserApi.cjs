@@ -197,6 +197,24 @@ var require_configFile = __commonJS({
         return false;
       }
     }
+    function recordGone(configPath, appId, startedAt) {
+      if (!appId || !startedAt) return false;
+      let dropped = false;
+      try {
+        updateJson(runtimePathFor(configPath), (runtime) => {
+          const e = runtime.apps && runtime.apps[appId];
+          if (e && e.startedBy && e.startedBy.at === startedAt) {
+            delete runtime.apps[appId];
+            dropped = true;
+          }
+        }, emptyRuntime);
+      } catch (err) {
+        console.error("[configFile] Failed to drop a gone app:", err.message);
+        return false;
+      }
+      if (dropped) history2((h) => h.closeRun(configPath, appId, { endedBy: "unknown" }));
+      return dropped;
+    }
     var CRASH_TAIL_CHARS = 2e3;
     function recordCrash(configPath, appId, exitCode, { errorTail = null, port = null } = {}) {
       if (!appId) return false;
@@ -243,12 +261,14 @@ var require_configFile = __commonJS({
       return path2.join(path2.dirname(configPath), "logs", `${safe}.log`);
     }
     function readLogTail(configPath, appId, chars = CRASH_TAIL_CHARS) {
+      return readFileTail(logPathFor(configPath, appId), chars);
+    }
+    function readFileTail(file, chars = CRASH_TAIL_CHARS, from = 0) {
       try {
-        const file = logPathFor(configPath, appId);
         const { size } = fs.statSync(file);
         const fd = fs.openSync(file, "r");
         try {
-          const len = Math.min(size, chars * 4);
+          const len = Math.max(0, Math.min(size - from, chars * 4));
           const buf = Buffer.alloc(len);
           fs.readSync(fd, buf, 0, len, size - len);
           return buf.toString("utf8").slice(-chars);
@@ -341,10 +361,12 @@ var require_configFile = __commonJS({
       readRuntime,
       recordStart,
       recordStop,
+      recordGone,
       recordCrash,
       clearCrash,
       logPathFor,
       readLogTail,
+      readFileTail,
       CRASH_TAIL_CHARS,
       sessionsDirFor,
       inboxPathFor,
