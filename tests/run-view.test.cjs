@@ -269,6 +269,28 @@ const run = (over = {}) => ({
     assert.strictEqual(view.startedByLabel({ kind: 'claude', surface: 'mcp' }), 'started by claude');
   });
 
+  const by = { kind: 'claude', surface: 'mcp', sessionId: 'b71c0000' };
+  await t('liveOwner: the runtime entry owns the live process when its recorded pid is the spawned pid or the port listener', async () => {
+    assert.strictEqual(view.liveOwner({ startedBy: by, pid: 4100, port: 3000 }, { pid: 4100, port: 3000 }), by);
+    assert.strictEqual(view.liveOwner({ startedBy: by, pid: 4200, port: 3000 }, { pid: 4100, listenerPid: 4200, port: 3000 }), by);
+  });
+
+  await t('liveOwner: the same port with a different pid (reboot, then a terminal start) has no owner', async () => {
+    assert.strictEqual(view.liveOwner({ startedBy: by, pid: 4100, port: 3000 }, { pid: 9000, listenerPid: 9000, port: 3000 }), null);
+  });
+
+  await t('liveOwner: an entry with no recorded pid, or no live pid, has no owner, even on a matching port', async () => {
+    assert.strictEqual(view.liveOwner({ startedBy: by, pid: null, port: 3000 }, { pid: 4100, port: 3000 }), null);
+    assert.strictEqual(view.liveOwner({ startedBy: by, port: null }, { pid: 4100 }), null);
+    assert.strictEqual(view.liveOwner({ startedBy: by, pid: 4100 }, { port: 3000 }), null);
+  });
+
+  await t('liveOwner: no entry, no startedBy and a crash-only entry have no owner', async () => {
+    assert.strictEqual(view.liveOwner(undefined, { pid: 1 }), null);
+    assert.strictEqual(view.liveOwner({ pid: 1 }, { pid: 1 }), null);
+    assert.strictEqual(view.liveOwner({ crashed: { startedBy: by }, pid: 1 }, { pid: 1 }), null);
+  });
+
   await t('startedByLabel is empty for a person, a detected server, an external run and a run with no record', async () => {
     assert.strictEqual(view.startedByLabel({ kind: 'human', surface: 'desktop' }), '');
     assert.strictEqual(view.startedByLabel({ kind: 'detected', surface: 'desktop' }), '');

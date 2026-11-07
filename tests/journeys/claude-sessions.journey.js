@@ -326,15 +326,20 @@ function worldProcs(dir) {
       j.check('web card reads running', await j.waitFor(async () => (await j.stateOf('app_journey_web')) === 'running', 20000), await j.stateOf('app_journey_web'));
       const webRun = await j.waitFor(() => j.runs().find((x) => x.appId === 'app_journey_web' && !x.stoppedAt), 10000);
       j.check('runs.json stamps the web run as started by a person (human, desktop)', webRun && webRun.startedBy?.kind === 'human' && webRun.startedBy?.surface === 'desktop', JSON.stringify(webRun && webRun.startedBy));
-      const webCard = await j.card('app_journey_web').textContent().catch(() => '');
-      j.check('the web card shows no "started by" label', !/started by/i.test(webCard) && /web/.test(webCard), webCard);
+      // Rendered first (running, named, with its port), then asserted: an empty card would pass "no label".
+      const webCard = await j.waitFor(async () => { const t = await j.card('app_journey_web').textContent().catch(() => ''); return /running/.test(t) && /web/.test(t) && t.includes(`:${webPort}`) && t; }, 15000);
+      j.check('the web card is rendered (running, named, with its port)', webCard, webCard);
+      j.check('and shows no "started by" label', webCard && !/started by/i.test(webCard), webCard);
       await j.shot('04-b-started-api');
       await j.tab('History');
       const row = await j.waitFor(async () => (await j.win.locator('.run').allTextContents()).find((t) => /api/.test(t) && /running/i.test(t) && t.includes(apiLabel)), 15000);
       j.check(`App History lists the api run as running, "${apiLabel}"`, row, row || (await j.win.locator('.run').allTextContents()).join(' | '));
       j.note(`api history row text: ${row}`);
-      const webRow = (await j.win.locator('.run').allTextContents()).find((t) => /web/.test(t) && /running/i.test(t));
-      j.check('App History lists the web run with no "started by" label', webRow && !/started by/i.test(webRow), webRow);
+      // The row whose app name is exactly "web", rendered and running, then asserted.
+      const webRows = j.win.locator('.run', { has: j.win.locator('.name', { hasText: /^web$/ }) });
+      const webRow = await j.waitFor(async () => { const t = await webRows.first().textContent({ timeout: 500 }).catch(() => ''); return /running/i.test(t) && t.includes(`:${webPort}`) && t; }, 15000);
+      j.check('App History lists the web run, running, with its port', webRow, webRow);
+      j.check('and with no "started by" label', webRow && !/started by/i.test(webRow), webRow);
       await j.shot('05-history-apps');
       await j.tab('Apps');
       await j.card('app_journey_web').getByRole('button', { name: 'Stop' }).click();

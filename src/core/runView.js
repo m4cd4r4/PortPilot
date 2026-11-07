@@ -111,6 +111,20 @@
     return p && p.kind === 'claude' ? `started by ${p.word}` : '';
   }
 
+  /**
+   * The startedBy record of a runtime entry, only if the entry describes the process that is running
+   * now: its recorded pid must be the pid PortPilot spawned (`live.pid`) or the pid listening on the
+   * port (`live.listenerPid`). The entry outlives its process (a reboot, a quit), so a port match
+   * proves nothing; with no recorded pid, or no live pid, nobody is named. A wrong "started by
+   * claude" is worse than a missing one.
+   */
+  function liveOwner(entry, live) {
+    if (!entry || !entry.startedBy || !live) return null;
+    const rec = Number(entry.pid);
+    if (!(rec > 0)) return null;
+    return rec === Number(live.pid) || rec === Number(live.listenerPid) ? entry.startedBy : null;
+  }
+
   const DAY = new Intl.DateTimeFormat('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
   const CLOCK = new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
 
@@ -185,5 +199,5 @@
     return out;
   }
 
-  return { appThumbs, filterRuns, facets, labelOf, runStateOf, startedByWord, startedByLabel, formatWhen, formatBytes, footerText, gitLine, rowThumbs };
+  return { appThumbs, filterRuns, facets, labelOf, runStateOf, startedByWord, startedByLabel, liveOwner, formatWhen, formatBytes, footerText, gitLine, rowThumbs };
 });

@@ -66,6 +66,24 @@ t('returns false for an app with no id', () => {
   assert.equal(stampStart(tmpConfig(), { name: 'nameless' }, 's1'), false);
 });
 
+t('records the pid listening on the port at start (the readers match the live process by it)', () => {
+  const cfg = tmpConfig();
+  let asked = 0;
+  assert.equal(stampStart(cfg, app, 's1', undefined, (port) => { asked = port; return 4242; }), true);
+  assert.equal(asked, 5173);
+  assert.equal(readRuntime(cfg).apps.app_web.pid, 4242);
+});
+
+t('records no pid when the lookup finds none or throws, and still stamps', () => {
+  for (const pidOf of [() => null, () => { throw new Error('netstat failed'); }]) {
+    const cfg = tmpConfig();
+    assert.equal(stampStart(cfg, app, 's1', undefined, pidOf), true);
+    const entry = readRuntime(cfg).apps.app_web;
+    assert.equal(entry.pid, null);
+    assert.equal(entry.startedBy.kind, 'claude');
+  }
+});
+
 fs.rmSync(root, { recursive: true, force: true });
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
