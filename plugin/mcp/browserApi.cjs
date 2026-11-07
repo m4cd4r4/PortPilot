@@ -1556,6 +1556,9 @@ var require_browserProcess = __commonJS({
       ours.get(k).add(pid);
     }
     var isOurs = (dir, pid) => !!(ours.get(norm(dir)) && ours.get(norm(dir)).has(pid));
+    var forget = (dir, pid) => {
+      if (ours.get(norm(dir))) ours.get(norm(dir)).delete(pid);
+    };
     var isHelper = (p) => /--type=/i.test(String(p.commandLine || ""));
     async function stillOnDir(pid, dir, d) {
       const info = await d.processInfo(pid);
@@ -1570,7 +1573,10 @@ var require_browserProcess = __commonJS({
     }
     async function awaitBrowserExit(pid, dir, d, o, pollMs) {
       const t0 = Date.now();
-      const done = (how) => ({ pid, how, ms: Date.now() - t0 });
+      const done = (how) => {
+        if (how !== "still-running") forget(dir, pid);
+        return { pid, how, ms: Date.now() - t0 };
+      };
       if (await waitExit(pid, dir, d, o.exitMs ?? EXIT_MS, pollMs)) return done("exited");
       if (!await stillOnDir(pid, dir, d)) return done("exited");
       await d.kill(pid);
@@ -1596,6 +1602,7 @@ var require_browserProcess = __commonJS({
         if (await stillOnDir(p.pid, dir, d)) await d.kill(p.pid);
       }
       const stuck = await until(o.killMs ?? KILL_MS);
+      for (const p of left) if (!stuck.some((s) => s.pid === p.pid)) forget(dir, p.pid);
       return stuck.length ? { stuck: brief(stuck) } : null;
     }
     module2.exports = {

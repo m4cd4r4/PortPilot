@@ -290,6 +290,16 @@ async function setup(fields = {}) {
     await w.cleanup();
   });
 
+  await t('a pid seen gone is forgotten: a browser opened by hand that reuses it is not ended as ours', async () => {
+    const w = world(); const { cfg, profile } = await setup();
+    await run.startProfile(cfg, 'shop-a', { pollMs: 5 }, w.deps);
+    await run.stopProfile(cfg, 'shop-a', { pollMs: 5 }, w.deps);
+    const dir = bp.userDataDirFor(cfg, profile);
+    w.procs.set(5001, { pid: 5001, ppid: 1, processName: 'fake-browser', commandLine: `/fake/brave --user-data-dir=${dir} --` });
+    await assert.rejects(run.startProfile(cfg, 'shop-a', { pollMs: 5, folderMs: 20 }, w.deps), (err) => err.code === 'FOLDER_IN_USE');
+    assert.deepStrictEqual(w.killed, []);
+  });
+
   await t('start waits for a browser that is leaving the folder by itself and kills nothing', async () => {
     const w = world(); const { cfg, profile } = await setup();
     const dir = bp.userDataDirFor(cfg, profile);

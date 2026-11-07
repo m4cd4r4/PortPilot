@@ -114,6 +114,9 @@ function remember(dir, pid) {
   ours.get(k).add(pid);
 }
 const isOurs = (dir, pid) => !!(ours.get(norm(dir)) && ours.get(norm(dir)).has(pid));
+// Once a pid is seen gone it is forgotten, so a later process that happens to get the same pid
+// never inherits "ours".
+const forget = (dir, pid) => { if (ours.get(norm(dir))) ours.get(norm(dir)).delete(pid); };
 const isHelper = (p) => /--type=/i.test(String(p.commandLine || ''));
 
 /** The identity check before anything is ended. The process info, or null when it fails. */
@@ -142,7 +145,10 @@ async function waitExit(pid, dir, d, ms, pollMs) {
  */
 async function awaitBrowserExit(pid, dir, d, o, pollMs) {
   const t0 = Date.now();
-  const done = (how) => ({ pid, how, ms: Date.now() - t0 });
+  const done = (how) => {
+    if (how !== 'still-running') forget(dir, pid);
+    return { pid, how, ms: Date.now() - t0 };
+  };
   if (await waitExit(pid, dir, d, o.exitMs ?? EXIT_MS, pollMs)) return done('exited');
   // waitExit's last look said it is still ours; look once more right before ending it.
   if (!(await stillOnDir(pid, dir, d))) return done('exited');
@@ -182,6 +188,7 @@ async function freeFolder(dir, o, d) {
     if (await stillOnDir(p.pid, dir, d)) await d.kill(p.pid);
   }
   const stuck = await until(o.killMs ?? KILL_MS);
+  for (const p of left) if (!stuck.some((s) => s.pid === p.pid)) forget(dir, p.pid);
   return stuck.length ? { stuck: brief(stuck) } : null;
 }
 
