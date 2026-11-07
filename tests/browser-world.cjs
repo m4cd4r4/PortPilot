@@ -55,7 +55,7 @@ function world({ installed = [{ id: 'brave', label: 'Brave', path: '/fake/brave'
         w.foreign(port, w.takenDuringStart, true);
         return child;
       }
-      w.holders.set(port, { pid, processName: 'fake-browser', commandLine: `${exe} ${args.join(' ')}` });
+      w.holders.set(port, { pid, processName: 'fake-browser', commandLine: `${exe} ${args.join(' ')}`, createdAt: `t${pid}` });
       listen(port, true).then((s) => w.servers.set(port, s));
       return child;
     },
@@ -64,10 +64,6 @@ function world({ installed = [{ id: 'brave', label: 'Brave', path: '/fake/brave'
       if (!w.closeWorks) return false;
       await w.drop(port);
       return true;
-    },
-    kill: async (pid) => {
-      w.killed.push(pid);
-      for (const [port, h] of w.holders) if (h.pid === pid) await w.drop(port);
     },
     park: async (port, left) => { w.parked.push({ port, left }); return { parked: true, left }; },
     placeWindow: async (port, want) => {
@@ -79,9 +75,30 @@ function world({ installed = [{ id: 'brave', label: 'Brave', path: '/fake/brave'
     windowBounds: async () => (w.windowFails ? null : (w.actual || { left: 10, top: 20, width: 1000, height: 700, windowState: 'normal' })),
     bringToFront: async (port) => { w.fronted.push(port); return !w.frontFails; },
     pinTopmost: async (pid) => { w.pinned.push(pid); return w.pinResult; },
+    // A process here lives as long as it holds its port, or past that when `w.linger` is set (it then
+    // waits in `w.lingering` until killed), so the real process table is never read.
+    processInfo: async (pid) => w.procs().find((h) => h.pid === pid) || null,
+    dirHolders: async () => w.procs(),
+    // browserProcessQuery.killVerified's contract: same pid AND start time, or nothing happens.
+    killVerified: async (target) => {
+      w.killCalls.push(target);
+      const p = w.procs().find((h) => h.pid === target.pid);
+      if (!p) return 'gone';
+      if (!target.createdAt || p.createdAt !== target.createdAt) return 'mismatch';
+      if (target.main && /--type=/.test(p.commandLine || '')) return 'mismatch';
+      w.killed.push(target.pid);
+      for (const [port, h] of w.holders) if (h.pid === target.pid) await w.drop(port);
+      w.lingering.delete(target.pid); // after the drop, which parks a lingering process here
+      return 'killed';
+    },
   };
+  w.lingering = new Map();
+  w.killCalls = [];
+  w.procs = () => [...w.holders.values(), ...w.lingering.values()];
   w.drop = async (port) => {
     const s = w.servers.get(port);
+    const h = w.holders.get(port);
+    if (h && w.linger && h.createdAt) w.lingering.set(h.pid, h);
     w.holders.delete(port);
     w.servers.delete(port);
     if (s) await closeServer(s);

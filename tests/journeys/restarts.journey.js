@@ -71,26 +71,24 @@ async function cdp(port) {
     const ps = `Get-CimInstance Win32_Process -Filter "Name='brave.exe'" | Where-Object { $_.CommandLine -and $_.CommandLine.ToLower().Contains('${dir}') } | ForEach-Object { $t = 'main'; if ($_.CommandLine -match '--type=(\\S+)') { $t = $Matches[1] }; "$($_.ProcessId):$t" }`;
     try { return execFileSync('powershell.exe', ['-NoProfile', '-Command', ps], { encoding: 'utf8', windowsHide: true }).split(/\s+/).filter(Boolean); } catch { return []; }
   }
-  /** Start from the card. A closed Brave can linger on its folder (N5): a person waits and presses Start again. */
+  /**
+   * Start from the card, at once. A Brave closed outside can still be on its folder (F45, was N5):
+   * Start itself waits for it or ends our own leftover, so one press is enough.
+   */
   async function startBrowser(name, port) {
     await j.tab('Browsers');
-    let up = null;
-    for (let attempt = 1; attempt <= 2 && !up; attempt++) {
-      const lingering = profileProcs(name);
-      const t1 = Date.now();
-      const gone = lingering.length ? !!(await j.waitFor(() => profileProcs(name).length === 0, 90000)) : true;
-      if (lingering.length) j.note(`${name}: Brave still on its folder before Start (${lingering.join(' ')}); gone after ${((Date.now() - t1) / 1000).toFixed(1)} s: ${gone}`);
-      const before = profileProcs(name);
-      await bcard(name).hover();
-      await bcard(name).getByRole('button', { name: 'Start', exact: true }).click();
-      up = await j.waitFor(() => cdp(port), 60000);
-      if (up) break;
-      await j.shot(`fail-start-${name}-${attempt}`);
-      const said = await j.win.locator('[role="alert"], .notice, .tile-notice').allTextContents().catch(() => []);
-      if (attempt === 1 && (lingering.length || before.length || profileProcs(name).length)) {
-        known('N5', `${name} starts on the first press after it was closed outside`, false, `Brave processes on its folder: ${profileProcs(name).join(' ') || 'none now'}; screen says ${JSON.stringify(said)}`);
-      } else break;
+    const lingering = profileProcs(name);
+    j.note(`${name}: Brave processes on its folder when Start is pressed: ${lingering.join(' ') || 'none'}`);
+    await bcard(name).hover();
+    await bcard(name).getByRole('button', { name: 'Start', exact: true }).click();
+    const up = await j.waitFor(() => cdp(port), 60000);
+    let said = [];
+    if (!up) {
+      await j.shot(`fail-start-${name}`);
+      said = await j.win.locator('[role="alert"], .notice, .tile-notice').allTextContents().catch(() => []);
     }
+    j.check(`${name} starts on the first press${lingering.length ? ', with Brave still on its folder' : ''}`, up,
+      up ? '' : `Brave processes on its folder: ${profileProcs(name).join(' ') || 'none now'}; screen says ${JSON.stringify(said)}`);
     j.check(`${name} answers on its own debug port`, up);
     j.check(`the ${name} card moves to Open`, await j.waitFor(async () => (await bgroup(name)) === 'open', 30000), await bgroup(name));
   }
@@ -115,7 +113,6 @@ async function cdp(port) {
   const KNOWN = {
     N3: 'after PortPilot is killed, the dead app\'s run stays open in runs.json and its runtime entry keeps startedBy',
     N4: 'after PortPilot is killed, display preferences kept in localStorage (Apps view) are sometimes lost: the key reads null',
-    N5: 'a browser closed outside can leave Brave processes on its folder after its port goes quiet; Start then fails with "nothing answered CDP" while the card reads Stopped',
   };
   function known(id, what, ok, detail = '') {
     if (ok) return j.check(what, true, detail);

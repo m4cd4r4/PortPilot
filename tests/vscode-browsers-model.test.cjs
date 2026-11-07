@@ -33,9 +33,9 @@ fs.mkdirSync(configDir, { recursive: true });
 const configPath = path.join(configDir, 'portpilot-config.json');
 
 // runtime/ is built (and gitignored) by copy-runtime; the provider needs it for the shared config and API.
-if (!fs.existsSync(path.join(ext, 'runtime', 'core', 'browserApi.js'))) {
-  execFileSync(process.execPath, [path.join(ext, 'scripts', 'copy-runtime.js')], { stdio: 'ignore' });
-}
+// Rebuilt on every run, as CI does from a clean checkout: a stale local copy hid a file missing from
+// the copy list (F90).
+execFileSync(process.execPath, [path.join(ext, 'scripts', 'copy-runtime.js')], { stdio: 'ignore' });
 
 const bm = require('../vscode-extension/out/browserModel.js');
 const probe = require('../vscode-extension/out/browserProbe.js');
