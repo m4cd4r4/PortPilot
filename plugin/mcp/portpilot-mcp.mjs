@@ -24284,7 +24284,7 @@ function alreadyRunning(app, check2 = checkPort) {
   if (!port || !check2(port)) return null;
   return { success: true, alreadyRunning: true, verified: true, message: `${app.name} is already running on port ${port}; left as it is` };
 }
-function stampStart(configPath, app, sessionId, client) {
+function stampStart(configPath, app, sessionId, client, pidOf = listenerPidOf) {
   if (!app || !app.id) return false;
   let startedBy;
   try {
@@ -24292,7 +24292,17 @@ function stampStart(configPath, app, sessionId, client) {
   } catch {
     return false;
   }
-  return configFile.recordStart(configPath, app.id, startedBy, { port: app.preferredPort });
+  let pid = null;
+  try {
+    pid = pidOf(app.preferredPort) || null;
+  } catch {
+  }
+  return configFile.recordStart(configPath, app.id, startedBy, { port: app.preferredPort, pid });
+}
+function listenerPidOf(port) {
+  if (!port) return null;
+  const hit = scanPorts().find((p) => p.port === Number(port));
+  return hit && hit.pid > 0 ? hit.pid : null;
 }
 function stopApp(app) {
   const activePorts = scanPorts();

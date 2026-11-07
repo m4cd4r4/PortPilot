@@ -292,6 +292,7 @@ button.tile:hover { border-color: var(--acc); }
 .sub { display: flex; flex-wrap: wrap; gap: 4px 10px; color: var(--tx2); font-size: 12.5px; margin-top: 2px; }
 .sub .branch, .title .branch { font-size: 11.5px; padding: 0 8px; border-radius: 999px; background: var(--pn2); color: var(--tx2); }
 .sub .note { color: var(--warn); }
+.sub .by { min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dot.running { background: var(--ok); }
 .dot.conflict, .dot.crashed { background: var(--warn); }
 .dot.stopped { background: var(--mut); }

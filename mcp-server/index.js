@@ -736,7 +736,7 @@ function alreadyRunning(app, check = checkPort) {
  * "claude <session>", or `client` (the MCP client's own name, e.g. "cursor") when it is not Claude. Best-effort: returns false (never throws) on a bad
  * session id or a failed write - the start itself already succeeded.
  */
-function stampStart(configPath, app, sessionId, client) {
+function stampStart(configPath, app, sessionId, client, pidOf = listenerPidOf) {
   if (!app || !app.id) return false;
   let startedBy;
   try {
@@ -744,7 +744,17 @@ function stampStart(configPath, app, sessionId, client) {
   } catch {
     return false;
   }
-  return configFile.recordStart(configPath, app.id, startedBy, { port: app.preferredPort });
+  // The pid listening on the port now: the readers use it to tell this process from a later one on
+  // the same port. Best-effort; none recorded means no owner is ever shown for it.
+  let pid = null;
+  try { pid = pidOf(app.preferredPort) || null; } catch { /* no pid */ }
+  return configFile.recordStart(configPath, app.id, startedBy, { port: app.preferredPort, pid });
+}
+
+function listenerPidOf(port) {
+  if (!port) return null;
+  const hit = scanPorts().find((p) => p.port === Number(port));
+  return hit && hit.pid > 0 ? hit.pid : null;
 }
 
 function stopApp(app) {

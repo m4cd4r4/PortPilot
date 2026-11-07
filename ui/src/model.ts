@@ -44,7 +44,7 @@ export function tally(s: Snapshot): Tally {
 }
 
 export type CardState = 'running' | 'conflict' | 'crashed' | 'stopped';
-export interface Card { app: AppRec; state: CardState; port?: number; note: string }
+export interface Card { app: AppRec; state: CardState; port?: number; note: string; /** runtime owner record of a live app; the card words it with runView().startedByLabel */ startedBy?: unknown }
 const RANK: Record<CardState, number> = { conflict: 0, crashed: 1, running: 2, stopped: 3 };
 
 /** One card per registered app: its state, the port to show and a short reason. Running first, then by name. */
@@ -67,7 +67,7 @@ export function cards(s: Snapshot, query = ''): Card[] {
       const code = s.crashed[app.id].exitCode;
       note = code != null ? `Exited with code ${code}` : 'Exited unexpectedly';
     }
-    out.push({ app, state, port: live?.port ?? conflict?.port ?? app.preferredPort, note });
+    out.push({ app, state, port: live?.port ?? conflict?.port ?? app.preferredPort, note, startedBy: live?.startedBy });
   }
   return out.sort((a, b) => RANK[a.state] - RANK[b.state] || a.app.name.localeCompare(b.app.name));
 }

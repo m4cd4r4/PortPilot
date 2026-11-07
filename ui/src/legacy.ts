@@ -11,6 +11,10 @@ interface RunViewApi {
   formatWhen(run: Run): string;
   runStateOf(run: Run, live: boolean): RunState;
   filterRuns(runs: Run[], f: { query?: string }): Run[];
+  /** "started by claude b71c" for a Claude-started run, '' for anything else. */
+  startedByLabel(startedBy: unknown): string;
+  /** The runtime entry's startedBy, only when its recorded pid is the live process; else null. */
+  liveOwner(entry: { startedBy?: unknown; pid?: number | null } | undefined, live: { pid?: number; listenerPid?: number }): unknown;
 }
 export const runView = (): RunViewApi => (window as any).PortPilotRunView;
 

@@ -1,4 +1,5 @@
 import type { AppRec, CrashAlert, Host, Snapshot } from './types';
+import { runView } from '../legacy';
 
 // window.portpilot is the contextBridge object from src/main/preload.js.
 type Api = any;
@@ -45,7 +46,13 @@ export function createElectronHost(): Host {
         else if (r.crashed) crashed[r.id] = { ...crashed[r.id], exitCode: r.exitCode };
       }
       // The scan knows the port an app is really on, and also finds apps another tool started.
-      for (const [id, m] of Object.entries<any>(scan?.matches || {})) running[id] = { ...running[id], port: m.port, pid: running[id]?.pid ?? m.pid };
+      for (const [id, m] of Object.entries<any>(scan?.matches || {})) running[id] = { ...running[id], port: m.port, pid: running[id]?.pid ?? m.pid, listenerPid: m.pid };
+      // Who started a live app comes from the runtime file. The entry outlives its process (a reboot,
+      // a quit), so it names an owner only when its recorded pid is the live process (runView.liveOwner).
+      for (const [id, live] of Object.entries(running)) {
+        const owner = runView().liveOwner(proc?.runtime?.[id], live);
+        if (owner) live.startedBy = owner;
+      }
       for (const id of Object.keys(running)) delete crashed[id];
       return {
         apps: cfg?.apps || [],

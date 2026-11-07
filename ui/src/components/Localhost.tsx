@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import type { Host, Snapshot } from '../host';
 import { clusterCards, type Cluster } from '../clusters';
+import { runView } from '../legacy';
 import { STALE_MS, cards, grouped, type Card } from '../model';
 import { VIEWS, gridClass, setPrefs, showsShot, usePrefs, type Prefs } from '../prefs';
 import type { Thumbs } from '../useThumbs';
@@ -160,6 +161,7 @@ interface More { count: number; open: boolean; toggle(): void }
 
 function AppCard({ c, title, more, member, prefs, thumbs, actions }: { c: Card; title?: string; more?: More; member?: boolean; prefs: Prefs; thumbs: Thumbs; actions: Actions }) {
   const thumb = thumbs.byApp[c.app.id];
+  const by = c.state === 'running' ? runView().startedByLabel(c.startedBy) : '';
   // An app with nothing to show drops the screenshot box: a tile of one grey letter is the clutter, not the app.
   const showShot = !member && (showsShot(prefs.view) || prefs.thumbs === 'inline') && (!!thumb || c.state !== 'stopped');
   const peek = !showShot && prefs.thumbs === 'peek' && thumb;
@@ -188,6 +190,7 @@ function AppCard({ c, title, more, member, prefs, thumbs, actions }: { c: Card; 
           {!member && c.app.branch && <span className="branch">{c.app.branch}</span>}
           {more && <button className="copies" aria-expanded={more.open} onClick={more.toggle}>{more.open ? '▾' : '▸'} {more.count} copies</button>}
           {c.note && <span className="note">{c.note}</span>}
+          {by && <span className="by" title={by}>{by}</span>}
         </div>
       </div>
       {peek && <img className="peek" src={thumb.url} alt="" loading="lazy" />}
