@@ -24,6 +24,26 @@ const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pp-quit-apps-'));
     const store = new ConfigStore(null, path.join(dir, 'portpilot-config.json'));
     try { assert.equal(store.getSettings().stopAppsOnQuit, false); } finally { store.close(); }
   });
+  const { ConfigStore } = require('../src/main/configStore');
+  const openStore = (file) => new ConfigStore(null, file);
+  await t('F101: a config saved before this update with stop-on-quit ticked (the old default) is reset to off once', () => {
+    const file = path.join(dir, 'old-config.json');
+    fs.writeFileSync(file, JSON.stringify({ apps: [], groups: [], settings: { stopAppsOnQuit: true, closeToTray: true } }));
+    const s = openStore(file);
+    try { assert.equal(s.getSettings().stopAppsOnQuit, false); } finally { s.close(); }
+    const onDisk = JSON.parse(fs.readFileSync(file, 'utf8')).settings;
+    assert.equal(onDisk.stopAppsOnQuit, false, JSON.stringify(onDisk));
+    assert.equal(onDisk.closeToTray, true, 'another setting changed');
+  });
+  await t('F101: ticked after the reset, it stays ticked across relaunches', () => {
+    const file = path.join(dir, 'old-config.json'); // migrated by the test above
+    const a = openStore(file);
+    try { a.updateSettings({ stopAppsOnQuit: true }); } finally { a.close(); }
+    for (let launch = 0; launch < 2; launch++) {
+      const b = openStore(file);
+      try { assert.equal(b.getSettings().stopAppsOnQuit, true, `reset on relaunch ${launch + 1}`); } finally { b.close(); }
+    }
+  });
 
   const quit = require('../src/main/quitApps');
   await t('a config that never set it keeps apps on quit; only a saved true stops them', () => {
@@ -53,6 +73,83 @@ const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pp-quit-apps-'));
   await t('adopted: with the shell gone, a listener older than the start whose parent pid matches is not ours', () => {
     const old = [{ pid: 300, ppid: 100, created: at - 3600000 }];
     assert.equal(adopted.verifyAdopted({ entry, listenerPid: 300, procs: old }).ok, false);
+  });
+  await t('F94: with the shell gone, a chain top whose parent pid matches but was created an hour after the start is not ours', () => {
+    // A later process handed the dead shell's pid as its parent (pid reuse), then started a listener.
+    const later = [{ pid: 300, ppid: 100, created: at + 3600000 }];
+    assert.equal(adopted.verifyAdopted({ entry, listenerPid: 300, procs: later }).ok, false);
+  });
+
+  const tree2 = require('../src/main/processTree');
+  await t('F99: a Windows process with no CreationDate is kept, with created null (and so is never verified)', () => {
+    const procs = tree2.parseProcessList('4 0 \r\n100 4 1762477200000\r\n', 'win32');
+    assert.deepEqual(procs, [{ pid: 4, ppid: 0, created: null }, { pid: 100, ppid: 4, created: 1762477200000 }]);
+  });
+
+  await t('F95: ps elapsed time as macOS and Linux both print it ([[dd-]hh:]mm:ss) gives the start time', () => {
+    const now = Date.parse('2026-11-07T12:00:00.000Z');
+    const procs = tree2.parseProcessList('  1     0 1-02:03:04\n 200     1    05:06\n 300   200 01:02:03\n', 'darwin', now);
+    assert.deepEqual(procs.map((p) => [p.pid, p.ppid, (now - p.created) / 1000]), [[1, 0, 93784], [200, 1, 306], [300, 200, 3723]]);
+  });
+
+  await t('F96: Unix Stop on an adopted app signals the whole tree deepest first, SIGKILLs what ignores SIGTERM, and succeeds only once the port is free', async () => {
+    const run = async ({ freesPort }) => {
+      const sent = [];
+      const dead = new Set();
+      const deps = {
+        platform: 'linux',
+        readRuntime: () => ({ apps: { a: entry } }),
+        snap: { procs: tree, listenerOf: () => 300 },
+        signal: (pid, sig) => { sent.push(`${sig} ${pid}`); if (sig === 'SIGKILL' || pid !== 300) dead.add(pid); },
+        alive: (pid) => !dead.has(pid), // 300 (the server) ignores SIGTERM
+        graceMs: 200,
+        checkPort: async () => (freesPort && dead.has(300) ? null : { pid: 300 }),
+        freeWithinMs: 300,
+      };
+      return { r: await adopted.stopAdopted('cfg', 'a', deps), sent };
+    };
+    const ok = await run({ freesPort: true });
+    assert.deepEqual(ok.sent, ['SIGTERM 300', 'SIGTERM 200', 'SIGTERM 100', 'SIGKILL 300']);
+    assert.equal(ok.r.success, true, JSON.stringify(ok.r));
+    const held = await run({ freesPort: false });
+    assert.equal(held.r.success, false, 'reported success while the port was still held');
+  });
+
+  // A runtime file of four starts, and a quit that records what it would stop.
+  const fakeQuit = () => {
+    const mk = (surface) => ({ startedBy: { kind: 'human', surface, at: new Date(at).toISOString() }, pid: 1, port: 1 });
+    const calls = { stopped: [], snaps: [], snapArgs: [] };
+    const deps = {
+      cleanupAllProcesses: async () => {},
+      readRuntime: () => ({ apps: { win: mk('desktop'), portal: mk('web'), ext: mk('vscode'), claude: mk('mcp') } }),
+      recordStop: () => {},
+      snapshot: async (_d, o) => { calls.snaps.push(o); return { procs: [], listenerOf: () => null }; },
+      stopAdopted: async (_c, id, d) => { calls.stopped.push(id); calls.snapArgs.push(d && d.snap); return { success: true }; },
+    };
+    return { calls, deps };
+  };
+  await t('F98: quit with the setting on also stops apps started from the web portal (the desktop process serves it), never VS Code or MCP starts', async () => {
+    const { calls, deps } = fakeQuit();
+    await quit.stopAppsForQuit({ stopAppsOnQuit: true }, 'cfg', deps);
+    assert.deepEqual(calls.stopped.sort(), ['portal', 'win']);
+  });
+  await t('F97: quit reads the OS once for every adopted app, with a process-list timeout inside the 10 s quit hold', async () => {
+    const { calls, deps } = fakeQuit();
+    await quit.stopAppsForQuit({ stopAppsOnQuit: true }, 'cfg', deps);
+    assert.equal(calls.snaps.length, 1, `${calls.snaps.length} snapshots`);
+    assert.ok(calls.snaps[0].timeoutMs > 0 && calls.snaps[0].timeoutMs < 10000, JSON.stringify(calls.snaps[0]));
+    assert.ok(calls.snapArgs.length === 2 && calls.snapArgs.every((s) => s && Array.isArray(s.procs)), 'a stop did its own OS read');
+  });
+
+  await t('F100: the legacy Settings shows the same label and hint as the React one (off by default, picked up next launch)', () => {
+    const tsx = fs.readFileSync(path.join(__dirname, '../ui/src/components/Settings.tsx'), 'utf8');
+    const html = fs.readFileSync(path.join(__dirname, '../src/renderer/index.html'), 'utf8');
+    const row = /key: 'stopAppsOnQuit', label: '([^']+)', hint: '([^']+)'/.exec(tsx);
+    assert.ok(row, 'React row not found');
+    const legacy = /<label class="setting-row"[^>]*title="([^"]+)"[^>]*>\s*<span>([^<]+)<\/span>\s*<input type="checkbox" id="setting-stop-apps-on-quit">/.exec(html);
+    assert.ok(legacy, 'legacy row has no hint');
+    assert.deepEqual([legacy[2].trim(), legacy[1]], [row[1], row[2]]);
+    assert.ok(/web portal/.test(row[2]) && /next time/.test(row[2]), row[2]);
   });
 
   // ---- real processes: a server an "earlier session" started, unknown to this processManager ----
@@ -111,8 +208,43 @@ const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pp-quit-apps-'));
     assert.ok(await portGone(port), 'port still held');
   });
 
+  const runHistory = require('../src/core/runHistory');
+  const openRun = (id) => runHistory.readRuns(cfg).filter((r) => r.appId === id && !r.stoppedAt);
+  const lastRun = (id) => runHistory.readRuns(cfg).filter((r) => r.appId === id).pop();
+  await t('F93: on launch, a desktop start whose server is gone loses its entry and its run closes as unknown; a live one and an MCP start stay', async () => {
+    const livePort = await earlierSession('still-up');
+    const gonePort = await earlierSession('gone');
+    const goneShell = cf.readRuntime(cfg).apps.gone.pid;
+    const holder = await checkPort(gonePort);
+    await pm.killProcess(goneShell); await pm.killProcess(holder.pid); // died while PortPilot was closed (a reboot)
+    assert.ok(await portGone(gonePort), 'gone still answers');
+    cf.recordStart(cfg, 'via-mcp', status.makeStartedBy({ kind: 'claude', surface: 'mcp', sessionId: '11111111-2222-3333-4444-555555555555' }), { port: gonePort });
+    const dropped = await adopted.reconcileStale(cfg, { before: Date.now() });
+    const rt = cf.readRuntime(cfg).apps;
+    // The earlier tests' stopped servers left entries too (the test calls no recordStop): stale as well.
+    assert.ok(dropped.includes('gone') && !dropped.includes('still-up') && !dropped.includes('via-mcp'), JSON.stringify(dropped));
+    assert.ok(!rt.gone, 'the stale entry is still there');
+    assert.equal(lastRun('gone').endedBy, 'unknown', JSON.stringify(lastRun('gone')));
+    assert.ok(rt['still-up']?.startedBy && openRun('still-up').length === 1, 'the live adopted app lost its entry or run');
+    assert.ok(rt['via-mcp']?.startedBy, 'the MCP start was touched');
+    assert.ok(await checkPort(livePort), 'the live adopted server was stopped');
+    await adopted.stopAdopted(cfg, 'still-up');
+    cf.recordStop(cfg, 'via-mcp');
+  });
+
+  await t('F93: Stop on an adopted app whose server and shell are both gone says it was not running and clears it', async () => {
+    const port = await earlierSession('dead-adopted');
+    const holder = await checkPort(port);
+    await pm.killProcess(cf.readRuntime(cfg).apps['dead-adopted'].pid); await pm.killProcess(holder.pid);
+    assert.ok(await portGone(port), 'still answers');
+    const r = await adopted.stopAdopted(cfg, 'dead-adopted');
+    assert.equal(r.success, true, JSON.stringify(r));
+    assert.ok(r.notRunning && /was not running/.test(r.message), JSON.stringify(r));
+    assert.ok(!cf.readRuntime(cfg).apps['dead-adopted'], 'entry left');
+    assert.equal(lastRun('dead-adopted').endedBy, 'unknown');
+  });
+
   // ---- quit ----
-  const openRun = (id) => require('../src/core/runHistory').readRuns(cfg).filter((r) => r.appId === id && !r.stoppedAt);
   /** An app this session started, as the desktop's Start does. Returns its port. */
   async function thisSession(id) {
     const port = await freePort();
@@ -143,6 +275,33 @@ const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pp-quit-apps-'));
     assert.equal(openRun('kept').length + openRun('adopted-quit').length, 0, 'a run is still open');
     assert.ok(await checkPort(vsPort), 'the VS Code-started server was stopped');
     assert.ok(rt['from-vscode']?.startedBy, 'the VS Code start lost its entry');
+  });
+
+  // ---- F92: a server left running by quit keeps logging after PortPilot is gone ----
+  await t('F92: an app this session started keeps answering, and logging, after the PortPilot process exits', async () => {
+    const port = await freePort();
+    const srv = path.join(dir, 'chatty.js');
+    fs.writeFileSync(srv, `require('http').createServer((q, s) => { console.log('GET', q.url); console.error('served', q.url); s.end('ok'); }).listen(${port}, () => console.log('listening'));`);
+    const parent = path.join(dir, 'parent.js');
+    fs.writeFileSync(parent, `const pm = require(${JSON.stringify(path.join(__dirname, '../src/main/processManager'))});
+if (pm.setLogConfigPath) pm.setLogConfigPath(${JSON.stringify(cfg)});
+pm.startApp({ id: 'chatty', name: 'chatty', command: 'node ' + JSON.stringify(${JSON.stringify(srv)}), preferredPort: ${port} })
+  .then((r) => { console.log(JSON.stringify(r)); setTimeout(() => process.exit(0), 1500); });`);
+    const { spawn } = require('child_process');
+    const p = spawn(process.execPath, [parent], { stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true });
+    let out = '';
+    p.stdout.on('data', (d) => { out += d; });
+    await new Promise((r) => p.on('exit', r)); // PortPilot is gone, as after a quit that keeps apps
+    const get = async () => { try { return (await fetch(`http://127.0.0.1:${port}/x`, { signal: AbortSignal.timeout(2000) })).status; } catch { return 0; } };
+    const answers = [];
+    for (let i = 0; i < 3; i++) { answers.push(await get()); await sleep(300); }
+    const holder = await checkPort(port);
+    if (holder && holder.pid) await pm.killProcess(holder.pid);
+    assert.deepEqual(answers, [200, 200, 200], `parent said ${out.trim()}`);
+    const log = cf.readLogTail(cfg, 'chatty') || '';
+    assert.ok(/GET \/x/.test(log) && /served \/x/.test(log), `log file: ${JSON.stringify(log)}`);
+    pm.setLogConfigPath(cfg); // the in-app log of an app this process never started reads the same file
+    assert.ok(/GET \/x/.test(pm.getAppLogs('chatty').stdout), JSON.stringify(pm.getAppLogs('chatty')));
   });
 
   for (const c of children) { if (c.exitCode === null) { try { await pm.killProcess(c.pid); } catch { /* gone */ } } }

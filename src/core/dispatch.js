@@ -29,6 +29,8 @@ const { makeStartedBy } = require('./status');
  * @param {string} [opts.surface='web']  which surface a human start is stamped with
  */
 function createDispatcher(configStore, { surface = 'web' } = {}) {
+  // App output -> logs/<appId>.log beside this config (F92).
+  if (configStore && configStore.configPath) require('../main/processManager').setLogConfigPath(configStore.configPath);
   const handlers = {
     // ---- Ports ----
     'ports:scan': async () => ({ success: true, ports: await scanPorts() }),

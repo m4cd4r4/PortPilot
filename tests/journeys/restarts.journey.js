@@ -183,6 +183,10 @@ async function cdp(port) {
       await j.quit();
       j.check('PortPilot has exited', !h.alive(pid));
       j.check('the clean quit left shop running (Stop PortPilot-started apps on quit is off by default)', (await j.answers(shopPort))?.title === 'Shop');
+      // Each answer writes a log line: a server whose output still went to the quit PortPilot died here (F92).
+      const later = [];
+      for (let i = 0; i < 2; i++) { await new Promise((r) => setTimeout(r, 500)); later.push((await j.answers(shopPort))?.title || null); }
+      j.check('shop keeps answering (and logging) after PortPilot is gone', later.every((t) => t === 'Shop'), JSON.stringify(later));
       j.check('the same server process still holds its port', j.listeners(shopPort).length === 1 && j.listeners(shopPort)[0] === was.shopPid, `${j.listeners(shopPort)} vs ${was.shopPid}`);
       j.check('its run is still open', openRuns((r) => r.appId === ids.shop).map((r) => r.id).join() === was.shopRun, JSON.stringify(openRuns((r) => r.appId === ids.shop).map((r) => r.id)));
       j.check('and its runtime entry still says a person started it', j.runtime()[ids.shop]?.startedBy?.kind === 'human', JSON.stringify(j.runtime()[ids.shop]));

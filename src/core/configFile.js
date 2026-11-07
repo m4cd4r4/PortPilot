@@ -226,6 +226,25 @@ function recordStop(configPath, appId) {
   }
 }
 
+// A start whose server is gone without anyone seeing it stop (it died while PortPilot was closed,
+// a reboot): drop the entry and close its run as 'unknown' (F93). Only the start stamped at
+// `startedAt` is dropped, so a newer start of the same app is never touched.
+function recordGone(configPath, appId, startedAt) {
+  if (!appId || !startedAt) return false;
+  let dropped = false;
+  try {
+    updateJson(runtimePathFor(configPath), (runtime) => {
+      const e = runtime.apps && runtime.apps[appId];
+      if (e && e.startedBy && e.startedBy.at === startedAt) { delete runtime.apps[appId]; dropped = true; }
+    }, emptyRuntime);
+  } catch (err) {
+    console.error('[configFile] Failed to drop a gone app:', err.message);
+    return false;
+  }
+  if (dropped) history((h) => h.closeRun(configPath, appId, { endedBy: 'unknown' }));
+  return dropped;
+}
+
 // Stamp an unexpected exit so surfaces outside the desktop process (the VS
 // Code extension) can tell a crash from a clean stop. The stamp replaces the
 // dead run's entry, so its startedBy never labels a later process on the same
@@ -288,8 +307,12 @@ function logPathFor(configPath, appId) {
 }
 
 function readLogTail(configPath, appId, chars = CRASH_TAIL_CHARS) {
+  return readFileTail(logPathFor(configPath, appId), chars);
+}
+
+/** The last `chars` characters of a file, or null when it cannot be read. */
+function readFileTail(file, chars = CRASH_TAIL_CHARS) {
   try {
-    const file = logPathFor(configPath, appId);
     const { size } = fs.statSync(file);
     const fd = fs.openSync(file, 'r');
     try {
@@ -391,7 +414,7 @@ function sendToSession(configPath, sessionId, appId, now = Date.now()) {
 
 module.exports = {
   readJson, writeJsonAtomic, withLock, updateJson,
-  runtimePathFor, readRuntime, recordStart, recordStop, recordCrash, clearCrash,
-  logPathFor, readLogTail, CRASH_TAIL_CHARS,
+  runtimePathFor, readRuntime, recordStart, recordStop, recordGone, recordCrash, clearCrash,
+  logPathFor, readLogTail, readFileTail, CRASH_TAIL_CHARS,
   sessionsDirFor, inboxPathFor, liveSessions, sendToSession, pruneSessions, SESSION_LIVE_MS, SESSION_KEEP_MS,
 };

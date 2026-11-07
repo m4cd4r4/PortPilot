@@ -213,6 +213,7 @@ if (!gotTheLock) {
   }
 
   app.whenReady().then(() => {
+    const launchedAt = Date.now(); // starts stamped before this came from an earlier session
     // Set dark mode for native title bar on Windows
     nativeTheme.themeSource = 'dark';
     if (OVERLAY_TITLE_BAR) Menu.setApplicationMenu(null);
@@ -220,6 +221,7 @@ if (!gotTheLock) {
     // Create window first, then pass it to ConfigStore for file watching
     const window = createWindow(null);
     configStore = new ConfigStore(window);
+    require('./processManager').setLogConfigPath(configStore.configPath); // app output -> logs/<appId>.log (F92)
     createTray();
     setupIpcHandlers(ipcMain, configStore);
 
@@ -274,7 +276,12 @@ if (!gotTheLock) {
     // launch, then hourly; the sweep itself only runs when a week has passed).
     try {
       require('./thumbnails').startThumbnailWatcher(configStore.configPath);
-      startLocalhostTracking();
+      // Desktop starts from an earlier session whose server is gone are dropped first (F93), so
+      // the watcher's first scan sees which ports PortPilot really still owns.
+      require('./adoptedApps').reconcileStale(configStore.configPath, { before: launchedAt })
+        .then((ids) => { if (ids.length) console.log(`[launch] closed ${ids.length} run(s) whose server was gone: ${ids.join(', ')}`); })
+        .catch((err) => console.error('[launch] stale-start check failed:', err))
+        .finally(() => { if (!quitCleanup) startLocalhostTracking(); });
       const { sweepIfDue } = require('../core/runSweep');
       const sweepTimer = setTimeout(function again() {
         sweepIfDue(configStore.configPath).finally(() => setTimeout(again, 60 * 60 * 1000).unref());

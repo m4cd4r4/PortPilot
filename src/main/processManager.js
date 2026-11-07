@@ -1,7 +1,8 @@
 const { spawn, exec } = require('child_process');
+const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { recordStop } = require('../core/configFile');
+const { recordStop, logPathFor, readFileTail } = require('../core/configFile');
 const { isOwnPid } = require('../core/selfGuard');
 
 // A kill aimed at PortPilot itself (Electron main, the MCP child, the in-process web agent):
@@ -13,6 +14,26 @@ function refuseOwn(pid) {
 
 // Track running child processes
 const runningProcesses = new Map();
+
+// An app's output goes to logs/<appId>.log beside the config (the file MCP starts write too), never
+// through a pipe to this process: a server left running by quit (quitApps.js) would die on its first
+// log line once the pipe's reader was gone (EPIPE, F92). The in-app log reads the file's tail.
+let logConfigPath = null;
+function setLogConfigPath(configPath) { logConfigPath = configPath || null; }
+function logFileFor(appId) {
+  if (logConfigPath) return logPathFor(logConfigPath, appId);
+  const safe = String(appId).replace(/[^A-Za-z0-9_-]/g, '_').slice(0, 120);
+  return path.join(os.tmpdir(), 'portpilot-logs', `${safe}.log`);
+}
+/** Truncate and open the app's log for the child to write; null (output discarded) when it cannot. */
+function openLog(file) {
+  try {
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    return fs.openSync(file, 'w');
+  } catch {
+    return null;
+  }
+}
 
 // Listeners notified when an app that was running exits unexpectedly (i.e. not
 // via stopApp). The Electron main process registers one to raise an OS
@@ -65,31 +86,23 @@ async function startApp(appConfig) {
         execEnv.PORT = appConfig.preferredPort.toString();
       }
 
-      const childProcess = exec(command, {
-        cwd: cwd || process.cwd(),
-        env: execEnv,
-        windowsHide: true,
-        maxBuffer: 10 * 1024 * 1024,
-        shell: isWindows ? 'C:\\Windows\\System32\\cmd.exe' : '/bin/sh'
-      });
-
-      let output = '';
-      let errorOutput = '';
-
-      childProcess.stdout?.on('data', (data) => {
-        output += data.toString();
-        // Update stored output
-        if (runningProcesses.has(id)) {
-          runningProcesses.get(id).output = output.slice(-10000); // Keep last 10KB
-        }
-      });
-
-      childProcess.stderr?.on('data', (data) => {
-        errorOutput += data.toString();
-        if (runningProcesses.has(id)) {
-          runningProcesses.get(id).errorOutput = errorOutput.slice(-10000);
-        }
-      });
+      // stdout and stderr go straight to the log file (no pipe, no maxBuffer kill).
+      const logFile = logFileFor(id);
+      const fd = openLog(logFile);
+      const out = fd == null ? 'ignore' : fd;
+      let childProcess;
+      try {
+        childProcess = spawn(command, {
+          cwd: cwd || process.cwd(),
+          env: execEnv,
+          windowsHide: true,
+          stdio: ['ignore', out, out],
+          shell: isWindows ? 'C:\\Windows\\System32\\cmd.exe' : '/bin/sh'
+        });
+      } finally {
+        if (fd != null) { try { fs.closeSync(fd); } catch { /* the child has its own handle */ } }
+      }
+      const tail = (chars) => (fd == null ? '' : readFileTail(logFile, chars) || '');
 
       childProcess.on('error', (err) => {
         runningProcesses.delete(id);
@@ -104,7 +117,7 @@ async function startApp(appConfig) {
           if (isCrashed(processInfo)) {
             // Tail taken at exit: stderr, else stdout (many dev servers print
             // their fatal error there).
-            const errorTail = (processInfo.errorOutput || processInfo.output || '').slice(-2000) || null;
+            const errorTail = tail(2000) || null;
             emitCrash({ id, name, code, errorTail, pid: processInfo.pid, at: Date.now() });
           }
         }
@@ -120,8 +133,7 @@ async function startApp(appConfig) {
         cwd,
         startTime: new Date(),
         running: true,
-        output: '',
-        errorOutput: ''
+        logFile: fd == null ? null : logFile
       });
 
       // Give it a moment to start
@@ -129,14 +141,15 @@ async function startApp(appConfig) {
         if (childProcess.killed || childProcess.exitCode !== null) {
           runningProcesses.delete(id); // Clean up failed start
           const exited = childProcess.exitCode !== null;
+          const said = tail(2000);
           resolve({
             success: false,
-            error: errorOutput || 'Process exited immediately',
+            error: said || 'Process exited immediately',
             exitCode: childProcess.exitCode,
             // Dead on arrival: the desktop Start handler turns this into a crash
             // (toast, Diagnose, Ask Claude) so it is not just a one-line error.
             exited,
-            errorTail: exited ? ((errorOutput || output).slice(-2000) || null) : null
+            errorTail: exited ? (said || null) : null
           });
         } else {
           const info = runningProcesses.get(id);
@@ -294,9 +307,7 @@ function getRunningApps() {
       running: info.running && info.process && !info.process.killed,
       startTime: info.startTime,
       exitCode: info.exitCode,
-      crashed: isCrashed(info),
-      outputTail: info.output?.slice(-500),
-      errorTail: info.errorOutput?.slice(-500)
+      crashed: isCrashed(info)
     });
   }
   
@@ -310,15 +321,14 @@ function getRunningApps() {
  */
 function getAppLogs(appId) {
   const processInfo = runningProcesses.get(appId);
-
-  if (!processInfo) {
+  // An app this session did not start (adopted after a relaunch) still has its log file.
+  const file = processInfo ? processInfo.logFile : logFileFor(appId);
+  const stdout = file ? readFileTail(file, 10000) : null;
+  if (!processInfo && stdout == null) {
     return { stdout: '', stderr: '', error: 'App not found' };
   }
-
-  return {
-    stdout: processInfo.output || '',
-    stderr: processInfo.errorOutput || ''
-  };
+  // One file holds both streams, in the order they were written.
+  return { stdout: stdout || '', stderr: '' };
 }
 
 /**
@@ -358,5 +368,6 @@ module.exports = {
   emitCrash,
   forgetCrash,
   dismissedSince,
-  isCrashed
+  isCrashed,
+  setLogConfigPath
 };

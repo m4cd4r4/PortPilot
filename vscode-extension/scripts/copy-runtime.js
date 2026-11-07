@@ -38,6 +38,7 @@ const FILES = [
   'core/localhostDetect.js',
   'core/runView.js',
   'core/status.js',
+  'core/selfGuard.js',
   'main/configStore.js',
   'main/portScanner.js',
   'main/processManager.js',

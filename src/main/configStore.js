@@ -3,6 +3,9 @@ const path = require('path');
 const { getConfigPath } = require('../core/configPath');
 const { readJson, writeJsonAtomic, withLock, updateJson } = require('../core/configFile');
 
+// Bumped when a saved setting needs a one-time migration (see migrateSettings).
+const SETTINGS_VERSION = 2;
+
 /**
  * ConfigStore - Manages persistent app configurations
  */
@@ -12,8 +15,30 @@ class ConfigStore {
     // all land on the same file (works with or without Electron).
     this.configPath = configPathOverride || getConfigPath();
     this.config = this.load();
+    this.migrateSettings();
     this.mainWindow = mainWindow;
     this.watchConfigFile();
+  }
+
+  /**
+   * One-time settings migrations, keyed by settings.settingsVersion (absent = 1).
+   * 2 (owner decision 2026-11-07, F101): "Stop PortPilot-started apps on quit" used to default to
+   * on, so a saved true mostly means nobody chose it. It is reset to off once; a box ticked after
+   * that is the person's choice and is never reset again.
+   */
+  migrateSettings() {
+    const version = Number(this.config && this.config.settings && this.config.settings.settingsVersion) || 1;
+    if (version >= SETTINGS_VERSION || !fs.existsSync(this.configPath)) return;
+    try {
+      this.update((c) => {
+        if (!c.settings || typeof c.settings !== 'object') c.settings = {};
+        if ((Number(c.settings.settingsVersion) || 1) >= SETTINGS_VERSION) return;
+        if (c.settings.stopAppsOnQuit === true) c.settings.stopAppsOnQuit = false;
+        c.settings.settingsVersion = SETTINGS_VERSION;
+      });
+    } catch (error) {
+      console.error('[ConfigStore] Settings migration failed:', error.message);
+    }
   }
 
   /**
@@ -99,6 +124,7 @@ class ConfigStore {
       apps: [],
       groups: [],
       settings: {
+        settingsVersion: SETTINGS_VERSION, // a new config needs no migration
         startMinimized: false,
         autoScan: true,
         scanInterval: 5000,
