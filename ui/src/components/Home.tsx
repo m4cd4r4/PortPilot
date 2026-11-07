@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Host, Profile, Run, Scene, Snapshot } from '../host';
 import { ago, cards, groupOf, hueOf, type Card, type Tally, type View } from '../model';
+import { runView } from '../legacy';
 import { sceneRun, sceneSummary, startScene, stopScene } from '../scenes';
 import { usePrefs } from '../prefs';
 import type { Thumbs } from '../useThumbs';
@@ -165,7 +166,7 @@ export function Home({ host, t, loaded, onView, onOpenItem, snap, thumbs, onDone
                     <h2>{prefs.status === 'dot'
                       ? <span className={`dot${c.state === 'running' ? ' on' : ''}`} />
                       : <span className="stat-word"><span aria-hidden="true">{c.state === 'running' ? '●' : '○'}</span> {c.state === 'running' ? 'running' : 'stopped'}</span>}<span className="nm">{c.app.name}</span></h2>
-                    <span className="tile-sub">{[c.port ? `:${c.port}` : '', last ? (c.state === 'running' ? `started ${last}` : `last run ${last}`) : ''].filter(Boolean).join(' · ')}</span>
+                    <span className="tile-sub">{[c.port ? `:${c.port}` : '', last ? (c.state === 'running' ? `started ${last}` : `last run ${last}`) : '', c.state === 'running' ? runView().startedByLabel(c.startedBy) : ''].filter(Boolean).join(' · ')}</span>
                   </div>
                   <button className="chip chip-tr" title="Details" onClick={() => onOpenItem('app', c.app.id)}>
                     <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="3.5" cy="8" r="1.2" fill="currentColor" stroke="none" /><circle cx="8" cy="8" r="1.2" fill="currentColor" stroke="none" /><circle cx="12.5" cy="8" r="1.2" fill="currentColor" stroke="none" /></svg>

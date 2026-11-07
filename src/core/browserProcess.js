@@ -1,6 +1,6 @@
 /**
  * Which processes are a browser profile's browser, and what a browser leaves on its folder
- * (findings F21, F22, F45, F64-F79).
+ * (findings F21, F22, F45, F64-F82).
  *
  * A browser's debug port can go quiet seconds before its main process exits, and Brave's crash
  * reporter (--type=crashpad-handler) can keep the profile folder open a minute or more. Stop waits
@@ -52,7 +52,7 @@ function holdsDir(holder, dir) {
 // Main processes this PortPilot process launched or stopped, per profile folder: pid -> createdAt
 // In memory and per process: the desktop app and each MCP server keep their own, so a browser
 // started by another of them is one this process "cannot confirm" (F63, F68). A pid whose start
-// time could not be read is never recorded: a pid alone cannot tell our browser from a reuse (F74).
+// time could not be read is never recorded: a pid alone cannot tell our browser from a reuse (F77).
 const ours = new Map();
 function remember(dir, pid, createdAt) {
   if (!Number.isInteger(pid) || pid <= 0 || !createdAt) return;
@@ -128,7 +128,7 @@ async function awaitBrowserExit(pid, dir, d, o, pollMs) {
  * what is left only when every one of them is a leftover of our own:
  *   - a main browser process this PortPilot process recorded (same pid and start time)
  *   - a helper (crash reporter and the like) whose parent is gone, or is one of ours. By the owner's
- *     decision (F81) an orphan helper is ended whoever launched its browser, a hand-launched one
+ *     decision (F84) an orphan helper is ended whoever launched its browser, a hand-launched one
  *     included: with its browser closed it only holds the folder.
  * A main we did not record, a helper whose parent is alive and not ours, or a parent that cannot be
  * queried makes the whole folder someone else's: nothing is killed.
@@ -162,7 +162,7 @@ async function freeFolder(dir, o, d) {
   }
   // Whose is each holder? A helper follows its parent; a parent outside the list is asked directly.
   // A "parent" that started after its child is a later process on a reused pid: the child is an
-  // orphan (F75).
+  // orphan (F78).
   const verdict = new Map();
   const judge = async (p, depth = 0) => {
     if (verdict.has(p.pid)) return verdict.get(p.pid);

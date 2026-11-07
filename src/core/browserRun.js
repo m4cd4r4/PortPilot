@@ -243,7 +243,7 @@ async function startProfile(configPath, name, o = {}, d = defaultDeps()) {
   if (!v) {
     // Left alone the child would hold the folder locked. But it may have handed off to another
     // instance and exited, and its pid been reused: end it only if it is still that same process
-    // (F64), which needs the start time read at launch. Without one nothing is killed (F76).
+    // (F64), which needs the start time read at launch. Without one nothing is killed (F79).
     if (launched) {
       const now = await identify(child.pid, dir, d, launched.createdAt);
       if (now && !now.unknown) await d.killVerified({ pid: child.pid, createdAt: launched.createdAt, dir, main: true });
@@ -332,7 +332,7 @@ async function waitDown(profile, d, ms, pollMs) {
  * profile's user-data-dir is ever stopped. Rejects NOT_OURS (port held by something else),
  * NOT_VERIFIED (cannot identify the holder) or STOP_FAILED. Once the port is quiet it waits for the
  * browser's main process too (F21): the result's `browserExit` says whether it exited or was killed.
- * By the owner's decision (F80), Stop ends the profile's browser even when this PortPilot process
+ * By the owner's decision (F83), Stop ends the profile's browser even when this PortPilot process
  * did not launch it (another window, an MCP server, or the user by hand): the port and folder make
  * it the profile's browser, and stopping it is what Stop is for.
  * @param {object} [o] { pollMs, graceMs, killMs, exitMs }
@@ -363,7 +363,7 @@ async function stopProfile(configPath, name, o = {}, d = defaultDeps()) {
   // this profile's browser, with the same pid and start time, immediately before ending it.
   const now = await d.inspectPort(profile.port);
   let killed = false;
-  // Without a start time read before the close there is no identity to check against: no kill (F74).
+  // Without a start time read before the close there is no identity to check against: no kill (F77).
   if (createdAt && now && now.pid === st.pid && holdsDir(now, dir)) {
     const same = await identify(st.pid, dir, d, createdAt);
     if (same && !same.unknown) killed = (await d.killVerified({ pid: st.pid, createdAt, dir, main: true })) === 'killed';

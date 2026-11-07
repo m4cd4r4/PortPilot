@@ -13,7 +13,7 @@
  *
  * Values that come from outside (a profile folder, a start time) never go into PowerShell script
  * text: they travel in environment variables (PP_DIR, PP_AT) and the script reads $env:. Quoting
- * them is not enough: PowerShell also ends a '...' string at U+2018-U+201B (F70).
+ * them is not enough: PowerShell also ends a '...' string at U+2018-U+201B (F73).
  */
 const path = require('path');
 const { execFile } = require('child_process');
@@ -29,8 +29,8 @@ const runFull = (file, args, env) => new Promise((resolve) => {
   execFile(file, args, { ...QUERY_OPTS, ...(env ? { env: { ...process.env, ...env } } : {}) },
     (err, stdout) => resolve({ err, code: err ? err.code : 0, stdout: stdout || '' }));
 });
-// UTF-8 out, so a non-ASCII folder or command line is not read back as '?' (F71).
-// Any error stops the script and exits 1, so a failed CIM query never prints an empty answer (F72).
+// UTF-8 out, so a non-ASCII folder or command line is not read back as '?' (F74).
+// Any error stops the script and exits 1, so a failed CIM query never prints an empty answer (F75).
 const ps1 = (body, env) => runFull('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command',
   `[Console]::OutputEncoding = [Text.Encoding]::UTF8; $ErrorActionPreference = 'Stop'; try {\n${body}\n} catch { exit 1 }`], env);
 const winDir = (dir) => String(dir).replace(/\//g, '\\').toLowerCase();
@@ -118,7 +118,7 @@ async function dirHolders(dir) {
   return parsePsTable(r.stdout).filter((p) => p.commandLine.toLowerCase().includes(key));
 }
 
-/** What a failed or successful process.kill means: only "no such process" is 'gone' (F73). */
+/** What a failed or successful process.kill means: only "no such process" is 'gone' (F76). */
 const signalResult = (err) => (!err ? 'killed' : err.code === 'ESRCH' ? 'gone' : 'unknown');
 
 /**

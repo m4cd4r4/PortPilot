@@ -122,7 +122,7 @@ function AppHistory({ host, kindSwitch }: Props & { kindSwitch: ReactNode }) {
                   <div className="meta">
                     <div className="title"><span className={`stat ${st}`}><span aria-hidden="true">{GLYPH[st]}</span> {WORD[st]}</span><span className="name">{rv.labelOf(r)}</span>
                       {r.git?.branch && <span className="branch">{r.git.branch}</span>}</div>
-                    <div className="sub"><span className="port">{r.port ? `:${r.port}` : ''}</span><span className="when">{rv.formatWhen(r).replace(/ -$/, '')}</span>{!live && state.reason && <span>{state.reason}</span>}</div>
+                    <div className="sub"><span className="port">{r.port ? `:${r.port}` : ''}</span><span className="when">{rv.formatWhen(r).replace(/ -$/, '')}</span>{!live && state.reason && <span>{state.reason}</span>}{rv.startedByLabel(r.startedBy) && <span className="by" title={rv.startedByLabel(r.startedBy)}>{rv.startedByLabel(r.startedBy)}</span>}</div>
                     {r.page?.title && r.page.title !== rv.labelOf(r) && <div className="sub"><span className="note">{r.page.title}</span></div>}
                   </div>
                   <div className="acts shown">
