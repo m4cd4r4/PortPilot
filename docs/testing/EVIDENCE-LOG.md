@@ -109,6 +109,7 @@ Every number published about this work (see [ARTICLE-NOTES.md](ARTICLE-NOTES.md)
 | 2026-11-07 11:30 | dc96384 + quit-keeps-servers (in progress) | restarts with the new default and the F42 checks | 46/52, stopped at the MCP stop step: card Stop refused the adopted shop (F50) | 169.2 s | quit with the default left shop running and the relaunch adopted the same run: those checks passed first time |
 | 2026-11-07 11:36 | + F50 fix | restarts | 94/94 | 163.1 s | screenshots read at 1440 and 390 (Settings box unticked by default, new hint; shop stopped after the adopted Stop) |
 | 2026-11-07 11:46-11:55 | e2c601e | restarts, day-one x2, long-haul, then `npm run test:unit`, one at a time under the lock | 94/94, 63/63, 63/63, 66/66; unit exit 0 | 157.0, 77.6, 67.4, 76.0 s | |
+| 2026-11-07 12:00-12:10 | 44cf74a (rebased onto eeef781) | restarts, day-one, long-haul, then `npm run test:unit`, one at a time under the lock | 94/94, 63/63, 66/66; unit exit 0 | 188.7, 86.2, 96.8 s | |
 
 ## Cleanups done on real data
 
