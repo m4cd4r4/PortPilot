@@ -262,6 +262,21 @@ const run = (over = {}) => ({
     assert.strictEqual(view.startedByWord(bare()), 'detected');
   });
 
+  await t('startedByLabel says "started by claude <id>" for a Claude run, in the Browsers history wording', async () => {
+    const by = { kind: 'claude', surface: 'mcp', sessionId: 'B71C-9d02-ffff', at: '2026-11-07T01:00:00.000Z' };
+    assert.strictEqual(view.startedByLabel(by), 'started by claude b71c');
+    assert.strictEqual(view.startedByLabel(by), `started by ${require('../src/core/browserView').startedByWord(by)}`);
+    assert.strictEqual(view.startedByLabel({ kind: 'claude', surface: 'mcp' }), 'started by claude');
+  });
+
+  await t('startedByLabel is empty for a person, a detected server, an external run and a run with no record', async () => {
+    assert.strictEqual(view.startedByLabel({ kind: 'human', surface: 'desktop' }), '');
+    assert.strictEqual(view.startedByLabel({ kind: 'detected', surface: 'desktop' }), '');
+    assert.strictEqual(view.startedByLabel({ kind: 'external', surface: 'desktop' }), '');
+    assert.strictEqual(view.startedByLabel(null), '');
+    assert.strictEqual(view.startedByLabel(undefined), '');
+  });
+
 
   console.log(`\n${passed} passed, ${failed} failed`);
   process.exit(failed ? 1 : 0);

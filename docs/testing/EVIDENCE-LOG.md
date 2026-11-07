@@ -63,6 +63,8 @@ Every number published about this work (see [ARTICLE-NOTES.md](ARTICLE-NOTES.md)
 | F47 | 2026-11-06 | Three test bugs found while building the restarts journey, fixed before it first passed. | restarts journey's own failed checks | test bug | restarts PR |
 | F48 | 2026-11-07 | After the rebase, "beta now has two records" read `browser-runs.json` straight after Start, before the start call had written the record; two later checks then failed from it. Same race the day-2 step already waited for. | restarts journey, 1 of 2 runs | test bug | restarts PR (waits up to 10 s) |
 | F49 | 2026-11-07 | `page.screenshot: Timeout 30000ms` again: once in restarts (step 2) and once in long-haul (last step, after its raise-and-retry). F18 and F35 are the same flake; the retry does not cure it. | restarts and long-haul journeys | flake (watch; see F18) | open |
+| F70 | 2026-11-07 | Resolution of F23. Decision 2026-11-07: App History rows and running app cards (Rows, Tiles, Cards, grouped, Home's running list, 390 px) say `started by claude <id>` when a Claude session started the run, in the Browsers history wording; nothing for a person-started or detected run. The card reads the runtime file's owner, and only while the entry's recorded port matches the live port, because the entry outlives its process. | claude-sessions journey: api card and History row carry the label, a person-started web app shows none | fix | history PR (`feat/history-started-by`) |
+| F71 | 2026-11-07 | The Browsers history filter does not match "started by" (it searches profile, tab title and address only), so the App History filter was left as it is: typing a session id or "claude" finds nothing in either list. | reading `BrowserHistory.tsx` `matches` while building F70 | gap (matches the Browsers behaviour, by decision) | open, not needed unless wanted |
 
 ## Runs
 
@@ -98,6 +100,7 @@ Every number published about this work (see [ARTICLE-NOTES.md](ARTICLE-NOTES.md)
 | 2026-11-07 07:56 | + review fix (quit logs when the 10 s cap cuts the cleanup short) | restarts | 75/75 | 115.9 s | |
 | 2026-11-07 06:48 | + review fixes (F39, first F40 attempt) | long-haul | 62/65: F40's failed check, then the last step stopped on `page.screenshot: Timeout 30000ms` (F18/F35 kind), so the two journey servers outlived it and were killed | 159.3 s | |
 | 2026-11-07 06:51 | + F40 fixed | long-haul x2, then day-one, one at a time | 66/66, 66/66, 63/63 | 82.2, 78.8, 73.3 s | |
+| 2026-11-07 11:16 | history: F70 started-by label (journey now has a person-started `web` app) | claude-sessions x2, day-one, one at a time under the lock; `npm run test:e2e:ui` (9 specs, 217 checks) | 72/72, 72/72, 63/63; e2e 0 failed | 121.5, 110.4, 85.5 s; e2e 233 s | |
 
 ## Cleanups done on real data
 

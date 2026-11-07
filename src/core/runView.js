@@ -102,6 +102,15 @@
     return p.kind === 'external' ? 'external' : p.word;
   }
 
+  /**
+   * "started by claude b71c" when a Claude session started the run, else '' (a person, a detected
+   * server, an old run with no record). Same words as Browsers history's startedByWord.
+   */
+  function startedByLabel(startedBy) {
+    const p = startedBy ? Status.provenanceOf(startedBy) : null;
+    return p && p.kind === 'claude' ? `started by ${p.word}` : '';
+  }
+
   const DAY = new Intl.DateTimeFormat('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
   const CLOCK = new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
 
@@ -176,5 +185,5 @@
     return out;
   }
 
-  return { appThumbs, filterRuns, facets, labelOf, runStateOf, startedByWord, formatWhen, formatBytes, footerText, gitLine, rowThumbs };
+  return { appThumbs, filterRuns, facets, labelOf, runStateOf, startedByWord, startedByLabel, formatWhen, formatBytes, footerText, gitLine, rowThumbs };
 });

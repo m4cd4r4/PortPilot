@@ -46,6 +46,12 @@ export function createElectronHost(): Host {
       }
       // The scan knows the port an app is really on, and also finds apps another tool started.
       for (const [id, m] of Object.entries<any>(scan?.matches || {})) running[id] = { ...running[id], port: m.port, pid: running[id]?.pid ?? m.pid };
+      // Who started a live app comes from the runtime file. The entry outlives its process, so it is
+      // used only while its recorded port still matches the one the app is on now.
+      for (const [id, live] of Object.entries(running)) {
+        const rt = proc?.runtime?.[id];
+        if (rt?.startedBy && (!rt.port || !live.port || rt.port === live.port)) live.startedBy = rt.startedBy;
+      }
       for (const id of Object.keys(running)) delete crashed[id];
       return {
         apps: cfg?.apps || [],

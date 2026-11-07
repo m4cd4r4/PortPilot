@@ -47,7 +47,7 @@ export interface Snapshot {
   apps: AppRec[];
   groups: Group[];
   /** appId -> live info, present only while the app is up */
-  running: Record<string, { port?: number; pid?: number }>;
+  running: Record<string, { port?: number; pid?: number; /** the runtime file's owner of this run: set only while it matches the live port */ startedBy?: unknown }>;
   /** appId -> exit info for an app PortPilot started that has since died; kept across relaunches until it starts again or is dismissed */
   crashed: Record<string, { exitCode?: number | null; at?: number; port?: number | null }>;
   conflicts: Conflict[];

@@ -11,6 +11,8 @@ interface RunViewApi {
   formatWhen(run: Run): string;
   runStateOf(run: Run, live: boolean): RunState;
   filterRuns(runs: Run[], f: { query?: string }): Run[];
+  /** "started by claude b71c" for a Claude-started run, '' for anything else. */
+  startedByLabel(startedBy: unknown): string;
 }
 export const runView = (): RunViewApi => (window as any).PortPilotRunView;
 

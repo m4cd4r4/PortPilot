@@ -155,8 +155,8 @@ function worldProcs(dir) {
   // dev servers). Drawn and guarded before the world exists; the kit's own ports are guarded once it hands them over.
   const extra = await h.freePorts(3);
   if (extra.some(devPort)) throw new Error(`the OS handed out a port the developer uses (${extra.join(', ')}); run again`);
-  const j = await journey('claude-sessions', { ports: 1, detectIntervalMs: 10000 });
-  const [apiPort] = j.ports;
+  const j = await journey('claude-sessions', { ports: 2, detectIntervalMs: 10000 });
+  const [apiPort, webPort] = j.ports;
   const all = [...j.ports, ...extra];
   if (all.some(devPort) || new Set(all).size !== all.length) {
     try { fs.rmSync(j.tmp, { recursive: true, force: true }); } catch { /* nothing started in it yet */ }
@@ -169,12 +169,14 @@ function worldProcs(dir) {
   await new Promise((r) => site.listen(sitePort, '127.0.0.1', r));
   const shopUrl = `http://127.0.0.1:${sitePort}/admin/orders`;
 
-  // The world a person set up before the sessions arrive: one app, two browser profiles.
+  // The world a person set up before the sessions arrive: two apps (api is started by a Claude session, web by the person), two browser profiles.
   const apiDir = j.project('api');
+  const webDir = j.project('web');
   const cfgPath = path.join(j.configDir, 'portpilot-config.json');
   fs.writeFileSync(cfgPath, JSON.stringify({
     groups: [], settings: {},
-    apps: [{ id: 'app_journey_api', name: 'api', cwd: apiDir, command: j.command(apiPort, { title: 'Api' }), preferredPort: apiPort, group: null, isFavorite: false, createdAt: new Date().toISOString() }],
+    apps: [{ id: 'app_journey_api', name: 'api', cwd: apiDir, command: j.command(apiPort, { title: 'Api' }), preferredPort: apiPort, group: null, isFavorite: false, createdAt: new Date().toISOString() },
+      { id: 'app_journey_web', name: 'web', cwd: webDir, command: j.command(webPort, { title: 'Web' }), preferredPort: webPort, group: null, isFavorite: false, createdAt: new Date().toISOString() }],
     browserProfiles: [
       { name: 'shop-admin', port: shopDebug, browser: 'brave', mode: 'headless', url: shopUrl, note: 'orders and refunds' },
       { name: 'blog-editor', port: blogDebug, browser: 'brave', mode: 'headless', url: 'about:blank', note: 'drafts and comments' },
@@ -316,12 +318,27 @@ function worldProcs(dir) {
       await j.tab('Apps');
       j.check('the api card reads running', await j.waitFor(async () => (await j.stateOf('app_journey_api')) === 'running', 15000), await j.stateOf('app_journey_api'));
       j.note(`api card text: ${(await j.card('app_journey_api').textContent().catch(() => '')).replace(/\s+/g, ' ')}`);
+      const apiLabel = `started by claude ${short(B)}`;
+      const apiCard = await j.waitFor(async () => { const t = await j.card('app_journey_api').textContent().catch(() => ''); return t.includes(apiLabel) && t; }, 15000);
+      j.check(`the api card says "${apiLabel}"`, apiCard, apiCard || await j.card('app_journey_api').textContent().catch(() => 'no card'));
+      // A person presses Start on web: its card and its History row must say nothing about who started it.
+      await j.card('app_journey_web').getByRole('button', { name: 'Start' }).click();
+      j.check('web card reads running', await j.waitFor(async () => (await j.stateOf('app_journey_web')) === 'running', 20000), await j.stateOf('app_journey_web'));
+      const webRun = await j.waitFor(() => j.runs().find((x) => x.appId === 'app_journey_web' && !x.stoppedAt), 10000);
+      j.check('runs.json stamps the web run as started by a person (human, desktop)', webRun && webRun.startedBy?.kind === 'human' && webRun.startedBy?.surface === 'desktop', JSON.stringify(webRun && webRun.startedBy));
+      const webCard = await j.card('app_journey_web').textContent().catch(() => '');
+      j.check('the web card shows no "started by" label', !/started by/i.test(webCard) && /web/.test(webCard), webCard);
       await j.shot('04-b-started-api');
       await j.tab('History');
-      const row = await j.waitFor(async () => (await j.win.locator('.run').allTextContents()).find((t) => /api/.test(t) && /running/i.test(t)), 15000);
-      j.check('History lists the api run as running', row, row);
+      const row = await j.waitFor(async () => (await j.win.locator('.run').allTextContents()).find((t) => /api/.test(t) && /running/i.test(t) && t.includes(apiLabel)), 15000);
+      j.check(`App History lists the api run as running, "${apiLabel}"`, row, row || (await j.win.locator('.run').allTextContents()).join(' | '));
       j.note(`api history row text: ${row}`);
+      const webRow = (await j.win.locator('.run').allTextContents()).find((t) => /web/.test(t) && /running/i.test(t));
+      j.check('App History lists the web run with no "started by" label', webRow && !/started by/i.test(webRow), webRow);
       await j.shot('05-history-apps');
+      await j.tab('Apps');
+      await j.card('app_journey_web').getByRole('button', { name: 'Stop' }).click();
+      j.check('web stops again', await j.portFree(webPort, 15000), j.listeners(webPort).join('/'));
     }],
 
     ['session B stops the browser and the app; Browsers history says who', async () => {
