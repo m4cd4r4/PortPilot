@@ -229,7 +229,7 @@ function killProcess(pid) {
     const leadsGroup = !isWindows && [...runningProcesses.values()].some((i) => i.pid === safePid && i.group);
     const command = isWindows
       ? `taskkill /F /PID ${safePid} /T`
-      : (leadsGroup ? `kill -9 -- -${safePid}` : `kill -9 ${safePid}`);
+      : `kill -9 ${safePid}`;
 
     // Must specify shell explicitly - Git Bash/MSYS can interfere with Windows commands
     const execOptions = { shell: isWindows ? 'cmd.exe' : '/bin/sh', windowsHide: true };
@@ -250,6 +250,11 @@ function killProcess(pid) {
       }
       resolve({ success: true, message: `Killed process ${safePid}` });
     };
+
+    if (leadsGroup) {
+      // Signal the group from here: the shell's `kill` builtin differs between dash and bash.
+      try { process.kill(-safePid, 'SIGKILL'); return killed(); } catch { /* group gone: fall back to the pid */ }
+    }
 
     exec(command, execOptions, (error) => {
       if (!error) return killed();
