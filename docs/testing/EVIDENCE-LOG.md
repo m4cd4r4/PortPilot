@@ -163,6 +163,8 @@ Every number published about this work (see [ARTICLE-NOTES.md](ARTICLE-NOTES.md)
 | 2026-11-07 14:53-14:55 UTC (machine clock) | same | restarts rerun alone, under the lock | 100/100 | 110.9 s | |
 | 2026-11-08 04:39-04:45 UTC | 65a7d7c, then f0306b5 (F106) | GitHub Actions on PR #217 | 65a7d7c: ubuntu Tests 32/33 (`kill -9 -- -pid` under dash); f0306b5: all 4 checks pass (Tests and Package, ubuntu and windows) | | first green ubuntu Tests on this PR |
 | 2026-11-08 04:55-04:59 UTC (machine clock) | f0306b5 | restarts, under the lock | 100/100 | 206.8 s | |
+| 2026-11-08 07:07-07:15 UTC (machine clock) | 2abce62 (F107-F109, with the orphan rule) | restarts, then `npm run test:unit`, under the lock | 99/99; unit exit 1: quit-apps 35/37, both F93 tests kept stale records (F109 orphan rule) | 162.5 s | led to reverting the orphan rule |
+| 2026-11-08 07:18-07:25 UTC (machine clock) | 5433d60 (orphan rule reverted) | restarts, then `npm run test:unit`, under the lock | 100/100; unit exit 0 (quit-apps 36/36) | 137.3 s | |
 
 ## Cleanups done on real data
 
