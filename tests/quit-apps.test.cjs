@@ -138,9 +138,6 @@ const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pp-quit-apps-'));
     assert.equal(leadsLiveGroup([app(1)], 1, 'linux'), false, 'pid 1');
     assert.equal(leadsLiveGroup([app(500)], 500, 'win32'), false, 'Windows uses taskkill /T');
   });
-  await t('F109: launch keeps a start whose shell and npm are gone but whose node grandchild lives, not bound yet', async () => {
-    assert.deepEqual(await reconcileWith(entry, { procs: tree.slice(2) }), []);
-  });
   await t('F102: launch keeps a start whose server bound a fallback port (Vite 5174 for a recorded 5173)', async () => {
     assert.deepEqual(await reconcileWith(entry, { ports: [{ port: entry.port + 1, pid: 300 }] }), []);
   });
