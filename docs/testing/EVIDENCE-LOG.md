@@ -158,6 +158,8 @@ Every number published about this work (see [ARTICLE-NOTES.md](ARTICLE-NOTES.md)
 | 2026-11-07 13:51-14:01 UTC (machine clock) | 46e517d merged with d6a4d44 (#216) | restarts (2 more requests after the quit, fixture logs per request), day-one, long-haul, claude-sessions, then `npm run test:unit` (quit-apps 25/25), one at a time under the lock | 100/100, 63/63, 66/66, 77/77; unit exit 0 | 116.9, 64.2, 78.0, 90.2 s | screenshots read at 1440 and 390: new hint wraps to two lines at 1440; at 390 the Apps group is below the fold |
 | 2026-11-07 14:46-14:53 UTC (machine clock) | 9257ec4 (F102-F105) | restarts, then `npm run test:unit` (quit-apps 34/34), one at a time under the lock | 14/16, stopped at step 2 on `page.screenshot: Timeout 30000ms` (F49 kind); unit exit 0 | 116.8 s | the flake is in the screenshot call, before anything F102-F105 touch |
 | 2026-11-07 14:53-14:55 UTC (machine clock) | same | restarts rerun alone, under the lock | 100/100 | 110.9 s | |
+| 2026-11-08 04:39-04:45 UTC | 65a7d7c, then f0306b5 (F106) | GitHub Actions on PR #217 | 65a7d7c: ubuntu Tests 32/33 (`kill -9 -- -pid` under dash); f0306b5: all 4 checks pass (Tests and Package, ubuntu and windows) | | first green ubuntu Tests on this PR |
+| 2026-11-08 04:55-04:59 UTC (machine clock) | f0306b5 | restarts, under the lock | 100/100 | 206.8 s | |
 
 ## Cleanups done on real data
 
