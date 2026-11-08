@@ -3,12 +3,14 @@
  * Run: npm run build:ui && node tests/journeys/restarts.journey.js   (skips without Brave)
  *
  * Day 2: yesterday's world opens -> start an app, a terminal server and two browsers -> one browser
- * is closed from outside while PortPilot watches -> clean quit for the night -> another browser is
- * closed while PortPilot is down. Day 3: open again: the terminal server and the surviving browser
- * are adopted (same records, no duplicates), the closed browser's record is closed -> untick "Stop
- * PortPilot-started apps on quit" and pick the Cards view -> quit with the app up: it is left running
- * and adopted on relaunch -> PortPilot is killed (hard) with everything up -> relaunch: every open
- * record matches something that still answers, preferences kept.
+ * is closed from outside while PortPilot watches -> clean quit for the night ("Stop PortPilot-started
+ * apps on quit" is off by default, so the app keeps running) -> another browser is closed while
+ * PortPilot is down. Day 3: open again: the app, the terminal server and the surviving browser are
+ * adopted (same records, no duplicates), the closed browser's record is closed -> Stop the adopted
+ * app from its card (F42) -> start it, quit, relaunch: adopted again, stopped over MCP stop_app ->
+ * tick "Stop PortPilot-started apps on quit" and pick the Cards view -> quit with the app up: quit
+ * stops it -> PortPilot is killed (hard) with everything up -> relaunch: every open record matches
+ * something that still answers, preferences kept.
  *
  * Browsers are real headless Brave with throwaway profiles in the journey's own world, on ports
  * from the OS (never 9222-9241). Each is closed from outside through its own debug port
@@ -19,6 +21,7 @@ const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
 const { journey, REAL_RUNS } = require('./kit');
+const { mcpClient } = require('./mcp-client');
 const h = require('../e2e-harness');
 
 const BRAVE = ['C:/Program Files/BraveSoftware/Brave-Browser/Application/brave.exe', 'C:/Program Files (x86)/BraveSoftware/Brave-Browser/Application/brave.exe']
@@ -108,7 +111,6 @@ async function cdp(port) {
    * passing check; drop it from KNOWN when the fix lands.
    */
   const KNOWN = {
-    N2: 'Stop on an app PortPilot started before a quit (left running, adopted on relaunch) says "App not found or not running" and leaves it running',
     N3: 'after PortPilot is killed, the dead app\'s run stays open in runs.json and its runtime entry keeps startedBy',
     N4: 'after PortPilot is killed, display preferences kept in localStorage (Apps view) are sometimes lost: the key reads null',
   };
@@ -171,13 +173,20 @@ async function cdp(port) {
       was.alphaRec = openB('alpha')[0]?.id;
       was.betaRec = openB('beta')[0]?.id;
       was.alphaPid = j.listeners(alphaPort)[0];
+      was.shopRun = openRuns((r) => r.appId === ids.shop)[0]?.id;
+      was.shopPid = j.listeners(shopPort)[0];
+      j.check('the config never set Stop PortPilot-started apps on quit', j.config()?.settings?.stopAppsOnQuit === undefined, JSON.stringify(j.config()?.settings));
       const pid = j.app.process().pid;
       await j.quit();
       j.check('PortPilot has exited', !h.alive(pid));
-      j.check('the clean quit stopped shop (Stop PortPilot-started apps on quit is on by default)', await j.portFree(shopPort, 10000));
-      const srun = j.runs().filter((r) => r.appId === ids.shop).pop();
-      j.check('and closed its run as stopped', srun && srun.stoppedAt && srun.endedBy === 'stop', JSON.stringify(srun && { stoppedAt: srun.stoppedAt, endedBy: srun.endedBy }));
-      j.check('and dropped its runtime entry', !j.runtime()[ids.shop], JSON.stringify(j.runtime()[ids.shop]));
+      j.check('the clean quit left shop running (Stop PortPilot-started apps on quit is off by default)', (await j.answers(shopPort))?.title === 'Shop');
+      // Each answer writes a log line: a server whose output still went to the quit PortPilot died here (F92).
+      const later = [];
+      for (let i = 0; i < 2; i++) { await new Promise((r) => setTimeout(r, 500)); later.push((await j.answers(shopPort))?.title || null); }
+      j.check('shop keeps answering (and logging) after PortPilot is gone', later.every((t) => t === 'Shop'), JSON.stringify(later));
+      j.check('the same server process still holds its port', j.listeners(shopPort).length === 1 && j.listeners(shopPort)[0] === was.shopPid, `${j.listeners(shopPort)} vs ${was.shopPid}`);
+      j.check('its run is still open', openRuns((r) => r.appId === ids.shop).map((r) => r.id).join() === was.shopRun, JSON.stringify(openRuns((r) => r.appId === ids.shop).map((r) => r.id)));
+      j.check('and its runtime entry still says a person started it', j.runtime()[ids.shop]?.startedBy?.kind === 'human', JSON.stringify(j.runtime()[ids.shop]));
       j.check('the terminal server was not touched', (await j.answers(notesPort))?.title === 'Notes');
       j.check('both browsers outlive the quit', (await cdp(alphaPort)) && (await cdp(betaPort)));
     }],
@@ -191,10 +200,12 @@ async function cdp(port) {
     ['day 3 morning: open PortPilot again', async () => {
       await j.launch();
       await j.tab('Apps');
-      j.check('shop reads stopped', await j.waitFor(async () => (await j.stateOf(ids.shop)) === 'stopped', 15000), await j.stateOf(ids.shop));
-      j.check('and has no open run', openRuns((r) => r.appId === ids.shop).length === 0);
+      j.check('shop, left running last night, reads running', await j.waitFor(async () => (await j.stateOf(ids.shop)) === 'running', 20000), await j.stateOf(ids.shop));
       // The watcher adopts on its first scan; give it a few.
       await h.sleep(4000);
+      const sopen = openRuns((r) => r.appId === ids.shop);
+      j.check('shop is adopted: one open run, the same one as last night', sopen.length === 1 && sopen[0].id === was.shopRun, JSON.stringify(sopen.map((r) => r.id)));
+      j.check('and no second run was made for shop', j.runs().filter((r) => r.appId === ids.shop).length === 1, `${j.runs().filter((r) => r.appId === ids.shop).length} runs`);
       const nopen = openRuns((r) => Number(r.port) === notesPort);
       j.check('the terminal server is adopted: one open run, the same one as last night', nopen.length === 1 && nopen[0].id === was.notesRun, JSON.stringify(nopen.map((r) => r.id)));
       j.check('and no second run was made for it', j.runs().filter((r) => Number(r.port) === notesPort).length === 1, `${j.runs().filter((r) => Number(r.port) === notesPort).length} runs`);
@@ -223,60 +234,74 @@ async function cdp(port) {
       j.check('and alpha still has a single record', bruns('alpha').length === 1);
     }],
 
-    ['change preferences: keep apps running on quit, Cards view', async () => {
-      await settings();
-      j.check('Stop PortPilot-started apps on quit starts ticked', await stopOnQuitBox().isChecked());
-      await stopOnQuitBox().click();
-      j.check('unticking it is saved to the config file', await j.waitFor(() => j.config()?.settings?.stopAppsOnQuit === false, 5000), JSON.stringify(j.config()?.settings));
-      await j.win.locator('[role=group][aria-label="Apps view"]').getByRole('button', { name: 'Cards' }).click();
-      j.check('the Cards view is picked', (await j.win.locator('[role=group][aria-label="Apps view"]').getByRole('button', { name: 'Cards' }).getAttribute('aria-pressed')) === 'true');
-      await j.shot('05-settings-changed');
-    }],
-
-    ['start shop, quit: shop is left running this time', async () => {
-      await startShop();
-      was.shopRun = openRuns((r) => r.appId === ids.shop)[0]?.id;
-      was.shopPid = j.listeners(shopPort)[0];
-      await j.quit();
-      j.check('shop still answers after the quit', (await j.answers(shopPort))?.title === 'Shop');
-      j.check('its run is still open', openRuns((r) => r.appId === ids.shop).length === 1);
-    }],
-
-    ['relaunch: shop is adopted and the preferences are kept', async () => {
-      await j.launch();
-      j.check('the config still says keep apps running on quit', j.config()?.settings?.stopAppsOnQuit === false);
-      await j.tab('Apps');
-      j.check('Apps opens in the Cards view', await j.waitFor(() => j.win.locator('.tiles .card[data-app]').count(), 10000));
-      j.check('shop reads running', await j.waitFor(async () => (await j.stateOf(ids.shop)) === 'running', 20000), await j.stateOf(ids.shop));
-      await h.sleep(3000);
-      const sopen = openRuns((r) => r.appId === ids.shop);
-      j.check('shop has one open run, the one from before the quit', sopen.length === 1 && sopen[0].id === was.shopRun, JSON.stringify(sopen.map((r) => r.id)));
-      j.check('the same server process holds the port', j.listeners(shopPort).length === 1 && j.listeners(shopPort)[0] === was.shopPid);
-      await j.shot('06-shop-adopted');
-      await settings();
-      j.check('Settings shows the box unticked', !(await stopOnQuitBox().isChecked()));
-    }],
-
-    ['stop the adopted shop from its card', async () => {
+    ['stop the adopted shop from its card (F42)', async () => {
       await j.tab('Apps');
       await j.card(ids.shop).hover();
       await j.card(ids.shop).getByRole('button', { name: 'Stop', exact: true }).click();
-      const freed = await j.portFree(shopPort, 15000);
-      const said = await j.win.locator('[role="alert"], .notice, .tile-notice').allTextContents().catch(() => []);
-      await j.shot('06b-stop-adopted');
-      known('N2', 'shop\'s port goes quiet', freed, `${j.listeners(shopPort)}; screen says ${JSON.stringify(said)}`);
-      const run = await j.waitFor(() => j.runs().find((r) => r.id === was.shopRun && r.stoppedAt), freed ? 10000 : 1000);
-      known('N2', 'its run closes as stopped', run && run.endedBy === 'stop', run && run.endedBy);
-      known('N2', 'the card reads stopped', await j.waitFor(async () => (await j.stateOf(ids.shop)) === 'stopped', freed ? 15000 : 1000), await j.stateOf(ids.shop));
-      if (!freed) {
-        // What a person does next: kill what holds the port from the Ports screen.
-        await j.tab('Ports');
-        const row = j.win.locator(`tr[data-port="${shopPort}"]`);
-        await row.getByRole('button', { name: 'Kill' }).click();
-        await row.getByRole('button', { name: 'Confirm kill' }).click();
-        j.note(`Stop did not stop the adopted shop; Ports > Kill freed it: ${await j.portFree(shopPort, 15000)}`);
-        await j.waitFor(async () => { await j.tab('Apps'); return (await j.stateOf(ids.shop)) === 'stopped'; }, 20000);
-      }
+      const said = async () => JSON.stringify(await j.win.locator('[role="alert"], .notice, .tile-notice').allTextContents().catch(() => []));
+      j.check('shop\'s port goes quiet', await j.portFree(shopPort, 15000), `${j.listeners(shopPort)}; screen says ${await said()}`);
+      const run = await j.waitFor(() => j.runs().find((r) => r.id === was.shopRun && r.stoppedAt), 10000);
+      j.check('its run from last night closes as stopped', run && run.endedBy === 'stop', JSON.stringify(run && run.endedBy));
+      j.check('its runtime entry is dropped', !j.runtime()[ids.shop], JSON.stringify(j.runtime()[ids.shop]));
+      j.check('the card reads stopped', await j.waitFor(async () => (await j.stateOf(ids.shop)) === 'stopped', 15000), await j.stateOf(ids.shop));
+      j.check('the terminal server is untouched', (await j.answers(notesPort))?.title === 'Notes');
+      await j.shot('05-stop-adopted');
+    }],
+
+    ['start shop, quit, relaunch: stop the adopted shop over MCP stop_app (F42)', async () => {
+      await startShop();
+      was.shopRun = openRuns((r) => r.appId === ids.shop)[0]?.id;
+      await j.quit();
+      j.check('the quit left shop running again', (await j.answers(shopPort))?.title === 'Shop');
+      await j.launch();
+      await j.tab('Apps');
+      j.check('shop reads running after the relaunch', await j.waitFor(async () => (await j.stateOf(ids.shop)) === 'running', 20000), await j.stateOf(ids.shop));
+      await h.sleep(3000);
+      const sopen = openRuns((r) => r.appId === ids.shop);
+      j.check('shop keeps its one open run', sopen.length === 1 && sopen[0].id === was.shopRun, JSON.stringify(sopen.map((r) => r.id)));
+      const mcpPort = Number(await j.app.evaluate(() => process.env.PORTPILOT_MCP_PORT));
+      const client = await j.waitFor(() => mcpClient(mcpPort).catch(() => null), 30000);
+      j.check('an MCP client connects to the journey\'s own MCP server', !!client, `:${mcpPort}`);
+      const r = client ? await client.tool('stop_app', { identifier: 'shop' }) : null;
+      j.check('stop_app frees shop\'s port', await j.portFree(shopPort, 15000), JSON.stringify(r && r.body).slice(0, 200));
+      const run = await j.waitFor(() => j.runs().find((x) => x.id === was.shopRun && x.stoppedAt), 10000);
+      j.check('its run closes as stopped', run && run.endedBy === 'stop', JSON.stringify(run && run.endedBy));
+      j.check('the card reads stopped', await j.waitFor(async () => (await j.stateOf(ids.shop)) === 'stopped', 15000), await j.stateOf(ids.shop));
+    }],
+
+    ['change preferences: stop apps on quit, Cards view', async () => {
+      await settings();
+      j.check('Stop PortPilot-started apps on quit starts unticked (off by default)', !(await stopOnQuitBox().isChecked()));
+      await j.shot('05b-settings-default');
+      await stopOnQuitBox().click();
+      j.check('ticking it is saved to the config file', await j.waitFor(() => j.config()?.settings?.stopAppsOnQuit === true, 5000), JSON.stringify(j.config()?.settings));
+      await j.win.locator('[role=group][aria-label="Apps view"]').getByRole('button', { name: 'Cards' }).click();
+      j.check('the Cards view is picked', (await j.win.locator('[role=group][aria-label="Apps view"]').getByRole('button', { name: 'Cards' }).getAttribute('aria-pressed')) === 'true');
+      await j.shot('05c-settings-changed');
+    }],
+
+    ['start shop, quit: this time quit stops it', async () => {
+      await startShop();
+      was.shopRun = openRuns((r) => r.appId === ids.shop)[0]?.id;
+      await j.quit();
+      j.check('the quit stopped shop: its port is quiet', await j.portFree(shopPort, 10000), `${j.listeners(shopPort)}`);
+      const run = j.runs().find((r) => r.id === was.shopRun);
+      j.check('and closed its run as stopped', run && run.stoppedAt && run.endedBy === 'stop', JSON.stringify(run && { stoppedAt: run.stoppedAt, endedBy: run.endedBy }));
+      j.check('and dropped its runtime entry', !j.runtime()[ids.shop], JSON.stringify(j.runtime()[ids.shop]));
+      j.check('the terminal server was not touched', (await j.answers(notesPort))?.title === 'Notes');
+      j.check('alpha outlives the quit', !!(await cdp(alphaPort)));
+    }],
+
+    ['relaunch: the preferences are kept, shop stays stopped', async () => {
+      await j.launch();
+      j.check('the config still says stop apps on quit', j.config()?.settings?.stopAppsOnQuit === true);
+      await j.tab('Apps');
+      j.check('Apps opens in the Cards view', await j.waitFor(() => j.win.locator('.tiles .card[data-app]').count(), 10000));
+      j.check('shop reads stopped', await j.waitFor(async () => (await j.stateOf(ids.shop)) === 'stopped', 15000), await j.stateOf(ids.shop));
+      j.check('and has no open run', openRuns((r) => r.appId === ids.shop).length === 0);
+      await j.shot('06-relaunch-after-stopping-quit');
+      await settings();
+      j.check('Settings shows the box ticked', await stopOnQuitBox().isChecked());
     }],
 
     ['start shop and beta, then PortPilot is killed', async () => {
@@ -303,7 +328,7 @@ async function cdp(port) {
       }
       const nopen = openRuns((r) => Number(r.port) === notesPort);
       j.check('the terminal server keeps its one run', nopen.length === 1 && nopen[0].id === was.notesRun, JSON.stringify(nopen.map((r) => r.id)));
-      j.check('the config survived the kill: keep apps running on quit', j.config()?.settings?.stopAppsOnQuit === false);
+      j.check('the config survived the kill: stop apps on quit', j.config()?.settings?.stopAppsOnQuit === true);
       known('N4', 'the Cards view survived the kill', await j.waitFor(() => j.win.locator('.tiles .card[data-app]').count(), 10000),
         `saved prefs: ${await j.win.evaluate(() => localStorage.getItem('portpilot-ui-prefs'))}; localStorage keys: ${await j.win.evaluate(() => Object.keys(localStorage).join(','))}`);
       await j.shot('07a-apps-after-the-kill');

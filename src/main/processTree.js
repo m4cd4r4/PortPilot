@@ -49,6 +49,57 @@ function listProcessPairs() {
   });
 }
 
+/** Seconds in a ps elapsed time, `[[dd-]hh:]mm:ss`; null when it is not one. */
+function elapsedSeconds(etime) {
+  const m = /^(?:(?:(\d+)-)?(\d+):)?(\d+):(\d+)$/.exec(String(etime));
+  if (!m) return null;
+  const [, d, h, mm, ss] = m.map((v) => (v == null ? 0 : Number(v)));
+  return ((d * 24 + h) * 60 + mm) * 60 + ss;
+}
+
+/**
+ * Parse the listing listProcesses reads. Pure. Windows gives epoch ms; elsewhere `ps -o etime`
+ * ([[dd-]hh:]mm:ss, the one form BSD/macOS and Linux ps both print; `etimes` is Linux only, F95).
+ * A line with no start time (CIM leaves CreationDate empty for some system processes) is kept with
+ * created null (F99): it is never verified as ours.
+ */
+function parseProcessList(stdout, platform, now = Date.now()) {
+  const out = [];
+  for (const line of String(stdout || '').split(/\r?\n/)) {
+    const m = line.trim().match(/^(\d+)\s+(\d+)(?:\s+(\S+))?$/);
+    if (!m) continue;
+    let created = null;
+    if (m[3] != null) {
+      if (platform === 'win32') created = /^-?\d+$/.test(m[3]) ? Number(m[3]) : null;
+      else { const s = elapsedSeconds(m[3]); created = s == null ? null : now - s * 1000; }
+    }
+    out.push({ pid: parseInt(m[1], 10), ppid: parseInt(m[2], 10), created });
+  }
+  return out;
+}
+
+/**
+ * Every process as { pid, ppid, created } (created = start time, epoch ms; null when unknown).
+ * [] when the platform query fails or takes longer than timeoutMs. Windows reads CIM; elsewhere
+ * `ps` (whole seconds).
+ */
+function listProcesses({ timeoutMs = 15000 } = {}) {
+  return new Promise((resolve) => {
+    const opts = { encoding: 'utf8', maxBuffer: 8 * 1024 * 1024, timeout: timeoutMs, windowsHide: true };
+    const now = Date.now();
+    const done = (err, stdout) => {
+      if (err || !stdout) return resolve([]);
+      resolve(parseProcessList(stdout, os.platform(), now));
+    };
+    if (os.platform() === 'win32') {
+      execFile('powershell', ['-NoProfile', '-NonInteractive', '-Command',
+        'Get-CimInstance Win32_Process | ForEach-Object { $c = ""; if ($_.CreationDate) { $c = ([DateTimeOffset]$_.CreationDate).ToUnixTimeMilliseconds() }; "$($_.ProcessId) $($_.ParentProcessId) $c" }'], opts, done);
+    } else {
+      execFile('ps', ['-A', '-o', 'pid=,ppid=,etime='], opts, done);
+    }
+  });
+}
+
 /**
  * appId -> Set of pids PortPilot owns for that app (the tracked shell pid and its descendants).
  * @param {Array<{id: string, pid: number, running: boolean}>} running from getRunningApps()
@@ -62,4 +113,4 @@ async function ownedPidsByApp(running) {
   return owned;
 }
 
-module.exports = { descendantsOf, ownedPidsByApp, listProcessPairs };
+module.exports = { descendantsOf, ownedPidsByApp, listProcessPairs, listProcesses, parseProcessList };

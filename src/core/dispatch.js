@@ -29,6 +29,8 @@ const { makeStartedBy } = require('./status');
  * @param {string} [opts.surface='web']  which surface a human start is stamped with
  */
 function createDispatcher(configStore, { surface = 'web' } = {}) {
+  // App output -> logs/<appId>.log beside this config (F92).
+  if (configStore && configStore.configPath) require('../main/processManager').setLogConfigPath(configStore.configPath);
   const handlers = {
     // ---- Ports ----
     'ports:scan': async () => ({ success: true, ports: await scanPorts() }),
@@ -64,7 +66,7 @@ function createDispatcher(configStore, { surface = 'web' } = {}) {
       return result;
     },
     'process:stop': async (appId) => {
-      const result = await stopApp(appId);
+      const result = await stopApp(appId, { configPath: configStore.configPath }); // adopted apps too (F42)
       if (result && result.success) recordStop(configStore.configPath, appId);
       // Re-acquire the reservation if the app opted in.
       const app = configStore.getApp(appId);

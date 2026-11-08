@@ -520,7 +520,8 @@ function setupIpcHandlers(ipcMain, configStore) {
   /** Stop an app */
   ipcMain.handle('process:stop', async (_, appId) => {
     try {
-      const result = await stopApp(appId);
+      // configPath: an app an earlier session started and this one adopted can be stopped too (F42).
+      const result = await stopApp(appId, { configPath: configStore.configPath });
       if (result && result.success) recordStop(configStore.configPath, appId);
       const app = configStore.getApp(appId);
       if (app && app.reservePort) await reserver.reserve(app);

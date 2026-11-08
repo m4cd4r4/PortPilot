@@ -40,8 +40,8 @@ const MIME = { '.js': 'text/javascript', '.css': 'text/css', '.html': 'text/html
  * @param {object} [opts.browserDeps]  browserRun deps override (tests only; real spawn/CDP otherwise)
  * @returns {{ start: Function, stop: Function, getInfo: Function }}
  */
-function createAgent({ configStore, port = DEFAULT_PORT, token = crypto.randomBytes(32).toString('hex'), browserDeps }) {
-  const dispatch = createDispatcher(configStore);
+function createAgent({ configStore, port = DEFAULT_PORT, token = crypto.randomBytes(32).toString('hex'), browserDeps, surface = 'web' }) {
+  const dispatch = createDispatcher(configStore, { surface });
   const sseClients = new Set();
 
   const allowedHosts = new Set([`${HOST}:${port}`, `localhost:${port}`]);
@@ -211,6 +211,15 @@ function openBrowser(url) {
   } catch { /* headless / no browser - URL is printed anyway */ }
 }
 
+/**
+ * Which surface this agent's starts are stamped with. Spawned by the VS Code extension it has an
+ * IPC channel (process.send): its starts are VS Code starts, which the desktop's quit never
+ * stops (F107). Otherwise 'web' (the desktop's in-process portal, or a standalone agent).
+ */
+function agentSurface(proc = process) {
+  return proc && typeof proc.send === 'function' ? 'vscode' : 'web';
+}
+
 // ---- Standalone CLI ----
 async function main() {
   const { ConfigStore } = require('../main/configStore');
@@ -218,7 +227,7 @@ async function main() {
   const configStore = new ConfigStore(null);
   // Auto-pick a free port from the default up so a busy 7317 doesn't error out.
   const port = (await findAvailablePort(DEFAULT_PORT)) || DEFAULT_PORT;
-  const agent = createAgent({ configStore, port });
+  const agent = createAgent({ configStore, port, surface: agentSurface() });
   let started;
   try {
     started = await agent.start();
@@ -276,7 +285,7 @@ async function main() {
   process.on('disconnect', () => void shutdown());
 }
 
-module.exports = { createAgent, openBrowser, DEFAULT_PORT };
+module.exports = { createAgent, openBrowser, DEFAULT_PORT, agentSurface };
 
 if (require.main === module) {
   main().catch((err) => { console.error(err); process.exit(1); });
