@@ -129,6 +129,18 @@ const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pp-quit-apps-'));
   await t('F102: launch keeps a start whose server is alive but not bound yet (slow compile, nodemon restart), shell gone', async () => {
     assert.deepEqual(await reconcileWith(entry, { procs: tree.slice(1) }), []);
   });
+  await t('F108: a group kill targets only a live tracked app\'s group, never a dead entry whose pid may be reused, never pid 1', () => {
+    const { leadsLiveGroup } = require('../src/main/processManager');
+    const app = (pid, exitCode = null, signalCode = null) => ({ pid, group: true, process: { exitCode, signalCode } });
+    assert.equal(leadsLiveGroup([app(500)], 500, 'linux'), true, 'a live app');
+    assert.equal(leadsLiveGroup([app(500, 0)], 500, 'linux'), false, 'exited: its pid may lead a new group now');
+    assert.equal(leadsLiveGroup([app(500, null, 'SIGKILL')], 500, 'linux'), false, 'killed by a signal');
+    assert.equal(leadsLiveGroup([app(1)], 1, 'linux'), false, 'pid 1');
+    assert.equal(leadsLiveGroup([app(500)], 500, 'win32'), false, 'Windows uses taskkill /T');
+  });
+  await t('F109: launch keeps a start whose shell and npm are gone but whose node grandchild lives, not bound yet', async () => {
+    assert.deepEqual(await reconcileWith(entry, { procs: tree.slice(2) }), []);
+  });
   await t('F102: launch keeps a start whose server bound a fallback port (Vite 5174 for a recorded 5173)', async () => {
     assert.deepEqual(await reconcileWith(entry, { ports: [{ port: entry.port + 1, pid: 300 }] }), []);
   });
@@ -290,6 +302,24 @@ const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pp-quit-apps-'));
     assert.ok(r.notRunning && /was not running/.test(r.message), JSON.stringify(r));
     assert.ok(!cf.readRuntime(cfg).apps['dead-adopted'], 'entry left');
     assert.equal(lastRun('dead-adopted').endedBy, 'unknown');
+  });
+
+  await t('F107: a start from the VS Code extension\'s web portal is stamped vscode and survives a quit with the box ticked', async () => {
+    const { agentSurface } = require('../src/agent/server');
+    assert.equal(agentSurface({ send: () => {} }), 'vscode', 'spawned by the extension (IPC channel)');
+    assert.equal(agentSurface({}), 'web', 'the desktop\'s in-process portal or a standalone agent');
+    const port = await freePort();
+    const dispatch = require('../src/core/dispatch').createDispatcher({ configPath: cfg }, { surface: agentSurface({ send: () => {} }) });
+    const r = await dispatch('process:start', [{ id: 'from-portal', name: 'from-portal', command: `node -e "require('http').createServer().listen(${port})"`, preferredPort: port }]);
+    assert.equal(r.success, true, JSON.stringify(r));
+    for (let i = 0; i < 40 && !(await checkPort(port)); i++) await sleep(150);
+    assert.equal(cf.readRuntime(cfg).apps['from-portal']?.startedBy?.surface, 'vscode');
+    // The agent is its own process: the desktop's quit only reaches it through the runtime file.
+    await quit.stopAppsForQuit({ stopAppsOnQuit: true }, cfg, { cleanupAllProcesses: async () => {} });
+    assert.ok(await checkPort(port), 'the desktop quit stopped a VS Code portal start');
+    assert.ok(cf.readRuntime(cfg).apps['from-portal']?.startedBy, 'its entry was dropped');
+    await pm.stopApp('from-portal');
+    cf.recordStop(cfg, 'from-portal');
   });
 
   // ---- quit ----

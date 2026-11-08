@@ -207,6 +207,19 @@ async function stopApp(appId, { configPath } = {}) {
 }
 
 /**
+ * Does `pid` lead the process group of a tracked app that is still running? Only then may its
+ * group be signalled: once the app's shell exited its pid (and so a group id) can be reused by an
+ * unrelated process (F108). Never pid 1, never on Windows (taskkill /T there).
+ */
+function leadsLiveGroup(infos, pid, platform) {
+  if (platform === 'win32' || !(pid > 1)) return false;
+  for (const i of infos) {
+    if (i.pid === pid && i.group && i.process && i.process.exitCode === null && i.process.signalCode === null) return true;
+  }
+  return false;
+}
+
+/**
  * Kill a process by PID
  * @param {number} pid - Process ID to kill
  * @returns {Promise<Object>} Result
@@ -226,7 +239,7 @@ function killProcess(pid) {
     const isWindows = os.platform() === 'win32';
     // Unix: an app this session started leads its own process group; `kill -9 <shell>` alone left
     // the server under it running (F106), so the whole group goes.
-    const leadsGroup = !isWindows && [...runningProcesses.values()].some((i) => i.pid === safePid && i.group);
+    const leadsGroup = leadsLiveGroup(runningProcesses.values(), safePid, os.platform());
     const command = isWindows
       ? `taskkill /F /PID ${safePid} /T`
       : `kill -9 ${safePid}`;
@@ -251,7 +264,7 @@ function killProcess(pid) {
       resolve({ success: true, message: `Killed process ${safePid}` });
     };
 
-    if (leadsGroup) {
+    if (leadsGroup && safePid > 1) {
       // Signal the group from here: the shell's `kill` builtin differs between dash and bash.
       try { process.kill(-safePid, 'SIGKILL'); return killed(); } catch { /* group gone: fall back to the pid */ }
     }
@@ -396,5 +409,6 @@ module.exports = {
   forgetCrash,
   dismissedSince,
   isCrashed,
-  setLogConfigPath
+  setLogConfigPath,
+  leadsLiveGroup
 };

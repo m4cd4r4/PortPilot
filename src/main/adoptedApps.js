@@ -56,17 +56,29 @@ function verifyAdopted({ entry, listenerPid, procs }) {
 }
 
 /**
- * Could the entry's server still be running, wherever it listens (or before it binds)? True when
- * a live process is the recorded shell, or a direct child of it, created with the start. The
- * server may be compiling, restarting under nodemon, or on a fallback port (F102): none of those
- * is "gone".
+ * Could the entry's server still be running, wherever it listens (or before it binds)? The server
+ * may be compiling, restarting under nodemon, or on a fallback port (F102): none of those is
+ * "gone". True when, among processes created with the start:
+ *  - a live one is the recorded shell, or a descendant of it through live parents; or
+ *  - a live one is an orphan (its parent pid names no live process). With the shell and npm both
+ *    gone, a node grandchild's parent pid is npm's dead pid, which nothing links back to the shell
+ *    (F109), so an orphan born with the start may be ours.
+ * Used only to decide NOT to drop a record (a stale one kept is the safe error); Stop still kills
+ * nothing that verifyAdopted does not prove.
  */
 function startStillAlive(entry, procs) {
   const at = Date.parse(entry.startedBy && entry.startedBy.at);
   const shellPid = Number(entry.pid);
   if (!Number.isFinite(at) || !Number.isInteger(shellPid) || shellPid < 1) return false;
+  const list = procs || [];
   const withStart = (p) => Number.isFinite(p.created) && p.created >= at - CREATED_BEFORE_MS && p.created <= at + CREATED_AFTER_MS;
-  return (procs || []).some((p) => (p.pid === shellPid || p.ppid === shellPid) && withStart(p));
+  const live = new Set(list.map((p) => p.pid));
+  const ours = new Set([shellPid]); // the shell, then its descendants through live parents
+  for (let grew = true; grew;) {
+    grew = false;
+    for (const p of list) if (!ours.has(p.pid) && ours.has(p.ppid) && withStart(p)) { ours.add(p.pid); grew = true; }
+  }
+  return list.some((p) => withStart(p) && (ours.has(p.pid) || !live.has(p.ppid)));
 }
 
 /** The pid listening on `port` from a fresh scan; undefined when the scan failed (an empty list). */
