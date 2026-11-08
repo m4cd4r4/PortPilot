@@ -225,7 +225,10 @@ const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pp-quit-apps-'));
     assert.equal(r.success, true, JSON.stringify(r));
     assert.ok(await portGone(port), 'port still held');
   });
-  await t('adopted: Stop reaches the orphaned server when its shell died (as after a real quit)', async () => {
+  // Windows only: there an orphan keeps its dead shell's pid as its parent. Linux and macOS reparent
+  // an orphan (to init or a subreaper), so nothing proves it was ours and Stop rightly refuses it;
+  // on those systems the shell outlives PortPilot's quit, so the real case climbs to a live shell.
+  if (process.platform === 'win32') await t('adopted: Stop reaches the orphaned server when its shell died (as after a real quit)', async () => {
     const port = await earlierSession('orphan');
     const shellPid = cf.readRuntime(cfg).apps.orphan.pid;
     process.kill(shellPid); // the shell only: its server lives on, as the restarts journey saw

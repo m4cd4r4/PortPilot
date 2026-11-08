@@ -111,7 +111,10 @@ async function startApp(appConfig) {
           env: execEnv,
           windowsHide: true,
           stdio: ['ignore', out, out],
-          shell: isWindows ? 'C:\\Windows\\System32\\cmd.exe' : '/bin/sh'
+          shell: isWindows ? 'C:\\Windows\\System32\\cmd.exe' : '/bin/sh',
+          // Unix: its own process group (pgid = the shell's pid), so Stop and quit can kill the
+          // shell and the server under it together (F106). Windows uses taskkill /T instead.
+          detached: !isWindows
         });
       } finally {
         if (fd != null) { try { fs.closeSync(fd); } catch { /* the child has its own handle */ } }
@@ -148,6 +151,7 @@ async function startApp(appConfig) {
         cwd,
         startTime: new Date(),
         running: true,
+        group: !isWindows, // leads its own process group (detached)
         logFile: fd == null ? null : logFile
       });
 
@@ -220,9 +224,12 @@ function killProcess(pid) {
       return;
     }
     const isWindows = os.platform() === 'win32';
+    // Unix: an app this session started leads its own process group; `kill -9 <shell>` alone left
+    // the server under it running (F106), so the whole group goes.
+    const leadsGroup = !isWindows && [...runningProcesses.values()].some((i) => i.pid === safePid && i.group);
     const command = isWindows
       ? `taskkill /F /PID ${safePid} /T`
-      : `kill -9 ${safePid}`;
+      : (leadsGroup ? `kill -9 -- -${safePid}` : `kill -9 ${safePid}`);
 
     // Must specify shell explicitly - Git Bash/MSYS can interfere with Windows commands
     const execOptions = { shell: isWindows ? 'cmd.exe' : '/bin/sh', windowsHide: true };
