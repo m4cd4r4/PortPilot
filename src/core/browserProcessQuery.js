@@ -58,10 +58,10 @@ async function describePid(pid) {
   return info && !info.unknown ? { processName: info.processName, commandLine: info.commandLine } : { processName: null, commandLine: null };
 }
 
-/** The executable's name from a ps args line: the part before the first flag, so "Google Chrome" survives. */
+/** The executable's name from a ps args line: the part before the first flag or URL, so spaced names survive. */
 function exeName(args) {
   const s = String(args || '').trim();
-  const cut = s.search(/\s+-/);
+  const cut = s.search(/\s+(?=-|\w+:\/\/)/);
   return path.basename(cut === -1 ? s : s.slice(0, cut)) || null;
 }
 

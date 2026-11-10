@@ -514,6 +514,20 @@ async function setup(fields = {}) {
     assert.deepStrictEqual(rows.map((r) => run.holdsDir(r, '/h/pp/shop')), [true, true]);
   });
 
+  await t('exeName preserves browser paths when URLs precede flags', () => {
+    const { exeName } = require('../src/core/browserProcessQuery');
+    const rows = run.parsePsTable([
+      '  902     1 /Applications/Google Chrome.app/Contents/MacOS/Google Chrome --user-data-dir=/x',
+      '  903     1 /Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge https://a.b/c --user-data-dir=/x',
+      '  904     1 /opt/brave/brave https://example.com/page --user-data-dir=/h/pp/shop',
+    ].join('\n'));
+    assert.deepStrictEqual(rows.map((r) => r.processName), ['Google Chrome', 'Microsoft Edge', 'brave']);
+    assert.strictEqual(exeName('/usr/bin/brave-browser'), 'brave-browser');
+    assert.strictEqual(exeName('brave'), 'brave');
+    assert.strictEqual(exeName(''), null);
+    assert.strictEqual(exeName(null), null);
+  });
+
   await t('a signal refused for lack of permission is unknown, never gone: only ESRCH means no such process', () => {
     const { signalResult } = require('../src/core/browserProcessQuery');
     assert.deepStrictEqual([null, { code: 'ESRCH' }, { code: 'EPERM' }].map(signalResult), ['killed', 'gone', 'unknown']);
