@@ -1530,7 +1530,7 @@ ${body}
     }
     function exeName(args) {
       const s = String(args || "").trim();
-      const cut = s.search(/\s+-/);
+      const cut = s.search(/\s+(?=-|\w+:\/\/)/);
       return path2.basename(cut === -1 ? s : s.slice(0, cut)) || null;
     }
     async function processInfo(pid) {
