@@ -8,7 +8,7 @@
  * PortPilot is down. Day 3: open again: the app, the terminal server and the surviving browser are
  * adopted (same records, no duplicates), the closed browser's record is closed -> Stop the adopted
  * app from its card (F42) -> start it, quit, relaunch: adopted again, stopped over MCP stop_app ->
- * tick "Stop PortPilot-started apps on quit" and pick the Cards view -> quit with the app up: quit
+ * tick "Stop PortPilot-started apps on quit" and pick the Tiles view -> quit with the app up: quit
  * stops it -> PortPilot is killed (hard) with everything up -> relaunch: every open record matches
  * something that still answers, preferences kept.
  *
@@ -269,14 +269,14 @@ async function cdp(port) {
       j.check('the card reads stopped', await j.waitFor(async () => (await j.stateOf(ids.shop)) === 'stopped', 15000), await j.stateOf(ids.shop));
     }],
 
-    ['change preferences: stop apps on quit, Cards view', async () => {
+    ['change preferences: stop apps on quit, Tiles view', async () => {
       await settings();
       j.check('Stop PortPilot-started apps on quit starts unticked (off by default)', !(await stopOnQuitBox().isChecked()));
       await j.shot('05b-settings-default');
       await stopOnQuitBox().click();
       j.check('ticking it is saved to the config file', await j.waitFor(() => j.config()?.settings?.stopAppsOnQuit === true, 5000), JSON.stringify(j.config()?.settings));
-      await j.win.locator('[role=group][aria-label="Apps view"]').getByRole('button', { name: 'Cards' }).click();
-      j.check('the Cards view is picked', (await j.win.locator('[role=group][aria-label="Apps view"]').getByRole('button', { name: 'Cards' }).getAttribute('aria-pressed')) === 'true');
+      await j.win.locator('[role=group][aria-label="Apps view"]').getByRole('button', { name: 'Tiles' }).click();
+      j.check('the Tiles view is picked', (await j.win.locator('[role=group][aria-label="Apps view"]').getByRole('button', { name: 'Tiles' }).getAttribute('aria-pressed')) === 'true');
       await j.shot('05c-settings-changed');
     }],
 
@@ -296,7 +296,7 @@ async function cdp(port) {
       await j.launch();
       j.check('the config still says stop apps on quit', j.config()?.settings?.stopAppsOnQuit === true);
       await j.tab('Apps');
-      j.check('Apps opens in the Cards view', await j.waitFor(() => j.win.locator('.tiles .card[data-app]').count(), 10000));
+      j.check('Apps opens in the Tiles view', await j.waitFor(() => j.win.locator('.minis .card[data-app]').count(), 10000));
       j.check('shop reads stopped', await j.waitFor(async () => (await j.stateOf(ids.shop)) === 'stopped', 15000), await j.stateOf(ids.shop));
       j.check('and has no open run', openRuns((r) => r.appId === ids.shop).length === 0);
       await j.shot('06-relaunch-after-stopping-quit');
@@ -329,7 +329,7 @@ async function cdp(port) {
       const nopen = openRuns((r) => Number(r.port) === notesPort);
       j.check('the terminal server keeps its one run', nopen.length === 1 && nopen[0].id === was.notesRun, JSON.stringify(nopen.map((r) => r.id)));
       j.check('the config survived the kill: stop apps on quit', j.config()?.settings?.stopAppsOnQuit === true);
-      known('N4', 'the Cards view survived the kill', await j.waitFor(() => j.win.locator('.tiles .card[data-app]').count(), 10000),
+      known('N4', 'the Tiles view survived the kill', await j.waitFor(() => j.win.locator('.minis .card[data-app]').count(), 10000),
         `saved prefs: ${await j.win.evaluate(() => localStorage.getItem('portpilot-ui-prefs'))}; localStorage keys: ${await j.win.evaluate(() => Object.keys(localStorage).join(','))}`);
       await j.shot('07a-apps-after-the-kill');
       await j.tab('History');
