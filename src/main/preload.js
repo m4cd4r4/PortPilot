@@ -38,6 +38,7 @@ contextBridge.exposeInMainWorld('portpilot', {
     updateSettings: (settings) => ipcRenderer.invoke('config:updateSettings', settings),
     export: () => ipcRenderer.invoke('config:export'),
     import: (json) => ipcRenderer.invoke('config:import', json),
+    getProjectRoots: () => ipcRenderer.invoke('config:getProjectRoots'),
     getGroups: () => ipcRenderer.invoke('config:getGroups'),
     saveGroup: (group) => ipcRenderer.invoke('config:saveGroup', group),
     deleteGroup: (groupId) => ipcRenderer.invoke('config:deleteGroup', groupId)

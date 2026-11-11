@@ -240,6 +240,23 @@ button.tile:hover { border-color: var(--acc); }
 .group-h { display: flex; align-items: baseline; gap: 8px; margin: 24px 0 10px; font-size: 13px; font-weight: 500; color: var(--tx2); }
 .group-h small { color: var(--mut); font-weight: 400; }
 .group-h.sub { margin: 16px 0 8px; font-size: 12px; color: var(--mut); }
+/* A section heading on Apps folds its apps away; the arrow is drawn here so the heading's text stays the name. */
+.group-h .fold { background: none; border: 0; padding: 0; color: inherit; font: inherit; cursor: pointer; display: inline-flex; align-items: baseline; gap: 6px; }
+/* The arrow is decoration: the empty text after the slash keeps it out of the button's spoken name. */
+.group-h .fold::before { content: '▸'; content: '▸' / ''; color: var(--mut); font-size: 11px; width: 10px; }
+.group-h .fold[aria-expanded="true"]::before { content: '▾'; content: '▾' / ''; }
+.group-h .fold[aria-disabled="true"] { cursor: default; }
+.group-h .fold:hover { color: var(--tx); }
+.group-h small.up { color: var(--ok, var(--acc)); }
+.group-h small.down { color: var(--warn); }
+.group-h:focus { outline: none; }
+.group-h:focus-visible { outline: 2px solid var(--acc); outline-offset: 4px; border-radius: 4px; }
+.group-head { display: flex; align-items: baseline; gap: 8px; }
+.group-head .group-h { flex: 1; }
+.fold-link { margin-left: auto; background: none; border: 0; padding: 0; color: var(--acc); font: inherit; font-size: 12px; cursor: pointer; }
+.fold-link:hover { text-decoration: underline; }
+section[data-open="false"] > .group-h { margin: 10px 0; }
+section[data-open="false"] + section[data-open="true"] > .group-h, section[data-open="true"] + section[data-open="false"] > .group-h { margin-top: 24px; }
 .card .copies { background: none; border: 0; padding: 0; color: var(--acc); font: inherit; font-size: 12px; cursor: pointer; }
 .card .copies:hover { text-decoration: underline; }
 .members { grid-column: 1 / -1; margin: -4px 0 6px 14px; padding-left: 12px; border-left: 2px solid var(--bd); }
@@ -535,6 +552,7 @@ table.ports td.row-acts button + button { margin-left: 6px; }
 .show-all { text-align: center; margin: 16px 0 0; }
 .show-all button { background: var(--pn2); border: 1px solid var(--bd); border-radius: 8px; padding: 6px 16px; color: var(--tx); }
 .show-all button:hover { border-color: var(--acc); }
+.show-all.older { display: flex; align-items: baseline; justify-content: center; gap: 10px; margin-top: 28px; color: var(--mut); font-size: 12px; }
 
 /* Scenes. */
 .scenes-view .toolbar { align-items: flex-start; }

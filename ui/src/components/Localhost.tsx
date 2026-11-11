@@ -1,8 +1,9 @@
-import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { Host, Snapshot } from '../host';
 import { clusterCards, type Cluster } from '../clusters';
 import { runView } from '../legacy';
-import { STALE_MS, cards, grouped, type Card } from '../model';
+import { STALE_MS, cards, type Card } from '../model';
+import { OLDER_DAYS, loadLastRuns, olderIds, projectsOf, pruneOpen, rememberedRuns, sections, type Section } from '../projects';
 import { VIEWS, gridClass, setPrefs, showsShot, usePrefs, type Prefs } from '../prefs';
 import type { Thumbs } from '../useThumbs';
 import { appBlocked, openApp, type TileNotice } from '../tileRule';
@@ -17,16 +18,49 @@ const HOVER_MS = 500;
 const SWEEP_MS = 30000;
 /** Stopped apps shown before "Show all"; running and crashed ones always show. */
 const STOPPED_SHOWN = 12;
+/** Past this many apps, a section with nothing running starts folded: the page opens on what is up. */
+const FOLD_AT = 30;
+const OPEN_KEY = 'portpilot-apps-open';
+
+/** Sections the person opened or folded by hand, by section id. */
+function savedOpen(): Record<string, boolean> {
+  try {
+    const j = JSON.parse(localStorage.getItem(OPEN_KEY) || '{}');
+    return j && typeof j === 'object' ? j : {};
+  } catch { return {}; }
+}
+
+const apps = (n: number) => `${n} ${n === 1 ? 'app' : 'apps'}`;
 
 export function Localhost({ host, snap, thumbs, onDone, manage, onManage, inspectId, onPorts }: Props) {
   const prefs = usePrefs();
   const [query, setQuery] = useState('');
   const [notice, setNotice] = useState<TileNotice | null>(null);
-  const [allStopped, setAllStopped] = useState(false);
+  const [allStopped, setAllStopped] = useState<Set<string>>(new Set());
   const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set());
+  const [openById, setOpenById] = useState<Record<string, boolean>>(savedOpen);
+  const [showOlder, setShowOlder] = useState(false);
+  const [lastRun, setLastRun] = useState<Record<string, number>>(rememberedRuns);
   // Details opened from Home land on the normal Apps view with the panel up.
   const [inspectApp, setInspectApp] = useState<string | undefined>(inspectId);
   const list = useMemo(() => cards(snap, query), [snap, query]);
+  const projects = useMemo(() => projectsOf(snap.apps, snap.roots), [snap.apps, snap.roots]);
+
+  // When each app last ran, for the "older" fold. Read again when an app starts or stops.
+  const runningCount = Object.keys(snap.running).length;
+  const appsRef = useRef(snap.apps);
+  appsRef.current = snap.apps;
+  useEffect(() => {
+    let off = false;
+    // No history, or no app list yet: nothing folds that was not already known.
+    loadLastRuns(() => host.history(), () => appsRef.current).then((runs) => { if (!off && runs) setLastRun(runs); });
+    return () => { off = true; };
+  }, [host, runningCount, snap.apps.length]);
+
+  // A filter looks everywhere: nothing is folded away from a search.
+  const older = useMemo(() => (query ? new Set<string>() : olderIds(list, lastRun, Date.now())), [list, lastRun, query]);
+  const fresh = useMemo(() => (older.size ? list.filter((c) => !older.has(c.app.id)) : list), [list, older]);
+  const old = useMemo(() => list.filter((c) => older.has(c.app.id)), [list, older]);
 
   // Keep running apps' screenshots fresh: one stale app per sweep, so captures never pile up.
   const latest = useRef({ list, thumbs });
@@ -61,14 +95,35 @@ export function Localhost({ host, snap, thumbs, onDone, manage, onManage, inspec
     tile: (c) => blockedOr(c, () => act(() => openApp(host, c.app))),
   };
 
-  const showAll = (n: number) => (
-    <p className="show-all"><button onClick={() => setAllStopped(true)}>Show all {n} stopped apps</button></p>
+  // Show all, Show older and Hide take away the button that was pressed: focus moves to what they revealed.
+  const uid = useId();
+  const olderId = `${uid}older`;
+  const [focusOn, setFocusOn] = useState('');
+  useEffect(() => {
+    if (!focusOn) return;
+    document.querySelector<HTMLElement>(focusOn)?.focus();
+    setFocusOn('');
+  }, [focusOn]);
+
+  const showAll = (id: string, n: number) => (
+    <p className="show-all"><button onClick={() => {
+      setAllStopped((o) => new Set(o).add(id));
+      setFocusOn(`[data-stopped=${JSON.stringify(id)}] > article:nth-of-type(${STOPPED_SHOWN + 1}) button`);
+    }}>Show all {n} stopped apps</button></p>
   );
 
   const toggle = (key: string) => setExpandedKeys((o) => { const n = new Set(o); if (n.has(key)) n.delete(key); else n.add(key); return n; });
+  // Saved choices for sections that no longer exist are dropped here. The ids come from the whole
+  // library, so a section whose apps are all under "older" just now keeps its choice.
+  const setOpen = (id: string, open: boolean) => setOpenById((o) => {
+    const ids = sections(cards(snap, ''), snap.groups, projects).map((s) => s.id);
+    const n = { ...pruneOpen(o, ids), [id]: open };
+    try { localStorage.setItem(OPEN_KEY, JSON.stringify(n)); } catch { /* storage can be unavailable */ }
+    return n;
+  });
 
-  const grid = (rows: Cluster[]) => (
-    <div className={`cards ${gridClass(prefs.view)}`} data-density={prefs.density} data-status={prefs.status} data-thumbs={prefs.thumbs}>
+  const grid = (rows: Cluster[], stoppedOf?: string) => (
+    <div className={`cards ${gridClass(prefs.view)}`} data-stopped={stoppedOf} data-density={prefs.density} data-status={prefs.status} data-thumbs={prefs.thumbs}>
       {rows.map((cl) => {
         const many = cl.members.length > 1;
         // A search names a branch more often than a project, so it opens every cluster.
@@ -90,36 +145,82 @@ export function Localhost({ host, snap, thumbs, onDone, manage, onManage, inspec
     </div>
   );
 
-  /** One run of apps: projects that are up first, then the stopped ones behind a count. */
-  const section = (list: Card[]) => {
+  /**
+   * One run of apps: the ones that are up first, then the stopped ones behind a count. Every number
+   * here counts apps, so a heading, the Stopped line and Show all agree; a row can hold several copies.
+   */
+  const section = (id: string, list: Card[]) => {
     const clusters = clusterCards(list);
     const active = clusters.filter((c) => c.state !== 'stopped');
     const stopped = clusters.filter((c) => c.state === 'stopped');
-    const capped = !allStopped && !query && stopped.length > STOPPED_SHOWN;
+    const stoppedApps = stopped.reduce((n, c) => n + c.members.length, 0);
+    const capped = !allStopped.has(id) && !query && stopped.length > STOPPED_SHOWN;
     const shown = capped ? stopped.slice(0, STOPPED_SHOWN) : stopped;
-    if (!active.length || !stopped.length) return <>{grid(shown.length ? shown : active)}{capped && showAll(stopped.reduce((n, c) => n + c.members.length, 0))}</>;
+    if (!active.length || !stopped.length) return <>{shown.length ? grid(shown, id) : grid(active)}{capped && showAll(id, stoppedApps)}</>;
     return (
       <>
         {grid(active)}
-        <h4 className="group-h sub">Stopped<small>{stopped.length}</small></h4>
-        {grid(shown)}
-        {capped && showAll(stopped.reduce((n, c) => n + c.members.length, 0))}
+        <h4 className="group-h sub">Stopped<small>{stoppedApps}</small></h4>
+        {grid(shown, id)}
+        {capped && showAll(id, stoppedApps)}
       </>
+    );
+  };
+
+  /** A group or project with its heading. In a big library a section with nothing running starts folded. */
+  const block = (sec: Section, folds: boolean, index: number) => {
+    const open = !!query || (openById[sec.id] ?? (sec.active || !folds));
+    const up = sec.cards.filter((c) => c.state === 'running').length;
+    const down = sec.cards.filter((c) => c.state === 'crashed').length;
+    const bodyId = `${uid}s${index}`;
+    return (
+      <section key={sec.id || 'rest'} aria-label={sec.name} data-section={sec.kind} data-open={open}>
+        <h3 className="group-h">
+          {/* A filter opens every section; a click then would save "folded" with nothing to show for it. */}
+          <button className="fold" aria-expanded={open} aria-controls={bodyId} aria-disabled={!!query || undefined}
+            onClick={() => { if (!query) setOpen(sec.id, !open); }}>{sec.name}</button>
+          <small>{sec.cards.length}</small>
+          {!open && up > 0 && <small className="up">{up} running</small>}
+          {!open && down > 0 && <small className="down">{down} crashed</small>}
+        </h3>
+        <div id={bodyId} hidden={!open}>{open && section(sec.id, sec.cards)}</div>
+      </section>
+    );
+  };
+
+  /** Apps not run in 30 days: one line at the foot of the page until asked for. */
+  const olderBlock = () => {
+    if (!old.length) return null;
+    const why = `not run in ${OLDER_DAYS()} days`;
+    // Nothing recent at all: the older apps are the page, not a footnote.
+    if (!showOlder && fresh.length) {
+      return (
+        <p className="show-all older">
+          <button aria-expanded={false} aria-label={`Show older: ${apps(old.length)} ${why}`}
+            onClick={() => { setShowOlder(true); setFocusOn('section[data-section="older"] h3'); }}>Show older</button>
+          <span aria-hidden="true">{apps(old.length)} {why}</span>
+        </p>
+      );
+    }
+    return (
+      <section aria-label="Older" data-section="older">
+        <div className="group-head">
+          <h3 className="group-h" tabIndex={-1}>Older<small>{old.length}</small><small>{why}</small></h3>
+          {fresh.length > 0 && <button className="fold-link" aria-expanded aria-controls={olderId}
+            onClick={() => { setShowOlder(false); setFocusOn('.show-all.older button'); }}>Hide</button>}
+        </div>
+        <div id={olderId}>{grid(clusterCards(old))}</div>
+      </section>
     );
   };
 
   const body = () => {
     if (!snap.apps.length) return <p className="empty-note">No apps yet. Add one with Manage, or start a dev server and PortPilot will notice it.</p>;
     if (!list.length) return <p className="empty-note">No app matches that filter.</p>;
-    if (prefs.grouping) {
-      return grouped(snap, list).map((g) => (
-        <section key={g.id || 'rest'} aria-label={g.name}>
-          <h3 className="group-h">{g.name}<small>{g.cards.length}</small></h3>
-          {section(g.cards)}
-        </section>
-      ));
-    }
-    return section(list);
+    if (!prefs.grouping) return <>{fresh.length > 0 && section('', fresh)}{olderBlock()}</>;
+    const secs = sections(fresh, snap.groups, projects);
+    const folds = fresh.length > FOLD_AT && secs.length > 1;
+    return <>{secs.map((sec, i) => block(sec, folds, i))}{olderBlock()}</>;
   };
 
   if (manage) return <Library host={host} snap={snap} onDone={onDone} onExit={() => onManage(false)} />;

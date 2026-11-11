@@ -29,8 +29,10 @@ export function createElectronHost(): Host {
   return {
     kind: 'electron',
     async snapshot(): Promise<Snapshot> {
-      const [cfg, groups, proc, scan, br] = await Promise.all([
+      const [cfg, groups, proc, scan, br, roots] = await Promise.all([
         api().config.getApps(), api().config.getGroups(), api().process.list(), api().ports.scanWithApps(), api().browsers.list(),
+        // Project folders only sharpen the Apps grouping: a host without the call, or a failed read, leaves paths to decide.
+        Promise.resolve(api().config.getProjectRoots?.()).catch(() => null),
       ]);
       const running: Snapshot['running'] = {};
       const crashed: Snapshot['crashed'] = {};
@@ -57,6 +59,7 @@ export function createElectronHost(): Host {
       return {
         apps: cfg?.apps || [],
         groups: groups?.groups || [],
+        roots: roots?.roots || {},
         running,
         crashed,
         conflicts: scan?.unknownConflicts || [],

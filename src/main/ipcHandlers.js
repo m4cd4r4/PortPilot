@@ -844,6 +844,15 @@ function setupIpcHandlers(ipcMain, configStore) {
     } catch (error) { return { success: false, error: error.message }; }
   });
 
+  /** The main repo folder of each app, for the Apps page's project groups. Cached; never fails the page. */
+  ipcMain.handle('config:getProjectRoots', async () => {
+    try {
+      return { success: true, roots: require('./projectRoots').projectRoots(configStore.getApps()) };
+    } catch (error) {
+      return { success: false, error: error.message, roots: {} };
+    }
+  });
+
   /** Get all groups */
   ipcMain.handle('config:getGroups', async () => {
     try {
