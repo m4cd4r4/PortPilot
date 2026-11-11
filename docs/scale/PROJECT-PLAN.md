@@ -2,7 +2,7 @@
 
 Goal: make the desktop app work for someone with well over a hundred registered apps and a dozen or more browser profiles. An audit on 2026-11-11 ran the master build against a copy of a real config (167 apps, 18 profiles, no groups) and found that the problems at that size are noise and list length, not visual style.
 
-Guiding constraint: **every PR is checked against a copy of a large real config, not only the three-app fixtures.** The fixtures hid all of the findings below.
+Guiding constraint: **every PR is checked against a copy of a large real config as well as the three-app fixtures.** The fixtures hid all of the findings below.
 
 Out of scope: a rewrite in another language or framework (rejected: the JS core is shared by the desktop app, the VS Code extension and the MCP server), and new VS Code extension features.
 
