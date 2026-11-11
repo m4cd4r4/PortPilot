@@ -4,8 +4,8 @@ const assert = require('assert');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { projectsOf, sections, lastRunByApp, olderIds, OLDER_DAYS } = require('../src/core/appProjects.js');
-const { projectRoots, mainRepoOf } = require('../src/main/projectRoots.js');
+const { projectsOf, sections, lastRunByApp, mergeLastRun, loadLastRun, pruneOpen, olderIds, OLDER_DAYS } = require('../src/core/appProjects.js');
+const { projectRoots, mainRepoOf, ttlFor, TTL_MS, SPREAD_MS } = require('../src/main/projectRoots.js');
 
 const app = (id, cwd, extra = {}) => ({ id, name: id, cwd, ...extra });
 const card = (a, state = 'stopped') => ({ app: a, state });
@@ -45,6 +45,31 @@ assert.notStrictEqual(bare.c.key, bare.a.key, 'a folder inside another is not jo
 // An app registered at a parent directory must not swallow the projects under it.
 const parentDir = projectsOf([app('top', 'D:/Code'), app('x', 'D:/Code/one'), app('y', 'D:/Code/two')], {});
 assert.strictEqual(new Set([parentDir.top.key, parentDir.x.key, parentDir.y.key]).size, 3);
+// With no repo read from disk, a worktree-shaped pair names the repo: the same folders under `shop`
+// and `shop-fix`. Everything inside `shop` then joins it (F122).
+const nested = projectsOf([app('n1', 'D:/Code/shop/apps/web'), app('n2', 'D:/Code/shop/apps/api'), app('n3', 'D:/Code/shop-fix/apps/web'), app('n4', 'D:/Code/mail/apps/web')], {});
+assert.strictEqual(nested.n1.key, 'd:/code/shop', 'the pair names the repo');
+assert.strictEqual(nested.n2.key, nested.n1.key, 'a folder inside the inferred repo joins it');
+assert.strictEqual(nested.n3.key, nested.n1.key, 'the worktree joins it');
+assert.strictEqual(nested.n4.key, 'd:/code/mail/apps/web', 'no pair, no guess: the folder itself');
+// A sibling of a sibling ends at the same project (F126).
+const chain = projectsOf([app('c1', 'D:/Code/a'), app('c2', 'D:/Code/a-b'), app('c3', 'D:/Code/a-b-c')], {});
+assert.strictEqual(new Set([chain.c1.key, chain.c2.key, chain.c3.key]).size, 1, 'a, a-b and a-b-c are one project');
+// ... but a repo read from disk is never folded into its neighbour, and keeps its own worktrees.
+const chainRoot = projectsOf([app('c1', 'D:/Code/a'), app('c2', 'D:/Code/a-b'), app('c3', 'D:/Code/a-b-c')], { c2: 'D:/Code/a-b' });
+assert.strictEqual(chainRoot.c2.key, 'd:/code/a-b');
+assert.strictEqual(chainRoot.c3.key, 'd:/code/a-b');
+// Lower-casing can change a string's length ("İ" becomes two code units): the folder is still cut at a slash (F131).
+const turkish = projectsOf([app('t1', 'D:/İİİ/shop'), app('t2', 'D:/İİİ/blog/site')], { t1: 'D:/İİİ/shop' });
+assert.strictEqual(turkish.t2.name, 'blog', 'the name is a whole folder name');
+// A big library is worked out in one pass, not app by app (F129): 5,000 apps took about 4 s before.
+const many = [];
+for (let i = 0; i < 5000; i++) many.push(app(`m${i}`, `D:/Code/repo-${i % 700}${i % 3 ? '' : '-wt'}/apps/a${i % 5}`));
+const manyRoots = {};
+for (let i = 0; i < 5000; i += 2) manyRoots[`m${i}`] = `D:/Code/repo-${i % 700}`;
+const t0 = Date.now();
+projectsOf(many, manyRoots);
+assert.ok(Date.now() - t0 < 1500, `5,000 apps in ${Date.now() - t0} ms`);
 // A parent loop ends.
 const loop = projectsOf([app('l1', 'D:/a', { parentId: 'l2' }), app('l2', 'D:/b', { parentId: 'l1' })], {});
 assert.ok(loop.l1.key && loop.l2.key);
@@ -131,7 +156,36 @@ assert.strictEqual(copies('running', 60).size, 0, 'a copy of a running app is no
 assert.strictEqual(copies('stopped', 3).size, 0, 'nor a copy of a recent one');
 assert.deepStrictEqual([...copies('stopped', 60)].sort(), ['copy', 'main'], 'all copies old: the whole row folds');
 
+// ---- last run, remembered ---------------------------------------------------------------------
+const regd = [{ id: 'r1' }, { id: 'r2' }, { id: 'kept' }];
+const merged = mergeLastRun([{ appId: 'r1', startedAt: iso(5), stoppedAt: iso(4) }], { r1: 1, kept: 77, gone: 88 }, regd);
+assert.deepStrictEqual(merged, { r1: now - 4 * DAY, kept: 77 }, 'the later time wins, a remembered time is kept, an unregistered app is dropped');
+// Before the app list lands there is nothing to prune against: saving then would wipe the memory (F123).
+assert.strictEqual(mergeLastRun([], { kept: 77 }, []), null, 'no apps: nothing to save');
+assert.strictEqual(mergeLastRun([], { kept: 77 }, undefined), null);
+(async () => {
+  assert.deepStrictEqual(await loadLastRun(async () => ({ runs: [{ appId: 'r2', startedAt: iso(1) }] }), () => ({ kept: 77 }), () => regd), { r2: now - DAY, kept: 77 });
+  assert.strictEqual(await loadLastRun(async () => { throw new Error('history is down'); }, () => ({ kept: 77 }), () => regd), null, 'a failed read saves nothing');
+  assert.strictEqual(await loadLastRun(async () => null, () => ({ kept: 77 }), () => []), null);
+})().catch((e) => { console.error(e); process.exit(1); });
+
+// ---- which sections are open, remembered ------------------------------------------------------
+assert.deepStrictEqual(pruneOpen({ 'p:d:/code/shop': true, 'p:d:/code/gone': false, g1: false }, ['p:d:/code/shop', 'g1', '']), { 'p:d:/code/shop': true, g1: false }, 'a section that no longer exists is forgotten (F127)');
+assert.deepStrictEqual(pruneOpen(null, ['x']), {});
+
 // ---- projectRoots (disk) ----------------------------------------------------------------------
+// Expiry is spread out, so a big library is not re-read in one tick, and a missing folder is looked
+// for again sooner than a found one (F125).
+const spread = new Set();
+for (let i = 0; i < 60; i++) {
+  const t = ttlFor(`D:/Code/repo-${i}`, true);
+  assert.ok(t >= TTL_MS && t <= TTL_MS + SPREAD_MS, `found: ${t}`);
+  spread.add(t);
+  assert.ok(ttlFor(`D:/Code/repo-${i}`, false) < TTL_MS / 2, 'missing: sooner');
+}
+assert.ok(spread.size > 30, `60 folders expire at ${spread.size} different times`);
+assert.strictEqual(ttlFor('D:/Code/repo-1', true), ttlFor('D:/Code/repo-1', true), 'the same folder, the same time');
+
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'pp-roots-'));
 try {
   const mk = (...parts) => { const d = path.join(tmp, ...parts); fs.mkdirSync(d, { recursive: true }); return d; };
@@ -147,14 +201,25 @@ try {
   assert.strictEqual(mainRepoOf(wtSub), fwd(main), 'a worktree names its main repo');
   // The temp dir may itself sit inside a repo on a developer machine: only claim "none" when it does not.
   if (!mainRepoOf(tmp)) assert.strictEqual(mainRepoOf(plain), null, 'no .git above: no answer');
-  assert.strictEqual(mainRepoOf(path.join(tmp, 'missing', 'deep')), mainRepoOf(tmp), 'a missing folder never throws');
+  // A folder that is gone has no answer: walking up from it would land in whatever repo sits above,
+  // which need not be its own (F124).
+  assert.strictEqual(mainRepoOf(path.join(main, 'removed', 'deep')), null, 'a missing folder inside a repo is not that repo');
+  assert.strictEqual(mainRepoOf(path.join(tmp, 'missing', 'deep')), null, 'a missing folder never throws');
+  assert.strictEqual(mainRepoOf(path.join(main, '.git', 'worktrees', 'fix', 'nofile.txt')), null);
   const got = projectRoots([{ id: 'a', cwd: sub }, { id: 'b', cwd: wtSub }, { id: 'c' }, null]);
   assert.deepStrictEqual({ a: got.a, b: got.b }, { a: fwd(main), b: fwd(main) });
   assert.strictEqual(got.c, undefined);
   // Cached: the answer holds after the folder goes, until the cache ages out.
+  const t1 = Date.now();
   fs.rmSync(wt, { recursive: true, force: true });
-  assert.strictEqual(projectRoots([{ id: 'b', cwd: wtSub }]).b, fwd(main));
-  assert.notStrictEqual(projectRoots([{ id: 'b', cwd: wtSub }], Date.now() + 6 * 60 * 1000).b, fwd(main), 'and is read again after 5 minutes');
+  assert.strictEqual(projectRoots([{ id: 'b', cwd: wtSub }], t1).b, fwd(main));
+  assert.strictEqual(projectRoots([{ id: 'b', cwd: wtSub }], t1 + TTL_MS + SPREAD_MS + 1000).b, undefined, 'and is read again once it ages out: the folder is gone, so no answer');
+  // A folder that was missing and has come back is found again within a minute, not five.
+  const late = path.join(tmp, 'late');
+  assert.strictEqual(projectRoots([{ id: 'l', cwd: late }], t1).l, undefined);
+  mk('late', '.git');
+  assert.strictEqual(projectRoots([{ id: 'l', cwd: late }], t1 + 1000).l, undefined, 'still cached a second later');
+  assert.strictEqual(projectRoots([{ id: 'l', cwd: late }], t1 + 60 * 1000).l, fwd(late), 'looked for again within a minute');
 } finally {
   fs.rmSync(tmp, { recursive: true, force: true });
 }

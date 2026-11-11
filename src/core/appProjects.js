@@ -26,14 +26,23 @@
   const norm = (p) => String(p || '').replace(/\\/g, '/').replace(/\/+$/, '');
   const leaf = (p) => norm(p).split('/').pop() || '';
   const dirOf = (p) => { const i = p.lastIndexOf('/'); return i > 0 ? p.slice(0, i) : ''; };
-  const longest = (list) => list.sort((a, b) => b.length - a.length)[0];
+  /** What a folder name may be a copy of, longest first: `a-b-c` gives `a-b`, `a`. */
+  const stems = (name) => {
+    const out = [];
+    for (let i = name.lastIndexOf('-'); i > 0; i = name.lastIndexOf('-', i - 1)) out.push(name.slice(0, i));
+    return out;
+  };
 
   /**
    * apps: the registered apps. roots: { appId: main repo folder } for the apps whose folder the
    * host could read. Returns { appId: { key, name } }; an app with no folder has no entry.
    * Order of evidence: the repo on disk, the parent app's project, a known repo that the folder
-   * sits in or beside (`repo/web`, `repo-slug`), the folder under a directory that holds known
+   * sits in or beside (`repo/web`, `repo-slug`), a repo named by a worktree-shaped pair of folders
+   * (`shop/apps/web` and `shop-fix/apps/web`), the folder under a directory that holds known
    * repos, then the folder itself. Keys compare without case: Windows paths do.
+   *
+   * Every lookup walks one path against a Set, so the cost grows with the number of apps, not its
+   * square: the page works this out again on each refresh.
    */
   function projectsOf(apps, roots) {
     const list = Array.isArray(apps) ? apps : [];
@@ -41,11 +50,48 @@
     const byId = new Map(list.map((a) => [a.id, a]));
     const shown = new Map(); // key -> the path as written, for the name
     const keyOf = (p) => { const n = norm(p); const k = n.toLowerCase(); if (k && !shown.has(k)) shown.set(k, n); return k; };
+    // A path is cut by counting folders, never by string length: lower-casing can change the length.
+    const firstFolders = (p, n) => norm(p).split('/').slice(0, n).join('/');
 
     const rootKeys = new Set();
     for (const a of list) if (known[a.id]) rootKeys.add(keyOf(known[a.id]));
-    const rootList = [...rootKeys].sort((a, b) => b.length - a.length);
-    const holders = [...new Set(rootList.map(dirOf).filter(Boolean))].sort((a, b) => b.length - a.length);
+    const holders = new Set([...rootKeys].map(dirOf).filter(Boolean));
+    const cwdKeys = new Set();
+    for (const a of list) { const k = keyOf(a.cwd); if (k) cwdKeys.add(k); }
+
+    // With no repo read from disk, two apps in the same place under `shop` and `shop-fix` name the
+    // repo: `shop`. Only a pair with folders below it counts; plain siblings are joined further down.
+    const inferred = new Set();
+    for (const a of list) {
+      if (known[a.id]) continue;
+      const parts = keyOf(a.cwd).split('/');
+      for (let i = 1; i < parts.length - 1; i++) {
+        for (const stem of stems(parts[i])) {
+          const twin = [...parts.slice(0, i), stem, ...parts.slice(i + 1)].join('/');
+          if (cwdKeys.has(twin)) inferred.add(keyOf(firstFolders(shown.get(twin), i + 1)));
+        }
+      }
+    }
+
+    /** The longest member of `set` that the folder is, sits inside, or sits beside as `name-...`. */
+    const near = (cwd, set) => {
+      if (!set.size) return '';
+      const parts = cwd.split('/');
+      for (let n = parts.length; n > 0; n--) {
+        const head = n > 1 ? `${parts.slice(0, n - 1).join('/')}/` : '';
+        if (set.has(head + parts[n - 1])) return head + parts[n - 1];
+        for (const stem of stems(parts[n - 1])) if (set.has(head + stem)) return head + stem;
+      }
+      return '';
+    };
+    /** The folder directly under the nearest directory that holds known repos. */
+    const underHolder = (a, cwd) => {
+      const parts = cwd.split('/');
+      for (let n = parts.length - 1; n > 0; n--) {
+        if (holders.has(parts.slice(0, n).join('/'))) return keyOf(firstFolders(a.cwd, n + 1));
+      }
+      return '';
+    };
 
     const done = new Map();
     const resolve = (a, seen) => {
@@ -55,25 +101,26 @@
       const parent = !key && a.parentId && !seen.has(a.parentId) ? byId.get(a.parentId) : null;
       if (parent) key = resolve(parent, new Set([...seen, a.id]));
       const cwd = key ? '' : keyOf(a.cwd);
-      if (cwd) {
-        key = rootList.find((m) => cwd === m || cwd.startsWith(`${m}/`) || cwd.startsWith(`${m}-`)) || '';
-        if (!key) {
-          const holder = holders.find((h) => cwd.startsWith(`${h}/`));
-          key = holder ? keyOf(`${shown.get(holder) || holder}/${norm(a.cwd).slice(holder.length + 1).split('/')[0]}`) : cwd;
-        }
-      }
+      if (cwd) key = near(cwd, rootKeys) || near(cwd, inferred) || underHolder(a, cwd) || cwd;
       done.set(a.id, key);
       return key;
     };
     for (const a of list) resolve(a, new Set());
 
-    // A guessed folder joins the project it sits beside: `shop-fix` goes with `shop`. Only a sibling
-    // joins: a folder inside another is left alone, or one app registered at a parent directory
-    // would swallow every project under it.
+    // A guessed folder joins the project it sits beside: `shop-fix` goes with `shop`, and so does
+    // `shop-fix-2`. Only a sibling joins: a folder inside another is left alone, or one app
+    // registered at a parent directory would swallow every project under it. A repo read from disk
+    // is never folded into its neighbour.
     const keys = new Set([...done.values()].filter(Boolean));
+    const home = new Map();
     const joined = (key) => {
       if (rootKeys.has(key)) return key;
-      return longest([...keys].filter((o) => o !== key && key.startsWith(`${o}-`) && !key.slice(o.length).includes('/'))) || key;
+      if (home.has(key)) return home.get(key);
+      const cut = key.lastIndexOf('/') + 1;
+      const beside = stems(key.slice(cut)).map((s) => key.slice(0, cut) + s).find((k) => keys.has(k));
+      const to = beside ? joined(beside) : key;
+      home.set(key, to);
+      return to;
     };
 
     const out = {};
@@ -148,6 +195,39 @@
   }
 
   /**
+   * The remembered last-run times brought up to date: the later of history and memory per app, and
+   * only apps still registered. Null when there are no apps: before the app list has landed there
+   * is nothing to prune against, and saving the result would wipe the memory.
+   */
+  function mergeLastRun(runs, remembered, apps) {
+    const list = Array.isArray(apps) ? apps : [];
+    if (!list.length) return null;
+    const seen = lastRunByApp(runs);
+    const old = remembered && typeof remembered === 'object' ? remembered : {};
+    const out = {};
+    for (const a of list) {
+      const t = Math.max(seen[a.id] || 0, Number(old[a.id]) || 0);
+      if (t) out[a.id] = t;
+    }
+    return out;
+  }
+
+  /** Reads history and merges it. Null, and nothing to save, when the read fails. */
+  async function loadLastRun(read, getOld, getApps) {
+    let h;
+    try { h = await read(); } catch { return null; }
+    return mergeLastRun(h && h.runs, getOld(), getApps());
+  }
+
+  /** The saved open/folded choices, less the sections that no longer exist. */
+  function pruneOpen(saved, ids) {
+    const keep = new Set(ids);
+    const out = {};
+    for (const [k, v] of Object.entries(saved && typeof saved === 'object' ? saved : {})) if (keep.has(k)) out[k] = !!v;
+    return out;
+  }
+
+  /**
    * Ids of the cards to fold under "Show older": stopped, and neither run nor added in the last
    * `days`. Adding counts, so an app registered yesterday is not hidden before its first run.
    * An app with no run and no added date is left alone: nothing says how old it is.
@@ -169,5 +249,5 @@
     return out;
   }
 
-  return { projectsOf, sections, lastRunByApp, olderIds, OLDER_DAYS };
+  return { projectsOf, sections, lastRunByApp, mergeLastRun, loadLastRun, pruneOpen, olderIds, OLDER_DAYS };
 });

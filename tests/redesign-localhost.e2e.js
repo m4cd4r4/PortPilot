@@ -78,7 +78,7 @@ async function main() {
       if (mode === 'rows') {
         const heads = await win.locator('.group-h').allTextContents();
         // idle and blocked share the shop folder, so they are a project; shop itself was put in Web by hand.
-        check('grouped is on by default: a heading per group and per project folder', heads.length === 2 && heads[0].startsWith('Web') && heads[1].startsWith('shop'), heads.join(' | '));
+        check('grouped is on by default: a heading per group and per project folder', heads.join(' | ') === 'Web1 | shop2', heads.join(' | '));
         await win.click('role=button[name="Grouped"]');
         await until(() => win.locator('.group-h').count().then((n) => n === 0 || n === 1), 5000, 'flat');
         await win.click('role=button[name="Grouped"]');

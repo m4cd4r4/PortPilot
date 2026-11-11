@@ -109,12 +109,21 @@ async function main() {
     check('opening shop shows its two rows', true);
     check('the worktree copy is folded into its app', (await sec('shop').locator('.copies').textContent()).includes('2 copies'));
     check('the heading says it is open', (await fold('shop').getAttribute('aria-expanded')) === 'true');
+    const controls = await fold('shop').getAttribute('aria-controls');
+    check('and names the region it opens', !!controls && (await sec('shop').locator(`[id="${controls}"] .card`).count()) > 0, String(controls));
+    // A choice saved for a section that is gone (a project whose apps were removed) is forgotten at the next click.
+    await win.evaluate(() => {
+      const saved = JSON.parse(localStorage.getItem('portpilot-apps-open') || '{}');
+      localStorage.setItem('portpilot-apps-open', JSON.stringify({ ...saved, 'p:d:/gone/project': true }));
+    });
     await win.reload();
     await openApps();
     await until(async () => (await cards()) === 2, 10000, 'shop still open');
     check('an opened section stays open after a reload', (await sec('shop').getAttribute('data-open')) === 'true');
     await fold('shop').click();
     await until(async () => (await cards()) === 0, 5000, 'folded again');
+    const savedOpen = await win.evaluate(() => JSON.parse(localStorage.getItem('portpilot-apps-open') || '{}'));
+    check('a saved choice for a section that no longer exists is dropped', !('p:d:/gone/project' in savedOpen) && Object.keys(savedOpen).length === 1, JSON.stringify(savedOpen));
 
     console.log('step: counts agree');
     await fold('Other').click();
@@ -123,28 +132,44 @@ async function main() {
     await win.click('role=button[name="Show all 31 stopped apps"]');
     await until(async () => (await cards()) === 31, 5000, 'all 31');
     check('Show all reveals exactly that many', true);
+    const focusRow = await win.evaluate(() => {
+      const card = document.activeElement && document.activeElement.closest('.card');
+      return card ? [...card.parentElement.querySelectorAll(':scope > article')].indexOf(card) : -1;
+    });
+    check('focus moves to the first app it revealed', focusRow === 12, `row ${focusRow}`);
     check('an app that ran two days ago is not old, whenever it was added', (await win.locator('.card[data-app="tool_2"]').count()) === 1);
     check('the old apps are not in the list', (await win.locator('.card[data-app="tool_1"], .card[data-app="tool_5"]').count()) === 0);
 
     console.log('step: show older');
-    await win.click('role=button[name="Show older"]');
+    const showOlder = () => win.getByRole('button', { name: /^Show older/ });
+    check('the Show older button is named with its count', (await win.getByRole('button', { name: `Show older: ${OLD} apps not run in 30 days`, exact: true }).count()) === 1);
+    await showOlder().click();
     await until(() => sec('Older').count().then((n) => n === 1), 5000, 'Older section');
     check('Show older lists every old app', (await sec('Older').locator('.card').count()) === OLD, String(await sec('Older').locator('.card').count()));
     check('its heading carries the same count', (await sec('Older').locator('h3').textContent()).startsWith(`Older${OLD}`), await sec('Older').locator('h3').textContent());
+    check('focus moves to the Older heading', await sec('Older').locator('h3').evaluate((el) => el === document.activeElement));
+    check('Hide sits beside the heading, not inside it', (await sec('Older').locator('h3 button').count()) === 0);
     await shot('older');
     await sec('Older').getByRole('button', { name: 'Hide' }).click();
     await until(() => sec('Older').count().then((n) => n === 0), 5000, 'Older hidden');
     check('Hide folds them back', (await olderLine()).includes(`${OLD} apps`));
+    check('and focus returns to Show older', await showOlder().evaluate((el) => el === document.activeElement));
 
     console.log('step: a filter finds an old app');
     await win.fill('input[aria-label="Filter apps"]', 'tool-05');
     await until(async () => (await win.locator('.card[data-app="tool_5"]').count()) === 1, 5000, 'filter result');
     check('the filter finds an old app without Show older', (await cards()) === 1 && (await win.locator('.show-all.older').count()) === 0);
+    // A filter opens every section, so a click on a heading changes nothing and must save nothing.
+    const filtered = (await heads()).map((t) => t.replace(/\d+.*$/, ''))[0];
+    const before = await win.evaluate(() => localStorage.getItem('portpilot-apps-open'));
+    check('the heading is marked as not foldable during a filter', (await fold(filtered).getAttribute('aria-disabled')) === 'true');
+    await fold(filtered).click({ force: true }); // forced: the button says it is disabled, and the handler must agree
+    check('a heading clicked during a filter saves no fold', (await win.evaluate(() => localStorage.getItem('portpilot-apps-open'))) === before && (await cards()) === 1, filtered);
     await win.fill('input[aria-label="Filter apps"]', '');
     await until(async () => (await olderLine()).includes(`${OLD} apps`), 5000, 'older line back');
 
     console.log('step: running an old app brings it back');
-    await win.click('role=button[name="Show older"]');
+    await showOlder().click();
     const tool0 = win.locator('.card[data-app="tool_0"]');
     await tool0.hover();
     await tool0.getByRole('button', { name: 'Start' }).click();

@@ -4,20 +4,39 @@
  * and its worktrees resolve to the same folder without running git.
  *
  * Answers are cached per folder: the Apps page asks on every refresh and a library of 170 apps is
- * 170 walks up the tree. A folder that is gone has no answer; the page then works from the path.
+ * 170 walks up the tree. Each folder ages out at its own time, so the library is never re-read in
+ * one tick. A folder that is gone has no answer and is looked for again sooner; the page then
+ * works from the path.
  */
 const fs = require('fs');
 const path = require('path');
 
 const TTL_MS = 5 * 60 * 1000;
+const SPREAD_MS = 60 * 1000;
+const MISSING_TTL_MS = 30 * 1000;
+const MISSING_SPREAD_MS = 15 * 1000;
 const MAX_UP = 12;
 const cache = new Map(); // folder -> { root, at }
 
 const norm = (p) => String(p || '').replace(/\\/g, '/').replace(/\/+$/, '');
 
-/** The main repo that holds `cwd`, or null when no `.git` is found above it. Never throws. */
+/** How long an answer for this folder is kept. The same folder always gets the same time. */
+function ttlFor(folder, found) {
+  let h = 0;
+  for (let i = 0; i < folder.length; i++) h = (h * 31 + folder.charCodeAt(i)) >>> 0;
+  return found ? TTL_MS + (h % SPREAD_MS) : MISSING_TTL_MS + (h % MISSING_SPREAD_MS);
+}
+
+/**
+ * The main repo that holds `cwd`, or null when no `.git` is found above it. Never throws.
+ * A folder that does not exist has no repo: walking up from it would stop at whatever repo sits
+ * above (a dotfiles repo in the home folder), which need not be its own.
+ */
 function mainRepoOf(cwd) {
   let dir = norm(cwd);
+  try {
+    if (!dir || !fs.statSync(dir).isDirectory()) return null;
+  } catch { return null; }
   for (let i = 0; i < MAX_UP && dir; i++) {
     const dotGit = `${dir}/.git`;
     try {
@@ -44,7 +63,7 @@ function projectRoots(apps, now = Date.now()) {
     if (!app || !app.id || !app.cwd) continue;
     const key = norm(app.cwd);
     let hit = cache.get(key);
-    if (!hit || now - hit.at > TTL_MS) {
+    if (!hit || now - hit.at > ttlFor(key, !!hit.root)) {
       hit = { root: mainRepoOf(key), at: now };
       cache.set(key, hit);
     }
@@ -53,4 +72,4 @@ function projectRoots(apps, now = Date.now()) {
   return out;
 }
 
-module.exports = { projectRoots, mainRepoOf, TTL_MS };
+module.exports = { projectRoots, mainRepoOf, ttlFor, TTL_MS, SPREAD_MS };
