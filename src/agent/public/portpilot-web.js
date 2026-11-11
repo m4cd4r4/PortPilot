@@ -69,6 +69,7 @@
       updateSettings: (settings) => call('config:updateSettings', settings),
       export: () => call('config:export'),
       import: (json) => call('config:import', json),
+      getProjectRoots: () => call('config:getProjectRoots'),
       getGroups: () => call('config:getGroups'),
       saveGroup: (group) => call('config:saveGroup', group),
       deleteGroup: (groupId) => call('config:deleteGroup', groupId)

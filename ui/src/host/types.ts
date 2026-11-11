@@ -46,6 +46,8 @@ export type SceneFields = Omit<Scene, 'id'> & { id?: string };
 export interface Snapshot {
   apps: AppRec[];
   groups: Group[];
+  /** appId -> the main repo folder its folder belongs to, where the host could read it (worktrees name their main repo) */
+  roots?: Record<string, string>;
   /** appId -> live info, present only while the app is up */
   running: Record<string, { port?: number; pid?: number; /** pid listening on the port, from the scan */ listenerPid?: number; /** the runtime file's owner of this run: set only while it matches the live port */ startedBy?: unknown }>;
   /** appId -> exit info for an app PortPilot started that has since died; kept across relaunches until it starts again or is dismissed */

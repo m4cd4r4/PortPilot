@@ -108,6 +108,7 @@ function createDispatcher(configStore, { surface = 'web' } = {}) {
       const result = configStore.import(jsonString);
       return { success: result, error: result ? null : 'Invalid config format' };
     },
+    'config:getProjectRoots': async () => ({ success: true, roots: require('../main/projectRoots').projectRoots(configStore.getApps()) }),
     'config:getGroups': async () => ({ success: true, groups: configStore.getGroups() }),
     'config:saveGroup': async (groupConfig) => ({ success: true, group: configStore.saveGroup(groupConfig) }),
     'config:deleteGroup': async (groupId) => { configStore.deleteGroup(groupId); return { success: true }; },

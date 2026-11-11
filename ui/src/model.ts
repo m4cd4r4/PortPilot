@@ -73,19 +73,6 @@ export function cards(s: Snapshot, query = ''): Card[] {
 /** The stored record calls it `group`; `groupId` is kept for older fixtures. */
 export const groupOf = (a: AppRec): string => a.group || a.groupId || '';
 
-/** Cards bucketed by app group, groups in config order, then the ungrouped ones. */
-export function grouped(s: Snapshot, list: Card[]): Array<{ id: string; name: string; cards: Card[] }> {
-  const out: Array<{ id: string; name: string; cards: Card[] }> = [];
-  for (const g of s.groups) {
-    const c = list.filter((x) => groupOf(x.app) === g.id);
-    if (c.length) out.push({ id: g.id, name: g.name, cards: c });
-  }
-  const known = new Set(s.groups.map((g) => g.id));
-  const rest = list.filter((x) => !groupOf(x.app) || !known.has(groupOf(x.app)));
-  if (rest.length) out.push({ id: '', name: out.length ? 'Other' : 'All apps', cards: rest });
-  return out;
-}
-
 export const STALE_MS = 5 * 60 * 1000;
 
 export type BrowserGroup = 'inuse' | 'open' | 'blocked' | 'stopped';
