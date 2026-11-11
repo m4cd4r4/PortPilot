@@ -199,7 +199,7 @@ More Claude Code screenshots (status line, crash band, `find_run`): [reference](
 
 **Apps**
 - Every app as a card with a live preview of its page, running first and stopped ones below.
-- Switch between Rows and Cards, and between Grouped and Flat.
+- Switch between Rows and Tiles, and between Grouped and Flat.
 - A stopped app stays "stopped" even when another program holds its port; you are told when you press Start. The Alerts bell counts crashes and failed starts only.
 
 **Manage**

@@ -12,21 +12,27 @@ export const ACCENTS = [
 ] as const;
 export type AccentId = (typeof ACCENTS)[number]['id'];
 
-/** How the Apps list is drawn. */
+/** How the Browsers list is drawn. */
 export const VIEWS = [{ v: 'rows', l: 'Rows' }, { v: 'tiles', l: 'Tiles' }, { v: 'cards', l: 'Cards' }] as const;
-export type AppView = (typeof VIEWS)[number]['v'];
+export type ListView = (typeof VIEWS)[number]['v'];
+/** How the Apps list is drawn. Apps has no Cards: with many apps most large cards were a blank picture. */
+export const APP_VIEWS = [VIEWS[0], VIEWS[1]] as const;
+export type AppView = (typeof APP_VIEWS)[number]['v'];
 /** The grid class for a view. 'tiles' is the small one (`minis`); the large Cards grid keeps the older `tiles` class. */
-export const gridClass = (v: AppView) => (v === 'cards' ? 'tiles' : v === 'tiles' ? 'minis' : v);
+export const gridClass = (v: ListView) => (v === 'cards' ? 'tiles' : v === 'tiles' ? 'minis' : v);
 /** Both picture views show a screenshot on every item. */
-export const showsShot = (v: AppView) => v === 'cards' || v === 'tiles';
+export const showsShot = (v: ListView) => v === 'cards' || v === 'tiles';
 export type Density = 'cozy' | 'tight';
 export type Thumbs = 'off' | 'peek' | 'inline';
 export type StatusStyle = 'dot' | 'glyph';
 
-export interface Prefs { nav: Nav; accent: AccentId; view: AppView; density: Density; thumbs: Thumbs; status: StatusStyle; grouping: boolean }
+/** `view` is the Apps list, `browserView` the Browsers list. */
+export interface Prefs { nav: Nav; accent: AccentId; view: AppView; browserView: ListView; density: Density; thumbs: Thumbs; status: StatusStyle; grouping: boolean }
 
 const KEY = 'portpilot-ui-prefs';
-const DEFAULTS: Prefs = { nav: 'side', accent: 'blue', view: 'rows', density: 'tight', thumbs: 'peek', status: 'glyph', grouping: true };
+const DEFAULTS: Prefs = { nav: 'side', accent: 'blue', view: 'rows', browserView: 'rows', density: 'tight', thumbs: 'peek', status: 'glyph', grouping: true };
+
+const isView = (v: unknown): v is ListView => VIEWS.some((x) => x.v === v);
 
 /** Reads the saved choices, dropping any value that is not one of the known options. */
 export function parsePrefs(raw: string | null): Prefs {
@@ -37,7 +43,10 @@ export function parsePrefs(raw: string | null): Prefs {
     if (ACCENTS.some((a) => a.id === j.accent)) out.accent = j.accent as AccentId;
     // Compact and Gallery were retired: they fold into the two views that remain.
     const view = (j.view as string) === 'compact' ? 'rows' : (j.view as string) === 'gallery' ? 'cards' : j.view;
-    if (VIEWS.some((x) => x.v === view)) out.view = view as AppView;
+    // Apps and Browsers shared one saved view until Apps lost Cards. Browsers keeps what was saved;
+    // on Apps a saved Cards becomes Tiles, the picture view that is left.
+    if (isView(view)) { out.view = view === 'cards' ? 'tiles' : view; out.browserView = view; }
+    if (isView(j.browserView)) out.browserView = j.browserView;
     if (j.density === 'cozy' || j.density === 'tight') out.density = j.density;
     if (j.thumbs === 'off' || j.thumbs === 'peek' || j.thumbs === 'inline') out.thumbs = j.thumbs;
     if (j.status === 'dot' || j.status === 'glyph') out.status = j.status;

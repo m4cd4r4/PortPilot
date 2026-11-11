@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { Host, Settings as S } from '../host';
-import { ACCENTS, VIEWS, setPrefs, usePrefs, type Nav, type Prefs } from '../prefs';
+import { ACCENTS, APP_VIEWS, setPrefs, usePrefs, type Nav, type Prefs } from '../prefs';
 
 interface Props { host: Host }
 
@@ -47,7 +47,7 @@ export function loadTheme(): string {
 }
 
 const DISPLAY: Array<{ key: keyof Prefs; label: string; opts: Array<[string, string]> }> = [
-  { key: 'view', label: 'Apps view', opts: VIEWS.map((v) => [v.v, v.l] as [string, string]) },
+  { key: 'view', label: 'Apps view', opts: APP_VIEWS.map((v) => [v.v, v.l] as [string, string]) },
   { key: 'density', label: 'Density', opts: [['cozy', 'Cozy'], ['tight', 'Tight']] },
   { key: 'thumbs', label: 'Thumbnails', opts: [['off', 'Off'], ['peek', 'Hover peek'], ['inline', 'Inline']] },
   { key: 'status', label: 'Status style', opts: [['dot', 'Dot'], ['glyph', 'Glyph + word']] },

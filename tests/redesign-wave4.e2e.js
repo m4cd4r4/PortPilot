@@ -89,7 +89,7 @@ async function main() {
     await win.click('role=tab[name="Apps"]');
     await until(() => win.evaluate(() => [...document.querySelectorAll('.group-h')].some((e) => e.textContent.startsWith('Work'))), 10000, 'Work heading');
     check('Grouping (on by default) shows the Work group', true);
-    await win.click('role=button[name="Cards"]');
+    await win.click('role=button[name="Tiles"]');
 
     console.log('step: start, details, ports');
     await win.click('role=tab[name="Apps"]');

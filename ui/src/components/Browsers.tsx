@@ -40,7 +40,7 @@ export function Browsers({ host, snap, onDone, editName, onPorts }: Props) {
   };
 
   const grid = (rows: BrowserCard[]) => (
-    <div className={`cards ${gridClass(prefs.view)}`} data-density={prefs.density} data-status={prefs.status} data-thumbs={prefs.thumbs}>
+    <div className={`cards ${gridClass(prefs.browserView)}`} data-density={prefs.density} data-status={prefs.status} data-thumbs={prefs.thumbs}>
       {rows.map((c) => <ProfileCard key={c.profile.name} c={c} prefs={prefs} art={art} signIn={signIns[c.profile.name]} busy={busy === c.profile.name} actions={actions} />)}
     </div>
   );
@@ -77,7 +77,7 @@ export function Browsers({ host, snap, onDone, editName, onPorts }: Props) {
         <div className="toolbar-end">
           <div className="seg small" role="group" aria-label="View mode">
             {VIEWS.map((m) => (
-              <button key={m.v} aria-pressed={prefs.view === m.v} className={prefs.view === m.v ? 'on' : ''} onClick={() => setPrefs({ view: m.v })}>{m.l}</button>
+              <button key={m.v} aria-pressed={prefs.browserView === m.v} className={prefs.browserView === m.v ? 'on' : ''} onClick={() => setPrefs({ browserView: m.v })}>{m.l}</button>
             ))}
           </div>
           <button aria-pressed={prefs.grouping} className={prefs.grouping ? 'tog on' : 'tog'} onClick={() => setPrefs({ grouping: !prefs.grouping })}>Grouped</button>
@@ -111,7 +111,7 @@ function ProfileCard({ c, prefs, art, signIn, busy, actions }: { c: BrowserCard;
   const accounts = p.accounts || [];
   const hue = hueOf(p.name);
   const lease = p.leasedTo;
-  const showShot = showsShot(prefs.view) || prefs.thumbs === 'inline';
+  const showShot = showsShot(prefs.browserView) || prefs.thumbs === 'inline';
   const state = up ? 'running' : c.group === 'blocked' ? 'conflict' : 'stopped';
   const [small, setSmall] = useState(false);
   // A favicon or touch icon is a small square: show it whole on the gradient, not stretched to fill the hero.

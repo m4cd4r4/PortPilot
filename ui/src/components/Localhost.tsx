@@ -4,7 +4,7 @@ import { clusterCards, type Cluster } from '../clusters';
 import { runView } from '../legacy';
 import { STALE_MS, cards, type Card } from '../model';
 import { OLDER_DAYS, loadLastRuns, olderIds, projectsOf, pruneOpen, rememberedRuns, sections, type Section } from '../projects';
-import { VIEWS, gridClass, setPrefs, showsShot, usePrefs, type Prefs } from '../prefs';
+import { APP_VIEWS, gridClass, setPrefs, showsShot, usePrefs, type Prefs } from '../prefs';
 import type { Thumbs } from '../useThumbs';
 import { appBlocked, openApp, type TileNotice } from '../tileRule';
 import { AppInspector } from './AppInspector';
@@ -231,7 +231,7 @@ export function Localhost({ host, snap, thumbs, onDone, manage, onManage, inspec
         <input className="filter" type="search" placeholder="Filter apps" aria-label="Filter apps" value={query} onChange={(e) => setQuery(e.target.value)} />
         <div className="toolbar-end">
           <div className="seg small" role="group" aria-label="View mode">
-            {VIEWS.map((m) => (
+            {APP_VIEWS.map((m) => (
               <button key={m.v} aria-pressed={prefs.view === m.v} className={prefs.view === m.v ? 'on' : ''} onClick={() => setPrefs({ view: m.v })}>{m.l}</button>
             ))}
           </div>

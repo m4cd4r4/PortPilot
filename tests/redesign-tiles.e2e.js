@@ -1,10 +1,10 @@
 /**
  * Real-Electron check of the Rows name fix, the Tiles view and the logo-only sidebar, against a THROWAWAY config.
  * Run: npm run build:ui && node tests/redesign-tiles.e2e.js
- * Set PORTPILOT_SHOTS_DIR to save screenshots (Rows, Tiles and Cards on Browsers and Apps, 1440 and 390 wide).
+ * Set PORTPILOT_SHOTS_DIR to save screenshots (Rows, Tiles and Cards on Browsers, Tiles on Apps, 1440 and 390 wide).
  *
  * Covers: no profile name is cut off in Browsers Rows (stopped and signed-in alike); Tiles shows more per
- * row than Cards and is smaller; the choice is remembered and shared by Apps; the sidebar shows the logo
+ * row than Cards and is smaller; Apps keeps its own view and has no Cards; the sidebar shows the logo
  * with no wordmark but keeps its accessible name.
  */
 const h = require('./e2e-harness');
@@ -73,10 +73,13 @@ async function main() {
     check('Cards stay larger, three or four across', (await perRow('.bcard')) <= 4);
     await shot('browsers-cards-1440');
 
-    await win.click('role=button[name="Tiles"]');
+    // Left on Cards: Apps has its own view, and no Cards to show.
     await win.click('role=tab[name="Apps"]').catch(() => win.click('role=button[name="Apps"]'));
     await until(() => win.locator('.card[data-app]').count().then((n) => n >= 9), 15000, 'app cards');
-    check('Apps uses the same Tiles choice', (await gridClass()).includes('minis'));
+    check('Cards on Browsers does not change the Apps view', (await gridClass()).includes('rows'), await gridClass());
+    check('Apps has no Cards button', (await win.locator('[role=group][aria-label="View mode"] >> role=button[name="Cards"]').count()) === 0);
+    await win.click('role=button[name="Tiles"]');
+    await until(async () => (await gridClass()).includes('minis'), 10000, 'apps tiles grid');
     check('Apps tiles fit five or more across', (await perRow('.card[data-app]')) >= 5);
     await shot('apps-tiles-1440');
 
