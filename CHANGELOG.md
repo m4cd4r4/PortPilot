@@ -5,6 +5,30 @@ All notable changes to PortPilot will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+- **Quitting PortPilot keeps your servers running.** Apps PortPilot started stay up when it quits, their output goes to `logs/<app>.log` (rotated at 10 MB), and on the next launch PortPilot picks them up again, so Stop still works on them. The "Stop apps on quit" setting is now off by default, and a saved "on" from an earlier version is reset to off once; tick it again and it stays. Starts from the VS Code extension's portal are never stopped on quit.
+- **Stop on a browser profile waits for the browser to close.** It asks Brave to quit, waits for the process it launched, and ends it after about 5 s if it lingers, checking the pid and start time first so a reused pid is never killed. Start first checks that nothing else holds the profile folder: leftover helpers of a closed browser are ended, and a browser opened by hand on that folder is reported as `FOLDER_IN_USE` instead of a launch that times out.
+- **One tile rule.** A running tile opens the app, a stopped one starts it then opens it, and a blocked one says what holds the port.
+- **Icon buttons** for the actions that repeat on every row and card.
+
+### Added
+- **"Started by claude".** App cards and App History name the Claude session that started a run.
+- **Crash toast is back.** A crash shows a toast, survives a relaunch, and counts on the Alerts bell. A crash stamp more than 7 days old is no longer shown as crashed.
+- **Browser session history** in the History tab, with an Apps | Browsers switch and Open again.
+- **Tiles view** in the desktop app; the brand is logo-only, and names are no longer cut off in rows.
+- **User-journey tests** (`npm run test:journeys`): four multi-day scripts that relaunch the app against the same data and check every step from outside it. Plan and findings in [docs/testing/](docs/testing/).
+
+### Fixed
+- **Open on a running browser profile** brings it forward, and Home's browser tiles act as shortcuts.
+- **Server detection:** one wrong folder guess no longer claims every later `node server.js`, and PortPilot's own test servers are not recorded as apps.
+- **macOS and Linux:** a browser whose command line has a URL before any flag is recognised as a browser, so the profile-folder check sees it (F89).
+- **Drawers no longer steal focus** when the list refreshes.
+
+### Known limits
+- After a relaunch, PortPilot forgets which browsers it started. A browser it launched that is still open counts as someone else's, so Start on that profile fails with `FOLDER_IN_USE` until you close it (F63).
+
 ## [5.0.1] - 2026-11-03
 
 ### Fixed

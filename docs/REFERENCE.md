@@ -161,7 +161,10 @@ Full threat model: [SECURITY.md](../SECURITY.md). Run either the desktop app or 
 npm install
 npm start                    # run the app
 npm run dev                  # dev mode (DevTools if enabled)
-npm test                     # Playwright E2E smoke suite (Electron + test servers on 3000/3001/8080)
+npm test                     # unit tests, then the redesign E2E specs (Electron)
+npm run test:unit            # unit tests only (what CI runs, with test:mcp)
+npm run test:mcp             # MCP server tests
+npm run test:journeys        # user journeys: multi-day scripts across app relaunches
 xvfb-run -a npm test         # headless Linux
 npm run screenshots          # UI screenshots
 npm run build                # Windows (NSIS installer)
@@ -170,7 +173,7 @@ npm run build:linux          # Linux (AppImage + .deb)
 npm run build:all-platforms  # both
 ```
 
-The smoke suite covers window launch, port scanning, test-server detection, port-card rendering, global search, copy/kill controls, the Settings panel and the Add App modal. The older `v1.3`/`v1.7`/`groups` specs target the pre-2.0 tab UI and are kept for reference only.
+The E2E specs (`tests/redesign-*.e2e.js`) each open one screen against a fresh config. The journeys (`tests/journeys/`) keep one config folder across several launches and play a script of events: servers start and crash, a stranger takes a port, two Claude sessions share a browser over MCP, PortPilot quits and comes back. Every step is checked from outside the app (files on disk, ports, Brave's debug port, the rendered screen), never by the app's own word. Run journeys one at a time; they use real ports. The plan, every finding (F-numbers) and every run are in [docs/testing/](testing/).
 
 Launching from VS Code or Claude Code: `launch.js` clears `ELECTRON_RUN_AS_NODE` for you.
 

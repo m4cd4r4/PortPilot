@@ -73,6 +73,7 @@ npm start
 **One place for every local server**
 - Apps you registered, servers you started in a terminal and servers Claude started all show up.
 - Each has its port, its state and a live preview of the page.
+- Quitting PortPilot leaves your servers running; it picks them up again on the next launch.
 
 **Named browsers with their own debug ports**
 - One profile per purpose (Search Console, GitHub, a staging admin), each signed in once.
@@ -85,6 +86,7 @@ npm start
 
 **A run record**
 - Every run is kept with the git state it came from, so you can come back to it later.
+- Each run says who started it: you, or the Claude session that did.
 
 **Assistants that cooperate**
 - Claude Code and other MCP clients start, stop and find servers through PortPilot.
