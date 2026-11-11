@@ -2,6 +2,7 @@ import { useMemo, useRef, useState } from 'react';
 import type { Host, Snapshot } from '../host';
 import { MORE_VIEWS, VIEWS, type View } from '../model';
 import { palette, type Command } from '../palette';
+import { startApp } from '../tileRule';
 
 interface Props {
   open: boolean; onClose: () => void; host: Host; snap: Snapshot;
@@ -36,7 +37,7 @@ function PaletteBody({ open, onClose, host, snap, view, onView, onDone }: Props)
     const a = cmd.action;
     try {
       if (a.type === 'view') onView(a.view as View);
-      else if (a.type === 'startApp') await host.startApp(snap.apps.find((x) => x.id === a.id)!);
+      else if (a.type === 'startApp') await startApp(host, snap, snap.apps.find((x) => x.id === a.id)!);
       else if (a.type === 'stopApp') await host.stopApp(a.id!);
       else if (a.type === 'openApp') {
         // Only a running app has a page; its preferred port alone is a dead URL.

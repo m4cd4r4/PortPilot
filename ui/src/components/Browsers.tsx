@@ -8,7 +8,7 @@ import { BrowserDrawer } from './BrowserDrawer';
 import { TileNoticeLine } from './TileNoticeLine';
 import { IconButton } from './icons';
 
-interface Props { host: Host; snap: Snapshot; onDone: () => void; editName?: string; onPorts: () => void }
+interface Props { host: Host; snap: Snapshot; onDone: () => void; editName?: string; onPorts: (port?: number) => void }
 
 const MAX_CHIPS = 3;
 

@@ -11,11 +11,11 @@ import { TileNoticeLine } from './TileNoticeLine';
 import { IconButton } from './icons';
 import { Library } from './Library';
 
-interface Props { host: Host; snap: Snapshot; thumbs: Thumbs; onDone: () => void; manage: boolean; onManage: (on: boolean) => void; inspectId?: string; onPorts: () => void }
+interface Props { host: Host; snap: Snapshot; thumbs: Thumbs; onDone: () => void; manage: boolean; onManage: (on: boolean) => void; inspectId?: string; onPorts: (port?: number) => void }
 
 const HOVER_MS = 500;
 const SWEEP_MS = 30000;
-/** Stopped apps shown before "Show all"; running and blocked ones always show. */
+/** Stopped apps shown before "Show all"; running and crashed ones always show. */
 const STOPPED_SHOWN = 12;
 
 export function Localhost({ host, snap, thumbs, onDone, manage, onManage, inspectId, onPorts }: Props) {
@@ -51,7 +51,8 @@ export function Localhost({ host, snap, thumbs, onDone, manage, onManage, inspec
     try { setNotice(null); await fn(); onDone(); } catch (e) { setNotice({ text: (e as Error).message }); }
   };
   const open = (c: Card) => c.port && act(() => host.openUrl(`http://localhost:${c.port}`));
-  // A held port is explained, not retried: the host would only fail the same way.
+  // A taken port is reported here, when Start is pressed, and nowhere before it. It is explained,
+  // not retried: the host would only fail the same way.
   const blockedOr = (c: Card, fn: () => void) => { const why = appBlocked(snap, c.app); if (why) setNotice(why); else fn(); };
   const actions: Actions = {
     open,
@@ -150,12 +151,11 @@ export function Localhost({ host, snap, thumbs, onDone, manage, onManage, inspec
 
 interface Actions { open(c: Card): void; start(c: Card): void; stop(c: Card): void; tile(c: Card): void }
 
-const GLYPH: Record<Card['state'], string> = { running: '●', conflict: '▲', crashed: '✕', stopped: '○' };
-const WORD: Record<Card['state'], string> = { running: 'running', conflict: 'blocked', crashed: 'crashed', stopped: 'stopped' };
+const GLYPH: Record<Card['state'], string> = { running: '●', crashed: '✕', stopped: '○' };
+const WORD: Record<Card['state'], string> = { running: 'running', crashed: 'crashed', stopped: 'stopped' };
 
-/** The picture is the shortcut: running opens, stopped starts then opens, a held port says why. */
-const tileLabel = (c: Card) => (c.state === 'conflict' ? `Why ${c.app.name} cannot start`
-  : c.state === 'running' ? `Open ${c.app.name}` : `Start and open ${c.app.name}`);
+/** The picture is the shortcut: running opens, stopped starts then opens (a taken port is said then). */
+const tileLabel = (c: Card) => (c.state === 'running' ? `Open ${c.app.name}` : `Start and open ${c.app.name}`);
 
 interface More { count: number; open: boolean; toggle(): void }
 
@@ -178,7 +178,6 @@ function AppCard({ c, title, more, member, prefs, thumbs, actions }: { c: Card; 
     <article className={`card ${c.state}${member ? ' member' : ''}`} data-app={c.app.id} data-state={c.state} onMouseEnter={hover} onMouseLeave={() => clearTimeout(timer.current)}>
       {showShot && <button className="shot" onClick={() => actions.tile(c)} aria-label={tileLabel(c)} title={tileLabel(c)}>
         {thumb ? <img src={thumb.url} alt="" loading="lazy" /> : <span className="letter" aria-hidden="true">{c.app.name.slice(0, 1).toUpperCase()}</span>}
-        {c.state === 'conflict' && <span className="badge warn">Port held</span>}
         {c.state === 'crashed' && <span className="badge warn">Crashed</span>}
       </button>}
       <div className="meta">

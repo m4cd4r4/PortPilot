@@ -8,23 +8,33 @@ import type { AppRec, Host, Profile, Snapshot } from './host';
  * Edit and Details are always a separate control, never the tile itself.
  */
 
-/** What a blocked tile tells the user. `ports` adds the link to the Ports screen. */
-export interface TileNotice { text: string; ports?: boolean }
+/** What a blocked tile tells the user. `ports` adds the link to the Ports screen, filtered to `port` when it is known. */
+export interface TileNotice { text: string; ports?: boolean; port?: number }
 
 const proc = (name?: string) => (name || 'another process').replace(/\.exe$/i, '');
 
-/** Why an app cannot start, or null when nothing holds its port. */
+/**
+ * Why an app cannot start, or null when nothing holds its port. Asked when Start is pressed:
+ * this is the only place a taken port is reported, the card itself stays "stopped".
+ */
 export function appBlocked(snap: Snapshot, app: AppRec): TileNotice | null {
   const c = snap.conflicts.find((x) => x.appId === app.id);
   if (!c) return null;
   const pid = c.occupiedBy?.pid ? ` (pid ${c.occupiedBy.pid})` : '';
-  return { text: `${app.name} cannot start: :${c.port} is held by ${proc(c.occupiedBy?.processName)}${pid}.`, ports: true };
+  return { text: `${app.name} cannot start: :${c.port} is held by ${proc(c.occupiedBy?.processName)}${pid}.`, ports: true, port: c.port };
+}
+
+/** Start an app from a place with no notice line of its own (palette, Library, bell): a taken port is the error. */
+export async function startApp(host: Host, snap: Snapshot, app: AppRec): Promise<void> {
+  const why = appBlocked(snap, app);
+  if (why) throw new Error(why.text);
+  await host.startApp(app);
 }
 
 /** Why a browser profile cannot start, or null when it can. */
 export function profileBlocked(p: Profile): TileNotice | null {
   if (p.state !== 'blocked') return null;
-  return { text: `${p.name} cannot start: ${p.warning || `:${p.port} is held by another process.`}`, ports: true };
+  return { text: `${p.name} cannot start: ${p.warning || `:${p.port} is held by another process.`}`, ports: true, port: p.port };
 }
 
 const STEP_MS = 750;

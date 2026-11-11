@@ -6,7 +6,7 @@
  *
  * Covers: one card per app; Start from the card; hover takes a live screenshot; a stopped app
  * keeps its last screenshot dimmed; the four view modes and their persistence; the filter;
- * a blocked port badges its card; History lists the run with its page title and day heading.
+ * a held port leaves a stopped card alone and is reported at Start; History lists the run with its page title and day heading.
  */
 const h = require('./e2e-harness');
 const { fs, path, until } = h;
@@ -109,15 +109,21 @@ async function main() {
     await win.fill('input[aria-label="Filter apps"]', '');
 
     console.log('step: blocked port');
+    // A stopped app whose port someone else holds stays "stopped": no badge, no note, no jump up
+    // the list. First prove the scan sees the holder, then give the 5 s refresh time to show it.
     foreign = h.holdPort(heldPort);
-    await until(async () => (await stateOf('app_blocked')) === 'conflict', 30000, 'blocked card shows the conflict');
-    check('a held port badges its card', (await card('app_blocked').locator('.badge').textContent()) === 'Port held');
+    await until(() => win.evaluate(async (p) => ((await window.portpilot.ports.scanWithApps()).unknownConflicts || []).some((c) => c.port === p), heldPort), 30000, 'the scan sees the held port');
+    await h.sleep(6500);
+    check('a held port leaves a stopped card stopped', (await stateOf('app_blocked')) === 'stopped', await stateOf('app_blocked'));
+    const heldText = await card('app_blocked').textContent();
+    check('with no badge or note about the port', (await card('app_blocked').locator('.badge').count()) === 0 && !/held/i.test(heldText), heldText);
 
-    console.log('step: the picture follows the tile rule');
-    await card('app_blocked').locator('.shot').click();
+    console.log('step: Start reports the taken port');
+    await card('app_blocked').hover();
+    await card('app_blocked').getByRole('button', { name: 'Start' }).click();
     const why = await win.locator('.tile-notice').textContent().catch(() => '');
-    check('a blocked picture says why instead of starting', why.includes('blocked cannot start') && why.includes(`:${heldPort} is held by`), why);
-    check('and the app was not started', (await stateOf('app_blocked')) === 'conflict');
+    check('Start says why instead of starting', why.includes('blocked cannot start') && why.includes(`:${heldPort} is held by`), why);
+    check('and the app was not started', (await stateOf('app_blocked')) === 'stopped');
     if (SHOTS) {
       for (const w of [1440, 390]) {
         await win.setViewportSize({ width: w, height: 800 });
@@ -128,6 +134,8 @@ async function main() {
     await win.click('.tile-notice >> role=button[name="Go to Ports"]');
     await until(() => win.evaluate(() => document.querySelector('[role="tab"][aria-selected="true"]')?.textContent === 'Ports'), 5000, 'Ports tab');
     check('Go to Ports opens the Ports screen', true);
+    check('filtered to the taken port', (await win.inputValue('input[aria-label="Filter ports"]')) === String(heldPort)
+      && (await win.locator('table.ports tbody tr').count()) === 1 && (await win.locator(`table.ports tr[data-port="${heldPort}"]`).count()) === 1);
     await win.click('role=tab[name="Apps"]');
     await app.evaluate(({ shell }) => { global.__opened = []; shell.openExternal = async (u) => { global.__opened.push(u); }; });
     await card('app_shop').locator('.shot').click();

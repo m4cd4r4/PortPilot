@@ -15,23 +15,22 @@ export const MORE_VIEWS: Array<{ view: View; label: string }> = [
   { view: 'history', label: 'History' },
 ];
 
-/** One line in the alerts bell: a blocked port (Fix opens Ports) or a crashed app (Restart / Dismiss). */
-export interface Alert { kind: 'conflict' | 'crash'; text: string; appId?: string }
+/**
+ * One line in the alerts bell: a crashed app or a start that died (Restart / Dismiss).
+ * A stopped app whose port someone else holds is not an alert: with many apps sharing a few
+ * ports that is the normal state, and it is reported when the app is started (tileRule.appBlocked).
+ */
+export interface Alert { kind: 'crash'; text: string; appId?: string }
 export interface Tally { running: number; apps: number; profilesUp: number; profiles: number; alerts: Alert[] }
 
 /** Counts for the Home tiles and the alerts bell. Pure. */
 export function tally(s: Snapshot): Tally {
   const top = s.apps.filter((a) => !a.parentId);
-  const alerts: Alert[] = s.conflicts.map((c) => {
-    const app = s.apps.find((a) => a.id === c.appId);
-    const name = app?.name || c.appName;
-    const who = c.occupiedBy?.processName ? c.occupiedBy.processName.replace(/\.exe$/i, '') : 'another process';
-    return { kind: 'conflict', appId: c.appId, text: `${name || 'An app'} is blocked: :${c.port} is held by ${who}` };
-  });
-  // A crash counts while the app is down and its port is not held: a blocked app shows its conflict only.
+  const alerts: Alert[] = [];
+  // A crash counts while the app is down, whoever holds its port now.
   for (const app of s.apps) {
     const c = s.crashed[app.id];
-    if (!c || s.running[app.id] || s.conflicts.some((x) => x.appId === app.id)) continue;
+    if (!c || s.running[app.id]) continue;
     alerts.push({ kind: 'crash', appId: app.id, text: `${app.name} crashed${c.exitCode != null ? `: exit ${c.exitCode}` : ''}` });
   }
   return {
@@ -43,11 +42,14 @@ export function tally(s: Snapshot): Tally {
   };
 }
 
-export type CardState = 'running' | 'conflict' | 'crashed' | 'stopped';
+export type CardState = 'running' | 'crashed' | 'stopped';
 export interface Card { app: AppRec; state: CardState; port?: number; note: string; /** runtime owner record of a live app; the card words it with runView().startedByLabel */ startedBy?: unknown }
-const RANK: Record<CardState, number> = { conflict: 0, crashed: 1, running: 2, stopped: 3 };
+const RANK: Record<CardState, number> = { crashed: 0, running: 1, stopped: 2 };
 
-/** One card per registered app: its state, the port to show and a short reason. Running first, then by name. */
+/**
+ * One card per registered app: its state, the port to show and a short reason. Crashed and running
+ * first, then by name. A stopped app stays "stopped" even when something else holds its port.
+ */
 export function cards(s: Snapshot, query = ''): Card[] {
   const words = query.toLowerCase().split(/\s+/).filter(Boolean);
   const out: Card[] = [];
@@ -55,19 +57,15 @@ export function cards(s: Snapshot, query = ''): Card[] {
     const hay = `${app.name} ${app.branch || ''} ${app.preferredPort || ''}`.toLowerCase();
     if (!words.every((w) => hay.includes(w))) continue;
     const live = s.running[app.id];
-    const conflict = s.conflicts.find((c) => c.appId === app.id);
     let state: CardState = 'stopped';
     let note = '';
     if (live) state = 'running';
-    else if (conflict) {
-      state = 'conflict';
-      note = `Port held by ${(conflict.occupiedBy?.processName || 'another process').replace(/\.exe$/i, '')}`;
-    } else if (s.crashed[app.id]) {
+    else if (s.crashed[app.id]) {
       state = 'crashed';
       const code = s.crashed[app.id].exitCode;
       note = code != null ? `Exited with code ${code}` : 'Exited unexpectedly';
     }
-    out.push({ app, state, port: live?.port ?? conflict?.port ?? app.preferredPort, note, startedBy: live?.startedBy });
+    out.push({ app, state, port: live?.port ?? app.preferredPort, note, startedBy: live?.startedBy });
   }
   return out.sort((a, b) => RANK[a.state] - RANK[b.state] || a.app.name.localeCompare(b.app.name));
 }

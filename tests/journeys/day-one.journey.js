@@ -146,14 +146,17 @@ const h = require('../e2e-harness');
     ['a stranger takes blog\'s port', async () => {
       stranger = j.holdPort(blogPort);
       j.check('the stranger is listening', await j.waitFor(() => j.listeners(blogPort).length > 0, 5000));
-      j.check('the blog card shows the conflict', await j.waitFor(async () => (await j.stateOf(ids.blog)) === 'conflict', 30000));
+      // A taken port is reported at Start only. Prove the scan sees the stranger, give the 5 s
+      // refresh time to show it, then check nothing on screen changed: blog still reads crashed
+      // (its last real state) and the bell still counts that one crash.
+      j.check('PortPilot\'s scan sees the stranger', await j.waitFor(() => j.win.evaluate(async (p) => ((await window.portpilot.ports.scanWithApps()).unknownConflicts || []).some((c) => c.port === p), blogPort), 30000));
+      await h.sleep(6500);
+      j.check('the blog card still reads crashed, not blocked', (await j.stateOf(ids.blog)) === 'crashed', await j.stateOf(ids.blog));
       const row = await j.card(ids.blog).textContent();
-      j.check('and names who holds the port', /Port held by node/.test(row), row);
-      // The sidebar and the narrow top bar each carry a bell; only one is visible.
-      const count = await j.waitFor(() => j.win.locator('.bell-count:visible').first().textContent(), 10000);
-      j.check('the alerts bell counts one', count === '1', count);
+      j.check('and says nothing about the port being held', !/held/i.test(row), row);
+      j.check('the alerts bell still counts the crash alone', (await j.bellCount()) === '1', await j.bellCount());
       await j.shot('05-port-held');
-      console.log('  a person presses Start on the blocked app anyway');
+      console.log('  a person presses Start on the app');
       await j.card(ids.blog).hover();
       await j.card(ids.blog).getByRole('button', { name: 'Start' }).click();
       const said = await j.waitFor(() => j.win.locator('.tile-notice, [role="alert"]').first().textContent(), 5000);
@@ -167,9 +170,9 @@ const h = require('../e2e-harness');
     ['the stranger leaves', async () => {
       await stranger.stop();
       j.check('blog\'s port is free again', await j.portFree(blogPort));
-      // A named state, not just "not conflict": a missing card reads as null and must not pass.
-      j.check('the card goes back to crashed (its last real state)', await j.waitFor(async () => (await j.stateOf(ids.blog)) === 'crashed', 30000), await j.stateOf(ids.blog));
-      j.check('the bell is back to the crash alone', await j.waitFor(async () => {
+      // A named state: a missing card reads as null and must not pass.
+      j.check('the card still reads crashed (its last real state)', await j.waitFor(async () => (await j.stateOf(ids.blog)) === 'crashed', 30000), await j.stateOf(ids.blog));
+      j.check('the bell holds the crash alone', await j.waitFor(async () => {
         if ((await j.bellCount()) !== '1') return false;
         await j.win.locator('.bell:visible').first().click();
         const kinds = await j.win.locator('.alerts-pop li').evaluateAll((els) => els.map((e) => e.getAttribute('data-alert')));

@@ -473,11 +473,11 @@ button.primary:disabled { opacity: 0.6; }
 .set-row strong { display: block; font-weight: 500; }
 .set-row small, .set-note { display: block; color: var(--tx2); font-size: 12.5px; margin: 0; }
 .set-row.num input { width: 84px; flex: none; background: var(--bg); border: 1px solid var(--bd); border-radius: 8px; padding: 4px 8px; color: var(--tx); font: inherit; }
-.set-group > button, .toolbar-end > button, .groups-panel button, .conflict-row button, .row-acts button, .empty-note button:not(.primary) {
+.set-group > button, .toolbar-end > button, .groups-panel button, .row-acts button, .empty-note button:not(.primary) {
   background: var(--pn2); border: 1px solid var(--bd); border-radius: 7px; padding: 4px 12px; color: var(--tx);
 }
 .set-group > button { justify-self: start; }
-.set-group > button:hover:not(:disabled), .toolbar-end > button:hover:not(:disabled), .row-acts button:hover:not(:disabled), .conflict-row button:hover:not(:disabled), .groups-panel button:hover:not(:disabled) { border-color: var(--acc); }
+.set-group > button:hover:not(:disabled), .toolbar-end > button:hover:not(:disabled), .row-acts button:hover:not(:disabled), .groups-panel button:hover:not(:disabled) { border-color: var(--acc); }
 button.danger { background: var(--warn-bg); border-color: color-mix(in srgb, var(--warn) 50%, transparent); color: var(--warn); }
 
 table.ports { width: 100%; border-collapse: collapse; background: var(--pn); border: 1px solid var(--bd); border-radius: var(--r); overflow: hidden; }
@@ -494,8 +494,6 @@ table.ports tbody tr:hover { background: var(--pn2); }
 table.library td.cmd { max-width: 0; width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--tx2); }
 /* The command column gives way so the row actions stay on one line (the 390 layout below stacks them on purpose). */
 @media (min-width: 641px) { table.library .row-acts { flex-wrap: nowrap; } }
-.conflicts { display: grid; gap: 6px; margin-bottom: 14px; }
-.conflict-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 12px; border-radius: 9px; background: var(--warn-bg); color: var(--warn); }
 .groups-panel { display: grid; gap: 8px; background: var(--pn); border: 1px solid var(--bd); border-radius: var(--r); padding: 12px 16px; margin-bottom: 14px; }
 .groups-panel input, .inline-row input { background: var(--bg); border: 1px solid var(--bd); border-radius: 8px; padding: 4px 10px; color: var(--tx); font: inherit; min-width: 0; }
 .inline-row { display: flex; align-items: center; gap: 8px; }

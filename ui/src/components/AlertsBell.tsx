@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Alert } from '../model';
 
-export type AlertAct = 'fix' | 'restart' | 'dismiss';
+export type AlertAct = 'restart' | 'dismiss';
 interface Props { alerts: Alert[]; onAct: (a: Alert, act: AlertAct) => void; where: 'side' | 'top' }
 
-/** Blocked ports and crashed apps live behind a bell with a count, not a banner over every screen. */
+/** Crashed apps and failed starts live behind a bell with a count, not a banner over every screen. */
 export function AlertsBell({ alerts, onAct, where }: Props) {
   const [open, setOpen] = useState(false);
   const box = useRef<HTMLDivElement>(null);
@@ -20,7 +20,6 @@ export function AlertsBell({ alerts, onAct, where }: Props) {
   }, [open]);
   useEffect(() => { if (n === 0) setOpen(false); }, [n]);
 
-  const act = (a: Alert, what: AlertAct) => { if (what === 'fix') setOpen(false); onAct(a, what); };
   const label = n === 0 ? 'Alerts, none' : `Alerts, ${n}`;
   return (
     <div className={`alerts alerts-${where}`} ref={box}>
@@ -39,12 +38,8 @@ export function AlertsBell({ alerts, onAct, where }: Props) {
             <ul>
               {alerts.map((a, i) => (
                 <li key={`${a.kind}-${a.appId || i}`} data-alert={a.kind}><span className="dot warn" aria-hidden="true" /><span className="msg">{a.text}</span>
-                  {a.kind === 'conflict'
-                    ? <button onClick={() => act(a, 'fix')}>Fix</button>
-                    : <>
-                        <button onClick={() => act(a, 'restart')}>Restart</button>
-                        <button onClick={() => act(a, 'dismiss')}>Dismiss</button>
-                      </>}
+                  <button onClick={() => onAct(a, 'restart')}>Restart</button>
+                  <button onClick={() => onAct(a, 'dismiss')}>Dismiss</button>
                 </li>
               ))}
             </ul>
