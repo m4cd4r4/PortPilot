@@ -17,6 +17,7 @@ import { syncTitleBar } from './titleBar';
 import { CrashToasts } from './components/CrashToasts';
 import { AppInspector } from './components/AppInspector';
 import type { AlertAct } from './components/AlertsBell';
+import { startApp } from './tileRule';
 
 const EMPTY: Snapshot = { apps: [], groups: [], running: {}, crashed: {}, conflicts: [], profiles: [], ports: [] };
 
@@ -26,11 +27,15 @@ export function App({ host }: { host: Host }) {
   /** A card clicked on Home: the Apps or Browsers screen opens straight onto that item. */
   const [focus, setFocus] = useState<{ kind: 'app' | 'browser'; id: string } | null>(null);
   /** 'library' is an alias for Apps in Manage mode; any other jump leaves Manage. */
+  /** "Go to Ports" from a taken-port notice opens Ports filtered to that port. */
+  const [portFilter, setPortFilter] = useState('');
   const setView = useCallback((v: View) => {
     setManage(v === 'library');
     setFocus(null);
+    setPortFilter('');
     setViewRaw(v === 'library' ? 'localhost' : v);
   }, []);
+  const toPorts = useCallback((port?: number) => { setView('ports'); setPortFilter(port ? String(port) : ''); }, [setView]);
   const openItem = useCallback((kind: 'app' | 'browser', id: string) => {
     setManage(false);
     setFocus({ kind, id });
@@ -90,15 +95,14 @@ export function App({ host }: { host: Host }) {
   const restart = useCallback(async (appId: string) => {
     const app = snap.apps.find((a) => a.id === appId);
     if (!app) throw new Error('That app is no longer in PortPilot');
-    try { await host.startApp(app); } finally { refresh(); }
+    try { await startApp(host, app); } finally { refresh(); }
   }, [host, snap.apps, refresh]);
   const onAlert = useCallback((a: Alert, act: AlertAct) => {
     setNotice('');
     const fail = (e: unknown) => setNotice((e as Error).message);
-    if (act === 'fix') setView('ports');
-    else if (a.appId && act === 'restart') restart(a.appId).catch(fail);
+    if (a.appId && act === 'restart') restart(a.appId).catch(fail);
     else if (a.appId && act === 'dismiss') host.dismissCrash(a.appId).then(refresh, fail);
-  }, [host, refresh, restart, setView]);
+  }, [host, refresh, restart]);
   const logsApp = logsFor ? snap.apps.find((a) => a.id === logsFor) : undefined;
 
   return (
@@ -110,13 +114,13 @@ export function App({ host }: { host: Host }) {
         <main className="main" id="main">
           {error && <p className="notice" role="alert">Could not read PortPilot state: {error}</p>}
           {notice && <p className="notice" role="alert">{notice}</p>}
-          {view === 'home' && <Home host={host} onDone={refresh} t={t} loaded={loaded} onView={setView} onOpenItem={openItem} snap={snap} thumbs={thumbs} />}
-          {view === 'localhost' && <Localhost host={host} snap={snap} thumbs={thumbs} onDone={refresh} manage={manage} onManage={setManage} inspectId={focus?.kind === 'app' ? focus.id : undefined} onPorts={() => setView('ports')} />}
+          {view === 'home' && <Home host={host} onDone={refresh} t={t} loaded={loaded} onView={setView} onPorts={toPorts} onOpenItem={openItem} snap={snap} thumbs={thumbs} />}
+          {view === 'localhost' && <Localhost host={host} snap={snap} thumbs={thumbs} onDone={refresh} manage={manage} onManage={setManage} inspectId={focus?.kind === 'app' ? focus.id : undefined} onPorts={toPorts} />}
           {view === 'history' && <History host={host} />}
           {view === 'scenes' && <Scenes host={host} snap={snap} onDone={refresh} />}
-          {view === 'ports' && <Ports host={host} snap={snap} onDone={refresh} />}
+          {view === 'ports' && <Ports key={portFilter} host={host} snap={snap} onDone={refresh} filter={portFilter} />}
           {view === 'settings' && <Settings host={host} />}
-          {view === 'browsers' && <Browsers host={host} snap={snap} onDone={refresh} editName={focus?.kind === 'browser' ? focus.id : undefined} onPorts={() => setView('ports')} />}
+          {view === 'browsers' && <Browsers host={host} snap={snap} onDone={refresh} editName={focus?.kind === 'browser' ? focus.id : undefined} onPorts={toPorts} />}
         </main>
       </div>
       <Palette open={paletteOpen} onClose={() => setPaletteOpen(false)} host={host} snap={snap}

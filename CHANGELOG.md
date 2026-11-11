@@ -8,9 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- **A taken port is reported when you press Start, not before.** A stopped app whose port another program holds stays "stopped": no "blocked" state, no "Port held" badge, no jump to the top of the list. The Alerts bell counts crashes and failed starts only. Start (card, tile, palette, Manage, the bell's Restart) names what holds the port, and Go to Ports opens Ports filtered to it. With many apps sharing a few ports the bell used to show a count when nothing was wrong.
 - **Quitting PortPilot keeps your servers running.** Apps PortPilot started stay up when it quits, their output goes to `logs/<app>.log` (rotated at 10 MB), and on the next launch PortPilot picks them up again, so Stop still works on them. The "Stop apps on quit" setting is now off by default, and a saved "on" from an earlier version is reset to off once; tick it again and it stays. Starts from the VS Code extension's portal are never stopped on quit.
 - **Stop on a browser profile waits for the browser to close.** It asks Brave to quit, waits for the process it launched, and ends it after about 5 s if it lingers, checking the pid and start time first so a reused pid is never killed. Start first checks that nothing else holds the profile folder: leftover helpers of a closed browser are ended, and a browser opened by hand on that folder is reported as `FOLDER_IN_USE` instead of a launch that times out.
-- **One tile rule.** A running tile opens the app, a stopped one starts it then opens it, and a blocked one says what holds the port.
+- **One tile rule.** A running tile opens the app, a stopped one starts it then opens it, and one whose port is taken says what holds it.
 - **Icon buttons** for the actions that repeat on every row and card.
 
 ### Added

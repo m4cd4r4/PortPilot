@@ -5,7 +5,7 @@
  *
  * Covers: the app loads the new bundle; Home tiles show real counts; the segmented
  * control switches screens; Ctrl+K opens the shared palette (also from a text field), ranks,
- * Enter starts and stops an app and switches screen; a held port counts on the alerts bell;
+ * Enter starts and stops an app and switches screen; a held port of a stopped app stays off the alerts bell;
  * no console errors.
  */
 const h = require('./e2e-harness');
@@ -106,16 +106,29 @@ async function main() {
     await until(async () => (await count()) === 0, 30000, 'bell clears');
     check('no count on the bell while nothing is blocked', true);
     check('there is no banner on any screen', (await win.locator('.banner').count()) === 0);
+    // A stopped app whose port someone else holds is not an alert (it is reported at Start).
+    // First prove the scan sees the holder, then give the 5 s refresh time to show it.
     foreign = h.holdPort(heldPort);
-    await until(async () => (await count()) >= 1, 30000, 'bell counts the blocked port');
-    check('the bell shows a count', true);
-    check('a blocked port does not push a banner over Home', (await win.locator('.banner').count()) === 0);
+    await until(() => win.evaluate(async (p) => ((await window.portpilot.ports.scanWithApps()).unknownConflicts || []).some((c) => c.port === p), heldPort), 30000, 'the scan sees the held port');
+    await h.sleep(6500);
+    check('a held port of a stopped app does not count on the bell', (await count()) === 0, String(await count()));
+    check('and does not push a banner over Home', (await win.locator('.banner').count()) === 0);
     await win.click('.bell');
-    await until(() => win.evaluate((p) => (document.querySelector('.alerts-pop')?.textContent || '').includes(String(p)), heldPort), 10000, 'popover names the port');
-    const msg = await win.locator('.alerts-pop li .msg').first().textContent();
-    check('the popover names the app and the port', msg.includes('blocked') && msg.includes(String(heldPort)) || (await win.locator('.alerts-pop').textContent()).includes(String(heldPort)), msg);
+    await until(() => win.locator('.alerts-pop').count().then((n) => n === 1), 5000, 'popover opens');
+    const said = await win.locator('.alerts-pop').textContent();
+    check('the popover has nothing to report', said.includes('Nothing needs you') && !said.includes(String(heldPort)), said);
     await win.keyboard.press('Escape');
     check('Esc closes the popover', (await win.locator('.alerts-pop').count()) === 0);
+
+    console.log('step: Start from the palette reports the taken port');
+    await openPalette();
+    await win.keyboard.type('start blocked');
+    await until(async () => (await rows())[0]?.includes('Start blocked'), 5000, 'first row is Start blocked');
+    await win.keyboard.press('Enter');
+    const told = await until(async () => (await win.locator('.pal-status').textContent().catch(() => '')) || '', 5000, 'palette status');
+    check('the palette says what holds the port', told.includes('blocked cannot start') && told.includes(`:${heldPort} is held by`), told);
+    check('and the app was not started', !(await running('app_blocked')));
+    await win.keyboard.press('Escape');
 
     if (SHOTS) {
       fs.mkdirSync(SHOTS, { recursive: true });

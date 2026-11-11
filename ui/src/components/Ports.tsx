@@ -2,13 +2,13 @@ import { useMemo, useState } from 'react';
 import type { Host, Snapshot } from '../host';
 import { IconButton } from './icons';
 
-interface Props { host: Host; snap: Snapshot; onDone: () => void }
+interface Props { host: Host; snap: Snapshot; onDone: () => void; /** The port a taken-port notice sent the user here for. */ filter?: string }
 
 /** Port 0-1023 and a few system names are not something a dev server owns; killing them needs more than one click. */
 const SYSTEM = /^(system|svchost|services|lsass|wininit|spoolsv|csrss)(\.exe)?$/i;
 
-export function Ports({ host, snap, onDone }: Props) {
-  const [query, setQuery] = useState('');
+export function Ports({ host, snap, onDone, filter = '' }: Props) {
+  const [query, setQuery] = useState(filter);
   const [armed, setArmed] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -55,18 +55,6 @@ export function Ports({ host, snap, onDone }: Props) {
           <button onClick={onDone}>Rescan</button>
         </div>
       </div>
-
-      {snap.conflicts.length > 0 && (
-        <div className="conflicts" role="region" aria-label="Blocked apps">
-          {snap.conflicts.map((c) => (
-            <div className="conflict-row" key={`${c.appId}-${c.port}`}>
-              <span><strong>{c.appName || 'An app'}</strong> is blocked: :{c.port} is held by {(c.occupiedBy?.processName || 'another process').replace(/\.exe$/i, '')}
-                {c.occupiedBy?.pid ? ` (pid ${c.occupiedBy.pid})` : ''}</span>
-              <button disabled={busy} onClick={() => kill(c.port)}>Free :{c.port}</button>
-            </div>
-          ))}
-        </div>
-      )}
 
       {error && <p className="notice" role="alert">{error}</p>}
       {!rows.length

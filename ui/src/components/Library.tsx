@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import type { AppRec, Host, Snapshot } from '../host';
 import { groupOf } from '../model';
+import { startApp } from '../tileRule';
 import { AppDrawer } from './AppDrawer';
 import { AppInspector } from './AppInspector';
 import { IconButton } from './icons';
@@ -83,7 +84,7 @@ export function Library({ host, snap, onDone, onExit }: Props) {
                           filled={!!a.isFavorite} className={a.isFavorite ? 'on' : ''} onClick={() => act(() => host.toggleFavorite(a.id))} />
                         {live
                           ? <IconButton icon="stop" label="Stop" tip={`Stop ${a.name}`} onClick={() => act(() => host.stopApp(a.id))} />
-                          : <IconButton icon="start" label="Start" tip={`Start ${a.name}`} onClick={() => act(() => host.startApp(a))} />}
+                          : <IconButton icon="start" label="Start" tip={`Start ${a.name}`} onClick={() => act(() => startApp(host, a))} />}
                         <IconButton icon="details" label="Details" tip={`Details for ${a.name}`} onClick={() => setInspect(a)} />
                         <IconButton icon="edit" label="Edit" tip={`Edit ${a.name}`} onClick={() => setEditing(a)} />
                       </td>

@@ -81,7 +81,7 @@ npm start
 - More in [Dedicated browsers](#dedicated-browsers).
 
 **Port trouble fixed in a click**
-- A blocked port is flagged on every screen, and one button frees it.
+- Press Start on an app whose port is taken and PortPilot names what holds it, with a link to Ports filtered to that port.
 - A crashed app keeps its exit code and last stderr line in History.
 
 **A run record**
@@ -200,7 +200,7 @@ More Claude Code screenshots (status line, crash band, `find_run`): [reference](
 **Apps**
 - Every app as a card with a live preview of its page, running first and stopped ones below.
 - Switch between Rows and Cards, and between Grouped and Flat.
-- An app another program is holding the port of is marked **Port held**.
+- A stopped app stays "stopped" even when another program holds its port; you are told when you press Start. The Alerts bell counts crashes and failed starts only.
 
 **Manage**
 - Turns the Apps screen into the editing table.

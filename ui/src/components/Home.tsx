@@ -10,7 +10,7 @@ import { appBlocked, openApp as openAppRule, openBrowser, profileBlocked, type T
 import { IconButton } from './icons';
 import { TileNoticeLine } from './TileNoticeLine';
 
-interface Props { host: Host; t: Tally; loaded: boolean; onView: (v: View) => void; onOpenItem: (kind: 'app' | 'browser', id: string) => void; snap: Snapshot; thumbs: Thumbs; onDone: () => void }
+interface Props { host: Host; t: Tally; loaded: boolean; onView: (v: View) => void; onPorts: (port?: number) => void; onOpenItem: (kind: 'app' | 'browser', id: string) => void; snap: Snapshot; thumbs: Thumbs; onDone: () => void }
 
 const KEY = 'portpilot-home-tally';
 const RUN_ROWS = 6;
@@ -44,7 +44,7 @@ const lastRunText = (iso: string | undefined) => {
   return !a ? '' : a === 'just now' ? a : `${a} ago`;
 };
 
-export function Home({ host, t, loaded, onView, onOpenItem, snap, thumbs, onDone }: Props) {
+export function Home({ host, t, loaded, onView, onPorts, onOpenItem, snap, thumbs, onDone }: Props) {
   const prefs = usePrefs();
   // The first read takes a couple of seconds on a big library: show the last known counts, dimmed, instead of dashes.
   const last = loaded ? null : lastCounts();
@@ -132,7 +132,7 @@ export function Home({ host, t, loaded, onView, onOpenItem, snap, thumbs, onDone
     setNotice(null);
     fn().catch((e) => setNotice({ text: (e as Error)?.message || 'That did not work.' })).finally(onDone);
   };
-  // Every tile follows the one rule in tileRule.ts: running opens, stopped starts then opens, blocked says why.
+  // Every tile follows the one rule in tileRule.ts: running opens, stopped starts then opens, a taken port says why.
   const openApp = (c: Card) => {
     const why = appBlocked(snap, c.app);
     if (why) { setNotice(why); return; }
@@ -143,13 +143,12 @@ export function Home({ host, t, loaded, onView, onOpenItem, snap, thumbs, onDone
     if (why) { setNotice(why); return; }
     run(() => openBrowser(host, p));
   };
-  const tileLabel = (c: Card) => (c.state === 'conflict' ? `Why ${c.app.name} cannot start`
-    : c.state === 'running' && c.port ? `Open ${c.app.name}` : `Start and open ${c.app.name}`);
+  const tileLabel = (c: Card) => (c.state === 'running' && c.port ? `Open ${c.app.name}` : `Start and open ${c.app.name}`);
 
   return (
     <section className={`home${scene ? ' has-scene' : ''}${loaded ? '' : last ? ' stale' : ' loading'}`} aria-label="Home" aria-busy={!loaded}>
       <div className="tile h-hero">
-        <TileNoticeLine notice={notice} onPorts={() => onView('ports')} onClose={() => setNotice(null)} />
+        <TileNoticeLine notice={notice} onPorts={onPorts} onClose={() => setNotice(null)} />
         {hero ? (
           <>
             <span className="tile-title">{runningList.length ? `Running, ${runningList.length} of ${t.apps} apps` : 'Last used'}</span>

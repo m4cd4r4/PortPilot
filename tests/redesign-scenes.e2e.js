@@ -79,11 +79,10 @@ async function main() {
     check('the held port is reported as Blocked', /Blocked: beta/.test(text), text);
     check('the blocked app was not started', !(await running()).includes('app_b'));
     await shot('started');
-    await win.click('.bell');
-    await win.click('.alerts-pop >> role=button[name="Fix"] >> nth=0');
-    await until(() => win.evaluate(() => document.querySelector('[role="tab"][aria-selected="true"]')?.textContent === 'Ports'), 10000, 'Ports tab');
-    check('Fix in the alerts popover opens Ports, not the palette', true);
-    await win.click('role=tab[name="Scenes"]');
+    // The scene report is where the taken port is said; the alerts bell is for crashes only.
+    // The report proves the scan saw the holder; give the 5 s refresh time to reach the bell.
+    await h.sleep(6500);
+    check('the held port does not count on the alerts bell', (await win.locator('.bell-count').count()) === 0);
 
     console.log('step: stop only what the scene started');
     await win.click(`article[data-scene="${sc.id}"] >> role=button[name="Stop"]`);
