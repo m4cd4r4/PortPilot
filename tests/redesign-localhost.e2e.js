@@ -135,7 +135,9 @@ async function main() {
     await until(() => win.evaluate(() => document.querySelector('[role="tab"][aria-selected="true"]')?.textContent === 'Ports'), 5000, 'Ports tab');
     check('Go to Ports opens the Ports screen', true);
     check('filtered to the taken port', (await win.inputValue('input[aria-label="Filter ports"]')) === String(heldPort)
-      && (await win.locator('table.ports tbody tr').count()) === 1 && (await win.locator(`table.ports tr[data-port="${heldPort}"]`).count()) === 1);
+      && (await win.locator(`table.ports tr[data-port="${heldPort}"]`).count()) === 1
+      // The filter matches text, so another row may share the digits; none may lack them.
+      && (await win.$$eval('table.ports tbody tr', (els, p) => els.length > 0 && els.every((e) => e.textContent.includes(p)), String(heldPort))));
     await win.click('role=tab[name="Apps"]');
     await app.evaluate(({ shell }) => { global.__opened = []; shell.openExternal = async (u) => { global.__opened.push(u); }; });
     await card('app_shop').locator('.shot').click();

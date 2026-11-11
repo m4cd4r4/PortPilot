@@ -24,9 +24,13 @@ export function appBlocked(snap: Snapshot, app: AppRec): TileNotice | null {
   return { text: `${app.name} cannot start: :${c.port} is held by ${proc(c.occupiedBy?.processName)}${pid}.`, ports: true, port: c.port };
 }
 
-/** Start an app from a place with no notice line of its own (palette, Library, bell): a taken port is the error. */
-export async function startApp(host: Host, snap: Snapshot, app: AppRec): Promise<void> {
-  const why = appBlocked(snap, app);
+/**
+ * Start an app from a place with no notice line of its own (palette, Library, bell): a taken port is the error.
+ * Asks the host at click time: the caller's snapshot can be a poll behind, and a port freed a
+ * second ago must not be refused.
+ */
+export async function startApp(host: Host, app: AppRec): Promise<void> {
+  const why = appBlocked(await host.snapshot(), app);
   if (why) throw new Error(why.text);
   await host.startApp(app);
 }

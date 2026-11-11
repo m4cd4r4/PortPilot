@@ -95,8 +95,8 @@ export function App({ host }: { host: Host }) {
   const restart = useCallback(async (appId: string) => {
     const app = snap.apps.find((a) => a.id === appId);
     if (!app) throw new Error('That app is no longer in PortPilot');
-    try { await startApp(host, snap, app); } finally { refresh(); }
-  }, [host, snap, refresh]);
+    try { await startApp(host, app); } finally { refresh(); }
+  }, [host, snap.apps, refresh]);
   const onAlert = useCallback((a: Alert, act: AlertAct) => {
     setNotice('');
     const fail = (e: unknown) => setNotice((e as Error).message);

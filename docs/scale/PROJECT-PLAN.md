@@ -34,7 +34,7 @@ Out of scope: a rewrite in another language or framework (rejected: the JS core 
 
 | # | Slug | Scope | Status |
 |---|------|-------|--------|
-| 1 | quiet-alerts | A1, A7. Stopped apps are never "blocked"; Start reports a taken port; Alerts badge counts crashes and failed starts. Diagnose and fix the popover spec. | done (EVIDENCE-LOG F110-F113) |
+| 1 | quiet-alerts | A1, A7. Stopped apps are never "blocked"; Start reports a taken port; Alerts badge counts crashes and failed starts. Diagnose and fix the popover spec. | done, PR #221 (EVIDENCE-LOG F110-F115) |
 | 2 | apps-by-project | A2. Group by project folder; fold apps not run in 30 days. | todo |
 | 3 | drop-apps-cards | A3. Remove Cards from Apps; migrate a saved "cards" preference to Tiles. | todo |
 | 4 | home-rework | A4, A5, A6. One tile size, no blanks, no duplicates, counts that agree with Apps. Picked from live previews. | todo |

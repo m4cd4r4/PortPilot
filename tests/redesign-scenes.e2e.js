@@ -80,6 +80,8 @@ async function main() {
     check('the blocked app was not started', !(await running()).includes('app_b'));
     await shot('started');
     // The scene report is where the taken port is said; the alerts bell is for crashes only.
+    // The report proves the scan saw the holder; give the 5 s refresh time to reach the bell.
+    await h.sleep(6500);
     check('the held port does not count on the alerts bell', (await win.locator('.bell-count').count()) === 0);
 
     console.log('step: stop only what the scene started');
