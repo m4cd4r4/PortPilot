@@ -91,6 +91,13 @@ function createWindow(configStore) {
     // If closeToTray is false, window closes normally
   });
 
+  // A minimised or tray-hidden window can still report itself visible to its page, so the page is told.
+  // The UI stops polling while it is out of sight (ui/src/poll.ts) and reads once when it is shown again.
+  const win = mainWindow;
+  const tellShown = () => { if (!win.isDestroyed()) win.webContents.send('window-shown', win.isVisible() && !win.isMinimized()); };
+  for (const ev of ['show', 'hide', 'minimize', 'restore']) win.on(ev, tellShown);
+  win.webContents.on('did-finish-load', tellShown);
+
   return mainWindow;
 }
 

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { every } from './poll';
 import type { Host, Snapshot } from './host';
 import { tally, type Alert, type View } from './model';
 import { TopBar } from './components/TopBar';
@@ -63,9 +64,9 @@ export function App({ host }: { host: Host }) {
 
   useEffect(() => {
     refresh();
-    const t = setInterval(refresh, 5000);
+    const stop = every(refresh, 5000);
     const off = host.onChange(refresh);
-    return () => { clearInterval(t); off(); };
+    return () => { stop(); off(); };
   }, [host, refresh]);
 
   useEffect(() => {

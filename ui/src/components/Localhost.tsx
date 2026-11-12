@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useId, useMemo, useRef, useState } from 'react';
+import { every } from '../poll';
 import type { Host, Snapshot } from '../host';
 import { clusterCards, type Cluster } from '../clusters';
 import { runView } from '../legacy';
@@ -77,8 +78,8 @@ export function Localhost({ host, snap, thumbs, onDone, manage, onManage, inspec
       if (due) t.capture(due.c.app.id, due.c.port!);
     };
     const first = setTimeout(sweep, 1500);
-    const id = setInterval(sweep, SWEEP_MS);
-    return () => { clearTimeout(first); clearInterval(id); };
+    const stop = every(sweep, SWEEP_MS);
+    return () => { clearTimeout(first); stop(); };
   }, []);
 
   const act = async (fn: () => Promise<void>) => {

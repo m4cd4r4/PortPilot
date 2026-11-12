@@ -143,6 +143,11 @@ button.tile:hover { border-color: var(--acc); }
 .tile-head .link:last-child { font-size: 12.5px; color: var(--acc); }
 .link:hover { color: var(--tx); }
 
+/* Ports: temporary and system ports are each folded under one line and dimmed when shown. */
+.ports tr.sys td, .ports tr.tmp td { color: var(--tx2); }
+.ports-fold td { padding-top: 14px; }
+.ports-fold .link { color: var(--acc); }
+
 /* Home rows: Recently used and Browsers. One row shape, hairline rules, the action at the right. */
 .h2-head { display: flex; align-items: baseline; gap: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--bd); }
 .h2-head .link { font-size: 13px; font-weight: 500; color: var(--tx); }

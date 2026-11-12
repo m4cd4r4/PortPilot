@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { every } from './poll';
 import type { Host, ThumbRef } from './host';
 
 export interface Thumb { url: string; at: number; live: boolean }
@@ -41,8 +42,8 @@ export function useThumbs(host: Host, pollMs = 4000): Thumbs {
   useEffect(() => {
     alive.current = true;
     sync();
-    const t = setInterval(sync, pollMs);
-    return () => { alive.current = false; clearInterval(t); };
+    const stop = every(sync, pollMs);
+    return () => { alive.current = false; stop(); };
   }, [sync, pollMs]);
 
   const capture = useCallback(async (appId: string, port: number) => {

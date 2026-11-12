@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { every } from './poll';
 import type { ArtRef, Host, Profile, SignIn } from './host';
 
 export interface BrowserArt {
@@ -49,8 +50,8 @@ export function useBrowserArt(host: Host, profiles: Profile[], pollMs = 6000): B
   useEffect(() => {
     alive.current = true;
     sync();
-    const t = setInterval(sync, pollMs);
-    return () => { alive.current = false; clearInterval(t); };
+    const stop = every(sync, pollMs);
+    return () => { alive.current = false; stop(); };
   }, [sync, pollMs]);
 
   // Find art for profiles that have none, one at a time.
@@ -104,8 +105,8 @@ export function useSignIns(host: Host, profiles: Profile[], pollMs = 20000): Rec
       } catch { /* leave the last answer */ }
     };
     read();
-    const t = setInterval(read, pollMs);
-    return () => { cancelled = true; clearInterval(t); };
+    const stop = every(read, pollMs);
+    return () => { cancelled = true; stop(); };
   }, [host, upKey, pollMs]);
 
   return state;
