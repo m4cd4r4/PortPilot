@@ -6,10 +6,10 @@ import { AppDrawer } from './AppDrawer';
 import { AppInspector } from './AppInspector';
 import { IconButton } from './icons';
 
-interface Props { host: Host; snap: Snapshot; onDone: () => void; onExit: () => void }
+interface Props { host: Host; snap: Snapshot; loaded: boolean; onDone: () => void; onExit: () => void }
 
 /** The Manage mode of the Apps screen: add, edit, star and group apps. */
-export function Library({ host, snap, onDone, onExit }: Props) {
+export function Library({ host, snap, loaded, onDone, onExit }: Props) {
   const [query, setQuery] = useState('');
   const [editing, setEditing] = useState<AppRec | 'new' | null>(null);
   const [inspect, setInspect] = useState<AppRec | null>(null);
@@ -61,7 +61,9 @@ export function Library({ host, snap, onDone, onExit }: Props) {
         </div>
       )}
 
-      {!snap.apps.length
+      {!loaded && !snap.apps.length
+        ? null // the first read has not landed: the library is unknown, not empty
+        : !snap.apps.length
         ? <div className="empty-note"><p>No apps yet. Add one, or start a dev server and PortPilot will notice it.</p><button className="primary" onClick={() => setEditing('new')}>Add app</button></div>
         : !list.length
           ? <p className="empty-note">No app matches that filter.</p>

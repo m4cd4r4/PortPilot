@@ -55,10 +55,10 @@ export function App({ host }: { host: Host }) {
     try {
       setSnap(await host.snapshot());
       setError('');
+      // Only a read that worked counts: after a failed one the library is unknown, not empty.
+      setLoaded(true);
     } catch (e) {
       setError((e as Error).message);
-    } finally {
-      setLoaded(true);
     }
   }, [host]);
 
@@ -116,7 +116,7 @@ export function App({ host }: { host: Host }) {
           {error && <p className="notice" role="alert">Could not read PortPilot state: {error}</p>}
           {notice && <p className="notice" role="alert">{notice}</p>}
           {view === 'home' && <Home host={host} onDone={refresh} t={t} loaded={loaded} onView={setView} onPorts={toPorts} onOpenItem={openItem} snap={snap} thumbs={thumbs} />}
-          {view === 'localhost' && <Localhost host={host} snap={snap} thumbs={thumbs} onDone={refresh} manage={manage} onManage={setManage} inspectId={focus?.kind === 'app' ? focus.id : undefined} onPorts={toPorts} />}
+          {view === 'localhost' && <Localhost host={host} snap={snap} loaded={loaded} thumbs={thumbs} onDone={refresh} manage={manage} onManage={setManage} inspectId={focus?.kind === 'app' ? focus.id : undefined} onPorts={toPorts} />}
           {view === 'history' && <History host={host} />}
           {view === 'scenes' && <Scenes host={host} snap={snap} onDone={refresh} />}
           {view === 'ports' && <Ports key={portFilter} host={host} snap={snap} onDone={refresh} filter={portFilter} />}

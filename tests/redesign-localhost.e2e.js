@@ -163,6 +163,23 @@ async function main() {
       // The filter matches text, so another row may share the digits; none may lack them.
       && (await win.$$eval('table.ports tbody tr', (els, p) => els.length > 0 && els.every((e) => e.textContent.includes(p)), String(heldPort))));
     await win.click('role=tab[name="Apps"]');
+
+    console.log('step: a port freed a moment ago does not block Start');
+    // The page's picture of the ports can be one poll (5 s) old. Let a poll land with the holder
+    // still there, free the port, and press Start before the next poll: Start must ask afresh.
+    await h.sleep(6000);
+    foreign.kill();
+    foreign = null;
+    await until(async () => !(await win.evaluate(async (p) => ((await window.portpilot.ports.scanWithApps()).unknownConflicts || []).some((c) => c.port === p), heldPort)), 15000, 'the scan sees the port free');
+    await card('app_blocked').hover();
+    await card('app_blocked').getByRole('button', { name: 'Start' }).click();
+    const freed = await until(async () => (await stateOf('app_blocked')) === 'running', 20000, 'blocked app running').then(() => true, () => false);
+    check('Start works at once on a port freed since the last poll', freed, await win.locator('.tile-notice').textContent().catch(() => ''));
+    if (freed) {
+      await card('app_blocked').hover();
+      await card('app_blocked').getByRole('button', { name: 'Stop' }).click();
+      await until(async () => (await stateOf('app_blocked')) === 'stopped', 30000, 'blocked app stopped');
+    }
     await app.evaluate(({ shell }) => { global.__opened = []; shell.openExternal = async (u) => { global.__opened.push(u); }; });
     await card('app_shop').locator('.shot').click();
     await until(() => app.evaluate(() => global.__opened.length > 0), 30000, 'shop page opened');
