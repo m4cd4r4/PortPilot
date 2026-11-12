@@ -2,7 +2,7 @@
  * Real-Electron check of the Home actions against a THROWAWAY config.
  * Run: npm run build:ui && node tests/redesign-home.e2e.js
  *
- * Covers: a stopped app on Recently used offers Start and starts it; the Scene card has a picker when
+ * Covers: a stopped app on Recently used offers Start and starts it; an app is under Running or Recently used, never both; the Scene card has a picker when
  * there are two scenes, remembers the choice, Start runs that scene and the same button then reads Stop,
  * and Stop stops what the scene started.
  */
@@ -44,14 +44,15 @@ async function main() {
     await startStop(apps[1], 1500); // beta ran once and is now stopped, so it lands in history
     await win.evaluate((x) => window.portpilot.process.start(x), apps[0]); // alpha is running and takes the hero
     await until(() => win.evaluate(() => document.querySelector('.h-hero h2 .nm')?.textContent === 'alpha'), 20000, 'hero is alpha');
-    await until(() => win.evaluate(() => !!document.querySelector('.h-recent .th-start')), 20000, 'a Start button on a stopped card');
-    check('the stopped app on Recently used offers Start', await win.evaluate(() => document.querySelector('.h-recent .th-start').getAttribute('aria-label') === 'Start beta'));
-    await win.locator('.h-recent .th-card:has-text("beta")').hover();
+    await until(() => win.evaluate(() => !!document.querySelector('.h-recent .h2-act')), 20000, 'a Start button on a stopped row');
+    check('the stopped app on Recently used offers Start', await win.evaluate(() => document.querySelector('.h-recent .h2-act').getAttribute('aria-label') === 'Start beta'));
+    check('a running app is not repeated under Recently used', await win.evaluate(() => ![...document.querySelectorAll('.h-recent .nm')].some((e) => e.textContent === 'alpha')));
+    check('the Running count is out of every app', (await win.locator('.h-hero .h2-head .tile-sub').textContent()) === '1 of 3 apps');
     await win.click('role=button[name="Start beta"]');
     await until(async () => (await running()).includes('app_b'), 20000, 'beta running');
-    check('Start on the card starts the app', true);
-    await until(() => win.evaluate(() => !document.querySelector('.h-recent .th-start')), 20000, 'Start button gone once it runs');
-    check('a running app has no Start button', true);
+    check('Start on the row starts the app', true);
+    await until(() => win.evaluate(() => ![...document.querySelectorAll('.h-recent .nm')].some((e) => e.textContent === 'beta') && [...document.querySelectorAll('.run-row .nm')].some((e) => e.textContent === 'beta')), 20000, 'beta moved to Running');
+    check('once it runs the app moves from Recently used to Running', true);
 
     console.log('step: scene picker');
     check('two scenes give a picker', (await win.locator('.h-scene select[aria-label="Scene"]').count()) === 1);
@@ -70,12 +71,12 @@ async function main() {
 
     console.log('step: click a card opens its page');
     await app.evaluate(({ shell }) => { global.__opened = []; shell.openExternal = async (u) => { global.__opened.push(u); }; });
-    await win.click('.h-recent .th-card:has-text("gamma") .th-wrap');
+    await win.click('.h-recent .h2-row:has-text("gamma") .h2-main');
     await until(async () => (await running()).includes('app_c'), 20000, 'gamma started by the click');
     await until(() => app.evaluate(() => global.__opened.length > 0), 20000, 'a page was opened');
     check('clicking a stopped app starts it and opens its page', (await app.evaluate(() => global.__opened[0])) === `http://localhost:${pc}`);
-    // beta has been up since the Start step and stays on the strip (gamma, just started, is now the hero).
-    await win.click('.h-recent .th-card:has-text("beta") .th-wrap');
+    // beta has been up since the Start step, so it is a Running tile.
+    await win.click('.run-row:has-text("beta") .row-wrap');
     await until(() => app.evaluate(() => global.__opened.length > 1), 20000, 'second open');
     check('clicking a running app just opens its page', (await app.evaluate(() => global.__opened[1])) === `http://localhost:${pb}`);
 
@@ -86,16 +87,16 @@ async function main() {
     check('Details on a Home tile opens that app\'s details', true);
     check('Details keeps the normal Apps view with its view switch', (await win.locator('[aria-label="View mode"]').count()) === 1);
     await win.click('[role=dialog] >> role=button[name="Close"]');
-    // A browser tile is a shortcut (running: show it, stopped: start it); a blocked one says why and links to Ports.
+    // A browser row is a shortcut (running: show it, stopped: start it); a blocked one says why and links to Ports.
     await win.click('role=tab[name="Home"]');
-    const tile = win.locator('.h-browsers .th-wrap', { hasText: 'Work' });
-    check('a stopped browser tile offers Start', (await tile.getAttribute('title')) === 'Start Work');
+    const tile = win.locator('.h-browsers .h2-main', { hasText: 'Work' });
+    check('a stopped browser row offers Start', (await tile.getAttribute('title')) === 'Start Work');
     held = h.holdPort(workPort);
     await until(async () => (await tile.getAttribute('title')) === 'Why Work cannot start', 30000, 'Work tile blocked');
     await tile.click();
     await win.waitForSelector('.h-hero .tile-notice', { timeout: 5000 });
     const why = await win.locator('.h-hero .tile-notice').textContent();
-    check('a blocked Home browser tile says why', why.includes('Work cannot start'), why);
+    check('a blocked Home browser row says why', why.includes('Work cannot start'), why);
     check('and opens no form', (await win.locator('[role=dialog]').count()) === 0);
     await win.click('.tile-notice >> role=button[name="Go to Ports"]');
     await until(() => win.evaluate(() => document.querySelector('[role="tab"][aria-selected="true"]')?.textContent === 'Ports'), 5000, 'Ports tab');

@@ -25,7 +25,6 @@ export interface Tally { running: number; apps: number; profilesUp: number; prof
 
 /** Counts for the Home tiles and the alerts bell. Pure. */
 export function tally(s: Snapshot): Tally {
-  const top = s.apps.filter((a) => !a.parentId);
   const alerts: Alert[] = [];
   // A crash counts while the app is down, whoever holds its port now.
   for (const app of s.apps) {
@@ -34,8 +33,9 @@ export function tally(s: Snapshot): Tally {
     alerts.push({ kind: 'crash', appId: app.id, text: `${app.name} crashed${c.exitCode != null ? `: exit ${c.exitCode}` : ''}` });
   }
   return {
-    running: top.filter((a) => s.running[a.id]).length,
-    apps: top.length,
+    // Every listed app, worktree copies included: the same number Apps shows.
+    running: s.apps.filter((a) => s.running[a.id]).length,
+    apps: s.apps.length,
     profilesUp: s.profiles.filter((p) => p.state === 'up').length,
     profiles: s.profiles.length,
     alerts,

@@ -28,7 +28,7 @@ Out of scope: a rewrite in another language or framework (rejected: the JS core 
 | Grouping | Automatic, by project folder: apps in the same repo or its worktrees share a group. A wrong guess can be moved by hand. |
 | Stale apps | Apps not run in 30 days fold under a "Show older" line. Nothing is deleted; search still finds them; running one brings it back. |
 | Apps Cards view | Removed from Apps. Browsers keeps Rows, Tiles and Cards. |
-| Home | Reworked last, chosen from live previews. |
+| Home | Reworked last, from three live previews (all rows; all tiles; two columns with chips). Chosen 2026-11-12: tiles for Running, rows for Recently used and Browsers. A stopped app often has no picture and worktree copies of one site look the same, so below Running the name and port do the work. |
 
 ## Status table
 
@@ -36,8 +36,8 @@ Out of scope: a rewrite in another language or framework (rejected: the JS core 
 |---|------|-------|--------|
 | 1 | quiet-alerts | A1, A7. Stopped apps are never "blocked"; Start reports a taken port; Alerts badge counts crashes and failed starts. Diagnose and fix the popover spec. | done, PR #221 (EVIDENCE-LOG F110-F115) |
 | 2 | apps-by-project | A2. Group by project folder; fold apps not run in 30 days. | done, PR #222 (EVIDENCE-LOG F113, F116-F131) |
-| 3 | drop-apps-cards | A3. Remove Cards from Apps; migrate a saved "cards" preference to Tiles. Apps and Browsers each keep their own saved view. | done (EVIDENCE-LOG F132-F134) |
-| 4 | home-rework | A4, A5, A6. One tile size, no blanks, no duplicates, counts that agree with Apps. Picked from live previews. | todo |
+| 3 | drop-apps-cards | A3. Remove Cards from Apps; migrate a saved "cards" preference to Tiles. Apps and Browsers each keep their own saved view. | done, PR #223 (EVIDENCE-LOG F132-F134) |
+| 4 | home-rework | A4, A5, A6. Running apps as tiles of one size; Recently used and Browsers as rows; no app listed twice; counts that agree with Apps; Welcome only for an empty library. Picked from three live previews. | done (EVIDENCE-LOG F135-F139) |
 | 5 | idle-polling | A8, A9. Measure first; pause polling when the window is hidden if it does not already. Dim or separate system ports. | todo (measure first) |
 
 One PR per row, merged in order. Each PR adds its findings to `docs/testing/EVIDENCE-LOG.md` and its line to `CHANGELOG.md` under Unreleased.
