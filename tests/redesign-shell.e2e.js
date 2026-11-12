@@ -51,9 +51,16 @@ async function main() {
     await until(() => win.evaluate(() => !!document.querySelector('.topbar')), 20000, 'new top bar');
     check('the new UI is on screen, not the v4 sidebar', await win.evaluate(() => !document.getElementById('v4-sidebar')));
     check('Home is the first screen', (await tabOn()) === 'Home');
-    await until(() => win.evaluate(() => !!document.querySelector('.h-hero .run-row h2') && !/Welcome/.test(document.querySelector('.h-hero')?.textContent || '')), 15000, 'home loads');
+    // Welcome is for an empty library only: it must never show while a library with apps is still loading.
+    let sawWelcome = false;
+    await until(async () => {
+      const s = await win.evaluate(() => ({ busy: document.querySelector('.home')?.getAttribute('aria-busy'), text: document.querySelector('.h-hero')?.textContent || '' }));
+      if (/Welcome/.test(s.text)) sawWelcome = true;
+      return s.busy === 'false' && /Nothing is running/.test(s.text);
+    }, 15000, 'home loads');
+    check('Home never says Welcome when there are apps', !sawWelcome);
     check('Home has no Localhost or news tile', await win.evaluate(() => !document.querySelector('.h-local') && !document.querySelector('.h-news')));
-    check('the hero names an app and offers Start', await win.evaluate(() => { const h = document.querySelector('.h-hero'); return !!h?.querySelector('h2')?.textContent && /^Start and open /.test(h.querySelector('.row-wrap')?.getAttribute('aria-label') || ''); }));
+    check('with nothing running Home says so and shows no tile', await win.evaluate(() => !document.querySelector('.h-hero .run-row') && /0 of \d+ apps/.test(document.querySelector('.h-hero .h2-head')?.textContent || '')));
     check('Home fits the window without scrolling', await win.evaluate(() => { const m = document.querySelector('.main'); return m.scrollHeight <= m.clientHeight + 1; }));
     check('Recently used is there and the Scene card waits for a scene', await win.evaluate(() => !!document.querySelector('.h-recent') && !document.querySelector('.h-scene')));
 

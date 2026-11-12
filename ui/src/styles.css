@@ -122,18 +122,18 @@ button.ib .ic { display: block; }
 /* Home: the spotlight grid. The Scene tile only exists once a scene does, and Browsers takes its row. */
 .home {
   display: grid; gap: 12px;
-  grid-template-columns: 2fr 1fr; grid-template-rows: auto auto auto;
-  grid-template-areas: "hero hero" "browsers browsers" "recent recent";
+  grid-template-columns: 2fr 1fr; column-gap: 28px; align-items: start; max-width: 1280px;
+  grid-template-areas: "hero hero" "recent browsers";
 }
-.home.has-scene { grid-template-areas: "hero hero" "browsers scene" "recent recent"; }
+.home.has-scene { grid-template-areas: "hero hero" "recent browsers" "recent scene"; grid-template-rows: auto auto 1fr; }
 .h-hero { grid-area: hero; } .h-browsers { grid-area: browsers; } .h-scene { grid-area: scene; } .h-recent { grid-area: recent; }
 .tile {
   position: relative; overflow: hidden; min-width: 0; text-align: left; display: flex; flex-direction: column; gap: 4px;
   background: var(--pn); border: 1px solid var(--bd); border-radius: var(--r); padding: 12px 16px;
 }
 button.tile:hover { border-color: var(--acc); }
-/* The running apps lead; Browsers and Recently used sit on the page, not in boxes of their own. */
-.h-browsers, .h-recent { background: none; border-color: transparent; padding-left: 0; padding-right: 0; }
+/* Running, Recently used and Browsers sit on the page, not in boxes of their own; only the Scene tile is a box. */
+.h-hero, .h-browsers, .h-recent { background: none; border-color: transparent; padding-left: 0; padding-right: 0; }
 .tile-title { color: var(--tx2); font-size: 12.5px; }
 .tile-count { font-size: 32px; font-weight: 500; line-height: 1.1; }
 .tile-count small { font-size: 14px; font-weight: 400; color: var(--tx2); }
@@ -142,6 +142,20 @@ button.tile:hover { border-color: var(--acc); }
 .link { background: none; border: 0; padding: 0; color: var(--tx2); font-size: 12.5px; }
 .tile-head .link:last-child { font-size: 12.5px; color: var(--acc); }
 .link:hover { color: var(--tx); }
+
+/* Home rows: Recently used and Browsers. One row shape, hairline rules, the action at the right. */
+.h2-head { display: flex; align-items: baseline; gap: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--bd); }
+.h2-head .link { font-size: 13px; font-weight: 500; color: var(--tx); }
+.h-hero .h2-head { border-bottom: 0; }
+.h2-row { display: flex; align-items: center; gap: 10px; min-height: 36px; border-bottom: 1px solid var(--bd); }
+.h2-main { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; background: none; border: 0; padding: 7px 0; color: var(--tx); font: inherit; text-align: left; cursor: pointer; }
+.h2-main:hover .nm { color: var(--acc); }
+.h2-main .dot.on { background: var(--ok); }
+.h2-main .nm { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.h2-meta { margin-left: auto; padding-left: 10px; color: var(--tx2); font-size: 12.5px; white-space: nowrap; }
+.h2-act { flex: none; background: none; border: 1px solid var(--bd); border-radius: 6px; color: var(--tx); font-size: 12px; padding: 2px 10px; cursor: pointer; }
+.h2-act:hover { border-color: var(--acc); }
+.h2-none { padding: 8px 0; }
 
 .h-hero { gap: 6px; }
 .run-row { display: flex; align-items: center; gap: 12px; padding: 4px 0; }
@@ -160,7 +174,7 @@ button.tile:hover { border-color: var(--acc); }
 .chip svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 .chip-tr { top: 8px; right: 8px; } .chip-br { bottom: 8px; right: 8px; }
 @media (max-width: 1100px) { .run-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (max-width: 520px) { .run-grid { grid-template-columns: 1fr; } .run-grid .run-row { aspect-ratio: 16 / 8; } }
+@media (max-width: 520px) { .run-grid { grid-template-columns: 1fr; } .run-grid .run-row { aspect-ratio: 3 / 1; } }
 .more-link { align-self: flex-start; font-size: 12.5px; color: var(--acc); }
 .h-hero .row-th { flex: none; width: 132px; height: 80px; background-size: cover; background-position: top; }
 .row-wrap { flex: none; cursor: pointer; }
@@ -173,44 +187,24 @@ button.tile:hover { border-color: var(--acc); }
 .row-actions svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 .row-actions button:hover { border-color: var(--acc); }
 .row-actions button.primary { background: var(--acc); border-color: var(--acc); color: var(--onacc); font-weight: 500; }
-.hero-shot { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: top; }
-.hero-shade { position: relative; padding: 56px 20px 18px; background: linear-gradient(rgba(5, 8, 12, 0.35), rgba(5, 8, 12, 0.94) 38%); color: #fff; }
-.hero-shade h2 { margin: 0; font-size: 26px; }
-.hero-live { color: var(--acc); font-size: 12.5px; }
-.facts { display: flex; flex-wrap: wrap; gap: 2px 18px; margin: 8px 0 12px; font-size: 13px; color: #cdd2de; }
-.facts div { display: flex; gap: 6px; min-width: 0; } .facts dt { color: #aab1c0; } .facts dd { margin: 0; color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 260px; }
-.hero-actions { display: flex; gap: 6px; }
 .hero-actions button, .h-scene button.primary {
   background: rgba(255, 255, 255, 0.12); border: 1px solid rgba(255, 255, 255, 0.22); border-radius: 8px; color: #fff; padding: 4px 14px;
 }
 .hero-actions button.primary, .h-scene button.primary { background: var(--acc); border-color: var(--acc); color: var(--onacc); font-weight: 500; }
 
-.mini { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 6px; min-height: 0; flex: 1; }
-.mini.five { grid-template-columns: repeat(5, 1fr); }
 .th-wrap { background: none; border: 0; padding: 0; min-width: 0; text-align: left; display: flex; flex-direction: column; gap: 4px; }
-/* Thumbnails keep one shape and scale with the window, so a shot is never cut off by a fixed row height. */
-.h-browsers .th, .h-recent .th { aspect-ratio: 16 / 10; flex: none; }
 .th { display: block; flex: 1; min-height: 0; border-radius: 6px; border: 1px solid var(--bd); background-size: cover; background-position: top; }
-/* A profile's picture is shown whole on its gradient, never cropped or blown up to fill the tile. */
-.h-browsers .th { max-height: 96px; }
-.h-recent .th { max-height: 112px; }
 .th.art { padding: 10px; background-size: contain, cover; background-repeat: no-repeat; background-position: center; background-origin: content-box, border-box; }
 .th.sel { outline: 2px solid var(--acc); outline-offset: 2px; }
 .th-wrap:hover .th { border-color: var(--acc); }
-.th-card { position: relative; display: flex; min-width: 0; min-height: 0; } .th-card .th-wrap { flex: 1; }
-.th-start { position: absolute; right: 6px; top: 6px; opacity: 0; background: var(--acc); color: var(--onacc); border: 0; border-radius: 6px; padding: 2px 8px; font-size: 12px; font-weight: 500; }
-.th-card:hover .th-start, .th-start:focus-visible { opacity: 1; }
 .scene-pick { background: var(--bg); color: var(--tx); border: 1px solid var(--bd); border-radius: 7px; padding: 2px 6px; font: inherit; font-weight: 500; max-width: 70%; }
-.cap { font-size: 11.5px; color: var(--tx2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 .h-scene { justify-content: center; } .h-scene b { font-size: 16px; }
 .h-scene button.primary { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); }
 
 @media (max-width: 899px) {
   .home { grid-template-columns: 1fr; grid-template-rows: none; grid-auto-rows: auto; grid-template-areas: "hero" "browsers" "recent"; }
-  .row-main { overflow: hidden; } .row-main h2, .row-main .tile-sub { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }  .home.has-scene { grid-template-areas: "hero" "browsers" "scene" "recent"; }
-  .h-browsers .th, .h-recent .th { aspect-ratio: 16 / 10; flex: none; }
-  .mini.five { grid-template-columns: repeat(3, 1fr); } .th-start { opacity: 1; } .h-scene { min-height: 72px; }
+  .row-main { overflow: hidden; } .row-main h2, .row-main .tile-sub { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }  .home.has-scene { grid-template-areas: "hero" "browsers" "scene" "recent"; } .h-scene { min-height: 72px; }
 }
 
 /* Palette. */
