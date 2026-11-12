@@ -99,6 +99,8 @@ async function main() {
     await win.keyboard.press('Enter');
     await until(async () => !(await running('app_shop')), 15000, 'shop stopped');
     check('Stop shop from the palette stops it', true);
+    // Ctrl+K toggles: pressed while the palette is still closing, it would shut it again.
+    await until(async () => !(await paletteOpen()), 15000, 'palette closes after Stop');
 
     await openPalette();
     await win.keyboard.type('go to local');

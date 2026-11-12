@@ -37,8 +37,8 @@ Out of scope: a rewrite in another language or framework (rejected: the JS core 
 | 1 | quiet-alerts | A1, A7. Stopped apps are never "blocked"; Start reports a taken port; Alerts badge counts crashes and failed starts. Diagnose and fix the popover spec. | done, PR #221 (EVIDENCE-LOG F110-F115) |
 | 2 | apps-by-project | A2. Group by project folder; fold apps not run in 30 days. | done, PR #222 (EVIDENCE-LOG F113, F116-F131) |
 | 3 | drop-apps-cards | A3. Remove Cards from Apps; migrate a saved "cards" preference to Tiles. Apps and Browsers each keep their own saved view. | done, PR #223 (EVIDENCE-LOG F132-F134) |
-| 4 | home-rework | A4, A5, A6. Running apps as tiles of one size; Recently used and Browsers as rows; no app listed twice; counts that agree with Apps; Welcome only for an empty library. Picked from three live previews. | done (EVIDENCE-LOG F135-F139) |
-| 5 | idle-polling | A8, A9. Measure first; pause polling when the window is hidden if it does not already. Dim or separate system ports. | todo (measure first) |
+| 4 | home-rework | A4, A5, A6. Running apps as tiles of one size; Recently used and Browsers as rows; no app listed twice; counts that agree with Apps; Welcome only for an empty library. Picked from three live previews. | done, PR #225 (EVIDENCE-LOG F135-F139) |
+| 5 | idle-polling | A8, A9. Measure first; pause polling when the window is hidden if it does not already. Fold system ports, and the temporary ports programs open for themselves, under one line each. | done, PR #226 (EVIDENCE-LOG F140-F144) |
 
 One PR per row, merged in order. Each PR adds its findings to `docs/testing/EVIDENCE-LOG.md` and its line to `CHANGELOG.md` under Unreleased.
 

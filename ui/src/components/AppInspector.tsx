@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { every } from '../poll';
 import type { AppRec, DiagnoseStatus, Host, ShareInfo } from '../host';
 import { IconButton } from './icons';
 
@@ -49,8 +50,8 @@ function Logs({ host, app, running }: { host: Host; app: AppRec; running: boolea
     let live = true;
     const read = () => host.appLogs(app.id).then((l) => { if (live) setLogs(l); }).catch((e) => { if (live) setError((e as Error).message); });
     read();
-    const t = running ? setInterval(read, 2000) : undefined;
-    return () => { live = false; clearInterval(t); };
+    const stop = running ? every(read, 2000) : undefined;
+    return () => { live = false; stop?.(); };
   }, [host, app.id, running]);
 
   if (error) return <p className="notice" role="alert">{error}</p>;

@@ -109,6 +109,40 @@ async function main() {
     await until(() => win.evaluate((p) => !!document.querySelector(`table.ports tr[data-port="${p}"]`), shopPort), 15000, 'port row');
     check('Ports lists the live listener with its PortPilot app', (await win.locator(`tr[data-port="${shopPort}"]`).textContent()).includes('shop'));
     await shot('ports');
+    // System ports (under 1024, or held by an OS service) start folded away. A machine may list none.
+    const fold = win.locator('tr.fold-sys button');
+    const sysRows = () => win.locator('table.ports tr.sys').count();
+    if (await fold.count()) {
+      check('system ports start folded away', (await sysRows()) === 0 && (await fold.getAttribute('aria-expanded')) === 'false');
+      await fold.click();
+      await until(async () => (await sysRows()) > 0, 5000, 'system rows show');
+      check('Show lists them and says so', (await fold.getAttribute('aria-expanded')) === 'true', String(await sysRows()));
+      const sysPort = await win.locator('table.ports tr.sys').first().getAttribute('data-port');
+      await shot('ports-system');
+      await fold.click();
+      await until(async () => (await sysRows()) === 0, 5000, 'system rows fold');
+      check('Hide folds them again', true);
+      await win.fill('input[aria-label="Filter ports"]', sysPort);
+      await until(async () => (await win.locator(`table.ports tr.sys[data-port="${sysPort}"]`).count()) > 0, 5000, 'filter shows the system port');
+      check('a filter shows a system port with no fold row', (await win.locator('tr.ports-fold').count()) === 0);
+      await win.fill('input[aria-label="Filter ports"]', '');
+      await until(async () => (await sysRows()) === 0, 5000, 'cleared filter folds again');
+    } else console.log('SKIP system-port fold: this machine lists no system port');
+    // Ports at 49152 and above that no PortPilot app runs on fold the same way. The running app's own
+    // port is in that range here and must stay in the main list.
+    const tfold = win.locator('tr.fold-temp button');
+    const tmpRows = () => win.locator('table.ports tr.tmp').count();
+    check('a high port a PortPilot app runs on is not folded as temporary', (await win.locator(`table.ports tr[data-port="${shopPort}"]:not(.tmp):not(.sys)`).count()) === 1, String(shopPort));
+    if (await tfold.count()) {
+      check('temporary ports start folded away', (await tmpRows()) === 0 && (await tfold.getAttribute('aria-expanded')) === 'false');
+      await tfold.click();
+      await until(async () => (await tmpRows()) > 0, 5000, 'temporary rows show');
+      check('Show lists them and says so', (await tfold.getAttribute('aria-expanded')) === 'true', String(await tmpRows()));
+      await shot('ports-temporary');
+      await tfold.click();
+      await until(async () => (await tmpRows()) === 0, 5000, 'temporary rows fold');
+      check('Hide folds them again', true);
+    } else console.log('SKIP temporary-port fold: this machine lists no unowned port at 49152 or above');
     await win.click(`tr[data-port="${shopPort}"] >> role=button[name="Kill"]`);
     check('Kill asks for a second click', await win.locator(`tr[data-port="${shopPort}"] >> role=button[name="Confirm kill"]`).count() === 1);
     check('nothing was killed by the first click', (await fetch(`http://127.0.0.1:${shopPort}`).then((r) => r.ok, () => false)));

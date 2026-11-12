@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { every } from '../poll';
 import type { BrowserSession, Host } from '../host';
 import { browserView } from '../legacy';
 import { dayOf, hueOf } from '../model';
@@ -31,8 +32,7 @@ export function BrowserHistory({ host, kindSwitch }: Props) {
 
   useEffect(() => {
     load();
-    const t = setInterval(load, 10000);
-    return () => clearInterval(t);
+    return every(load, 10000);
   }, [load]);
 
   const bv = browserView();

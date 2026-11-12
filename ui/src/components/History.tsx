@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { every } from '../poll';
 import type { HistoryData, Host, Run } from '../host';
 import { runView } from '../legacy';
 import { dayOf } from '../model';
@@ -52,8 +53,7 @@ function AppHistory({ host, kindSwitch }: Props & { kindSwitch: ReactNode }) {
 
   useEffect(() => {
     load();
-    const t = setInterval(load, 5000);
-    return () => clearInterval(t);
+    return every(load, 5000);
   }, [load]);
 
   const rv = runView();
