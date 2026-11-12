@@ -72,6 +72,7 @@ async function main() {
       let clicked = false;
       const look = () => {
         if (/No apps yet/.test(document.body?.textContent || '')) window.__sawNoApps = true;
+        if (/Reading your apps/.test(document.querySelector('.gallery-view')?.textContent || '')) window.__sawReading = true;
         if (clicked) return;
         const tab = [...document.querySelectorAll('[role="tab"]')].find((t) => t.textContent.trim() === 'Apps');
         if (tab) { clicked = true; tab.click(); }
@@ -82,6 +83,9 @@ async function main() {
     await until(() => win.locator('.gallery-view[aria-label="Localhost"] .card').count().then((n) => n === 3), 20000, 'apps after reload');
     check('Apps opened before the first read', (await tabOn()) === 'Apps');
     check('Apps never says "No apps yet" while a library with apps loads', !(await win.evaluate(() => window.__sawNoApps)));
+    // The wait is said, not left as a blank page, and the line goes once the apps are there.
+    const reading = await win.evaluate(() => ({ saw: !!window.__sawReading, still: /Reading your apps/.test(document.querySelector('.gallery-view')?.textContent || '') }));
+    check('Apps says it is reading while the library loads, and stops once it has', reading.saw && !reading.still, JSON.stringify(reading));
     await win.click('role=tab[name="Home"]');
 
     console.log('step: segmented control');

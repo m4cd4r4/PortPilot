@@ -222,7 +222,7 @@ export function Localhost({ host, snap, loaded, thumbs, onDone, manage, onManage
 
   const body = () => {
     // Until the first read lands the library is unknown: saying "No apps yet" then would be a guess.
-    if (!loaded && !snap.apps.length) return null;
+    if (!loaded && !snap.apps.length) return <p className="empty-note reading" role="status">Reading your apps</p>;
     if (!snap.apps.length) return <p className="empty-note">No apps yet. Add one with Manage, or start a dev server and PortPilot will notice it.</p>;
     if (!list.length) return <p className="empty-note">No app matches that filter.</p>;
     if (!prefs.grouping) return <>{fresh.length > 0 && section('', fresh)}{olderBlock()}</>;

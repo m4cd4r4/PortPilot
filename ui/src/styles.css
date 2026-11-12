@@ -236,6 +236,9 @@ button.tile:hover { border-color: var(--acc); }
 .more-menu button.on { border-color: var(--acc); }
 .seg.small button { padding: 4px 12px; font-size: 13px; }
 .empty-note { color: var(--tx2); max-width: 520px; margin: 40px auto; text-align: center; }
+/* The first read is usually done in a blink: the line shows only when the wait is long enough to wonder about. */
+.empty-note.reading { animation: reading-in 0.2s 0.4s both; }
+@keyframes reading-in { from { opacity: 0; } }
 .group-h { display: flex; align-items: baseline; gap: 8px; margin: 24px 0 10px; font-size: 13px; font-weight: 500; color: var(--tx2); }
 .group-h small { color: var(--mut); font-weight: 400; }
 .group-h.sub { margin: 16px 0 8px; font-size: 12px; color: var(--mut); }
