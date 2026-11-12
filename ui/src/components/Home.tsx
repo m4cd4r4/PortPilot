@@ -6,7 +6,7 @@ import { runView } from '../legacy';
 import { sceneRun, sceneSummary, startScene, stopScene } from '../scenes';
 import { usePrefs } from '../prefs';
 import type { Thumbs } from '../useThumbs';
-import { appBlocked, openApp as openAppRule, openBrowser, profileBlocked, type TileNotice } from '../tileRule';
+import { appBlockedNow, openApp as openAppRule, openBrowser, profileBlocked, type TileNotice } from '../tileRule';
 import { TileNoticeLine } from './TileNoticeLine';
 
 interface Props { host: Host; t: Tally; loaded: boolean; onView: (v: View) => void; onPorts: (port?: number) => void; onOpenItem: (kind: 'app' | 'browser', id: string) => void; snap: Snapshot; thumbs: Thumbs; onDone: () => void }
@@ -93,15 +93,15 @@ export function Home({ host, t, loaded, onView, onPorts, onOpenItem, snap, thumb
     fn().catch((e) => setNotice({ text: (e as Error)?.message || 'That did not work.' })).finally(onDone);
   };
   // Every tile and row follows the one rule in tileRule.ts: running opens, stopped starts then opens, a taken port says why.
-  const openApp = (c: Card) => {
-    const why = appBlocked(snap, c.app);
-    if (why) { setNotice(why); return; }
-    run(() => openAppRule(host, c.app));
+  // The host is asked at the click: this page's snapshot can be a poll old, and would refuse a port
+  // the app itself freed a second ago.
+  const blockedOr = async (c: Card, fn: () => Promise<unknown>) => {
+    let why: TileNotice | null;
+    try { why = await appBlockedNow(host, c.app); } catch (e) { setNotice({ text: (e as Error)?.message || 'That did not work.' }); return; }
+    if (why) setNotice(why); else run(fn);
   };
-  const startApp = (c: Card) => {
-    const why = appBlocked(snap, c.app);
-    if (why) setNotice(why); else run(() => host.startApp(c.app));
-  };
+  const openApp = (c: Card) => blockedOr(c, () => openAppRule(host, c.app));
+  const startApp = (c: Card) => blockedOr(c, () => host.startApp(c.app));
   const openProfile = (p: Profile) => {
     const why = profileBlocked(p);
     if (why) { setNotice(why); return; }

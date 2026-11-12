@@ -3,7 +3,7 @@
  * Run: node tests/own-port.test.cjs   (part of npm run test:unit)
  */
 const assert = require('assert');
-const { matchPortsToApps } = require('../src/main/ipcHandlers');
+const { matchPortsToApps, ownershipSuspects } = require('../src/main/ipcHandlers');
 
 let passed = 0;
 let failed = 0;
@@ -40,6 +40,44 @@ t('an owned match is not overwritten by a later cwd match on another port', () =
   const other = { port: 5002, pid: 701, processName: 'node.exe', address: '127.0.0.1:5002', commandLine: 'node c:\\work\\zz-demo-1\\x.js' };
   const { matches } = matchPortsToApps([other, listener], [shop], { app_shop: new Set([700]) });
   assert.equal(matches.app_shop.port, 5001);
+});
+
+// F138: two registered apps share a folder and a port. The command line names the folder, so it
+// fits both, and the first pass gives the port to whichever app comes first in the config.
+const web = { id: 'app_web', name: 'web', cwd: 'C:\\work\\zz-demo-2', preferredPort: 5005 };
+const preview = { id: 'app_preview', name: 'preview', cwd: 'C:\\work\\zz-demo-2', preferredPort: 5005 };
+const shared = { port: 5005, pid: 800, processName: 'node.exe', address: '127.0.0.1:5005', commandLine: 'node c:\\work\\zz-demo-2\\server.js' };
+
+t('F138: the first pass alone credits a shared port to the first app in the config', () => {
+  const first = matchPortsToApps([shared], [web, preview]);
+  assert.equal(first.matches.app_web.pid, 800);
+  assert.equal(first.matches.app_preview, undefined);
+  assert.equal(first.unknownConflicts.length, 0);
+});
+
+t('F138: a running app whose port the first pass gave to another app is a suspect', () => {
+  const first = matchPortsToApps([shared], [web, preview]);
+  const suspects = ownershipSuspects(first, [{ id: 'app_preview', running: true }], [web, preview]);
+  assert.deepEqual(suspects.map((r) => r.id), ['app_preview']);
+});
+
+t('F138: with its pids known, the app PortPilot started gets the port and the other reads stopped', () => {
+  const { matches, unknownConflicts } = matchPortsToApps([shared], [web, preview], { app_preview: new Set([800]) });
+  assert.equal(matches.app_preview.pid, 800);
+  assert.equal(matches.app_web, undefined);
+  assert.equal(unknownConflicts.length, 0);
+});
+
+t('an app the first pass matched, a stopped app and an app with a free port are not suspects', () => {
+  const first = matchPortsToApps([shared], [web, preview]);
+  const idle = { id: 'app_idle', name: 'idle', cwd: 'C:\\work\\zz-demo-3', preferredPort: 5999 };
+  const running = [{ id: 'app_web', running: true }, { id: 'app_preview', running: false }, { id: 'app_idle', running: true }];
+  assert.deepEqual(ownershipSuspects(first, running, [web, preview, idle]), []);
+});
+
+t('a running app with an unknown conflict is still a suspect', () => {
+  const first = matchPortsToApps([listener], [shop]);
+  assert.deepEqual(ownershipSuspects(first, [{ id: 'app_shop', running: true }], [shop]).map((r) => r.id), ['app_shop']);
 });
 
 const { descendantsOf } = require('../src/main/processTree');

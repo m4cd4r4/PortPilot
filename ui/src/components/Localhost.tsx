@@ -7,13 +7,13 @@ import { STALE_MS, cards, type Card } from '../model';
 import { OLDER_DAYS, loadLastRuns, olderIds, projectsOf, pruneOpen, rememberedRuns, sections, type Section } from '../projects';
 import { APP_VIEWS, gridClass, setPrefs, showsShot, usePrefs, type Prefs } from '../prefs';
 import type { Thumbs } from '../useThumbs';
-import { appBlocked, openApp, type TileNotice } from '../tileRule';
+import { appBlockedNow, openApp, type TileNotice } from '../tileRule';
 import { AppInspector } from './AppInspector';
 import { TileNoticeLine } from './TileNoticeLine';
 import { IconButton } from './icons';
 import { Library } from './Library';
 
-interface Props { host: Host; snap: Snapshot; thumbs: Thumbs; onDone: () => void; manage: boolean; onManage: (on: boolean) => void; inspectId?: string; onPorts: (port?: number) => void }
+interface Props { host: Host; snap: Snapshot; loaded: boolean; thumbs: Thumbs; onDone: () => void; manage: boolean; onManage: (on: boolean) => void; inspectId?: string; onPorts: (port?: number) => void }
 
 const HOVER_MS = 500;
 const SWEEP_MS = 30000;
@@ -33,7 +33,7 @@ function savedOpen(): Record<string, boolean> {
 
 const apps = (n: number) => `${n} ${n === 1 ? 'app' : 'apps'}`;
 
-export function Localhost({ host, snap, thumbs, onDone, manage, onManage, inspectId, onPorts }: Props) {
+export function Localhost({ host, snap, loaded, thumbs, onDone, manage, onManage, inspectId, onPorts }: Props) {
   const prefs = usePrefs();
   const [query, setQuery] = useState('');
   const [notice, setNotice] = useState<TileNotice | null>(null);
@@ -87,8 +87,13 @@ export function Localhost({ host, snap, thumbs, onDone, manage, onManage, inspec
   };
   const open = (c: Card) => c.port && act(() => host.openUrl(`http://localhost:${c.port}`));
   // A taken port is reported here, when Start is pressed, and nowhere before it. It is explained,
-  // not retried: the host would only fail the same way.
-  const blockedOr = (c: Card, fn: () => void) => { const why = appBlocked(snap, c.app); if (why) setNotice(why); else fn(); };
+  // not retried: the host would only fail the same way. The host is asked at the click: this
+  // page's snapshot can be a poll old, and would refuse a port the app itself freed a second ago.
+  const blockedOr = async (c: Card, fn: () => void) => {
+    let why: TileNotice | null;
+    try { why = await appBlockedNow(host, c.app); } catch (e) { setNotice({ text: (e as Error).message }); return; }
+    if (why) setNotice(why); else fn();
+  };
   const actions: Actions = {
     open,
     start: (c) => blockedOr(c, () => act(() => host.startApp(c.app))),
@@ -216,6 +221,8 @@ export function Localhost({ host, snap, thumbs, onDone, manage, onManage, inspec
   };
 
   const body = () => {
+    // Until the first read lands the library is unknown: saying "No apps yet" then would be a guess.
+    if (!loaded && !snap.apps.length) return null;
     if (!snap.apps.length) return <p className="empty-note">No apps yet. Add one with Manage, or start a dev server and PortPilot will notice it.</p>;
     if (!list.length) return <p className="empty-note">No app matches that filter.</p>;
     if (!prefs.grouping) return <>{fresh.length > 0 && section('', fresh)}{olderBlock()}</>;
@@ -224,10 +231,10 @@ export function Localhost({ host, snap, thumbs, onDone, manage, onManage, inspec
     return <>{secs.map((sec, i) => block(sec, folds, i))}{olderBlock()}</>;
   };
 
-  if (manage) return <Library host={host} snap={snap} onDone={onDone} onExit={() => onManage(false)} />;
+  if (manage) return <Library host={host} snap={snap} loaded={loaded} onDone={onDone} onExit={() => onManage(false)} />;
 
   return (
-    <section className="gallery-view" aria-label="Localhost">
+    <section className="gallery-view" aria-label="Localhost" aria-busy={!loaded || undefined}>
       <div className="toolbar">
         <input className="filter" type="search" placeholder="Filter apps" aria-label="Filter apps" value={query} onChange={(e) => setQuery(e.target.value)} />
         <div className="toolbar-end">

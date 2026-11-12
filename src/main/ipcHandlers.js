@@ -390,13 +390,30 @@ function matchPortsToApps(ports, apps, ownedPids = {}) {
 }
 
 /**
+ * The apps PortPilot is running that the first pass may have got wrong: one whose port it called
+ * a conflict, or one whose port it gave to a different app. Apps that share a folder or a name
+ * and a port look the same on a command line, and the first in the config would win (F138).
+ */
+function ownershipSuspects(first, running, apps) {
+  const portOf = new Map(apps.map(a => [a.id, a.preferredPort]));
+  const takenBy = new Map(Object.entries(first.matches).map(([id, m]) => [m.port, id]));
+  return running.filter(r => {
+    if (!r.running || first.matches[r.id]) return false;
+    if (first.unknownConflicts.some(c => c.appId === r.id)) return true;
+    const port = portOf.get(r.id);
+    return port != null && takenBy.has(port);
+  });
+}
+
+/**
  * matchPortsToApps, plus ownership: when a registered app that PortPilot is running looks
- * blocked, check whether the "stranger" is a process PortPilot spawned for it (the process tree
- * is only read in that case, so the common scan pays nothing).
+ * blocked, or its port was credited to another app, check whether the holder is a process
+ * PortPilot spawned for it (the process tree is only read in that case, so the common scan
+ * pays nothing).
  */
 async function matchPortsWithOwnership(ports, apps) {
   const first = matchPortsToApps(ports, apps);
-  const suspects = getRunningApps().filter(r => r.running && first.unknownConflicts.some(c => c.appId === r.id));
+  const suspects = ownershipSuspects(first, getRunningApps(), apps);
   if (!suspects.length) return first;
   return matchPortsToApps(ports, apps, await ownedPidsByApp(suspects));
 }
@@ -1151,4 +1168,4 @@ function setupIpcHandlers(ipcMain, configStore) {
   require('./browserExtraIpc').setupBrowserExtraIpc(ipcMain, configStore);
 }
 
-module.exports = { setupIpcHandlers, matchPortsToApps, matchPortsWithOwnership, getProcessDetails, detectWorktrees, detectStaleWorktrees };
+module.exports = { setupIpcHandlers, matchPortsToApps, matchPortsWithOwnership, ownershipSuspects, getProcessDetails, detectWorktrees, detectStaleWorktrees };

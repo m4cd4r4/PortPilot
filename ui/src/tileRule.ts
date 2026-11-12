@@ -25,12 +25,19 @@ export function appBlocked(snap: Snapshot, app: AppRec): TileNotice | null {
 }
 
 /**
+ * appBlocked, asked of the host at click time. A card's own snapshot can be a poll (5 s) behind:
+ * a port freed since then, often by this same app being stopped, must not be refused, and one
+ * taken since then must be reported.
+ */
+export async function appBlockedNow(host: Host, app: AppRec): Promise<TileNotice | null> {
+  return appBlocked(await host.snapshot(), app);
+}
+
+/**
  * Start an app from a place with no notice line of its own (palette, Library, bell): a taken port is the error.
- * Asks the host at click time: the caller's snapshot can be a poll behind, and a port freed a
- * second ago must not be refused.
  */
 export async function startApp(host: Host, app: AppRec): Promise<void> {
-  const why = appBlocked(await host.snapshot(), app);
+  const why = await appBlockedNow(host, app);
   if (why) throw new Error(why.text);
   await host.startApp(app);
 }

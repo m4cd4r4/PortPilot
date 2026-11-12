@@ -64,6 +64,26 @@ async function main() {
     check('Home fits the window without scrolling', await win.evaluate(() => { const m = document.querySelector('.main'); return m.scrollHeight <= m.clientHeight + 1; }));
     check('Recently used is there and the Scene card waits for a scene', await win.evaluate(() => !!document.querySelector('.h-recent') && !document.querySelector('.h-scene')));
 
+    console.log('step: Apps while the library loads');
+    // "No apps yet" is for an empty library only. The page opens Apps the moment the tab exists,
+    // before the first read lands, and remembers whether the empty note was ever on screen.
+    await win.addInitScript(() => {
+      window.__sawNoApps = false;
+      let clicked = false;
+      const look = () => {
+        if (/No apps yet/.test(document.body?.textContent || '')) window.__sawNoApps = true;
+        if (clicked) return;
+        const tab = [...document.querySelectorAll('[role="tab"]')].find((t) => t.textContent.trim() === 'Apps');
+        if (tab) { clicked = true; tab.click(); }
+      };
+      new MutationObserver(look).observe(document, { childList: true, subtree: true, characterData: true });
+    });
+    await win.reload();
+    await until(() => win.locator('.gallery-view[aria-label="Localhost"] .card').count().then((n) => n === 3), 20000, 'apps after reload');
+    check('Apps opened before the first read', (await tabOn()) === 'Apps');
+    check('Apps never says "No apps yet" while a library with apps loads', !(await win.evaluate(() => window.__sawNoApps)));
+    await win.click('role=tab[name="Home"]');
+
     console.log('step: segmented control');
     await win.click('role=tab[name="Browsers"]');
     check('Browsers tab opens its screen', (await tabOn()) === 'Browsers' && (await win.locator('.gallery-view[aria-label="Browsers"]').count()) === 1);
