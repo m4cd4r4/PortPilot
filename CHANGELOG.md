@@ -29,7 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - **Start right after Stop works.** Start on an Apps or Home card checked a port reading up to 5 seconds old, so pressing Start just after Stop could say the port was held by a process that had already gone. The card now checks at the click.
 - **Two apps that share a folder and a port:** the one you started is the one shown as running. The other used to be shown as running instead.
-- **Apps no longer says "No apps yet" while the library is loading,** or after a failed read. The note is for an empty library only.
+- **Apps no longer says "No apps yet" while the library is loading,** or after a failed read. The note is for an empty library only. If the first read takes longer than a moment, Apps says "Reading your apps".
 - **Open on a running browser profile** brings it forward, and Home's browser tiles act as shortcuts.
 - **Server detection:** one wrong folder guess no longer claims every later `node server.js`, and PortPilot's own test servers are not recorded as apps.
 - **macOS and Linux:** a browser whose command line has a URL before any flag is recognised as a browser, so the profile-folder check sees it (F89).

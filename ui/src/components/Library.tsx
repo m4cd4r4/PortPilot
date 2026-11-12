@@ -62,7 +62,7 @@ export function Library({ host, snap, loaded, onDone, onExit }: Props) {
       )}
 
       {!loaded && !snap.apps.length
-        ? null // the first read has not landed: the library is unknown, not empty
+        ? <p className="empty-note reading" role="status">Reading your apps</p> // the first read has not landed: the library is unknown, not empty
         : !snap.apps.length
         ? <div className="empty-note"><p>No apps yet. Add one, or start a dev server and PortPilot will notice it.</p><button className="primary" onClick={() => setEditing('new')}>Add app</button></div>
         : !list.length
