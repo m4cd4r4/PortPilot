@@ -74,7 +74,8 @@ async function main() {
     const runningIds = () => win.evaluate(async () => (await window.portpilot.process.list()).apps.filter((a) => a.running).map((a) => a.id));
     check('the finished run stays stopped', !(await runningIds()).includes('app_portfolio'), (await runningIds()).join(','));
     await win.click('role=tab[name="Apps"]');
-    await win.click('role=button[name="Cards"]');
+    // Apps has Rows and Tiles since Cards was removed (#223); Tiles is the picture view.
+    await win.click('role=button[name="Tiles"]');
     await until(() => win.evaluate((n) => document.querySelectorAll('.card.running .shot img').length >= n, SITES.length - 1), 120000, 'live thumbnails');
     check('every running app shows a real capture', true);
     await h.sleep(1500);
@@ -93,6 +94,7 @@ async function main() {
     await shot('manage');
 
     await win.click('role=tab[name="Browsers"]');
+    await win.click('role=button[name="Cards"]'); // Browsers opens on Rows; the shot shows each profile's picture
     await until(() => win.locator('.bcard .shot img').count().then((n) => n === PROFILES.length), 20000, 'profile art');
     check('each profile card shows its picture', true);
     await shot('browsers');

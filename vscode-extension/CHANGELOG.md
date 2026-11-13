@@ -1,5 +1,10 @@
 # Changelog
 
+## [4.2.6] - 2026-11-13
+
+- The web portal's Stop on a browser profile waits for the browser to close, and Start reports a browser opened by hand on the profile's folder instead of timing out (shared with desktop 5.1.0).
+- Stop works on a server PortPilot started before a relaunch.
+
 ## [4.2.5] - 2026-11-03
 
 - Kill on a port held by two processes (an IPv4 and an IPv6 listener) now frees it: every holder is killed, where before the second one kept the port.

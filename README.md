@@ -18,7 +18,7 @@ It works on its own; the assistant link is optional.
 
 Prefer to stay in your editor? The same apps, ports and crash alerts are in the [PortPilot VS Code extension](https://marketplace.visualstudio.com/items?itemName=macdara.portpilot).
 
-[![Version](https://img.shields.io/badge/version-5.0.1-blue.svg)](https://github.com/m4cd4r4/PortPilot/releases/tag/v5.0.1)
+[![Version](https://img.shields.io/badge/version-5.1.0-blue.svg)](https://github.com/m4cd4r4/PortPilot/releases/tag/v5.1.0)
 [![Tests](https://img.shields.io/badge/tests-Playwright%20E2E-blue.svg)](tests/)
 [![Licence](https://img.shields.io/badge/licence-MIT-green.svg)](LICENSE)
 [![MCP](https://img.shields.io/badge/MCP-26%20tools-purple.svg)](docs/REFERENCE.md#mcp-tools-26)
@@ -28,7 +28,7 @@ Prefer to stay in your editor? The same apps, ports and crash alerts are in the 
 
 </div>
 
-![PortPilot Home: the running apps with Open, Stop and Details, your browser profiles and recently used apps](docs/screenshots/ui/home.png)
+![PortPilot Home: running apps as picture tiles with Stop and a menu, recently used apps and browser profiles as rows with Start](docs/screenshots/ui/home.png)
 
 [![A cat at a desk watches Claude Code ask PortPilot for the youtube profile; the Browsers row switches to in use and the newest video opens](docs/media/browsers-film-poster.jpg)](docs/media/browsers-film.mp4)
 
@@ -50,10 +50,10 @@ Windows 10/11 and Linux.
 
 | Platform | Download |
 |----------|----------|
-| Windows installer | [PortPilot-5.0.1-x64.exe](https://github.com/m4cd4r4/PortPilot/releases/download/v5.0.1/PortPilot-5.0.1-x64.exe) (119 MB) |
-| Windows portable | [PortPilot-5.0.1-portable.exe](https://github.com/m4cd4r4/PortPilot/releases/download/v5.0.1/PortPilot-5.0.1-portable.exe) (119 MB) |
-| Linux AppImage | [PortPilot-5.0.1-x86_64.AppImage](https://github.com/m4cd4r4/PortPilot/releases/download/v5.0.1/PortPilot-5.0.1-x86_64.AppImage) (129 MB) |
-| Debian / Ubuntu | [PortPilot-5.0.1-amd64.deb](https://github.com/m4cd4r4/PortPilot/releases/download/v5.0.1/PortPilot-5.0.1-amd64.deb) (91 MB) |
+| Windows installer | [PortPilot-5.1.0-x64.exe](https://github.com/m4cd4r4/PortPilot/releases/download/v5.1.0/PortPilot-5.1.0-x64.exe) (119 MB) |
+| Windows portable | [PortPilot-5.1.0-portable.exe](https://github.com/m4cd4r4/PortPilot/releases/download/v5.1.0/PortPilot-5.1.0-portable.exe) (119 MB) |
+| Linux AppImage | [PortPilot-5.1.0-x86_64.AppImage](https://github.com/m4cd4r4/PortPilot/releases/download/v5.1.0/PortPilot-5.1.0-x86_64.AppImage) (129 MB) |
+| Debian / Ubuntu | [PortPilot-5.1.0-amd64.deb](https://github.com/m4cd4r4/PortPilot/releases/download/v5.1.0/PortPilot-5.1.0-amd64.deb) (91 MB) |
 
 Install it, click Scan, then add your projects.
 
@@ -187,8 +187,8 @@ More Claude Code screenshots (status line, crash band, `find_run`): [reference](
     <th>Browsers</th>
   </tr>
   <tr>
-    <td width="33%"><a href="docs/screenshots/ui/apps.png"><img src="docs/screenshots/ui/apps.png" alt="Apps: running sites with live page previews"></a></td>
-    <td width="33%"><a href="docs/screenshots/ui/history.png"><img src="docs/screenshots/ui/history.png" alt="History: runs with thumbnails, a crashed run, stopped runs and running ones with Open"></a></td>
+    <td width="33%"><a href="docs/screenshots/ui/apps.png"><img src="docs/screenshots/ui/apps.png" alt="Apps in the Tiles view: running sites with live page previews in their groups, a stopped app below"></a></td>
+    <td width="33%"><a href="docs/screenshots/ui/history.png"><img src="docs/screenshots/ui/history.png" alt="History: app runs with thumbnails, branch, port and time, running ones with Open, and a switch to browser sessions"></a></td>
     <td width="33%"><a href="docs/screenshots/ui/browsers.png"><img src="docs/screenshots/ui/browsers.png" alt="Browsers: three profiles with their ports and purposes"></a></td>
   </tr>
 </table>
