@@ -50,9 +50,9 @@ Windows 10/11 and Linux.
 
 | Platform | Download |
 |----------|----------|
-| Windows installer | [PortPilot-5.1.0-x64.exe](https://github.com/m4cd4r4/PortPilot/releases/download/v5.1.0/PortPilot-5.1.0-x64.exe) (119 MB) |
+| Windows installer | [PortPilot-5.1.0-x64.exe](https://github.com/m4cd4r4/PortPilot/releases/download/v5.1.0/PortPilot-5.1.0-x64.exe) (120 MB) |
 | Windows portable | [PortPilot-5.1.0-portable.exe](https://github.com/m4cd4r4/PortPilot/releases/download/v5.1.0/PortPilot-5.1.0-portable.exe) (119 MB) |
-| Linux AppImage | [PortPilot-5.1.0-x86_64.AppImage](https://github.com/m4cd4r4/PortPilot/releases/download/v5.1.0/PortPilot-5.1.0-x86_64.AppImage) (129 MB) |
+| Linux AppImage | [PortPilot-5.1.0-x86_64.AppImage](https://github.com/m4cd4r4/PortPilot/releases/download/v5.1.0/PortPilot-5.1.0-x86_64.AppImage) (130 MB) |
 | Debian / Ubuntu | [PortPilot-5.1.0-amd64.deb](https://github.com/m4cd4r4/PortPilot/releases/download/v5.1.0/PortPilot-5.1.0-amd64.deb) (91 MB) |
 
 Install it, click Scan, then add your projects.
