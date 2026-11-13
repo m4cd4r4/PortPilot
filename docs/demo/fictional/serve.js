@@ -20,4 +20,9 @@ http.createServer((req, res) => {
   if (!TYPES[path.extname(file)] || !fs.existsSync(file)) { res.writeHead(404); res.end('Not found'); return; }
   res.writeHead(200, { 'content-type': TYPES[path.extname(file)] });
   fs.createReadStream(file).pipe(res);
-}).listen(port, '127.0.0.1', () => console.log(`${site} on http://localhost:${port}`));
+}).listen(port, '127.0.0.1', () => {
+  console.log(`${site} on http://localhost:${port}`);
+  // --exit-after <ms>: serve, then die with exit 1, so a screenshot can show a crash.
+  const ms = Number(arg('exit-after'));
+  if (ms > 0) setTimeout(() => { console.error(`${site}: simulated crash`); process.exit(1); }, ms);
+});

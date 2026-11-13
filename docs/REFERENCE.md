@@ -86,7 +86,7 @@ The Claude Code images are terminal frames rendered around the plugin's real out
 
 **Manual entry.** Click Add app and fill in Name, Command (for example `npm run dev`), Working Directory, Preferred Port, and an optional Fallback Range (for example `3001-3010`).
 
-**Port conflicts.** When another process holds an app's port, the Alerts bell counts it, and its Fix button opens Ports, where **Free :port** stops the holder.
+**Port conflicts.** A stopped app whose port another process holds stays "stopped". Press Start and PortPilot names the holder, and **Go to Ports** opens Ports filtered to that port, where **Free :port** stops it. The Alerts bell counts crashes only.
 
 ## Badges
 
