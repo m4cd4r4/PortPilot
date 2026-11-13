@@ -5,7 +5,7 @@ All notable changes to PortPilot will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [5.1.0] - 2026-11-13
 
 ### Changed
 - **PortPilot stops reading while its window is out of sight.** Minimised or hidden to the tray, the window asks the app for nothing; it used to re-read apps, ports and browsers every few seconds whether or not anyone could see it. Shown again, it reads once straight away. Starting, stopping and crash alerts do not depend on the window and work as before.
@@ -34,6 +34,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Server detection:** one wrong folder guess no longer claims every later `node server.js`, and PortPilot's own test servers are not recorded as apps.
 - **macOS and Linux:** a browser whose command line has a URL before any flag is recognised as a browser, so the profile-folder check sees it (F89).
 - **Drawers no longer steal focus** when the list refreshes.
+
+### Security
+- **MCP server dependencies updated** to clear all seven `npm audit` advisories: body-parser 2.4.0 (a denial of service through trailing bytes after a compressed body), zod 4.6.7, hono 4.13.18, @hono/node-server 2.1.8, fast-uri 3.1.9, qs 6.17.1 and ip-address 10.7.6. The MCP server's HTTP mode listens on 127.0.0.1 unless started with `--host`, and turns away requests with a foreign Host or Origin. Reported in #224.
 
 ### Known limits
 - After a relaunch, PortPilot forgets which browsers it started. A browser it launched that is still open counts as someone else's, so Start on that profile fails with `FOLDER_IN_USE` until you close it (F63).
