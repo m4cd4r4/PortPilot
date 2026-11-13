@@ -63,8 +63,8 @@
     "isAccessibleForFree": true,
     "featureList": [
       "Claude Code plugin with a status line, a dev-server guard and crash alerts",
-      "Row state on every app: running, stopped or blocked, with what holds a blocked port",
-      "Alerts bell with a count for blocked ports, and Free to stop the holder",
+      "Row state on every app: running, stopped or crashed, and what holds a taken port when you press Start",
+      "Alerts bell with a count of crashes, and Restart from the bell",
       "MCP server with 26 tools for any MCP assistant",
       "Branch and worktree awareness with nested, colour-coded rows",
       "Port scanning with process details and one-click kill",
@@ -246,16 +246,16 @@
         <div class="feature-row reveal">
           <div class="feature-copy">
             <h3>Row state</h3>
-            <p>Every app shows its state and port. A blocked app says what holds the port, so the right server is easy to spot. The Cards view adds a small preview of each running page.</p>
+            <p>Every app shows its state and port, and a crash says how the app exited. Press Start on an app whose port is taken and PortPilot names what holds it. The Tiles view adds a picture of each running page.</p>
           </div>
-          <img src="screenshots/ui/rows.png" class="crop zoomable" tabindex="0" width="1224" height="288" loading="lazy" alt="The Rows view: three running apps with Open and Stop, one app marked blocked because its port is held by node, and one stopped app">
+          <img src="screenshots/ui/rows.png" class="crop zoomable" tabindex="0" width="1224" height="337" loading="lazy" alt="The Rows view: three running apps with Open and Stop, one app crashed with exit code 1, and one stopped app">
         </div>
         <div class="feature-row reveal">
           <div class="feature-copy">
             <h3>Alerts, out of the way</h3>
-            <p>A blocked port adds to the count on the Alerts bell instead of covering the screen. Click it to see each one, and Fix opens Ports, where Free stops whatever holds the port.</p>
+            <p>A crash adds to the count on the Alerts bell instead of covering the screen. Click it to see each one, then Restart the app or Dismiss the note.</p>
           </div>
-          <img src="screenshots/ui/alerts.png" class="crop zoomable" tabindex="0" width="600" height="200" loading="lazy" alt="The Alerts bell with a count of 1, open on a note that Quill and Ink is blocked because its port is held by node, with a Fix button">
+          <img src="screenshots/ui/alerts.png" class="crop zoomable" tabindex="0" width="600" height="200" loading="lazy" alt="The Alerts bell with a count of 1, open on a note that Quill and Ink crashed with exit 1, with Restart and Dismiss">
         </div>
       </div>
     </section>
@@ -281,7 +281,7 @@
             <ul>
               <li>Scan every TCP port with process, PID, memory and uptime</li>
               <li>Kill a stuck port in one click</li>
-              <li>Grouped into Dev, Other and System</li>
+              <li>Your ports first; temporary and system ports fold away</li>
               <li>Bind type and IPv4/IPv6 on each port</li>
             </ul>
           </article>

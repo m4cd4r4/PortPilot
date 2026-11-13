@@ -194,12 +194,13 @@ More Claude Code screenshots (status line, crash band, `find_run`): [reference](
 </table>
 
 **Home**
-- Shows what you were just doing: a row per running app with Open, Stop and Details.
-- Your browser profiles as pictures, and recently used apps with a thumbnail of the page each served.
+- Shows what you were just doing: every running app as a picture tile with Stop and a menu.
+- Recently used apps and your browser profiles as rows with the port, the time and Start.
 
 **Apps**
-- Every app as a card with a live preview of its page, running first and stopped ones below.
+- Every app as a tile with a live preview of its page, running first and stopped ones below.
 - Switch between Rows and Tiles, and between Grouped and Flat.
+- Apps from the same repo or its worktrees share a section; apps not run or added in 30 days fold under Show older.
 - A stopped app stays "stopped" even when another program holds its port; you are told when you press Start. The Alerts bell counts crashes and failed starts only.
 
 **Manage**
@@ -213,7 +214,8 @@ More Claude Code screenshots (status line, crash band, `find_run`): [reference](
 - Servers PortPilot did not start (from a terminal, Claude or an editor) are recorded too once they answer HTTP on two scans in a row; switch that off under Settings.
 
 **Ports**
-- Lists every TCP port with its process.
+- Lists every TCP port with its process, your ports first.
+- Temporary ports (49152 and above) and system ports fold under one line each; the filter still finds them.
 - Offers Kill and Find a free port.
 
 **Scenes**
