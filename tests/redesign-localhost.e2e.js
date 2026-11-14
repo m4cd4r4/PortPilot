@@ -26,6 +26,8 @@ async function main() {
     apps: [
       { id: 'app_shop', name: 'shop', command: `node server.js --portpilot-test --port ${shopPort}`, cwd: shop, preferredPort: shopPort, groupId: 'g_web' },
       { id: 'app_idle', name: 'idle', command: `node server.js --portpilot-test --port ${idlePort}`, cwd: shop, preferredPort: idlePort },
+      // Shares shop's port: a second checkout of the same site. Start on it while shop runs must say so.
+      { id: 'app_shop_copy', name: 'shop copy', command: `node server.js --portpilot-test --port ${shopPort}`, cwd: shop, preferredPort: shopPort },
       { id: 'app_blocked', name: 'blocked', command: `node server.js --portpilot-test --port ${heldPort}`, cwd: shop, preferredPort: heldPort },
     ],
   });
@@ -42,7 +44,7 @@ async function main() {
   try {
     await until(() => win.evaluate(() => !!document.querySelector('.topbar')), 20000, 'new top bar');
     await win.click('role=tab[name="Apps"]');
-    await until(() => win.locator('.card').count().then((n) => n === 3), 15000, 'three cards');
+    await until(() => win.locator('.card').count().then((n) => n === 4), 15000, 'four cards');
     check('one card per registered app', true);
     check('rows is the default view, with no inline screenshot', (await modeClass()).includes('rows') && (await win.locator('.shot').count()) === 0);
     const viewNames = await win.locator('[role=group][aria-label="View mode"] button').allTextContents();
@@ -56,6 +58,20 @@ async function main() {
     await card('app_shop').getByRole('button', { name: 'Start' }).click();
     await until(async () => (await stateOf('app_shop')) === 'running', 30000, 'shop card running');
     check('Start on the card starts the app', true);
+
+    console.log('step: Start on an app whose port another of your apps holds');
+    await card('app_shop_copy').hover();
+    await card('app_shop_copy').getByRole('button', { name: 'Start' }).click();
+    const shared = await win.locator('.tile-notice').textContent().catch(() => '');
+    check('Start names the other app holding the port', shared.includes(`shop copy cannot start: :${shopPort} is held by shop, another of your apps`), shared);
+    check('and the copy was not started', (await stateOf('app_shop_copy')) === 'stopped');
+    if (SHOTS) {
+      for (const w of [1440, 390]) {
+        await win.setViewportSize({ width: w, height: 800 });
+        await win.screenshot({ path: path.join(SHOTS, `localhost-shared-port-notice-${w}.png`) });
+      }
+      await win.setViewportSize({ width: 1440, height: 900 });
+    }
     await card('app_shop').hover();
     await win.mouse.move(5, 5);
     await card('app_shop').hover();
@@ -76,11 +92,11 @@ async function main() {
     for (const mode of ['tiles', 'rows']) {
       await win.click(`role=button[name="${mode[0].toUpperCase() + mode.slice(1)}"]`);
       await until(async () => (await modeClass()).includes(mode === 'tiles' ? 'minis' : mode), 5000, `${mode} class`);
-      check(`${mode} mode renders its cards`, (await win.locator('.card').count()) === 3);
+      check(`${mode} mode renders its cards`, (await win.locator('.card').count()) === 4);
       if (mode === 'rows') {
         const heads = await win.locator('.group-h').allTextContents();
         // idle and blocked share the shop folder, so they are a project; shop itself was put in Web by hand.
-        check('grouped is on by default: a heading per group and per project folder', heads.join(' | ') === 'Web1 | shop2', heads.join(' | '));
+        check('grouped is on by default: a heading per group and per project folder', heads.join(' | ') === 'Web1 | shop3', heads.join(' | '));
         await win.click('role=button[name="Grouped"]');
         await until(() => win.locator('.group-h').count().then((n) => n === 0 || n === 1), 5000, 'flat');
         await win.click('role=button[name="Grouped"]');
@@ -99,7 +115,7 @@ async function main() {
       await win.reload();
       await until(() => win.locator('.topbar').count().then((n) => n === 1), 20000, 'reloaded');
       await win.click('role=tab[name="Apps"]');
-      await until(() => win.locator('.card').count().then((n) => n === 3), 15000, 'cards after reload');
+      await until(() => win.locator('.card').count().then((n) => n === 4), 15000, 'cards after reload');
     };
     const pressed = () => win.locator('[role=group][aria-label="View mode"] button[aria-pressed="true"]').allTextContents();
     await win.click('role=button[name="Tiles"]');
@@ -114,14 +130,14 @@ async function main() {
     await until(() => win.locator('section[aria-label="Browsers"]').count().then((n) => n === 1), 10000, 'Browsers');
     check('and Browsers keeps Cards', (await pressed()).join() === 'Cards', (await pressed()).join());
     await win.click('role=tab[name="Apps"]');
-    await until(() => win.locator('.card').count().then((n) => n === 3), 15000, 'back on Apps');
+    await until(() => win.locator('.card').count().then((n) => n === 4), 15000, 'back on Apps');
     await win.click('role=button[name="Rows"]');
     await until(async () => (await modeClass()).includes('rows'), 5000, 'rows again');
     await win.click('role=tab[name="Browsers"]');
     await until(() => win.locator('section[aria-label="Browsers"]').count().then((n) => n === 1), 10000, 'Browsers again');
     check('changing the Apps view leaves the Browsers view alone', (await pressed()).join() === 'Cards', (await pressed()).join());
     await win.click('role=tab[name="Apps"]');
-    await until(() => win.locator('.card').count().then((n) => n === 3), 15000, 'Apps for the filter step');
+    await until(() => win.locator('.card').count().then((n) => n === 4), 15000, 'Apps for the filter step');
     await win.click('role=button[name="Tiles"]');
 
     console.log('step: filter');

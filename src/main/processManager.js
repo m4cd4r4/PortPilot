@@ -289,8 +289,9 @@ function killProcess(pid) {
  */
 async function killByPort(port) {
   const { checkPort } = require('./portScanner');
-  const portInfo = await checkPort(port);
-  
+  // Kill is pressed on a port the last scan listed: one miss is a flaky scan, not a free port.
+  const portInfo = await checkPort(port, { retries: 2 });
+
   if (!portInfo || !portInfo.pid) {
     return { success: false, error: `No process found on port ${port}` };
   }

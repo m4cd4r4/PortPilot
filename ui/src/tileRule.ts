@@ -18,10 +18,27 @@ const proc = (name?: string) => (name || 'another process').replace(/\.exe$/i, '
  * this is the only place a taken port is reported, the card itself stays "stopped".
  */
 export function appBlocked(snap: Snapshot, app: AppRec): TileNotice | null {
+  const h = portHolder(snap, app);
+  if (!h) return null;
+  const tail = h.app ? ', another of your apps. Stop it first.' : '.';
+  return { text: `${app.name} cannot start: :${h.port} is held by ${h.name}${tail}`, ports: true, port: h.port };
+}
+
+/**
+ * Who holds a stopped app's port: a stranger (the scan's conflicts), or another registered app that is
+ * running on it. The scan credits a port to one app only, so the second case is never a conflict there.
+ */
+export function portHolder(snap: Snapshot, app: AppRec): { port: number; name: string; app?: boolean } | null {
+  if (snap.running[app.id]) return null;
   const c = snap.conflicts.find((x) => x.appId === app.id);
-  if (!c) return null;
-  const pid = c.occupiedBy?.pid ? ` (pid ${c.occupiedBy.pid})` : '';
-  return { text: `${app.name} cannot start: :${c.port} is held by ${proc(c.occupiedBy?.processName)}${pid}.`, ports: true, port: c.port };
+  if (c) {
+    const pid = c.occupiedBy?.pid ? ` (pid ${c.occupiedBy.pid})` : '';
+    return { port: c.port, name: `${proc(c.occupiedBy?.processName)}${pid}` };
+  }
+  const port = app.preferredPort;
+  if (!port) return null;
+  const other = snap.apps.find((a) => a.id !== app.id && snap.running[a.id]?.port === port);
+  return other ? { port, name: other.name, app: true } : null;
 }
 
 /**
