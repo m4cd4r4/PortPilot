@@ -292,11 +292,19 @@ function queryWindowsProcessInfoTasklist(pids) {
 /**
  * Check if a specific port is in use
  * @param {number} port - Port number to check
+ * @param {{retries?: number, delayMs?: number, scan?: Function}} [opts] rescan up to `retries` times on a miss
  * @returns {Promise<Object|null>} Port info if in use, null otherwise
  */
-async function checkPort(port) {
-  const ports = await scanPorts();
-  return ports.find(p => p.port === port) || null;
+async function checkPort(port, { retries = 0, delayMs = 300, scan = scanPorts } = {}) {
+  for (let i = 0; ; i++) {
+    const hit = (await scan()).find(p => p.port === port);
+    if (hit) return hit;
+    // A full scan now and then comes back without a port that is plainly listening (netstat
+    // timing out under load answers []). Callers that act on a port the user just saw, like
+    // Kill, ask again before saying nobody is there (Vikunja #3772).
+    if (i >= retries) return null;
+    await new Promise(r => setTimeout(r, delayMs));
+  }
 }
 
 /**

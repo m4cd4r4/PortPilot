@@ -38,8 +38,16 @@ async function main() {
     const over = async (ms) => { const a = await total(); await h.sleep(ms); return (await total()) - a; };
     const frame = (fn) => app.evaluate(({ BrowserWindow }, name) => { const w = BrowserWindow.getAllWindows().find((x) => x.isVisible() || x.isMinimized()); w[name](); }, fn);
 
+    // Per channel, so a change in the visible count can be traced to the poll that made it. One read
+    // is 7 calls (apps, groups, processes, ports, browsers, project roots, thumbs) every 5 s, so a 12 s
+    // span holds 2 or 3 reads depending on where it starts: 14-15 or 21 calls are both right (traced
+    // 2026-11-14, one run printed 21 visible and 15 after restore).
+    const byChannel = () => app.evaluate(() => ({ ...global.__calls }));
+    const before = await byChannel();
     const visible = await over(SPAN);
-    console.log(`calls in ${SPAN / 1000} s, visible: ${visible}`);
+    const after = await byChannel();
+    const delta = Object.fromEntries(Object.keys(after).map((k) => [k, after[k] - (before[k] || 0)]).filter(([, n]) => n));
+    console.log(`calls in ${SPAN / 1000} s, visible: ${visible} ${JSON.stringify(delta)}`);
     check('a visible window keeps reading', visible >= 2, String(visible));
 
     await frame('minimize');

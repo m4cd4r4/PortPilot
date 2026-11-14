@@ -1,4 +1,5 @@
 import type { AppRec, Host, Scene, Snapshot } from './host';
+import { portHolder } from './tileRule';
 
 /** What one Start did: each member lands in exactly one list. */
 export interface SceneReport {
@@ -42,9 +43,9 @@ export async function startScene(host: Host, scene: Scene): Promise<SceneReport>
     const app: AppRec | undefined = snap.apps.find((a) => a.id === id);
     if (!app) { report.failed.push({ name: id, reason: 'no longer in the Library' }); continue; }
     if (snap.running[id]) { report.already.push(app.name); continue; }
-    const held = snap.conflicts.find((c) => c.appId === id);
+    const held = portHolder(snap, app);
     if (held) {
-      report.failed.push({ name: app.name, reason: `:${held.port} is held by ${(held.occupiedBy?.processName || 'another process').replace(/\.exe$/i, '')}` });
+      report.failed.push({ name: app.name, reason: `:${held.port} is held by ${held.name}` });
       continue;
     }
     try { await host.startApp(app); report.started.push(app.name); run.apps.push(id); }
