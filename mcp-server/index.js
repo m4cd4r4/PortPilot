@@ -893,7 +893,7 @@ function rerunSteps(run, exists = fs.existsSync) {
 function createServer() {
   const server = new McpServer({
     name: 'portpilot',
-    version: '5.1.0',
+    version: '5.1.1',
   });
 
   // The connected client's own name from the MCP handshake ("cursor-vscode", "claude-code"), so a
