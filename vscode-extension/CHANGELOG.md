@@ -1,5 +1,9 @@
 # Changelog
 
+## [4.2.7] - 2026-11-14
+
+- The web portal's Kill on a port that has only just started listening checks it twice more before reporting "No process found" (shared with desktop 5.1.1).
+
 ## [4.2.6] - 2026-11-13
 
 - The web portal's Stop on a browser profile waits for the browser to close, and Start reports a browser opened by hand on the profile's folder instead of timing out (shared with desktop 5.1.0).
