@@ -5,6 +5,12 @@ All notable changes to PortPilot will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+- **Start names the app holding the port.** Starting a stopped app whose port another of your apps is running on now says "X cannot start: :P is held by Y, another of your apps. Stop it first." instead of naming a bare process. Scenes use the same check.
+- **Kill rescans before "No process found".** Kill on a port that has only just started listening checks it twice more, 0.3 s apart, before reporting nothing there.
+
 ## [5.1.0] - 2026-11-13
 
 ### Changed
