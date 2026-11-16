@@ -5,6 +5,11 @@ All notable changes to PortPilot will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+- **A slow start still reaches History.** When `start_app` or `bulk_start` sees no port after ~6 s (npx downloading a package on its first run, a cold build), PortPilot keeps watching the port for 2 minutes and records the run, with its "started by claude" stamp, the moment it opens. The reply now says the app may still be starting (`stillStarting: true`) instead of pointing at a broken command. `stop_app` ends the watch.
+
 ## [5.1.1] - 2026-11-14
 
 ### Fixed
