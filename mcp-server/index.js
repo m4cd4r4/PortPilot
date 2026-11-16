@@ -683,7 +683,35 @@ function expectedPort(app) {
  * instead of a misleading success). Without a port we can only confirm the
  * shell spawned, and say so.
  */
-function startApp(app, logPath = null) {
+// Apps whose port missed the verify window and are still being watched, by app id -> cancel().
+const lateWatches = new Map();
+
+function cancelLateWatch(appId) {
+  const cancel = lateWatches.get(appId);
+  if (cancel) cancel();
+}
+
+/**
+ * Keep polling a port that missed the verify window (npx fetching a package on its first run,
+ * a cold build) and call onUp once it opens, so the start still gets its run. Gives up after
+ * windowMs. A new watch on the same app replaces the old one.
+ */
+function watchLate(appId, port, onUp, { windowMs = 120000, intervalMs = 2000 } = {}) {
+  cancelLateWatch(appId);
+  const deadline = Date.now() + windowMs;
+  const iv = setInterval(() => {
+    if (checkPort(port)) { cancel(); onUp(); }
+    else if (Date.now() >= deadline) cancel();
+  }, intervalMs);
+  if (typeof iv.unref === 'function') iv.unref();
+  function cancel() {
+    clearInterval(iv);
+    if (lateWatches.get(appId) === cancel) lateWatches.delete(appId);
+  }
+  lateWatches.set(appId, cancel);
+}
+
+function startApp(app, logPath = null, { verifyTries = 6, onLateUp = null, lateWindowMs = 120000 } = {}) {
   return new Promise((resolve) => {
     let settled = false;
     const done = (res) => { if (!settled) { settled = true; resolve(res); } };
@@ -705,9 +733,15 @@ function startApp(app, logPath = null) {
           if (checkPort(port)) {
             clearInterval(iv);
             done({ success: true, verified: true, message: `Started ${app.name}; port ${port} is up` });
-          } else if (tries >= 6) {
+          } else if (tries >= verifyTries) {
             clearInterval(iv);
-            done({ success: false, verified: true, error: `Started ${app.name} but port ${port} never came up within ~6s - check the command, cwd, or its logs` });
+            if (onLateUp) {
+              watchLate(app.id, port, onLateUp, { windowMs: lateWindowMs });
+              const mins = Math.round(lateWindowMs / 60000);
+              done({ success: false, verified: true, stillStarting: true, error: `Started ${app.name} but port ${port} is not up after ~${verifyTries}s. It may still be starting (npx downloading, a cold build): PortPilot keeps watching for ${mins} min and records the run if it opens - call check_port ${port} to see. If it never opens, check the command, cwd, or its logs` });
+            } else {
+              done({ success: false, verified: true, error: `Started ${app.name} but port ${port} never came up within ~${verifyTries}s - check the command, cwd, or its logs` });
+            }
           }
         }, 1000);
       } else {
@@ -749,6 +783,19 @@ function stampStart(configPath, app, sessionId, client, pidOf = listenerPidOf) {
   let pid = null;
   try { pid = pidOf(app.preferredPort) || null; } catch { /* no pid */ }
   return configFile.recordStart(configPath, app.id, startedBy, { port: app.preferredPort, pid });
+}
+
+/**
+ * Start `app` (unless its port is already up) and record the start: at once when the port comes
+ * up inside the verify window, or later when it opens during the late watch.
+ */
+async function startAndRecord(configPath, app, { sessionId, client, ...opts } = {}) {
+  const up = alreadyRunning(app);
+  if (up) return up;
+  const stamp = () => stampStart(configPath, app, sessionId, client);
+  const result = await startApp(app, configFile.logPathFor(configPath, app.id), { ...opts, onLateUp: stamp });
+  if (result.success) stamp();
+  return result;
 }
 
 function listenerPidOf(port) {
@@ -1012,9 +1059,7 @@ function createServer() {
       if (!app) return { content: [{ type: 'text', text: `App not found: ${identifier}` }], isError: true };
       const refused = startRefusal(app);
       if (refused) return { content: [{ type: 'text', text: refused }], isError: true };
-      const up = alreadyRunning(app);
-      const result = up || await startApp(app, configFile.logPathFor(getConfigPath(), app.id));
-      if (result.success && !up) stampStart(getConfigPath(), app, sessionId, clientName());
+      const result = await startAndRecord(getConfigPath(), app, { sessionId, client: clientName() });
       return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }], isError: !result.success };
     }
   );
@@ -1029,6 +1074,7 @@ function createServer() {
       const config = readConfig();
       const app = findApp(config.apps || [], identifier);
       if (!app) return { content: [{ type: 'text', text: `App not found: ${identifier}` }], isError: true };
+      cancelLateWatch(app.id);
       const result = stopApp(app);
       if (result.success) configFile.recordStop(getConfigPath(), app.id);
       return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }], isError: !result.success };
@@ -1056,9 +1102,7 @@ function createServer() {
       const results = await Promise.all(apps.map(async a => {
         const refused = startRefusal(a);
         if (refused) return { name: a.name, success: false, error: refused };
-        const up = alreadyRunning(a);
-        const result = up || await startApp(a, configFile.logPathFor(getConfigPath(), a.id));
-        if (result.success && !up) stampStart(getConfigPath(), a, sessionId, clientName());
+        const result = await startAndRecord(getConfigPath(), a, { sessionId, client: clientName() });
         return { name: a.name, ...result };
       }));
       const ok = results.filter(r => r.success).length;
@@ -1559,4 +1603,4 @@ async function main() {
 const isMain = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
 if (isMain) main().catch(console.error);
 
-export { matchRunning, isOwnListener, cmdNamesPath, findRuns, rerunSteps, alreadyRunning, expectedPort,normPath, appAtCwd, cmdSafe, startRefusal, observedDuplicate,pickColor, resolveWorktreeGit, registerWorktree, stampStart, detachedCommand, prepareLog };
+export { matchRunning, isOwnListener, cmdNamesPath, findRuns, rerunSteps, alreadyRunning, expectedPort,normPath, appAtCwd, cmdSafe, startRefusal, observedDuplicate,pickColor, resolveWorktreeGit, registerWorktree, stampStart, detachedCommand, prepareLog, startAndRecord, checkPort };
